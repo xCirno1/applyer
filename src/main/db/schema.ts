@@ -79,6 +79,16 @@ export const jobs = sqliteTable('jobs', {
   updatedAt: text('updated_at').notNull().default(nowIso)
 })
 
+export const jobExclusions = sqliteTable('job_exclusions', {
+  id: text('id').primaryKey(),
+  url: text('url').notNull().unique(),
+  title: text('title'),
+  company: text('company'),
+  reason: text('reason'),
+  excludedBy: text('excluded_by', { enum: ['user', 'agent'] }).notNull(),
+  createdAt: text('created_at').notNull().default(nowIso)
+})
+
 export const failureTags = sqliteTable('failure_tags', {
   id: text('id').primaryKey(),
   label: text('label').notNull(),

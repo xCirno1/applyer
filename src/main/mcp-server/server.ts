@@ -6,7 +6,8 @@ import {
   listJobsShape,
   flagFailureShape,
   getProfileShape,
-  fillApplicationShape
+  fillApplicationShape,
+  excludeJobShape
 } from './schemas'
 import { getProfileTool } from './tools/getProfile'
 import { searchJobsTool } from './tools/searchJobs'
@@ -15,6 +16,7 @@ import { queueJobTool } from './tools/queueJob'
 import { listJobsTool } from './tools/listJobs'
 import { flagFailureTool } from './tools/flagFailure'
 import { fillApplicationTool } from './tools/fillApplication'
+import { excludeJobTool } from './tools/excludeJob'
 
 export function createApplyerMcpServer(): McpServer {
   const server = new McpServer({ name: 'applyer', version: '0.1.0' })
@@ -93,6 +95,19 @@ export function createApplyerMcpServer(): McpServer {
       inputSchema: fillApplicationShape
     },
     fillApplicationTool
+  )
+
+  server.registerTool(
+    'exclude_job',
+    {
+      title: 'Exclude a job posting',
+      description:
+        "Permanently blacklists a job posting URL: it's removed from the board if currently tracked, will never be returned by search_jobs again, and can't be re-queued. " +
+        'ONLY call this when the user has explicitly asked to exclude, blacklist, hide, or stop seeing a specific posting or postings matching some stated criteria (e.g. "put job postings that are not remote on the exclusion list", "exclude that one", "I never want to see Foo Corp jobs again"). ' +
+        "Do NOT call this on your own judgment just because you think a job is a bad match — for that, simply don't queue it. Excluding is a standing, permanent instruction from the user, not a quality filter you apply yourself.",
+      inputSchema: excludeJobShape
+    },
+    excludeJobTool
   )
 
   return server

@@ -1,8 +1,10 @@
-import { setFailed, listBlockedJobs } from './db/repositories/jobsRepository'
+import { setFailed, listBlockedJobs, getJobByUrl, removeJob } from './db/repositories/jobsRepository'
 import { ensureFailureTag } from './db/repositories/failureTagsRepository'
 import { logActivity } from './db/repositories/activityLogRepository'
-import { broadcastJobUpdate } from './ipc/jobsBroadcast'
+import { excludeUrl } from './db/repositories/jobExclusionsRepository'
+import { broadcastJobUpdate, broadcastJobRemoved } from './ipc/jobsBroadcast'
 import type { JobRecord } from '@shared/types/job'
+import type { ExclusionRecord, ExcludedBy } from '@shared/types/exclusion'
 
 /**
  * Shared job-state-transition helpers used by both the MCP tool layer
@@ -31,4 +33,40 @@ export function reconcileOrphanedBlockedJobs(): void {
   for (const job of listBlockedJobs()) {
     failJob(job.id, 'interrupted', 'The app was closed or restarted while this job was waiting on a verification challenge. Retry it to try again.')
   }
+}
+
+export interface ExcludeJobInput {
+  url: string
+  title?: string | null
+  company?: string | null
+  reason?: string | null
+  excludedBy: ExcludedBy
+}
+
+/**
+ * Adds a URL to the permanent exclusion list (search_jobs/queue_job both
+ * consult it) and, if that URL is currently tracked on the board, removes
+ * it — shared between the user-facing "Exclude" action on a job and the
+ * agent-facing exclude_job MCP tool so both paths behave identically.
+ */
+export function excludeJob(input: ExcludeJobInput): { exclusion: ExclusionRecord; wasExisting: boolean } {
+  const result = excludeUrl({
+    url: input.url,
+    title: input.title,
+    company: input.company,
+    reason: input.reason,
+    excludedBy: input.excludedBy
+  })
+
+  const trackedJob = getJobByUrl(input.url)
+  if (trackedJob) {
+    removeJob(trackedJob.id)
+    broadcastJobRemoved(trackedJob.id)
+  }
+
+  if (!result.wasExisting) {
+    logActivity('info', `Excluded job posting (${input.excludedBy}): ${input.url}`, { reason: input.reason ?? undefined })
+  }
+
+  return result
 }

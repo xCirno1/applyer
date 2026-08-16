@@ -7,6 +7,7 @@ import { createMainWindow } from './window'
 import { initDatabase, closeDatabase } from './db'
 import { registerTerminalIpc } from './ipc/terminal'
 import { registerJobsIpc } from './ipc/jobs'
+import { registerExclusionsIpc } from './ipc/exclusions'
 import { registerProfileIpc } from './ipc/profile'
 import { registerOnboardingIpc } from './ipc/onboarding'
 import { registerBrowserControlIpc } from './ipc/browserControl'
@@ -48,6 +49,7 @@ app.whenReady().then(() => {
   writeAgentInstructions()
 
   registerJobsIpc()
+  registerExclusionsIpc()
   registerProfileIpc()
   registerOnboardingIpc()
   registerBrowserControlIpc()

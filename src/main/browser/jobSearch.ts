@@ -1,5 +1,6 @@
 import { searchIndeed } from './scrapers/indeed'
 import { searchLinkedIn } from './scrapers/linkedin'
+import { isUrlExcluded } from '../db/repositories/jobExclusionsRepository'
 import type { JobSearchResultItem } from './types'
 import type { JobSource } from './sourceRouter'
 
@@ -70,7 +71,7 @@ export async function searchJobs(params: SearchJobsParams): Promise<SearchJobsOu
   const deduped = allResults.filter((r) => {
     if (seen.has(r.url)) return false
     seen.add(r.url)
-    return true
+    return !isUrlExcluded(r.url)
   })
 
   return {

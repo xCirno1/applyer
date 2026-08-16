@@ -1,6 +1,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { z } from 'zod'
 import { queueJob } from '../../db/repositories/jobsRepository'
+import { isUrlExcluded } from '../../db/repositories/jobExclusionsRepository'
 import { detectSource } from '../../browser/sourceRouter'
 import { logActivity } from '../../db/repositories/activityLogRepository'
 import { broadcastJobUpdate } from '../../ipc/jobsBroadcast'
@@ -11,6 +12,14 @@ import type { queueJobShape } from '../schemas'
 type Args = { [K in keyof typeof queueJobShape]: z.infer<(typeof queueJobShape)[K]> }
 
 export async function queueJobTool(args: Args): Promise<CallToolResult> {
+  if (isUrlExcluded(args.url)) {
+    return jsonResult({
+      jobId: null,
+      status: 'excluded',
+      message: 'This URL is on the user\'s exclusion list and will not be queued.'
+    })
+  }
+
   try {
     const { job, wasExisting } = queueJob({
       title: args.title,

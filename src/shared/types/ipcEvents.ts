@@ -13,7 +13,14 @@ export const IPC = {
     markSubmitted: 'jobs:markSubmitted',
     retry: 'jobs:retry',
     remove: 'jobs:remove',
-    onUpdated: 'jobs:updated'
+    exclude: 'jobs:exclude',
+    onUpdated: 'jobs:updated',
+    onRemoved: 'jobs:removed'
+  },
+  exclusions: {
+    list: 'exclusions:list',
+    add: 'exclusions:add',
+    remove: 'exclusions:remove'
   },
   profile: {
     get: 'profile:get',

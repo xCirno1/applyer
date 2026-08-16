@@ -48,3 +48,10 @@ export const getProfileShape = {}
 export const fillApplicationShape = {
   jobId: z.string().trim().min(1)
 }
+
+export const excludeJobShape = {
+  url: z.string().trim().url(),
+  title: z.string().trim().max(300).optional(),
+  company: z.string().trim().max(300).optional(),
+  reason: z.string().trim().max(300).optional()
+}

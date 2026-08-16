@@ -27,6 +27,7 @@ interface JobsState {
   fetchAllColumns: () => void
   loadMore: (status: JobStatus) => Promise<void>
   applyUpdate: (job: JobRecord) => void
+  removeJobLocal: (jobId: string) => void
   subscribeToUpdates: () => () => void
   openJob: (id: string) => void
   closeJob: () => void
@@ -134,7 +135,29 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     })
   },
 
-  subscribeToUpdates: () => window.api.jobs.onUpdated((job) => get().applyUpdate(job)),
+  removeJobLocal: (jobId) => {
+    set((state) => {
+      const columns = { ...state.columns }
+      for (const status of STATUSES) {
+        if (!columns[status].jobs.some((j) => j.id === jobId)) continue
+        columns[status] = {
+          ...columns[status],
+          jobs: columns[status].jobs.filter((j) => j.id !== jobId),
+          total: Math.max(0, columns[status].total - 1)
+        }
+      }
+      return { columns }
+    })
+  },
+
+  subscribeToUpdates: () => {
+    const removeUpdatedListener = window.api.jobs.onUpdated((job) => get().applyUpdate(job))
+    const removeRemovedListener = window.api.jobs.onRemoved(({ jobId }) => get().removeJobLocal(jobId))
+    return () => {
+      removeUpdatedListener()
+      removeRemovedListener()
+    }
+  },
 
   openJob: (id) => set({ openJobId: id }),
   closeJob: () => set({ openJobId: null })

@@ -15,6 +15,12 @@ export function broadcastJobUpdate(job: JobRecord): void {
   }
 }
 
+export function broadcastJobRemoved(jobId: string): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.jobs.onRemoved, { jobId })
+  }
+}
+
 export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaDetected, payload)

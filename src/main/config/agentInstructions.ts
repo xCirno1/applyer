@@ -29,6 +29,14 @@ app's local job-tracking database and a real browser:
   reviews and submits it themselves.
 - \`flag_failure\` — mark a job Failed with a reason when you can't proceed
   with it (e.g. a login wall or an expired listing).
+- \`exclude_job\` — permanently blacklist a job posting URL: removed from the
+  board if tracked, never returned by \`search_jobs\` again, can't be
+  re-queued. ONLY call this when the user has explicitly asked to exclude,
+  blacklist, hide, or stop seeing a posting or postings matching some stated
+  criteria (e.g. "put job postings that are not remote on the exclusion
+  list", "exclude that one", "I never want to see Foo Corp jobs again").
+  Never call it just because you personally judge a job a bad match — for
+  that, simply don't queue it.
 
 When the user asks you to find, search for, track, or apply to jobs, use
 these tools instead of browsing job sites manually — they operate on the

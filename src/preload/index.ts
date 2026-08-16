@@ -16,6 +16,7 @@ import {
 import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job'
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
 import type { ListActivityQuery, ListActivityResult } from '@shared/types/activity'
+import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
 
 const terminalApi = {
   create: (options: TerminalCreateOptions): Promise<TerminalCreateResult> =>
@@ -47,11 +48,28 @@ const jobsApi = {
   retry: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: string }> =>
     ipcRenderer.invoke(IPC.jobs.retry, { jobId }),
   remove: (jobId: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.jobs.remove, { jobId }),
+  exclude: (
+    jobId: string,
+    reason?: string
+  ): Promise<{ ok: boolean; exclusion?: ExclusionRecord; error?: string }> =>
+    ipcRenderer.invoke(IPC.jobs.exclude, { jobId, reason }),
   onUpdated: (callback: (job: JobRecord) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, job: JobRecord): void => callback(job)
     ipcRenderer.on(IPC.jobs.onUpdated, listener)
     return () => ipcRenderer.removeListener(IPC.jobs.onUpdated, listener)
+  },
+  onRemoved: (callback: (payload: { jobId: string }) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: { jobId: string }): void => callback(payload)
+    ipcRenderer.on(IPC.jobs.onRemoved, listener)
+    return () => ipcRenderer.removeListener(IPC.jobs.onRemoved, listener)
   }
+}
+
+const exclusionsApi = {
+  list: (query: ListExclusionsQuery): Promise<ListExclusionsResult> => ipcRenderer.invoke(IPC.exclusions.list, query),
+  add: (url: string, reason?: string): Promise<{ ok: boolean; exclusion?: ExclusionRecord; error?: string }> =>
+    ipcRenderer.invoke(IPC.exclusions.add, { url, reason }),
+  remove: (id: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.exclusions.remove, { id })
 }
 
 const profileApi = {
@@ -112,6 +130,7 @@ const logsApi = {
 const api = {
   terminal: terminalApi,
   jobs: jobsApi,
+  exclusions: exclusionsApi,
   profile: profileApi,
   onboarding: onboardingApi,
   browserControl: browserControlApi,

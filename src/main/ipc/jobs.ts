@@ -1,7 +1,8 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
-import { listJobs, setSubmitted, retry, removeJob, IllegalTransitionError } from '../db/repositories/jobsRepository'
+import { listJobs, setSubmitted, retry, removeJob, getJob, IllegalTransitionError } from '../db/repositories/jobsRepository'
 import { broadcastJobUpdate } from './jobsBroadcast'
+import { excludeJob } from '../jobActions'
 import type { ListJobsQuery } from '@shared/types/job'
 
 export function registerJobsIpc(): void {
@@ -32,5 +33,20 @@ export function registerJobsIpc(): void {
   ipcMain.handle(IPC.jobs.remove, (_event, { jobId }: { jobId: string }) => {
     removeJob(jobId)
     return { ok: true }
+  })
+
+  ipcMain.handle(IPC.jobs.exclude, (_event, { jobId, reason }: { jobId: string; reason?: string }) => {
+    const job = getJob(jobId)
+    if (!job) {
+      return { ok: false, error: 'Job not found.' }
+    }
+    const { exclusion } = excludeJob({
+      url: job.url,
+      title: job.title,
+      company: job.company,
+      reason: reason?.trim() || null,
+      excludedBy: 'user'
+    })
+    return { ok: true, exclusion }
   })
 }

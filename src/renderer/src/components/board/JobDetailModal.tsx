@@ -15,10 +15,13 @@ function formatTime(iso: string): string {
 
 export default function JobDetailModal({ job, onClose }: { job: JobRecord | null; onClose: () => void }): ReactElement | null {
   const applyUpdate = useJobsStore((s) => s.applyUpdate)
+  const removeJobLocal = useJobsStore((s) => s.removeJobLocal)
   const toast = useToast()
   const [submitting, setSubmitting] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  const [excluding, setExcluding] = useState(false)
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false)
+  const [confirmExcludeOpen, setConfirmExcludeOpen] = useState(false)
   const [activity, setActivity] = useState<ActivityLogEntry[]>([])
 
   useEffect(() => {
@@ -62,6 +65,20 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
       onClose()
     } else {
       toast.error(result.error ?? 'Failed to retry.')
+    }
+  }
+
+  const handleExclude = async (): Promise<void> => {
+    setConfirmExcludeOpen(false)
+    setExcluding(true)
+    const result = await window.api.jobs.exclude(job.id)
+    setExcluding(false)
+    if (result.ok) {
+      removeJobLocal(job.id)
+      toast.success("Excluded — it won't be shown again or resurfaced by search.")
+      onClose()
+    } else {
+      toast.error(result.error ?? 'Failed to exclude this job.')
     }
   }
 
@@ -137,6 +154,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
             Open original listing ↗
           </a>
           <div className="flex gap-2">
+            {job.status !== 'submitted' && (
+              <Button size="sm" variant="danger" onClick={() => setConfirmExcludeOpen(true)} loading={excluding}>
+                Exclude
+              </Button>
+            )}
             {job.status === 'failed' && (
               <Button size="sm" onClick={handleRetry} loading={retrying}>
                 Retry
@@ -158,6 +180,16 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
         confirmLabel="Mark submitted"
         onConfirm={handleMarkSubmitted}
         onCancel={() => setConfirmSubmitOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmExcludeOpen}
+        title="Exclude this job posting"
+        message="This removes it from the board and permanently blacklists its URL — it will never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Settings > Exclusions."
+        confirmLabel="Exclude"
+        danger
+        onConfirm={handleExclude}
+        onCancel={() => setConfirmExcludeOpen(false)}
       />
     </Modal>
   )

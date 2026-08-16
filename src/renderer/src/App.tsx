@@ -5,6 +5,7 @@ import OnboardingFlow from './pages/Onboarding/OnboardingFlow'
 import ToastProvider from './components/ui/ToastProvider'
 import Skeleton from './components/ui/Skeleton'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
+import ThemeProvider from './providers/ThemeProvider'
 
 type Screen = 'workspace' | 'settings'
 type BootState = 'loading' | 'onboarding' | 'ready'
@@ -55,15 +56,17 @@ export default function App(): ReactElement {
   }, [])
 
   return (
-    <ToastProvider>
-      {boot === 'loading' && (
-        <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-32 w-full" />
-        </div>
-      )}
-      {boot === 'onboarding' && <OnboardingFlow onComplete={() => setBoot('ready')} />}
-      {boot === 'ready' && <MainShell />}
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        {boot === 'loading' && (
+          <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-32 w-full" />
+          </div>
+        )}
+        {boot === 'onboarding' && <OnboardingFlow onComplete={() => setBoot('ready')} />}
+        {boot === 'ready' && <MainShell />}
+      </ToastProvider>
+    </ThemeProvider>
   )
 }

@@ -3,6 +3,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import '@xterm/xterm/css/xterm.css'
+import { useTheme } from '../../providers/ThemeContext'
 
 /**
  * xterm's canvas/WebGL renderer needs a concrete color, not a CSS variable
@@ -19,8 +20,40 @@ function resolveCssColor(cssVarExpression: string): string {
   return resolved
 }
 
+function resolveTerminalTheme(): { background: string; foreground: string; cursor: string; cursorAccent: string } {
+  const background = resolveCssColor('var(--color-canvas-raised)')
+  const foreground = resolveCssColor('var(--color-text)')
+  return {
+    background,
+    foreground,
+    // xterm defaults an unset cursor to white, which disappears against a
+    // light-mode background — pin it to the theme's own colors instead so
+    // it's always a solid, visible block regardless of scheme.
+    cursor: foreground,
+    cursorAccent: background
+  }
+}
+
+/**
+ * `rgb:rrrr/gggg/bbbb`, the reply format for OSC 10/11/12 color queries —
+ * an 8-bit-per-channel color doubled into the 16-bit-per-channel hex triplet
+ * the spec expects.
+ */
+function toOscColorReply(cssVarExpression: string): string {
+  const resolved = resolveCssColor(cssVarExpression)
+  const channels = resolved.match(/\d+(?:\.\d+)?/g) ?? []
+  const hex = (n: string | undefined): string => {
+    const clamped = Math.max(0, Math.min(255, Math.round(Number(n ?? 0))))
+    const byte = clamped.toString(16).padStart(2, '0')
+    return byte + byte
+  }
+  return `rgb:${hex(channels[0])}/${hex(channels[1])}/${hex(channels[2])}`
+}
+
 export default function TerminalPane(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
+  const termRef = useRef<Terminal | null>(null)
+  const { state, resolvedScheme } = useTheme()
 
   useEffect(() => {
     const container = containerRef.current
@@ -30,12 +63,10 @@ export default function TerminalPane(): ReactElement {
       cursorBlink: true,
       fontSize: 13,
       fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-      theme: {
-        background: resolveCssColor('var(--color-canvas-raised)'),
-        foreground: resolveCssColor('var(--color-text)')
-      },
+      theme: resolveTerminalTheme(),
       allowProposedApi: true
     })
+    termRef.current = term
 
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
@@ -83,6 +114,24 @@ export default function TerminalPane(): ReactElement {
       }
     })
 
+    // CLI programs that adapt their own light/dark styling (Codex, and
+    // others built on TUI frameworks that support it) do so by asking the
+    // terminal what its foreground/background color is via these OSC
+    // queries — xterm.js doesn't answer them on its own, so without this
+    // they fall back to whatever they assume by default. The reply goes
+    // back down the pty as if it were typed input, since that's the same
+    // channel the query arrived on.
+    const oscForegroundDisposable = term.parser.registerOscHandler(10, (data) => {
+      if (data !== '?' || !sessionId) return false
+      window.api.terminal.write(sessionId, `\x1b]10;${toOscColorReply('var(--color-text)')}\x07`)
+      return true
+    })
+    const oscBackgroundDisposable = term.parser.registerOscHandler(11, (data) => {
+      if (data !== '?' || !sessionId) return false
+      window.api.terminal.write(sessionId, `\x1b]11;${toOscColorReply('var(--color-canvas-raised)')}\x07`)
+      return true
+    })
+
     const resizeObserver = new ResizeObserver(() => {
       fitAddon.fit()
       if (sessionId) {
@@ -95,14 +144,26 @@ export default function TerminalPane(): ReactElement {
       disposed = true
       resizeObserver.disconnect()
       onDataDisposable.dispose()
+      oscForegroundDisposable.dispose()
+      oscBackgroundDisposable.dispose()
       removeDataListener?.()
       removeExitListener?.()
       if (sessionId) {
         window.api.terminal.dispose(sessionId)
       }
+      termRef.current = null
       term.dispose()
     }
   }, [])
+
+  // Re-applies whenever the resolved scheme changes, or any other part of
+  // the theme state does — accent/customCss don't touch these two tokens by
+  // default, but a user's own custom CSS overriding --color-text or
+  // --color-canvas-raised should still be picked up live.
+  useEffect(() => {
+    if (!termRef.current) return
+    termRef.current.options.theme = resolveTerminalTheme()
+  }, [resolvedScheme, state])
 
   return <div ref={containerRef} className="h-full w-full px-3 py-1.5" />
 }

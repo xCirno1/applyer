@@ -6,17 +6,17 @@ import { screenshotsDir } from './config/paths'
 // Must run before app.whenReady() — Electron requires privileged schemes to
 // be registered at module load time.
 protocol.registerSchemesAsPrivileged([
-  { scheme: 'jobhunt-file', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: false } }
+  { scheme: 'applyer-file', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: false } }
 ])
 
 /**
  * Serves screenshots to the renderer without exposing raw file:// access.
- * URLs look like jobhunt-file://screenshots/<filename> — the filename is
+ * URLs look like applyer-file://screenshots/<filename> — the filename is
  * validated to be a bare name (no path traversal) before joining it against
  * the one directory this protocol is allowed to read from.
  */
-export function registerJobHuntFileProtocol(): void {
-  protocol.handle('jobhunt-file', (request) => {
+export function registerApplyerFileProtocol(): void {
+  protocol.handle('applyer-file', (request) => {
     const url = new URL(request.url)
     if (url.hostname !== 'screenshots') {
       return new Response('Not found', { status: 404 })

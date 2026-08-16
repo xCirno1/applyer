@@ -1,27 +1,22 @@
-import type { ReactElement, SelectHTMLAttributes } from 'react'
+import type { ReactElement } from 'react'
+import Dropdown, { type DropdownOption } from './Dropdown'
 
-interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>, 'className'> {
+interface SelectProps {
   label: string
-  options: { value: string; label: string }[]
+  options: DropdownOption[]
+  value: string
+  onChange: (value: string) => void
+  id?: string
+  disabled?: boolean
 }
 
-export default function Select({ label, options, id, ...rest }: SelectProps): ReactElement {
+export default function Select({ label, options, value, onChange, id, disabled }: SelectProps): ReactElement {
   const selectId = id ?? `field-${label.replace(/\s+/g, '-').toLowerCase()}`
 
   return (
     <label htmlFor={selectId} className="flex flex-col gap-1">
       <span className="text-[12px] font-medium text-text-muted">{label}</span>
-      <select
-        id={selectId}
-        {...rest}
-        className="h-7 cursor-pointer border border-border bg-canvas-soft px-2 text-[13px] text-text outline-none focus:border-accent"
-      >
-        {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </select>
+      <Dropdown id={selectId} options={options} value={value} onChange={onChange} disabled={disabled} />
     </label>
   )
 }

@@ -97,7 +97,7 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
           <div>
             <p className="text-[12px] font-medium text-text-muted">Filled application (screenshot)</p>
             <img
-              src={`jobhunt-file://screenshots/${job.id}.png`}
+              src={`applyer-file://screenshots/${job.id}.png`}
               alt="Screenshot of the filled application form"
               className="mt-1 max-h-64 w-full border border-border-soft object-contain object-top"
             />

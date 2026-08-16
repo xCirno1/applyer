@@ -115,4 +115,4 @@ const api = {
 
 contextBridge.exposeInMainWorld('api', api)
 
-export type JobHuntApi = typeof api
+export type ApplyerApi = typeof api

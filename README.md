@@ -1,4 +1,4 @@
-# JobHunt
+# Applyer
 
 A local Electron app that turns a coding assistant running in a built-in terminal (Claude Code, Codex CLI, or any other MCP-capable agent) into a job-search assistant.
 
@@ -8,7 +8,7 @@ You keep your profile and resume in the app. The agent searches the web for matc
 
 1. **Tell it about yourself.** Onboarding walks you through a profile (contact info, desired roles, skills, salary expectations) and your resume/cover letter documents. You choose whether this is stored encrypted (OS keychain-backed) or plaintext on disk.
 2. **Connect an agent.** Onboarding detects installed MCP-capable CLIs (currently Claude Code and Codex CLI) and can auto-configure the connection for you, or give you a config snippet to add manually.
-3. **Ask the agent to job hunt**, from the terminal built into the app. It calls back into JobHunt over MCP to search, inspect postings, and manage your board.
+3. **Ask the agent to job hunt**, from the terminal built into the app. It calls back into Applyer over MCP to search, inspect postings, and manage your board.
 4. **Review on the board.** Matches land in a Kanban board (Queued → Filled → Submitted, plus Failed) that updates live as the agent works.
 
 ## Prerequisites

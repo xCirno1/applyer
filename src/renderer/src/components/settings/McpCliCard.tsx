@@ -46,7 +46,7 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
     if (!freshlyConfigured) {
       setVerifying(false)
       setVerifyResult(
-        `${CLI_LABELS[detection.cli]} isn't configured to use JobHunt yet — click Auto-configure above, or add the snippet manually, first.`
+        `${CLI_LABELS[detection.cli]} isn't configured to use Applyer yet — click Auto-configure above, or add the snippet manually, first.`
       )
       return
     }
@@ -81,7 +81,7 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
       <ConfirmDialog
         open={confirmOpen}
         title={`Configure ${CLI_LABELS[detection.cli]}`}
-        message={`This will edit ${CLI_LABELS[detection.cli]}'s own configuration to add JobHunt as an MCP server (backing up the original first). Continue?`}
+        message={`This will edit ${CLI_LABELS[detection.cli]}'s own configuration to add Applyer as an MCP server (backing up the original first). Continue?`}
         confirmLabel="Configure"
         onConfirm={handleAutoConfigure}
         onCancel={() => setConfirmOpen(false)}

@@ -1,55 +1,44 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import TerminalPane from './components/terminal/TerminalPane'
-import BoardPage from './pages/Board/BoardPage'
-import LogsPage from './pages/Logs/LogsPage'
+import WorkspacePage from './pages/Workspace/WorkspacePage'
 import SettingsPage from './pages/Settings/SettingsPage'
 import OnboardingFlow from './pages/Onboarding/OnboardingFlow'
 import ToastProvider from './components/ui/ToastProvider'
 import Skeleton from './components/ui/Skeleton'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
 
-const TABS = ['board', 'terminal', 'logs', 'settings'] as const
-type Tab = (typeof TABS)[number]
+type Screen = 'workspace' | 'settings'
 type BootState = 'loading' | 'onboarding' | 'ready'
 
 function MainShell(): ReactElement {
-  const [tab, setTab] = useState<Tab>('board')
+  const [screen, setScreen] = useState<Screen>('workspace')
 
   return (
     <div className="flex h-full flex-col bg-canvas-inset">
-      <header className="flex h-nav shrink-0 items-center gap-1 border-b border-border bg-canvas px-3">
-        <span className="text-[13px] font-medium text-text">JobHunt</span>
-        <nav className="ml-4 flex h-full items-center gap-1">
-          {TABS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`h-7 cursor-pointer px-3 text-[12px] font-medium capitalize ${
-                tab === t ? 'border-b-2 border-accent text-text' : 'text-text-muted hover:text-text'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </nav>
-      </header>
       <CaptchaAlertProvider>
         <main className="min-h-0 flex-1">
-          {/* Board and Terminal stay mounted across tab switches — Board needs
-              its live update subscription regardless of visibility, and
-              Terminal's pty session would otherwise be killed. Logs/Settings
-              mount fresh each visit instead, which is fine since they don't
-              hold any state worth preserving. */}
-          <div className={tab === 'board' ? 'h-full' : 'hidden'}>
-            <BoardPage />
+          {/* The workspace stays mounted even while Settings is open — it
+              owns the terminal's live pty session and the jobs live-update
+              subscription, both of which a remount would kill/drop. Settings
+              mounts fresh each visit since it holds no state worth
+              preserving. */}
+          <div className={screen === 'workspace' ? 'h-full' : 'hidden'}>
+            <WorkspacePage onOpenSettings={() => setScreen('settings')} />
           </div>
-          <div className={tab === 'terminal' ? 'h-full' : 'hidden'}>
-            <div className="h-full bg-canvas-raised">
-              <TerminalPane />
+          {screen === 'settings' && (
+            <div className="flex h-full flex-col">
+              <div className="flex h-nav shrink-0 items-center border-b border-border bg-canvas px-3">
+                <button
+                  onClick={() => setScreen('workspace')}
+                  className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text"
+                >
+                  ← Back to workspace
+                </button>
+              </div>
+              <div className="min-h-0 flex-1">
+                <SettingsPage />
+              </div>
             </div>
-          </div>
-          {tab === 'logs' && <LogsPage />}
-          {tab === 'settings' && <SettingsPage />}
+          )}
         </main>
       </CaptchaAlertProvider>
     </div>

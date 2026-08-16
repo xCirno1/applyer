@@ -7,7 +7,7 @@ import { jsonResult, textError } from '../toolResult'
 export async function getProfileTool(): Promise<CallToolResult> {
   if (!isOnboardingCompleted()) {
     return textError(
-      'No profile found — open JobHunt and complete onboarding (profile + documents) before searching or matching jobs.'
+      'No profile found — open Applyer and complete onboarding (profile + documents) before searching or matching jobs.'
     )
   }
 

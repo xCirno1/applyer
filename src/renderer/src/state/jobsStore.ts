@@ -20,12 +20,16 @@ export interface JobFilters {
 interface JobsState {
   columns: Record<JobStatus, ColumnState>
   filters: JobFilters
+  /** Job currently open in the detail modal — shared so any panel (board, sidebar) can drive it. */
+  openJobId: string | null
   setFilters: (partial: Partial<JobFilters>) => void
   fetchColumn: (status: JobStatus) => Promise<void>
   fetchAllColumns: () => void
   loadMore: (status: JobStatus) => Promise<void>
   applyUpdate: (job: JobRecord) => void
   subscribeToUpdates: () => () => void
+  openJob: (id: string) => void
+  closeJob: () => void
 }
 
 function emptyColumn(): ColumnState {
@@ -42,6 +46,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     failed: emptyColumn()
   },
   filters: DEFAULT_FILTERS,
+  openJobId: null,
 
   setFilters: (partial) => {
     set((state) => ({ filters: { ...state.filters, ...partial } }))
@@ -129,5 +134,8 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     })
   },
 
-  subscribeToUpdates: () => window.api.jobs.onUpdated((job) => get().applyUpdate(job))
+  subscribeToUpdates: () => window.api.jobs.onUpdated((job) => get().applyUpdate(job)),
+
+  openJob: (id) => set({ openJobId: id }),
+  closeJob: () => set({ openJobId: null })
 }))

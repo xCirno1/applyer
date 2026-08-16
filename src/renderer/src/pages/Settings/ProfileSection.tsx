@@ -92,7 +92,7 @@ export default function ProfileSection(): ReactElement {
         <Select
           label="Remote preference"
           value={fields.remotePreference}
-          onChange={(e) => set('remotePreference', e.target.value as ProfileFields['remotePreference'])}
+          onChange={(v) => set('remotePreference', v as ProfileFields['remotePreference'])}
           options={[
             { value: 'no_preference', label: 'No preference' },
             { value: 'remote', label: 'Remote' },

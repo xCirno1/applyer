@@ -14,7 +14,7 @@ import tailwindcss from '@tailwindcss/vite'
  */
 function copyMigrationsPlugin(): Plugin {
   return {
-    name: 'jobhunt-copy-migrations',
+    name: 'applyer-copy-migrations',
     apply: 'build',
     closeBundle() {
       const src = resolve(__dirname, 'src/main/db/migrations')

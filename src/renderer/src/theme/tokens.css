@@ -70,3 +70,39 @@ body {
   background-color: var(--color-canvas);
   color: var(--color-text);
 }
+
+/*
+ * Scrollbars — thin, tracks transparent into whatever surface they sit on
+ * (matching the "depth from seams, not chrome" rule), thumb lights up to
+ * the accent color on hover/drag like ResizeHandle's seam does. Electron's
+ * renderer is always Chromium, so the ::-webkit-scrollbar rules are what
+ * actually render; the standard properties are a no-cost fallback.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border: 2px solid transparent;
+  border-radius: 2px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-accent);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}

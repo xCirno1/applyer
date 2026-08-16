@@ -1,8 +1,8 @@
 /**
- * Protocol-level smoke test for the JobHunt MCP tool surface — spawns the
+ * Protocol-level smoke test for the Applyer MCP tool surface — spawns the
  * same stdio bridge an external CLI (claude/codex) would, connects a real
  * MCP client, lists tools, and calls each with both valid and deliberately
- * invalid input. Requires the JobHunt app to already be running (it's what
+ * invalid input. Requires the Applyer app to already be running (it's what
  * hosts the actual MCP server on a Unix socket).
  *
  * Usage: tsx scripts/smoke-mcp.ts [--socket <path>]
@@ -14,12 +14,12 @@ import { homedir } from 'os'
 import { join } from 'path'
 
 function resolveDefaultSocketPath(): string {
-  const appName = 'jobhunt'
+  const appName = 'applyer'
   if (process.platform === 'darwin') {
     return join(homedir(), 'Library', 'Application Support', appName, 'mcp.sock')
   }
   if (process.platform === 'win32') {
-    return '\\\\.\\pipe\\jobhunt-mcp'
+    return '\\\\.\\pipe\\applyer-mcp'
   }
   const configHome = process.env.XDG_CONFIG_HOME || join(homedir(), '.config')
   return join(configHome, appName, 'mcp.sock')
@@ -50,12 +50,12 @@ async function main(): Promise<void> {
 
   console.log(`Connecting via bridge (socket: ${socketPath})...`)
   const transport = new StdioClientTransport({ command: 'node', args: [bridgeScript, socketPath] })
-  const client = new Client({ name: 'jobhunt-smoke-test', version: '0.1.0' })
+  const client = new Client({ name: 'applyer-smoke-test', version: '0.1.0' })
 
   try {
     await client.connect(transport)
   } catch (err) {
-    console.error(`\nFailed to connect — is the JobHunt app running? (${String(err)})`)
+    console.error(`\nFailed to connect — is the Applyer app running? (${String(err)})`)
     process.exit(1)
   }
 

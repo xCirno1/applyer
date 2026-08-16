@@ -45,7 +45,7 @@ export function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
 
   const userDataDir = app.getPath('userData')
   mkdirSync(userDataDir, { recursive: true })
-  const dbPath = join(userDataDir, 'jobhunt.db')
+  const dbPath = join(userDataDir, 'applyer.db')
 
   sqlite = new Database(dbPath)
   sqlite.pragma('journal_mode = WAL')

@@ -1,9 +1,9 @@
 {
-  "name": "jobhunt",
+  "name": "applyer",
   "version": "0.1.0",
   "description": "Local Electron app for autonomous job hunting via CLI agents (Claude Code, Codex, etc.)",
   "main": "./out/main/index.js",
-  "author": "jobhunt",
+  "author": "applyer",
   "private": true,
   "type": "module",
   "scripts": {
@@ -68,8 +68,8 @@
     "vite": "^7.3.6"
   },
   "build": {
-    "appId": "com.jobhunt.app",
-    "productName": "JobHunt",
+    "appId": "com.applyer.app",
+    "productName": "Applyer",
     "directories": {
       "output": "release"
     },

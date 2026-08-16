@@ -21,14 +21,14 @@ export function logsDir(): string {
 }
 
 export function tempDir(): string {
-  const dir = join(app.getPath('temp'), 'jobhunt-tmp')
+  const dir = join(app.getPath('temp'), 'applyer-tmp')
   mkdirSync(dir, { recursive: true })
   return dir
 }
 
 export function mcpSocketPath(): string {
   if (process.platform === 'win32') {
-    return '\\\\.\\pipe\\jobhunt-mcp'
+    return '\\\\.\\pipe\\applyer-mcp'
   }
   return join(app.getPath('userData'), 'mcp.sock')
 }

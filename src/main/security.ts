@@ -12,7 +12,7 @@ export function applyProductionCsp(): void {
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: jobhunt-file:",
+    "img-src 'self' data: applyer-file:",
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",

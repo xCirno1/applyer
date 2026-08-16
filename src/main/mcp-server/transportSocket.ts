@@ -2,7 +2,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import { createServer, type Server, type Socket } from 'net'
 import { existsSync, unlinkSync } from 'fs'
-import { createJobHuntMcpServer } from './server'
+import { createApplyerMcpServer } from './server'
 import { mcpLogger } from '../logger'
 
 /**
@@ -57,7 +57,7 @@ export function startMcpSocketServer(socketPath: string): Server {
   }
 
   const server = createServer((socket) => {
-    const mcpServer = createJobHuntMcpServer()
+    const mcpServer = createApplyerMcpServer()
     const transport = new SocketServerTransport(socket)
 
     mcpServer.connect(transport).catch((err) => {

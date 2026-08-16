@@ -13,7 +13,7 @@ import type {
   McpVerifyResult
 } from '@shared/types/ipcEvents'
 
-const SERVER_NAME = 'jobhunt'
+const SERVER_NAME = 'applyer'
 
 const ADAPTERS: Record<McpCliId, McpAdapter> = {
   claude: claudeAdapter,
@@ -69,7 +69,7 @@ export async function verifyMcpConnection(): Promise<McpVerifyResult> {
     args: invocation.args,
     env: invocation.env ? { ...getDefaultEnvironment(), ...invocation.env } : undefined
   })
-  const client = new Client({ name: 'jobhunt-onboarding-check', version: '0.1.0' })
+  const client = new Client({ name: 'applyer-onboarding-check', version: '0.1.0' })
 
   try {
     await client.connect(transport)

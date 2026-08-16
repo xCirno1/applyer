@@ -11,7 +11,7 @@ import { migrate } from 'drizzle-orm/better-sqlite3/migrator'
 import { resolve, dirname } from 'path'
 import { mkdirSync } from 'fs'
 
-const dbPath = process.argv[2] ?? resolve(process.cwd(), '.tmp/jobhunt.smoke.db')
+const dbPath = process.argv[2] ?? resolve(process.cwd(), '.tmp/applyer.smoke.db')
 mkdirSync(dirname(dbPath), { recursive: true })
 
 const sqlite = new Database(dbPath)

@@ -23,7 +23,7 @@ export default function McpSetup({ onFinish, onBack }: { onFinish: () => void; o
       <div>
         <h1 className="text-[16px] font-medium text-text">Connect your agent</h1>
         <p className="mt-1 text-[13px] text-text-muted">
-          JobHunt exposes tools (search, queue, etc.) over MCP — a standard way for coding agents to call into an
+          Applyer exposes tools (search, queue, etc.) over MCP — a standard way for coding agents to call into an
           app. Set this up once per agent, either automatically or by copying the command below into its config.
         </p>
       </div>

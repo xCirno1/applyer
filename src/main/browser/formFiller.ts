@@ -77,9 +77,9 @@ async function collectFields(page: Page): Promise<FieldDescriptor[]> {
       const name = el.getAttribute('name')
       if (name) return `[name="${CSS.escape(name)}"]`
       // Last resort: a data attribute we tag onto the element ourselves.
-      const tagged = `jobhunt-field-${Math.random().toString(36).slice(2)}`
-      el.setAttribute('data-jobhunt-field', tagged)
-      return `[data-jobhunt-field="${tagged}"]`
+      const tagged = `applyer-field-${Math.random().toString(36).slice(2)}`
+      el.setAttribute('data-applyer-field', tagged)
+      return `[data-applyer-field="${tagged}"]`
     }
 
     const results: FieldDescriptor[] = []

@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
 import Tag from '../../components/ui/Tag'
+import Dropdown from '../../components/ui/Dropdown'
 import type { ActivityLevel, ActivityLogEntry } from '@shared/types/activity'
 
 const PAGE_SIZE = 50
@@ -59,17 +60,14 @@ export default function LogsPage(): ReactElement {
     <div className="flex h-full flex-col bg-canvas-inset">
       <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border-soft bg-canvas px-3">
         <span className="text-[12px] font-medium text-text">Activity Log</span>
-        <select
+        <Dropdown
+          size="sm"
+          className="w-32"
+          ariaLabel="Filter by level"
+          options={LEVEL_OPTIONS}
           value={level}
-          onChange={(e) => setLevel(e.target.value as ActivityLevel | '')}
-          className="h-6 cursor-pointer border border-border bg-canvas-soft px-1.5 text-[12px] text-text outline-none focus:border-accent"
-        >
-          {LEVEL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          onChange={(v) => setLevel(v as ActivityLevel | '')}
+        />
         <span className="ml-auto text-[11px] text-text-faint">{total} entries</span>
       </div>
 

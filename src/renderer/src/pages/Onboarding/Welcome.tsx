@@ -5,9 +5,9 @@ export default function Welcome({ onNext }: { onNext: () => void }): ReactElemen
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-[16px] font-medium text-text">Welcome to JobHunt</h1>
+        <h1 className="text-[16px] font-medium text-text">Welcome to Applyer</h1>
         <p className="mt-1 text-[13px] text-text-muted">
-          JobHunt turns a coding assistant running in the built-in terminal (Claude Code, Codex, or any other
+          Applyer turns a coding assistant running in the built-in terminal (Claude Code, Codex, or any other
           MCP-capable agent) into a job-search assistant. Here&apos;s the shape of it:
         </p>
       </div>

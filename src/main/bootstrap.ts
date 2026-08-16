@@ -2,7 +2,7 @@ import { app, BrowserWindow } from 'electron'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import './logger'
 import { appLogger } from './logger'
-import { registerJobHuntFileProtocol } from './protocols'
+import { registerApplyerFileProtocol } from './protocols'
 import { createMainWindow } from './window'
 import { initDatabase, closeDatabase } from './db'
 import { registerTerminalIpc } from './ipc/terminal'
@@ -23,13 +23,13 @@ import { reconcileOrphanedBlockedJobs } from './jobActions'
 let mcpSocketServer: ReturnType<typeof startMcpSocketServer> | undefined
 
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.jobhunt.app')
+  electronApp.setAppUserModelId('com.applyer.app')
 
   if (!is.dev) {
     applyProductionCsp()
   }
 
-  registerJobHuntFileProtocol()
+  registerApplyerFileProtocol()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

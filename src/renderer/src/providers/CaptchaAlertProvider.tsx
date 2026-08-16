@@ -26,7 +26,7 @@ export default function CaptchaAlertProvider({ children }: { children: ReactNode
   const blockedJobIds = useMemo(() => new Set(pending.map((p) => p.jobId)), [pending])
 
   return (
-    <CaptchaAlertContext.Provider value={{ blockedJobIds }}>
+    <CaptchaAlertContext.Provider value={{ blockedJobIds, pending }}>
       <CaptchaAlertBanner pending={pending} onRemove={removeEntry} />
       {children}
     </CaptchaAlertContext.Provider>

@@ -16,8 +16,8 @@ import { listJobsTool } from './tools/listJobs'
 import { flagFailureTool } from './tools/flagFailure'
 import { fillApplicationTool } from './tools/fillApplication'
 
-export function createJobHuntMcpServer(): McpServer {
-  const server = new McpServer({ name: 'jobhunt', version: '0.1.0' })
+export function createApplyerMcpServer(): McpServer {
+  const server = new McpServer({ name: 'applyer', version: '0.1.0' })
 
   server.registerTool(
     'get_profile',

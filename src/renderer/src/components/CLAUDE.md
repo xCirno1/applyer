@@ -17,7 +17,9 @@ The main screen is a single panel-based workspace (`pages/Workspace/WorkspacePag
 
 | Component | Path | Notes |
 |---|---|---|
-| `TerminalPane` | `terminal/TerminalPane.tsx` | xterm.js view bound 1:1 to a main-process `node-pty` session via `window.api.terminal`. Owns its own session lifecycle (create on mount, dispose on unmount). Reused inside `workspace/WorkspaceDock.tsx`'s Terminal tab (kept mounted via CSS visibility across dock-tab switches so the pty session survives). |
+| `TerminalPane` | `terminal/TerminalPane.tsx` | xterm.js view bound 1:1 to a main-process `node-pty` session via `window.api.terminal`. Owns its own session lifecycle (create on mount, dispose on unmount), so multiple instances are simply multiple independent sessions. Also answers the terminal-side OSC 10/11 foreground/background color queries CLI agents (Codex, etc.) use to auto-detect light/dark, and re-pushes the resolved theme colors (background/foreground/cursor) into the live xterm instance whenever the app's theme changes. |
+| `TerminalGroup` | `terminal/TerminalGroup.tsx` | One or more concurrent `TerminalPane` sessions as sub-tabs (state via `useTerminalTabs`) — every open tab stays mounted (CSS visibility) so switching between them doesn't kill a session, while closing one actually unmounts it (disposing the pty). Empty state ("No terminals open") + New terminal button when the last tab is closed. Used by `workspace/WorkspaceDock.tsx`'s Terminal tab in place of a single `TerminalPane`. |
+| `TerminalTabBar` | `terminal/TerminalTabBar.tsx` | The sub-tab strip `TerminalGroup` renders above its sessions — per-tab close button (visible on hover), "+" to add a new terminal (disabled past `MAX_TERMINALS`). |
 | `Button` | `ui/Button.tsx` | Variants: primary/secondary/danger/ghost. Sizes: sm (h-6) / md (h-7). `loading` prop shows a spinner and disables the button — the standard pattern for any action that hits IPC. |
 | `Spinner` | `ui/Spinner.tsx` | Small inline spinner, used by `Button` and standalone. |
 | `Skeleton` | `ui/Skeleton.tsx` | Pulsing placeholder block for loading states (board columns, boot screen). |

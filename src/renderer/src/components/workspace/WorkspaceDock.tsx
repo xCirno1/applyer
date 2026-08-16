@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import TerminalPane from '../terminal/TerminalPane'
+import TerminalGroup from '../terminal/TerminalGroup'
 import LogsPage from '../../pages/Logs/LogsPage'
 import type { DockTab } from './workspaceLayout'
 
@@ -9,12 +9,12 @@ const TABS: { id: DockTab; label: string }[] = [
 ]
 
 /**
- * The bottom dock: terminal and activity log as tabs of one height-
- * constrained region rather than two full pages, since only one is being
- * read at a time. Both stay mounted across tab switches (CSS visibility, not
- * conditional render) — the terminal owns a live pty session that a remount
- * would kill, and keeping Logs alongside it means switching back doesn't
- * re-fetch.
+ * The bottom dock: terminal (itself a `TerminalGroup` of one or more
+ * concurrent sessions) and activity log as tabs of one height-constrained
+ * region rather than two full pages, since only one is being read at a time.
+ * Both stay mounted across tab switches (CSS visibility, not conditional
+ * render) — each terminal owns a live pty session that a remount would kill,
+ * and keeping Logs alongside it means switching back doesn't re-fetch.
  */
 export default function WorkspaceDock({
   tab,
@@ -53,9 +53,7 @@ export default function WorkspaceDock({
 
       <div className="min-h-0 flex-1">
         <div className={tab === 'terminal' ? 'h-full' : 'hidden'}>
-          <div className="h-full bg-canvas-raised">
-            <TerminalPane />
-          </div>
+          <TerminalGroup />
         </div>
         <div className={tab === 'logs' ? 'h-full' : 'hidden'}>
           <LogsPage />

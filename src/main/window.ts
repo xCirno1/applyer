@@ -7,6 +7,15 @@ import { is } from '@electron-toolkit/utils'
 // computed relative to its own location. app.getAppPath() is stable.
 const outDir = join(app.getAppPath(), 'out')
 
+// Windows/macOS packaged builds already carry the icon baked into the
+// exe/app bundle (from build.icon in package.json) — this only matters for
+// the taskbar icon in dev and on Linux, which reads it from BrowserWindow's
+// `icon` option at runtime. Same packaged-vs-dev resource lookup as
+// mcpConfigWriter's bridge script.
+const iconPath = app.isPackaged
+  ? join(process.resourcesPath, 'icon.png')
+  : join(app.getAppPath(), 'resources', 'icon.png')
+
 export function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1280,
@@ -16,6 +25,7 @@ export function createMainWindow(): BrowserWindow {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#1a1d23',
+    icon: iconPath,
     webPreferences: {
       preload: join(outDir, 'preload/index.cjs'),
       contextIsolation: true,

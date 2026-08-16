@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, type ReactElement } from 'react'
+import logo from '../../assets/logo.png'
 import KanbanBoard from '../../components/board/KanbanBoard'
 import PipelineOverview from '../../components/board/PipelineOverview'
 import WorkspaceDock from '../../components/workspace/WorkspaceDock'
 import ResizeHandle from '../../components/ui/ResizeHandle'
-import Button from '../../components/ui/Button'
+import ViewMenu from '../../components/workspace/ViewMenu'
 import { useWorkspaceLayout } from '../../components/workspace/useWorkspaceLayout'
 import { DOCK_MAX_PX, DOCK_MIN_PX, SIDEBAR_MAX_PX, SIDEBAR_MIN_PX } from '../../components/workspace/workspaceLayout'
 
@@ -54,41 +55,30 @@ export default function WorkspacePage({ onOpenSettings }: { onOpenSettings: () =
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex h-nav shrink-0 items-center gap-3 border-b border-border bg-canvas px-3">
-        <span className="text-[13px] font-medium text-text">Applyer</span>
+      <header className="flex h-nav shrink-0 items-center gap-2 border-b border-border bg-canvas px-3">
+        <img src={logo} alt="Applyer" className="h-5 w-5 shrink-0" draggable={false} />
+        <ViewMenu
+          items={[
+            { key: 'overview', label: 'Overview', checked: layout.sidebarVisible, onToggle: () => setSidebarVisible(!layout.sidebarVisible) },
+            { key: 'console', label: 'Console', checked: layout.dockVisible, onToggle: () => setDockVisible(!layout.dockVisible) }
+          ]}
+        />
 
         <div className="ml-auto flex items-center gap-1.5">
-          <Button
-            size="sm"
-            variant={layout.sidebarVisible ? 'secondary' : 'ghost'}
-            aria-pressed={layout.sidebarVisible}
-            onClick={() => setSidebarVisible(!layout.sidebarVisible)}
-          >
-            Overview
-          </Button>
-          <Button
-            size="sm"
-            variant={layout.dockVisible ? 'secondary' : 'ghost'}
-            aria-pressed={layout.dockVisible}
-            onClick={() => setDockVisible(!layout.dockVisible)}
-          >
-            Console
-          </Button>
-          <div className="mx-0.5 h-4 w-px bg-border-soft" />
           <button
             onClick={onOpenSettings}
             title="Settings"
             aria-label="Settings"
             className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
           >
-            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
-              <circle cx="7.5" cy="7.5" r="2.2" stroke="currentColor" strokeWidth="1.2" />
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
               <path
-                d="M7.5 1.5v1.4M7.5 12.1v1.4M13.5 7.5h-1.4M2.9 7.5H1.5M11.6 3.4l-1 1M4.4 10.1l-1 1M11.6 11.6l-1-1M4.4 4.9l-1-1"
+                d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
                 stroke="currentColor"
-                strokeWidth="1.2"
-                strokeLinecap="round"
+                strokeWidth="1.8"
+                strokeLinejoin="round"
               />
+              <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
             </svg>
           </button>
         </div>

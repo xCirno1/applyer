@@ -23,8 +23,13 @@ export default function OnboardingFlow({ onComplete }: { onComplete: () => void 
   const goto = (s: Step): void => setStep(s)
 
   return (
-    <div className="flex h-full items-center justify-center overflow-y-auto bg-canvas-inset p-6">
-      <div className="w-full max-w-2xl border border-border bg-canvas p-5 shadow-pop">
+    <div className="flex h-full flex-col items-center overflow-y-auto bg-canvas-inset p-6">
+      {/* my-auto (not justify-center on the scroll container) so tall steps
+          stay top-anchored and fully scrollable instead of being clipped
+          equally at both edges — centering an overflowing flex child via
+          justify-content leaves the portion before the start edge
+          unreachable by scroll in some browsers. */}
+      <div className="my-auto w-full max-w-2xl border border-border bg-canvas p-5 shadow-pop">
         {step === 'welcome' && <Welcome onNext={() => goto('storage')} />}
         {step === 'storage' && (
           <StorageModeChoice onNext={() => goto('profile')} onBack={() => goto('welcome')} />

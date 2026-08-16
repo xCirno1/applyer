@@ -1,0 +1,100 @@
+/** Channel names shared between preload and renderer for typed IPC. */
+export const IPC = {
+  terminal: {
+    create: 'terminal:create',
+    write: 'terminal:write',
+    resize: 'terminal:resize',
+    dispose: 'terminal:dispose',
+    onData: 'terminal:data',
+    onExit: 'terminal:exit'
+  },
+  jobs: {
+    list: 'jobs:list',
+    markSubmitted: 'jobs:markSubmitted',
+    retry: 'jobs:retry',
+    remove: 'jobs:remove',
+    onUpdated: 'jobs:updated'
+  },
+  profile: {
+    get: 'profile:get',
+    save: 'profile:save',
+    uploadDocument: 'profile:uploadDocument',
+    deleteDocument: 'profile:deleteDocument'
+  },
+  onboarding: {
+    getStatus: 'onboarding:getStatus',
+    setStorageMode: 'onboarding:setStorageMode',
+    complete: 'onboarding:complete',
+    detectMcpConfigs: 'onboarding:detectMcpConfigs',
+    getMcpSnippet: 'onboarding:getMcpSnippet',
+    autoConfigureMcp: 'onboarding:autoConfigureMcp',
+    verifyMcpConnection: 'onboarding:verifyMcpConnection'
+  },
+  browserControl: {
+    resumeTask: 'browser:resumeTask',
+    cancelTask: 'browser:cancelTask',
+    onCaptchaDetected: 'browser:captchaDetected',
+    onCaptchaResolved: 'browser:captchaResolved'
+  },
+  settings: {
+    changeStorageMode: 'settings:changeStorageMode'
+  },
+  logs: {
+    list: 'logs:list'
+  }
+} as const
+
+export interface TerminalCreateOptions {
+  cols: number
+  rows: number
+}
+
+export interface TerminalCreateResult {
+  sessionId: string
+}
+
+export type McpCliId = 'claude' | 'codex'
+
+export interface McpConfigDetection {
+  cli: McpCliId
+  configPath: string
+  exists: boolean
+  alreadyConfigured: boolean
+}
+
+export interface McpAutoConfigureResult {
+  success: boolean
+  backupPath?: string
+  error?: string
+}
+
+export interface McpVerifyResult {
+  success: boolean
+  tools?: string[]
+  error?: string
+}
+
+export interface OnboardingStatus {
+  completed: boolean
+  storageMode: 'encrypted' | 'plaintext' | null
+  encryptionAvailable: boolean
+}
+
+export interface UploadDocumentRequest {
+  kind: 'resume' | 'cover_letter' | 'other'
+  filename: string
+  mimeType: string
+  data: ArrayBuffer
+}
+
+export interface CaptchaDetectedPayload {
+  taskId: string
+  jobId: string
+  jobTitle: string
+  company: string
+}
+
+export interface CaptchaResolvedPayload {
+  taskId: string
+  jobId: string
+}

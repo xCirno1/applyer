@@ -1,0 +1,17 @@
+node_modules
+out
+dist
+dist-electron
+release
+*.log
+*.tsbuildinfo
+.DS_Store
+.env
+.env.local
+.tmp
+
+# app runtime data if ever generated inside the repo during local testing
+*.db
+*.db-journal
+*.db-wal
+*.db-shm

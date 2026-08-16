@@ -1,0 +1,72 @@
+/*
+ * Design tokens — single source of truth for color/shadow/spacing primitives.
+ * Declared once via @theme (Tailwind v4 generates bg-canvas-inset, text-text,
+ * shadow-pop, etc. from these names), with the actual color values living in
+ * plain :root rules below so they can still be swapped at runtime for
+ * light/dark — Tailwind only needs the variable declared once to emit the
+ * utility; it doesn't care that the value changes later.
+ * Components must reference these via the generated utilities, never a raw
+ * hex/px value, so the whole app can be re-themed by editing only this file.
+ */
+
+@theme {
+  --color-canvas-inset: hsl(220 14% 10%);
+  --color-canvas: hsl(220 13% 13%);
+  --color-canvas-soft: hsl(220 12% 16%);
+  --color-canvas-raised: hsl(220 11% 19%);
+
+  --color-border: hsl(220 10% 27%);
+  --color-border-soft: hsl(220 10% 22%);
+
+  --color-text: hsl(220 15% 92%);
+  --color-text-muted: hsl(220 10% 68%);
+  --color-text-faint: hsl(220 8% 48%);
+
+  --color-accent: hsl(217 91% 60%);
+  --color-accent-fg: hsl(220 15% 98%);
+
+  --color-success: hsl(142 71% 45%);
+  --color-success-fg: hsl(220 15% 98%);
+  --color-warning: hsl(38 92% 50%);
+  --color-warning-fg: hsl(220 13% 13%);
+  --color-danger: hsl(0 72% 56%);
+  --color-danger-fg: hsl(220 15% 98%);
+
+  --shadow-pop: 0 4px 16px -4px rgb(0 0 0 / 0.45), 0 1px 0 0 rgb(0 0 0 / 0.2);
+  --shadow-overlay: 0 16px 48px -12px rgb(0 0 0 / 0.55), 0 1px 0 0 rgb(0 0 0 / 0.2);
+
+  --spacing-nav: 2.75rem;
+}
+
+/* Light theme override — same ramp relationship, inverted lightness direction. */
+:root[data-theme='light'] {
+  --color-canvas-inset: hsl(220 20% 91%);
+  --color-canvas: hsl(0 0% 100%);
+  --color-canvas-soft: hsl(220 25% 97%);
+  --color-canvas-raised: hsl(0 0% 100%);
+
+  --color-border: hsl(220 15% 84%);
+  --color-border-soft: hsl(220 15% 90%);
+
+  --color-text: hsl(220 25% 12%);
+  --color-text-muted: hsl(220 10% 40%);
+  --color-text-faint: hsl(220 8% 58%);
+
+  --color-accent: hsl(217 91% 48%);
+  --color-accent-fg: hsl(0 0% 100%);
+
+  --color-success: hsl(142 65% 34%);
+  --color-success-fg: hsl(0 0% 100%);
+  --color-warning: hsl(32 90% 40%);
+  --color-warning-fg: hsl(0 0% 100%);
+  --color-danger: hsl(0 65% 45%);
+  --color-danger-fg: hsl(0 0% 100%);
+
+  --shadow-pop: 0 4px 16px -4px rgb(0 0 0 / 0.14), 0 1px 0 0 rgb(0 0 0 / 0.04);
+  --shadow-overlay: 0 16px 48px -12px rgb(0 0 0 / 0.22), 0 1px 0 0 rgb(0 0 0 / 0.04);
+}
+
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-text);
+}

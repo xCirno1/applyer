@@ -1,0 +1,254 @@
+import { randomUUID } from 'crypto'
+import { and, desc, eq, isNotNull, like, or, sql, type SQL } from 'drizzle-orm'
+import { getDb } from '../index'
+import { jobs } from '../schema'
+import type { JobRecord, JobStatus, ListJobsQuery, ListJobsResult, ApplyMethod } from '@shared/types/job'
+import { LIST_JOBS_DEFAULT_LIMIT, LIST_JOBS_MAX_LIMIT } from '@shared/constants'
+
+type JobRow = typeof jobs.$inferSelect
+
+function toJobRecord(row: JobRow): JobRecord {
+  return {
+    id: row.id,
+    externalId: row.externalId,
+    source: row.source,
+    title: row.title,
+    company: row.company,
+    location: row.location,
+    url: row.url,
+    description: row.description,
+    salaryRange: row.salaryRange,
+    status: row.status,
+    matchScore: row.matchScore,
+    matchReasons: row.matchReasons,
+    applicationUrl: row.applicationUrl,
+    applyMethod: row.applyMethod,
+    screenshotPath: row.screenshotPath,
+    failureTag: row.failureTag,
+    failureMessage: row.failureMessage,
+    blockingReason: row.blockingReason,
+    blockingTaskId: row.blockingTaskId,
+    queuedAt: row.queuedAt,
+    filledAt: row.filledAt,
+    submittedAt: row.submittedAt,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt
+  }
+}
+
+const nowIso = (): string => new Date().toISOString()
+
+export interface QueueJobInput {
+  title: string
+  company: string
+  url: string
+  location?: string | null
+  source?: string | null
+  description?: string | null
+  salaryRange?: string | null
+  matchScore?: number | null
+  matchReasons?: string[] | null
+  applicationUrl?: string | null
+  applyMethod?: ApplyMethod | null
+}
+
+export function queueJob(input: QueueJobInput): { job: JobRecord; wasExisting: boolean } {
+  const db = getDb()
+  const existing = db.select().from(jobs).where(eq(jobs.url, input.url)).get()
+  if (existing) {
+    return { job: toJobRecord(existing), wasExisting: true }
+  }
+
+  const id = randomUUID()
+  const now = nowIso()
+  db.insert(jobs)
+    .values({
+      id,
+      title: input.title,
+      company: input.company,
+      url: input.url,
+      location: input.location ?? null,
+      source: input.source ?? null,
+      description: input.description ?? null,
+      salaryRange: input.salaryRange ?? null,
+      status: 'queued',
+      matchScore: input.matchScore ?? null,
+      matchReasons: input.matchReasons ?? null,
+      applicationUrl: input.applicationUrl ?? null,
+      applyMethod: input.applyMethod ?? null,
+      queuedAt: now,
+      createdAt: now,
+      updatedAt: now
+    })
+    .run()
+
+  const row = db.select().from(jobs).where(eq(jobs.id, id)).get()
+  if (!row) throw new Error('Failed to read back inserted job')
+  return { job: toJobRecord(row), wasExisting: false }
+}
+
+export function getJob(id: string): JobRecord | null {
+  const row = getDb().select().from(jobs).where(eq(jobs.id, id)).get()
+  return row ? toJobRecord(row) : null
+}
+
+export function getJobByUrl(url: string): JobRecord | null {
+  const row = getDb().select().from(jobs).where(eq(jobs.url, url)).get()
+  return row ? toJobRecord(row) : null
+}
+
+export function listJobs(query: ListJobsQuery): ListJobsResult {
+  const db = getDb()
+  const limit = Math.min(Math.max(1, query.limit ?? LIST_JOBS_DEFAULT_LIMIT), LIST_JOBS_MAX_LIMIT)
+  const offset = Math.max(0, query.offset ?? 0)
+
+  const conditions: SQL<unknown>[] = []
+  if (query.status) conditions.push(eq(jobs.status, query.status))
+  if (query.source) conditions.push(eq(jobs.source, query.source))
+  if (query.search?.trim()) {
+    const pattern = `%${query.search.trim().replace(/[%_]/g, (c) => `\\${c}`)}%`
+    const searchCondition = or(like(jobs.title, pattern), like(jobs.company, pattern))
+    if (searchCondition) conditions.push(searchCondition)
+  }
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined
+
+  const orderBy =
+    query.sortBy === 'matchScore'
+      ? [sql`${jobs.matchScore} IS NULL`, desc(jobs.matchScore), desc(jobs.updatedAt)]
+      : [desc(jobs.updatedAt)]
+
+  const rows = db.select().from(jobs).where(whereClause).orderBy(...orderBy).limit(limit).offset(offset).all()
+
+  const totalRow = db
+    .select({ count: sql<number>`count(*)` })
+    .from(jobs)
+    .where(whereClause)
+    .get()
+
+  return {
+    jobs: rows.map(toJobRecord),
+    total: totalRow?.count ?? 0
+  }
+}
+
+const LEGAL_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
+  queued: ['filled', 'failed'],
+  filled: ['submitted', 'failed'],
+  submitted: [],
+  failed: ['queued']
+}
+
+class IllegalTransitionError extends Error {
+  constructor(from: JobStatus, to: JobStatus) {
+    super(`Illegal job state transition: ${from} -> ${to}`)
+    this.name = 'IllegalTransitionError'
+  }
+}
+
+function assertLegalTransition(from: JobStatus, to: JobStatus): void {
+  if (!LEGAL_TRANSITIONS[from].includes(to)) {
+    throw new IllegalTransitionError(from, to)
+  }
+}
+
+export function setFilled(id: string, meta: { screenshotPath?: string | null } = {}): JobRecord {
+  const db = getDb()
+  const current = getJob(id)
+  if (!current) throw new Error(`Job not found: ${id}`)
+  assertLegalTransition(current.status, 'filled')
+
+  const now = nowIso()
+  db.update(jobs)
+    .set({
+      status: 'filled',
+      screenshotPath: meta.screenshotPath ?? current.screenshotPath,
+      filledAt: now,
+      blockingReason: null,
+      blockingTaskId: null,
+      updatedAt: now
+    })
+    .where(eq(jobs.id, id))
+    .run()
+
+  return getJob(id) as JobRecord
+}
+
+export function setSubmitted(id: string): JobRecord {
+  const db = getDb()
+  const current = getJob(id)
+  if (!current) throw new Error(`Job not found: ${id}`)
+  assertLegalTransition(current.status, 'submitted')
+
+  const now = nowIso()
+  db.update(jobs).set({ status: 'submitted', submittedAt: now, updatedAt: now }).where(eq(jobs.id, id)).run()
+  return getJob(id) as JobRecord
+}
+
+export function setFailed(id: string, failureTag: string, failureMessage?: string | null): JobRecord {
+  const db = getDb()
+  const current = getJob(id)
+  if (!current) throw new Error(`Job not found: ${id}`)
+  assertLegalTransition(current.status, 'failed')
+
+  const now = nowIso()
+  db.update(jobs)
+    .set({
+      status: 'failed',
+      failureTag,
+      failureMessage: failureMessage ?? null,
+      blockingReason: null,
+      blockingTaskId: null,
+      updatedAt: now
+    })
+    .where(eq(jobs.id, id))
+    .run()
+
+  return getJob(id) as JobRecord
+}
+
+export function retry(id: string): JobRecord {
+  const db = getDb()
+  const current = getJob(id)
+  if (!current) throw new Error(`Job not found: ${id}`)
+  assertLegalTransition(current.status, 'queued')
+
+  const now = nowIso()
+  db.update(jobs)
+    .set({
+      status: 'queued',
+      failureTag: null,
+      failureMessage: null,
+      updatedAt: now
+    })
+    .where(eq(jobs.id, id))
+    .run()
+
+  return getJob(id) as JobRecord
+}
+
+export function setBlocking(id: string, blockingReason: string, blockingTaskId: string): void {
+  getDb()
+    .update(jobs)
+    .set({ blockingReason, blockingTaskId, updatedAt: nowIso() })
+    .where(eq(jobs.id, id))
+    .run()
+}
+
+export function clearBlocking(id: string): void {
+  getDb()
+    .update(jobs)
+    .set({ blockingReason: null, blockingTaskId: null, updatedAt: nowIso() })
+    .where(eq(jobs.id, id))
+    .run()
+}
+
+export function removeJob(id: string): void {
+  getDb().delete(jobs).where(and(eq(jobs.id, id))).run()
+}
+
+/** Jobs left with a stale blockingTaskId from a previous run — the in-memory captcha gate that owned it doesn't survive a restart. */
+export function listBlockedJobs(): JobRecord[] {
+  return getDb().select().from(jobs).where(isNotNull(jobs.blockingTaskId)).all().map(toJobRecord)
+}
+
+export { IllegalTransitionError }

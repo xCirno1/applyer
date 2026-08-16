@@ -1,7 +1,8 @@
 import * as pty from 'node-pty'
 import { randomUUID } from 'crypto'
-import os from 'os'
 import { appLogger } from '../logger'
+import { agentWorkspaceDir } from '../config/paths'
+import { getAutoStartCommand } from '../db/repositories/settingsRepository'
 
 export interface PtySession {
   id: string
@@ -30,7 +31,7 @@ export function createSession(
     name: 'xterm-256color',
     cols: Math.max(1, Math.trunc(cols) || 80),
     rows: Math.max(1, Math.trunc(rows) || 24),
-    cwd: os.homedir(),
+    cwd: agentWorkspaceDir(),
     env: process.env as Record<string, string>
   })
 
@@ -42,6 +43,15 @@ export function createSession(
 
   sessions.set(id, { id, process: ptyProcess })
   appLogger.info(`Terminal session ${id} started (shell: ${shell})`)
+
+  const autoStartCommand = getAutoStartCommand()
+  if (autoStartCommand) {
+    // Fed to the shell's input queue right after spawn — the OS-level pty
+    // buffers it, so it's picked up once the shell is ready to read a line
+    // even though nothing has been typed by the user yet.
+    ptyProcess.write(`${autoStartCommand}\r`)
+  }
+
   return id
 }
 

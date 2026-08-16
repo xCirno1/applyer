@@ -37,7 +37,9 @@ export const IPC = {
     onCaptchaResolved: 'browser:captchaResolved'
   },
   settings: {
-    changeStorageMode: 'settings:changeStorageMode'
+    changeStorageMode: 'settings:changeStorageMode',
+    getAutoStartCommand: 'settings:getAutoStartCommand',
+    setAutoStartCommand: 'settings:setAutoStartCommand'
   },
   logs: {
     list: 'logs:list'
@@ -54,6 +56,13 @@ export interface TerminalCreateResult {
 }
 
 export type McpCliId = 'claude' | 'codex'
+
+/**
+ * Shell command line to type into a freshly opened terminal session, e.g.
+ * `claude`, `codex`, or any other agent CLI the user has installed
+ * (`aider`, `opencode --model ...`, etc). Empty string means disabled.
+ */
+export type AutoStartCommand = string
 
 export interface McpConfigDetection {
   cli: McpCliId

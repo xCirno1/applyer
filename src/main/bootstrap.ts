@@ -18,6 +18,7 @@ import { applyProductionCsp } from './security'
 import { startMcpSocketServer } from './mcp-server/transportSocket'
 import { closeAllBrowsers } from './browser/browserController'
 import { mcpSocketPath } from './config/paths'
+import { writeAgentInstructions } from './config/agentInstructions'
 import { reconcileOrphanedBlockedJobs } from './jobActions'
 
 let mcpSocketServer: ReturnType<typeof startMcpSocketServer> | undefined
@@ -44,6 +45,7 @@ app.whenReady().then(() => {
   }
 
   reconcileOrphanedBlockedJobs()
+  writeAgentInstructions()
 
   registerJobsIpc()
   registerProfileIpc()

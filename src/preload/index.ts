@@ -7,6 +7,7 @@ import {
   type McpConfigDetection,
   type McpAutoConfigureResult,
   type McpVerifyResult,
+  type AutoStartCommand,
   type OnboardingStatus,
   type UploadDocumentRequest,
   type CaptchaDetectedPayload,
@@ -96,7 +97,12 @@ const browserControlApi = {
 
 const settingsApi = {
   changeStorageMode: (mode: StorageMode): Promise<{ ok: boolean; error?: string }> =>
-    ipcRenderer.invoke(IPC.settings.changeStorageMode, { mode })
+    ipcRenderer.invoke(IPC.settings.changeStorageMode, { mode }),
+  getAutoStartCommand: (): Promise<AutoStartCommand> => ipcRenderer.invoke(IPC.settings.getAutoStartCommand),
+  setAutoStartCommand: (
+    command: AutoStartCommand
+  ): Promise<{ ok: boolean; command?: AutoStartCommand; error?: string }> =>
+    ipcRenderer.invoke(IPC.settings.setAutoStartCommand, { command })
 }
 
 const logsApi = {

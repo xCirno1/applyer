@@ -26,6 +26,18 @@ export function tempDir(): string {
   return dir
 }
 
+// Dedicated cwd for the embedded terminal — NOT the user's home directory —
+// so the project-scoped CLAUDE.md/AGENTS.md written by writeAgentInstructions()
+// only steers agent sessions started from Applyer's terminal, rather than
+// leaking applyer-specific tool guidance into the user's other, unrelated
+// Claude Code/Codex projects (which would happen with the user-level
+// ~/.claude/CLAUDE.md or ~/.codex/AGENTS.md memory files).
+export function agentWorkspaceDir(): string {
+  const dir = join(app.getPath('userData'), 'workspace')
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
+
 export function mcpSocketPath(): string {
   if (process.platform === 'win32') {
     return '\\\\.\\pipe\\applyer-mcp'

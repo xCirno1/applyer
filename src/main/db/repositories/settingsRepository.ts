@@ -2,9 +2,11 @@ import { eq } from 'drizzle-orm'
 import { getDb } from '../index'
 import { appSettings } from '../schema'
 import type { StorageMode } from '@shared/types/profile'
+import type { AutoStartCommand } from '@shared/types/ipcEvents'
 
 const STORAGE_MODE_KEY = 'storage_mode'
 const ONBOARDING_COMPLETED_KEY = 'onboarding_completed'
+const AUTO_START_COMMAND_KEY = 'auto_start_command'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -34,4 +36,12 @@ export function isOnboardingCompleted(): boolean {
 
 export function markOnboardingCompleted(): void {
   setSetting(ONBOARDING_COMPLETED_KEY, '1')
+}
+
+export function getAutoStartCommand(): AutoStartCommand {
+  return getSetting(AUTO_START_COMMAND_KEY) ?? ''
+}
+
+export function setAutoStartCommand(command: AutoStartCommand): void {
+  setSetting(AUTO_START_COMMAND_KEY, command)
 }

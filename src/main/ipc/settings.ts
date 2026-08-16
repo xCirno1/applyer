@@ -1,11 +1,19 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
-import { getStorageMode, setStorageMode } from '../db/repositories/settingsRepository'
+import {
+  getStorageMode,
+  setStorageMode,
+  getAutoStartCommand,
+  setAutoStartCommand
+} from '../db/repositories/settingsRepository'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
 import { isEncryptionAvailable } from '../db/encryption'
 import { logActivity } from '../db/repositories/activityLogRepository'
 import type { StorageMode } from '@shared/types/profile'
+import type { AutoStartCommand } from '@shared/types/ipcEvents'
+
+const AUTO_START_COMMAND_MAX_LENGTH = 500
 
 export function registerSettingsIpc(): void {
   ipcMain.handle(IPC.settings.changeStorageMode, (_event, { mode }: { mode: StorageMode }) => {
@@ -43,5 +51,24 @@ export function registerSettingsIpc(): void {
       logActivity('error', 'Storage mode change failed', { error: String(err) })
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
+  })
+
+  ipcMain.handle(IPC.settings.getAutoStartCommand, (): AutoStartCommand => getAutoStartCommand())
+
+  ipcMain.handle(IPC.settings.setAutoStartCommand, (_event, { command }: { command: unknown }) => {
+    if (typeof command !== 'string') {
+      return { ok: false, error: 'Invalid command.' }
+    }
+    // Strip newlines/carriage returns rather than rejecting them outright —
+    // this is typed straight into a pty on session start, so a stray
+    // newline would silently turn into "run this extra line too" instead
+    // of an obvious validation error.
+    const sanitized = command.replace(/[\r\n]+/g, ' ').trim()
+    if (sanitized.length > AUTO_START_COMMAND_MAX_LENGTH) {
+      return { ok: false, error: `Command is too long (max ${AUTO_START_COMMAND_MAX_LENGTH} characters).` }
+    }
+    setAutoStartCommand(sanitized)
+    logActivity('info', sanitized ? `Auto-start command set to: ${sanitized}` : 'Auto-start command disabled')
+    return { ok: true, command: sanitized }
   })
 }

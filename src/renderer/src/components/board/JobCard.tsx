@@ -20,34 +20,49 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
   const toggleSelected = useJobsStore((s) => s.toggleSelected)
   const { openContextMenu, menuNode } = useJobContextMenu()
 
+  // Select mode is simply "there's an active selection" — entered via
+  // shift+click or right-click (see useJobContextMenu's selectOnly). While
+  // it's active, a plain click toggles selection instead of opening the
+  // job, and the checkbox affordance appears; otherwise the checkbox is
+  // hidden entirely rather than hover-revealed.
+  const handleActivate = (shiftKey: boolean): void => {
+    if (shiftKey || hasSelection) {
+      toggleSelected(job.id)
+      return
+    }
+    onOpen()
+  }
+
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={onOpen}
+      onClick={(e) => handleActivate(e.shiftKey)}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          onOpen()
+          handleActivate(e.shiftKey)
         }
       }}
       onContextMenu={(e) => openContextMenu(e, job, onOpen)}
-      className={`group flex w-full cursor-pointer items-start gap-2 border border-border-soft border-l-2 px-2 py-1.5 text-left outline-none hover:border-border focus-visible:border-accent ${STATUS_ACCENT[job.status]} ${selected ? 'bg-canvas-soft' : 'bg-canvas-raised'}`}
+      className={`flex w-full cursor-pointer select-none items-start gap-2 border border-border-soft border-l-2 px-2 py-1.5 text-left outline-none hover:border-border focus-visible:border-accent ${STATUS_ACCENT[job.status]} ${selected ? 'bg-canvas-soft' : 'bg-canvas-raised'}`}
     >
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation()
-          toggleSelected(job.id)
-        }}
-        aria-pressed={selected}
-        aria-label={selected ? 'Deselect job' : 'Select job'}
-        className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center border ${
-          selected ? 'border-accent bg-accent' : 'border-border bg-canvas-raised'
-        } ${hasSelection ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`}
-      >
-        {selected && <CheckIcon />}
-      </button>
+      {hasSelection && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation()
+            toggleSelected(job.id)
+          }}
+          aria-pressed={selected}
+          aria-label={selected ? 'Deselect job' : 'Select job'}
+          className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center border ${
+            selected ? 'border-accent bg-accent' : 'border-border bg-canvas-raised'
+          }`}
+        >
+          {selected && <CheckIcon />}
+        </button>
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-start justify-between gap-2">

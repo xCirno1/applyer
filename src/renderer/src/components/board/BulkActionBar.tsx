@@ -15,11 +15,16 @@ import { useJobActions } from './useJobActions'
 export default function BulkActionBar(): ReactElement | null {
   const selectedJobIds = useJobsStore((s) => s.selectedJobIds)
   const clearSelection = useJobsStore((s) => s.clearSelection)
-  const selectedJobs = useJobsStore((s) =>
-    Object.values(s.columns)
-      .flatMap((c) => c.jobs)
-      .filter((j) => s.selectedJobIds.has(j.id))
-  )
+  // Derived in the render body rather than inside the store selector — a
+  // selector returning a fresh array/filter result on every call never
+  // stabilizes for useSyncExternalStore's snapshot check, which crashes
+  // React with "Maximum update depth exceeded" (error #185). `columns` and
+  // `selectedJobIds` themselves are stable references, so recomputing this
+  // per render is cheap and safe.
+  const columns = useJobsStore((s) => s.columns)
+  const selectedJobs = Object.values(columns)
+    .flatMap((c) => c.jobs)
+    .filter((j) => selectedJobIds.has(j.id))
   const { retryMany, excludeMany } = useJobActions()
 
   const [confirmRetryOpen, setConfirmRetryOpen] = useState(false)

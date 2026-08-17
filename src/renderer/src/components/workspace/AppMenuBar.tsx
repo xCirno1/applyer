@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import Menu, { type MenuEntry } from '../ui/Menu'
+import Menu, { MenuBar, type MenuEntry } from '../ui/Menu'
 import Modal from '../ui/Modal'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { useToast } from '../ui/useToast'
@@ -151,11 +151,13 @@ export default function AppMenuBar({
 
   return (
     <div className="flex items-center">
-      <Menu label="File" items={fileItems} />
-      <Menu label="Terminal" items={terminalItems} />
-      <Menu label="Jobs" items={jobsItems} />
-      <Menu label="View" items={viewItems} />
-      <Menu label="Help" items={helpItems} />
+      <MenuBar className="flex items-center">
+        <Menu label="File" items={fileItems} />
+        <Menu label="Terminal" items={terminalItems} />
+        <Menu label="Jobs" items={jobsItems} />
+        <Menu label="View" items={viewItems} />
+        <Menu label="Help" items={helpItems} />
+      </MenuBar>
 
       <ConfirmDialog
         open={confirmRetryAllOpen}

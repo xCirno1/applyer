@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { createContext, useContext, useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
 
 export type MenuEntry =
   | { type: 'action'; key: string; label: string; shortcut?: string; onSelect: () => void; disabled?: boolean }
@@ -59,27 +59,35 @@ export function MenuList({
   )
 }
 
+interface MenuBarContextValue {
+  activeLabel: string | null
+  openMenu: (label: string) => void
+  closeAll: () => void
+}
+
+const MenuBarContext = createContext<MenuBarContextValue | null>(null)
+
 /**
- * Single top-level menu-bar dropdown (à la VS Code's File/Edit/View...).
- * `absolute`-positioned off its own trigger, not `fixed`+measured like
- * `Dropdown`, since it only ever opens inside the header, which never clips
- * it. Generalizes what used to be `workspace/ViewMenu.tsx` (checkbox items
- * only) to also support plain actions and separators, so
- * `workspace/AppMenuBar.tsx` can build File/Terminal/Jobs/View/Help out of
- * the same component.
+ * Groups a row of top-level `Menu`s (à la VS Code's File/Edit/View... bar) so
+ * they share one "which menu is open" state instead of each managing its own.
+ * That's what makes the VS Code-style handoff possible: clicking a menu opens
+ * it and marks the bar active; while active, just *hovering* another menu's
+ * trigger switches to it with no second click. Clicking anywhere outside the
+ * whole bar (not just outside the currently-open menu) closes everything and
+ * drops back to "hover does nothing" until the next click.
  */
-export default function Menu({ label, items }: { label: string; items: MenuEntry[] }): ReactElement {
-  const [open, setOpen] = useState(false)
+export function MenuBar({ children, className }: { children: ReactNode; className?: string }): ReactElement {
+  const [activeLabel, setActiveLabel] = useState<string | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!open) return
+    if (activeLabel === null) return
     const onPointerDown = (e: PointerEvent): void => {
       if (rootRef.current?.contains(e.target as Node)) return
-      setOpen(false)
+      setActiveLabel(null)
     }
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') setActiveLabel(null)
     }
     document.addEventListener('pointerdown', onPointerDown)
     document.addEventListener('keydown', onKeyDown)
@@ -87,13 +95,47 @@ export default function Menu({ label, items }: { label: string; items: MenuEntry
       document.removeEventListener('pointerdown', onPointerDown)
       document.removeEventListener('keydown', onKeyDown)
     }
-  }, [open])
+  }, [activeLabel])
 
   return (
-    <div ref={rootRef} className="relative">
+    <MenuBarContext.Provider value={{ activeLabel, openMenu: setActiveLabel, closeAll: () => setActiveLabel(null) }}>
+      <div ref={rootRef} className={className}>
+        {children}
+      </div>
+    </MenuBarContext.Provider>
+  )
+}
+
+/**
+ * Single top-level menu-bar dropdown (à la VS Code's File/Edit/View...).
+ * `absolute`-positioned off its own trigger, not `fixed`+measured like
+ * `Dropdown`, since it only ever opens inside the header, which never clips
+ * it. Generalizes what used to be `workspace/ViewMenu.tsx` (checkbox items
+ * only) to also support plain actions and separators, so
+ * `workspace/AppMenuBar.tsx` can build File/Terminal/Jobs/View/Help out of
+ * the same component. Must be rendered inside a `MenuBar` — that's what
+ * makes hovering between already-open menus switch them without a click.
+ */
+export default function Menu({ label, items }: { label: string; items: MenuEntry[] }): ReactElement {
+  const menuBar = useContext(MenuBarContext)
+  if (!menuBar) throw new Error('Menu must be rendered inside a MenuBar')
+  const open = menuBar.activeLabel === label
+
+  const handleTriggerClick = (): void => {
+    if (open) menuBar.closeAll()
+    else menuBar.openMenu(label)
+  }
+
+  const handleTriggerMouseEnter = (): void => {
+    if (menuBar.activeLabel !== null && menuBar.activeLabel !== label) menuBar.openMenu(label)
+  }
+
+  return (
+    <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleTriggerClick}
+        onMouseEnter={handleTriggerMouseEnter}
         aria-haspopup="menu"
         aria-expanded={open}
         className={`h-6 cursor-pointer px-2 text-[12px] ${
@@ -106,7 +148,7 @@ export default function Menu({ label, items }: { label: string; items: MenuEntry
       {open && (
         <MenuList
           items={items}
-          onItemActivated={() => setOpen(false)}
+          onItemActivated={() => menuBar.closeAll()}
           className="absolute left-0 top-[calc(100%+4px)] z-50 w-max min-w-40 whitespace-nowrap border border-border bg-canvas-raised py-1 shadow-pop"
         />
       )}

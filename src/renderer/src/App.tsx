@@ -6,12 +6,15 @@ import ToastProvider from './components/ui/ToastProvider'
 import Skeleton from './components/ui/Skeleton'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
 import ThemeProvider from './providers/ThemeProvider'
+import ShortcutsProvider from './providers/ShortcutsProvider'
+import { useShortcutHandler } from './providers/ShortcutsContext'
 
 type Screen = 'workspace' | 'settings'
 type BootState = 'loading' | 'onboarding' | 'ready'
 
 function MainShell(): ReactElement {
   const [screen, setScreen] = useState<Screen>('workspace')
+  useShortcutHandler('app.toggleSettings', () => setScreen((s) => (s === 'settings' ? 'workspace' : 'settings')))
 
   return (
     <div className="flex h-full flex-col bg-canvas-inset">
@@ -56,17 +59,19 @@ export default function App(): ReactElement {
   }, [])
 
   return (
-    <ThemeProvider>
-      <ToastProvider>
-        {boot === 'loading' && (
-          <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-32 w-full" />
-          </div>
-        )}
-        {boot === 'onboarding' && <OnboardingFlow onComplete={() => setBoot('ready')} />}
-        {boot === 'ready' && <MainShell />}
-      </ToastProvider>
-    </ThemeProvider>
+    <ShortcutsProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          {boot === 'loading' && (
+            <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
+              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          )}
+          {boot === 'onboarding' && <OnboardingFlow onComplete={() => setBoot('ready')} />}
+          {boot === 'ready' && <MainShell />}
+        </ToastProvider>
+      </ThemeProvider>
+    </ShortcutsProvider>
   )
 }

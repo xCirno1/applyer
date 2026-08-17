@@ -3,6 +3,7 @@ import TerminalPane from './TerminalPane'
 import TerminalTabBar from './TerminalTabBar'
 import { useTerminalTabs } from './useTerminalTabs'
 import Button from '../ui/Button'
+import { useShortcutHandler } from '../../providers/ShortcutsContext'
 
 /**
  * Multiple concurrent terminal sessions as sub-tabs of the dock's Terminal
@@ -15,6 +16,21 @@ import Button from '../ui/Button'
  */
 export default function TerminalGroup(): ReactElement {
   const { tabs, activeId, atMax, addTerminal, closeTerminal, setActiveId } = useTerminalTabs()
+
+  const cycleTab = (direction: 1 | -1): void => {
+    if (tabs.length === 0) return
+    const currentIndex = tabs.findIndex((t) => t.id === activeId)
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + direction + tabs.length) % tabs.length
+    const next = tabs[nextIndex]
+    if (next) setActiveId(next.id)
+  }
+
+  useShortcutHandler('terminal.new', addTerminal)
+  useShortcutHandler('terminal.close', () => {
+    if (activeId) closeTerminal(activeId)
+  })
+  useShortcutHandler('terminal.nextTab', () => cycleTab(1))
+  useShortcutHandler('terminal.prevTab', () => cycleTab(-1))
 
   return (
     <div className="flex h-full min-h-0 flex-col">

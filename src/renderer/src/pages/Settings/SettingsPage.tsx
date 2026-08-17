@@ -6,6 +6,7 @@ import ConnectionsSection from './ConnectionsSection'
 import AgentSection from './AgentSection'
 import ExclusionsSection from './ExclusionsSection'
 import AppearanceSection from './AppearanceSection'
+import ShortcutsSection from './ShortcutsSection'
 
 const SECTIONS = [
   { id: 'profile', label: 'Profile' },
@@ -14,7 +15,8 @@ const SECTIONS = [
   { id: 'connections', label: 'Connections' },
   { id: 'agent', label: 'Agent' },
   { id: 'exclusions', label: 'Exclusions' },
-  { id: 'appearance', label: 'Appearance' }
+  { id: 'appearance', label: 'Appearance' },
+  { id: 'shortcuts', label: 'Shortcuts' }
 ] as const
 
 type SectionId = (typeof SECTIONS)[number]['id']
@@ -45,6 +47,7 @@ export default function SettingsPage(): ReactElement {
         {section === 'agent' && <AgentSection />}
         {section === 'exclusions' && <ExclusionsSection />}
         {section === 'appearance' && <AppearanceSection />}
+        {section === 'shortcuts' && <ShortcutsSection />}
       </div>
     </div>
   )

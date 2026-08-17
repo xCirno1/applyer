@@ -7,6 +7,7 @@ import ResizeHandle from '../../components/ui/ResizeHandle'
 import ViewMenu from '../../components/workspace/ViewMenu'
 import { useWorkspaceLayout } from '../../components/workspace/useWorkspaceLayout'
 import { DOCK_MAX_PX, DOCK_MIN_PX, SIDEBAR_MAX_PX, SIDEBAR_MIN_PX } from '../../components/workspace/workspaceLayout'
+import { useShortcutHandler } from '../../providers/ShortcutsContext'
 
 /**
  * The main screen: a job-pipeline overview, the kanban board, and a
@@ -19,6 +20,17 @@ import { DOCK_MAX_PX, DOCK_MIN_PX, SIDEBAR_MAX_PX, SIDEBAR_MIN_PX } from '../../
 export default function WorkspacePage({ onOpenSettings }: { onOpenSettings: () => void }): ReactElement {
   const { layout, setSidebarVisible, setDockVisible, setDockTab, setSidebarWidth, setDockHeight } =
     useWorkspaceLayout()
+
+  useShortcutHandler('view.toggleOverview', () => setSidebarVisible(!layout.sidebarVisible))
+  useShortcutHandler('view.toggleConsole', () => setDockVisible(!layout.dockVisible))
+  useShortcutHandler('dock.showTerminal', () => {
+    setDockVisible(true)
+    setDockTab('terminal')
+  })
+  useShortcutHandler('dock.showLogs', () => {
+    setDockVisible(true)
+    setDockTab('logs')
+  })
 
   // bodyRef is the column the board and dock share; topRef the row the
   // board and sidebar share — both measured to clamp a drag against what's
@@ -108,21 +120,24 @@ export default function WorkspacePage({ onOpenSettings }: { onOpenSettings: () =
         </div>
 
         {layout.dockVisible && (
-          <>
-            <ResizeHandle
-              orientation="horizontal"
-              value={layout.dockHeight}
-              min={DOCK_MIN_PX}
-              max={DOCK_MAX_PX}
-              invert
-              label="Resize console dock"
-              onResize={handleDockResize}
-            />
-            <div className="shrink-0 overflow-hidden border-t border-border" style={{ height: layout.dockHeight }}>
-              <WorkspaceDock tab={layout.dockTab} onTabChange={setDockTab} onHide={() => setDockVisible(false)} />
-            </div>
-          </>
+          <ResizeHandle
+            orientation="horizontal"
+            value={layout.dockHeight}
+            min={DOCK_MIN_PX}
+            max={DOCK_MAX_PX}
+            invert
+            label="Resize console dock"
+            onResize={handleDockResize}
+          />
         )}
+        {/* Always mounted (CSS visibility, not conditional render) so hiding the dock
+            doesn't kill the terminal sessions living inside WorkspaceDock/TerminalGroup. */}
+        <div
+          className={`shrink-0 overflow-hidden border-t border-border ${layout.dockVisible ? '' : 'hidden'}`}
+          style={{ height: layout.dockVisible ? layout.dockHeight : 0 }}
+        >
+          <WorkspaceDock tab={layout.dockTab} onTabChange={setDockTab} onHide={() => setDockVisible(false)} />
+        </div>
       </div>
     </div>
   )

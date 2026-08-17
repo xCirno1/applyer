@@ -16,6 +16,7 @@ import { registerLogsIpc } from './ipc/logs'
 import { registerJobsBroadcastTarget } from './ipc/jobsBroadcast'
 import { disposeAllSessions } from './terminal/ptyManager'
 import { applyProductionCsp } from './security'
+import { configureApplicationMenu } from './menu'
 import { startMcpSocketServer } from './mcp-server/transportSocket'
 import { closeAllBrowsers } from './browser/browserController'
 import { mcpSocketPath } from './config/paths'
@@ -29,6 +30,7 @@ app.whenReady().then(() => {
 
   if (!is.dev) {
     applyProductionCsp()
+    configureApplicationMenu()
   }
 
   registerApplyerFileProtocol()

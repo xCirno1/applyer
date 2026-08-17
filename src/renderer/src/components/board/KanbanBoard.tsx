@@ -4,6 +4,7 @@ import { useJobsStore } from '../../state/jobsStore'
 import KanbanColumn from './KanbanColumn'
 import JobDetailModal from './JobDetailModal'
 import BoardFilters from './BoardFilters'
+import BulkActionBar from './BulkActionBar'
 
 const COLUMNS: JobStatus[] = ['queued', 'filled', 'submitted', 'failed']
 
@@ -27,6 +28,7 @@ export default function KanbanBoard(): ReactElement {
   return (
     <div className="flex h-full flex-col">
       <BoardFilters />
+      <BulkActionBar />
       <div className="flex min-h-0 flex-1 overflow-x-auto">
         {COLUMNS.map((status) => (
           <KanbanColumn key={status} status={status} onOpenJob={(job: JobRecord) => openJob(job.id)} />

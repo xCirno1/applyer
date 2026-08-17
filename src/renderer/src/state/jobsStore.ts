@@ -22,6 +22,8 @@ interface JobsState {
   filters: JobFilters
   /** Job currently open in the detail modal — shared so any panel (board, sidebar) can drive it. */
   openJobId: string | null
+  /** Checked job ids for the board's bulk-action toolbar and per-card right-click menu. */
+  selectedJobIds: Set<string>
   setFilters: (partial: Partial<JobFilters>) => void
   fetchColumn: (status: JobStatus) => Promise<void>
   fetchAllColumns: () => void
@@ -31,6 +33,9 @@ interface JobsState {
   subscribeToUpdates: () => () => void
   openJob: (id: string) => void
   closeJob: () => void
+  toggleSelected: (id: string) => void
+  selectOnly: (id: string) => void
+  clearSelection: () => void
 }
 
 function emptyColumn(): ColumnState {
@@ -48,6 +53,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
   filters: DEFAULT_FILTERS,
   openJobId: null,
+  selectedJobIds: new Set(),
 
   setFilters: (partial) => {
     set((state) => ({ filters: { ...state.filters, ...partial } }))
@@ -146,7 +152,10 @@ export const useJobsStore = create<JobsState>((set, get) => ({
           total: Math.max(0, columns[status].total - 1)
         }
       }
-      return { columns }
+      if (!state.selectedJobIds.has(jobId)) return { columns }
+      const selectedJobIds = new Set(state.selectedJobIds)
+      selectedJobIds.delete(jobId)
+      return { columns, selectedJobIds }
     })
   },
 
@@ -160,5 +169,15 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
 
   openJob: (id) => set({ openJobId: id }),
-  closeJob: () => set({ openJobId: null })
+  closeJob: () => set({ openJobId: null }),
+
+  toggleSelected: (id) =>
+    set((state) => {
+      const selectedJobIds = new Set(state.selectedJobIds)
+      if (selectedJobIds.has(id)) selectedJobIds.delete(id)
+      else selectedJobIds.add(id)
+      return { selectedJobIds }
+    }),
+  selectOnly: (id) => set({ selectedJobIds: new Set([id]) }),
+  clearSelection: () => set({ selectedJobIds: new Set() })
 }))

@@ -47,12 +47,17 @@ const jobsApi = {
     ipcRenderer.invoke(IPC.jobs.markSubmitted, { jobId }),
   retry: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: string }> =>
     ipcRenderer.invoke(IPC.jobs.retry, { jobId }),
+  retryAll: (): Promise<{ ok: boolean; jobs: JobRecord[] }> => ipcRenderer.invoke(IPC.jobs.retryAll),
+  retryMany: (jobIds: string[]): Promise<{ ok: boolean; jobs: JobRecord[] }> =>
+    ipcRenderer.invoke(IPC.jobs.retryMany, { jobIds }),
   remove: (jobId: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.jobs.remove, { jobId }),
   exclude: (
     jobId: string,
     reason?: string
   ): Promise<{ ok: boolean; exclusion?: ExclusionRecord; error?: string }> =>
     ipcRenderer.invoke(IPC.jobs.exclude, { jobId, reason }),
+  excludeMany: (jobIds: string[]): Promise<{ ok: boolean; excludedIds: string[] }> =>
+    ipcRenderer.invoke(IPC.jobs.excludeMany, { jobIds }),
   onUpdated: (callback: (job: JobRecord) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, job: JobRecord): void => callback(job)
     ipcRenderer.on(IPC.jobs.onUpdated, listener)
@@ -127,6 +132,10 @@ const logsApi = {
   list: (query: ListActivityQuery): Promise<ListActivityResult> => ipcRenderer.invoke(IPC.logs.list, query)
 }
 
+const appApi = {
+  getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.app.getVersion)
+}
+
 const api = {
   terminal: terminalApi,
   jobs: jobsApi,
@@ -135,7 +144,8 @@ const api = {
   onboarding: onboardingApi,
   browserControl: browserControlApi,
   settings: settingsApi,
-  logs: logsApi
+  logs: logsApi,
+  app: appApi
 }
 
 contextBridge.exposeInMainWorld('api', api)

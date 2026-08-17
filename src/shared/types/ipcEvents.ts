@@ -12,8 +12,11 @@ export const IPC = {
     list: 'jobs:list',
     markSubmitted: 'jobs:markSubmitted',
     retry: 'jobs:retry',
+    retryAll: 'jobs:retryAll',
+    retryMany: 'jobs:retryMany',
     remove: 'jobs:remove',
     exclude: 'jobs:exclude',
+    excludeMany: 'jobs:excludeMany',
     onUpdated: 'jobs:updated',
     onRemoved: 'jobs:removed'
   },
@@ -50,6 +53,9 @@ export const IPC = {
   },
   logs: {
     list: 'logs:list'
+  },
+  app: {
+    getVersion: 'app:getVersion'
   }
 } as const
 

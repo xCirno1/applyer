@@ -226,6 +226,48 @@ export function retry(id: string): JobRecord {
   return getJob(id) as JobRecord
 }
 
+/** Bulk-requeues every currently failed job (used by the Jobs > Retry All Failed menu action). */
+export function retryAllFailed(): JobRecord[] {
+  const db = getDb()
+  const failedIds = db
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(eq(jobs.status, 'failed'))
+    .all()
+    .map((row) => row.id)
+  if (failedIds.length === 0) return []
+
+  db.update(jobs)
+    .set({ status: 'queued', failureTag: null, failureMessage: null, updatedAt: nowIso() })
+    .where(eq(jobs.status, 'failed'))
+    .run()
+
+  return failedIds.map((id) => getJob(id) as JobRecord)
+}
+
+/**
+ * Requeues whichever of the given ids are currently failed (used by both
+ * the per-card right-click menu and the board's bulk-selection toolbar).
+ * Ids that don't exist or aren't currently failed are silently skipped —
+ * the renderer already filters to failed jobs before calling this, but the
+ * check is repeated here since ids arriving over IPC are never trusted.
+ */
+export function retryManyFailed(ids: string[]): JobRecord[] {
+  const db = getDb()
+  const now = nowIso()
+  const updated: JobRecord[] = []
+  for (const id of ids) {
+    const current = getJob(id)
+    if (!current || current.status !== 'failed') continue
+    db.update(jobs)
+      .set({ status: 'queued', failureTag: null, failureMessage: null, updatedAt: now })
+      .where(eq(jobs.id, id))
+      .run()
+    updated.push(getJob(id) as JobRecord)
+  }
+  return updated
+}
+
 export function setBlocking(id: string, blockingReason: string, blockingTaskId: string): void {
   getDb()
     .update(jobs)

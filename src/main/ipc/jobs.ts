@@ -1,8 +1,17 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
-import { listJobs, setSubmitted, retry, removeJob, getJob, IllegalTransitionError } from '../db/repositories/jobsRepository'
+import {
+  listJobs,
+  setSubmitted,
+  retry,
+  retryAllFailed,
+  retryManyFailed,
+  removeJob,
+  getJob,
+  IllegalTransitionError
+} from '../db/repositories/jobsRepository'
 import { broadcastJobUpdate } from './jobsBroadcast'
-import { excludeJob } from '../jobActions'
+import { excludeJob, excludeJobsByIds } from '../jobActions'
 import type { ListJobsQuery } from '@shared/types/job'
 
 export function registerJobsIpc(): void {
@@ -30,6 +39,18 @@ export function registerJobsIpc(): void {
     }
   })
 
+  ipcMain.handle(IPC.jobs.retryAll, () => {
+    const updated = retryAllFailed()
+    for (const job of updated) broadcastJobUpdate(job)
+    return { ok: true, jobs: updated }
+  })
+
+  ipcMain.handle(IPC.jobs.retryMany, (_event, { jobIds }: { jobIds: string[] }) => {
+    const updated = retryManyFailed(jobIds)
+    for (const job of updated) broadcastJobUpdate(job)
+    return { ok: true, jobs: updated }
+  })
+
   ipcMain.handle(IPC.jobs.remove, (_event, { jobId }: { jobId: string }) => {
     removeJob(jobId)
     return { ok: true }
@@ -48,5 +69,10 @@ export function registerJobsIpc(): void {
       excludedBy: 'user'
     })
     return { ok: true, exclusion }
+  })
+
+  ipcMain.handle(IPC.jobs.excludeMany, (_event, { jobIds }: { jobIds: string[] }) => {
+    const excludedIds = excludeJobsByIds(jobIds)
+    return { ok: true, excludedIds }
   })
 }

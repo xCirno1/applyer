@@ -1,4 +1,4 @@
-import { setFailed, listBlockedJobs, getJobByUrl, removeJob } from './db/repositories/jobsRepository'
+import { setFailed, listBlockedJobs, getJob, getJobByUrl, removeJob } from './db/repositories/jobsRepository'
 import { ensureFailureTag } from './db/repositories/failureTagsRepository'
 import { logActivity } from './db/repositories/activityLogRepository'
 import { excludeUrl } from './db/repositories/jobExclusionsRepository'
@@ -69,4 +69,23 @@ export function excludeJob(input: ExcludeJobInput): { exclusion: ExclusionRecord
   }
 
   return result
+}
+
+/**
+ * Bulk form of `excludeJob` for the board's multi-select toolbar and the
+ * per-card right-click menu — ids that don't exist or are already
+ * Submitted are silently skipped (Submitted jobs are excluded from the
+ * Exclude action everywhere else in the UI too). Returns the ids actually
+ * excluded, so the renderer can drop exactly those from local state
+ * without waiting on the `jobs:removed` broadcast.
+ */
+export function excludeJobsByIds(jobIds: string[]): string[] {
+  const excludedIds: string[] = []
+  for (const id of jobIds) {
+    const job = getJob(id)
+    if (!job || job.status === 'submitted') continue
+    excludeJob({ url: job.url, title: job.title, company: job.company, excludedBy: 'user' })
+    excludedIds.push(id)
+  }
+  return excludedIds
 }

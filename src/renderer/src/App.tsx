@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import WorkspacePage from './pages/Workspace/WorkspacePage'
-import SettingsPage from './pages/Settings/SettingsPage'
+import SettingsPage, { type SectionId } from './pages/Settings/SettingsPage'
 import OnboardingFlow from './pages/Onboarding/OnboardingFlow'
 import ToastProvider from './components/ui/ToastProvider'
 import Skeleton from './components/ui/Skeleton'
@@ -14,7 +14,13 @@ type BootState = 'loading' | 'onboarding' | 'ready'
 
 function MainShell(): ReactElement {
   const [screen, setScreen] = useState<Screen>('workspace')
+  const [settingsSection, setSettingsSection] = useState<SectionId>('profile')
   useShortcutHandler('app.toggleSettings', () => setScreen((s) => (s === 'settings' ? 'workspace' : 'settings')))
+
+  const openSettings = (section?: SectionId): void => {
+    if (section) setSettingsSection(section)
+    setScreen('settings')
+  }
 
   return (
     <div className="flex h-full flex-col bg-canvas-inset">
@@ -26,7 +32,7 @@ function MainShell(): ReactElement {
               mounts fresh each visit since it holds no state worth
               preserving. */}
           <div className={screen === 'workspace' ? 'h-full' : 'hidden'}>
-            <WorkspacePage onOpenSettings={() => setScreen('settings')} />
+            <WorkspacePage onOpenSettings={openSettings} />
           </div>
           {screen === 'settings' && (
             <div className="flex h-full flex-col">
@@ -39,7 +45,7 @@ function MainShell(): ReactElement {
                 </button>
               </div>
               <div className="min-h-0 flex-1">
-                <SettingsPage />
+                <SettingsPage initialSection={settingsSection} />
               </div>
             </div>
           )}

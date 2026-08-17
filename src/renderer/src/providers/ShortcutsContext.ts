@@ -6,6 +6,8 @@ export interface ShortcutsContextValue {
   bindings: Partial<Record<CommandId, string | null>>
   /** Called by whichever component currently owns a command's behavior; returns an unregister function. */
   registerHandler: (commandId: CommandId, handler: () => void) => () => void
+  /** Fires a command's currently registered handler directly (no-op if nothing owns it) — lets the menu bar trigger the same action a shortcut would. */
+  runCommand: (commandId: CommandId) => void
   setBinding: (commandId: CommandId, comboId: string | null) => void
   resetBinding: (commandId: CommandId) => void
   resetAllBindings: () => void
@@ -20,6 +22,7 @@ const noop = (): void => {}
 export const ShortcutsContext = createContext<ShortcutsContextValue>({
   bindings: {},
   registerHandler: () => noop,
+  runCommand: noop,
   setBinding: noop,
   resetBinding: noop,
   resetAllBindings: noop,

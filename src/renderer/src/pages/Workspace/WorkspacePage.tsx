@@ -4,10 +4,11 @@ import KanbanBoard from '../../components/board/KanbanBoard'
 import PipelineOverview from '../../components/board/PipelineOverview'
 import WorkspaceDock from '../../components/workspace/WorkspaceDock'
 import ResizeHandle from '../../components/ui/ResizeHandle'
-import ViewMenu from '../../components/workspace/ViewMenu'
+import AppMenuBar from '../../components/workspace/AppMenuBar'
 import { useWorkspaceLayout } from '../../components/workspace/useWorkspaceLayout'
 import { DOCK_MAX_PX, DOCK_MIN_PX, SIDEBAR_MAX_PX, SIDEBAR_MIN_PX } from '../../components/workspace/workspaceLayout'
 import { useShortcutHandler } from '../../providers/ShortcutsContext'
+import type { SectionId } from '../Settings/SettingsPage'
 
 /**
  * The main screen: a job-pipeline overview, the kanban board, and a
@@ -17,16 +18,22 @@ import { useShortcutHandler } from '../../providers/ShortcutsContext'
  * detail modal is shared app state (jobsStore) so both the board and the
  * sidebar's verification list can drive it.
  */
-export default function WorkspacePage({ onOpenSettings }: { onOpenSettings: () => void }): ReactElement {
+export default function WorkspacePage({
+  onOpenSettings
+}: {
+  onOpenSettings: (section?: SectionId) => void
+}): ReactElement {
   const { layout, setSidebarVisible, setDockVisible, setDockTab, setSidebarWidth, setDockHeight } =
     useWorkspaceLayout()
 
-  useShortcutHandler('view.toggleOverview', () => setSidebarVisible(!layout.sidebarVisible))
-  useShortcutHandler('view.toggleConsole', () => setDockVisible(!layout.dockVisible))
-  useShortcutHandler('dock.showTerminal', () => {
+  const showTerminalTab = (): void => {
     setDockVisible(true)
     setDockTab('terminal')
-  })
+  }
+
+  useShortcutHandler('view.toggleOverview', () => setSidebarVisible(!layout.sidebarVisible))
+  useShortcutHandler('view.toggleConsole', () => setDockVisible(!layout.dockVisible))
+  useShortcutHandler('dock.showTerminal', showTerminalTab)
   useShortcutHandler('dock.showLogs', () => {
     setDockVisible(true)
     setDockTab('logs')
@@ -69,16 +76,18 @@ export default function WorkspacePage({ onOpenSettings }: { onOpenSettings: () =
     <div className="flex h-full flex-col">
       <header className="flex h-nav shrink-0 items-center gap-2 border-b border-border bg-canvas px-3">
         <img src={logo} alt="Applyer" className="h-5 w-5 shrink-0" draggable={false} />
-        <ViewMenu
-          items={[
-            { key: 'overview', label: 'Overview', checked: layout.sidebarVisible, onToggle: () => setSidebarVisible(!layout.sidebarVisible) },
-            { key: 'console', label: 'Console', checked: layout.dockVisible, onToggle: () => setDockVisible(!layout.dockVisible) }
-          ]}
+        <AppMenuBar
+          onOpenSettings={onOpenSettings}
+          sidebarVisible={layout.sidebarVisible}
+          onToggleSidebar={() => setSidebarVisible(!layout.sidebarVisible)}
+          dockVisible={layout.dockVisible}
+          onToggleDock={() => setDockVisible(!layout.dockVisible)}
+          onShowTerminalTab={showTerminalTab}
         />
 
         <div className="ml-auto flex items-center gap-1.5">
           <button
-            onClick={onOpenSettings}
+            onClick={() => onOpenSettings()}
             title="Settings"
             aria-label="Settings"
             className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"

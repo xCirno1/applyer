@@ -19,10 +19,10 @@ const SECTIONS = [
   { id: 'shortcuts', label: 'Shortcuts' }
 ] as const
 
-type SectionId = (typeof SECTIONS)[number]['id']
+export type SectionId = (typeof SECTIONS)[number]['id']
 
-export default function SettingsPage(): ReactElement {
-  const [section, setSection] = useState<SectionId>('profile')
+export default function SettingsPage({ initialSection = 'profile' }: { initialSection?: SectionId }): ReactElement {
+  const [section, setSection] = useState<SectionId>(initialSection)
 
   return (
     <div className="flex h-full bg-canvas-inset">

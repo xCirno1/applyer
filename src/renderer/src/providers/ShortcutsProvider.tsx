@@ -81,6 +81,10 @@ export default function ShortcutsProvider({ children }: { children: ReactNode })
     }
   }, [])
 
+  const runCommand = useCallback((commandId: CommandId) => {
+    handlersRef.current.get(commandId)?.()
+  }, [])
+
   const setBinding = useCallback((commandId: CommandId, comboId: string | null) => {
     setOverrides((prev) => ({ ...prev, [commandId]: comboId }))
   }, [])
@@ -115,8 +119,17 @@ export default function ShortcutsProvider({ children }: { children: ReactNode })
   }, [overrides])
 
   const value = useMemo(
-    () => ({ bindings, registerHandler, setBinding, resetBinding, resetAllBindings, findConflicts, setSuspended }),
-    [bindings, registerHandler, setBinding, resetBinding, resetAllBindings, findConflicts, setSuspended]
+    () => ({
+      bindings,
+      registerHandler,
+      runCommand,
+      setBinding,
+      resetBinding,
+      resetAllBindings,
+      findConflicts,
+      setSuspended
+    }),
+    [bindings, registerHandler, runCommand, setBinding, resetBinding, resetAllBindings, findConflicts, setSuspended]
   )
 
   return <ShortcutsContext.Provider value={value}>{children}</ShortcutsContext.Provider>

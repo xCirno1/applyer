@@ -35,7 +35,7 @@ export default function ShortcutsSection(): ReactElement {
         return
       }
       const comboId = comboIdFromEvent(e)
-      if (!comboId) return // not a qualifying combo yet (needs the mod key held) — keep listening
+      if (!comboId) return // not a qualifying combo yet (needs the mod key held, unless it's a function key) — keep listening
 
       const conflicts = findConflicts(comboId, recordingId)
       if (conflicts.length > 0) {
@@ -59,8 +59,9 @@ export default function ShortcutsSection(): ReactElement {
         <div>
           <h2 className="text-[13px] font-semibold text-text">Keyboard shortcuts</h2>
           <p className="mt-0.5 text-[12px] text-text-muted">
-            Every shortcut requires holding {isMacPlatform() ? 'Cmd (⌘)' : 'Ctrl'} — plain typing, including inside
-            the terminal, is never intercepted.
+            Every shortcut requires holding {isMacPlatform() ? 'Cmd (⌘)' : 'Ctrl'}, except function keys (F1–F24,
+            which don't produce typed characters) — plain typing, including inside the terminal, is never
+            intercepted.
           </p>
         </div>
         <Button size="sm" variant="ghost" onClick={() => setConfirmResetAllOpen(true)}>

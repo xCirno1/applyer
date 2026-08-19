@@ -152,18 +152,6 @@ Yes, for personal, single-user use on Linux. Concretely, what's been verified:
   just inferred from config.
 - Typecheck, lint, and build are all clean.
 
-What to know before relying on it further:
-
-- **No component/UI test coverage yet** — the Vitest suite covers logic and data, not
-  rendered React components, and there's no end-to-end browser-automation test beyond
-  the manual/smoke verification above.
-- **Only exercised on Linux.** The `mac`/`win` electron-builder targets are configured
-  but never actually built or run.
-- **Not code-signed**, and `electron-updater` is a dependency but auto-update isn't
-  wired up — packaged builds won't self-update.
-- It hasn't yet been used for a real, complete job search by a human end to end (real
-  accounts, real applications) — only smoke-tested and dogfooded during development.
-
 For getting a coding agent to help you look for jobs on your own machine, it's in good
 enough shape to start using today. Treat a packaged build on macOS/Windows as unverified
 until someone actually builds and runs one there.

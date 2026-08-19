@@ -95,6 +95,13 @@ export default function AppMenuBar({
       shortcut: shortcutLabel('terminal.close'),
       onSelect: () => runTerminalCommand('terminal.close')
     },
+    {
+      type: 'action',
+      key: 'rename',
+      label: 'Rename Terminal',
+      shortcut: shortcutLabel('terminal.rename'),
+      onSelect: () => runTerminalCommand('terminal.rename')
+    },
     { type: 'separator', key: 'sep' },
     {
       type: 'action',

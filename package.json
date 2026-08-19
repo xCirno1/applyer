@@ -3,7 +3,12 @@
   "version": "0.1.0",
   "description": "Local Electron app for autonomous job hunting via CLI agents (Claude Code, Codex, etc.)",
   "main": "./out/main/index.js",
-  "author": "applyer",
+  "author": "xCirno1",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xCirno1/applyer.git"
+  },
   "private": true,
   "type": "module",
   "scripts": {

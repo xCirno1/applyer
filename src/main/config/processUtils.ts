@@ -6,9 +6,15 @@ export interface RunResult {
   stderr: string
 }
 
-export function runCommand(command: string, args: string[], timeoutMs = 15000): Promise<RunResult> {
+export interface RunCommandOptions {
+  timeoutMs?: number
+  cwd?: string
+}
+
+export function runCommand(command: string, args: string[], options: RunCommandOptions = {}): Promise<RunResult> {
+  const { timeoutMs = 15000, cwd } = options
   return new Promise((resolve) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], cwd })
     let stdout = ''
     let stderr = ''
     let settled = false
@@ -41,6 +47,6 @@ export function runCommand(command: string, args: string[], timeoutMs = 15000): 
 }
 
 export async function commandExists(command: string): Promise<boolean> {
-  const result = await runCommand(command, ['--version'], 8000)
+  const result = await runCommand(command, ['--version'], { timeoutMs: 8000 })
   return result.code === 0
 }

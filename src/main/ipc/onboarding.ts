@@ -13,7 +13,7 @@ import {
   autoConfigureMcp,
   verifyMcpConnection
 } from '../config/mcpConfigWriter'
-import type { McpCliId, OnboardingStatus } from '@shared/types/ipcEvents'
+import type { McpCliId, McpScope, OnboardingStatus } from '@shared/types/ipcEvents'
 import type { StorageMode } from '@shared/types/profile'
 
 export function registerOnboardingIpc(): void {
@@ -40,9 +40,14 @@ export function registerOnboardingIpc(): void {
 
   ipcMain.handle(IPC.onboarding.detectMcpConfigs, () => detectMcpConfigs())
 
-  ipcMain.handle(IPC.onboarding.getMcpSnippet, (_event, { cli }: { cli: McpCliId }) => getMcpSnippet(cli))
+  ipcMain.handle(IPC.onboarding.getMcpSnippet, (_event, { cli, scope }: { cli: McpCliId; scope: McpScope }) =>
+    getMcpSnippet(cli, scope)
+  )
 
-  ipcMain.handle(IPC.onboarding.autoConfigureMcp, (_event, { cli }: { cli: McpCliId }) => autoConfigureMcp(cli))
+  ipcMain.handle(
+    IPC.onboarding.autoConfigureMcp,
+    (_event, { cli, scope }: { cli: McpCliId; scope: McpScope }) => autoConfigureMcp(cli, scope)
+  )
 
   ipcMain.handle(IPC.onboarding.verifyMcpConnection, () => verifyMcpConnection())
 }

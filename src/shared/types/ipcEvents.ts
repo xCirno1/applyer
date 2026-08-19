@@ -71,6 +71,15 @@ export interface TerminalCreateResult {
 export type McpCliId = 'claude' | 'codex'
 
 /**
+ * `user` writes to the CLI's global config (applies to every project the
+ * CLI is run from); `workspace` scopes it to Applyer's own dedicated
+ * terminal cwd (see `agentWorkspaceDir()`) so the server only shows up in
+ * CLI sessions started from Applyer's terminal, not the user's other
+ * projects. Not every CLI supports the latter — see `supportsWorkspaceScope`.
+ */
+export type McpScope = 'user' | 'workspace'
+
+/**
  * Shell command line to type into a freshly opened terminal session, e.g.
  * `claude`, `codex`, or any other agent CLI the user has installed
  * (`aider`, `opencode --model ...`, etc). Empty string means disabled.
@@ -81,7 +90,8 @@ export interface McpConfigDetection {
   cli: McpCliId
   configPath: string
   exists: boolean
-  alreadyConfigured: boolean
+  supportsWorkspaceScope: boolean
+  configuredScopes: McpScope[]
 }
 
 export interface McpAutoConfigureResult {

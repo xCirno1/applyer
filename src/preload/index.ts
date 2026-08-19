@@ -6,6 +6,7 @@ import {
   type McpCliId,
   type McpConfigDetection,
   type McpAutoConfigureResult,
+  type McpScope,
   type McpVerifyResult,
   type AutoStartCommand,
   type OnboardingStatus,
@@ -95,9 +96,10 @@ const onboardingApi = {
     ipcRenderer.invoke(IPC.onboarding.setStorageMode, { mode }),
   complete: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.onboarding.complete),
   detectMcpConfigs: (): Promise<McpConfigDetection[]> => ipcRenderer.invoke(IPC.onboarding.detectMcpConfigs),
-  getMcpSnippet: (cli: McpCliId): Promise<string> => ipcRenderer.invoke(IPC.onboarding.getMcpSnippet, { cli }),
-  autoConfigureMcp: (cli: McpCliId): Promise<McpAutoConfigureResult> =>
-    ipcRenderer.invoke(IPC.onboarding.autoConfigureMcp, { cli }),
+  getMcpSnippet: (cli: McpCliId, scope: McpScope): Promise<string> =>
+    ipcRenderer.invoke(IPC.onboarding.getMcpSnippet, { cli, scope }),
+  autoConfigureMcp: (cli: McpCliId, scope: McpScope): Promise<McpAutoConfigureResult> =>
+    ipcRenderer.invoke(IPC.onboarding.autoConfigureMcp, { cli, scope }),
   verifyMcpConnection: (): Promise<McpVerifyResult> => ipcRenderer.invoke(IPC.onboarding.verifyMcpConnection)
 }
 

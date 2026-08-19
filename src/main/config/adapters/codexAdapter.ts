@@ -9,6 +9,9 @@ export const codexAdapter: McpAdapter = {
   id: 'codex',
   displayName: 'Codex CLI',
   cliCommand: 'codex',
+  // Codex's `mcp add` has no --scope flag — it only ever writes to the global
+  // ~/.codex/config.toml, so `workspace` scope isn't offered for this CLI.
+  supportsWorkspaceScope: false,
 
   isCliAvailable: () => commandExists('codex'),
 

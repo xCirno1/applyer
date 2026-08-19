@@ -1,33 +1,49 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
+import Dropdown from '../ui/Dropdown'
 import McpConfigSnippet from '../onboarding/McpConfigSnippet'
 import { useToast } from '../ui/useToast'
 import { CLI_LABELS } from './mcpCliLabels'
-import type { McpConfigDetection } from '@shared/types/ipcEvents'
+import type { McpConfigDetection, McpScope } from '@shared/types/ipcEvents'
+
+const SCOPE_OPTIONS: { value: McpScope; label: string }[] = [
+  { value: 'user', label: 'All projects (global)' },
+  { value: 'workspace', label: 'This workspace only' }
+]
+
+const SCOPE_LABELS: Record<McpScope, string> = {
+  user: 'all projects (global)',
+  workspace: 'this workspace only'
+}
 
 /** Used by both onboarding's McpSetup step and the Settings > Connections section. */
 export default function McpCliCard({ detection }: { detection: McpConfigDetection }): ReactElement {
   const toast = useToast()
+  const [scope, setScope] = useState<McpScope>('user')
   const [snippet, setSnippet] = useState('')
   const [configuring, setConfiguring] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [configured, setConfigured] = useState(detection.alreadyConfigured)
+  const [configuredScopes, setConfiguredScopes] = useState(detection.configuredScopes)
   const [verifying, setVerifying] = useState(false)
   const [verifyResult, setVerifyResult] = useState<string | null>(null)
 
+  const configured = configuredScopes.includes(scope)
+
   useEffect(() => {
-    window.api.onboarding.getMcpSnippet(detection.cli).then(setSnippet)
-  }, [detection.cli])
+    window.api.onboarding.getMcpSnippet(detection.cli, scope).then(setSnippet)
+  }, [detection.cli, scope])
 
   const handleAutoConfigure = async (): Promise<void> => {
     setConfirmOpen(false)
     setConfiguring(true)
-    const result = await window.api.onboarding.autoConfigureMcp(detection.cli)
+    const result = await window.api.onboarding.autoConfigureMcp(detection.cli, scope)
     setConfiguring(false)
     if (result.success) {
-      setConfigured(true)
-      toast.success(`${CLI_LABELS[detection.cli]} configured.`)
+      setConfiguredScopes((prev) => (prev.includes(scope) ? prev : [...prev, scope]))
+      toast.success(
+        `${CLI_LABELS[detection.cli]} configured for ${SCOPE_LABELS[scope]}. Restart ${detection.cli} in any open terminal for it to take effect.`
+      )
     } else {
       toast.error(result.error ?? 'Auto-configure failed — use the snippet below instead.')
     }
@@ -40,13 +56,13 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
     // Re-check the CLI's own config fresh rather than trusting local state — it may have
     // been configured manually (via the snippet) or in a previous app session.
     const freshDetections = await window.api.onboarding.detectMcpConfigs()
-    const freshlyConfigured = freshDetections.find((d) => d.cli === detection.cli)?.alreadyConfigured ?? false
-    setConfigured(freshlyConfigured)
+    const freshScopes = freshDetections.find((d) => d.cli === detection.cli)?.configuredScopes ?? []
+    setConfiguredScopes(freshScopes)
 
-    if (!freshlyConfigured) {
+    if (!freshScopes.includes(scope)) {
       setVerifying(false)
       setVerifyResult(
-        `${CLI_LABELS[detection.cli]} isn't configured to use Applyer yet — click Auto-configure above, or add the snippet manually, first.`
+        `${CLI_LABELS[detection.cli]} isn't configured for ${SCOPE_LABELS[scope]} yet — click Auto-configure above, or add the snippet manually, first.`
       )
       return
     }
@@ -66,6 +82,21 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
         {configured && <span className="text-[11px] text-success">Configured</span>}
       </div>
 
+      {detection.supportsWorkspaceScope ? (
+        <Dropdown
+          size="sm"
+          className="w-44"
+          ariaLabel={`${CLI_LABELS[detection.cli]} config scope`}
+          options={SCOPE_OPTIONS}
+          value={scope}
+          onChange={(v) => setScope(v as McpScope)}
+        />
+      ) : (
+        <span className="text-[11px] text-text-faint">
+          {CLI_LABELS[detection.cli]} only supports global configuration.
+        </span>
+      )}
+
       <McpConfigSnippet snippet={snippet} />
 
       <div className="flex items-center gap-2">
@@ -81,7 +112,7 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
       <ConfirmDialog
         open={confirmOpen}
         title={`Configure ${CLI_LABELS[detection.cli]}`}
-        message={`This will edit ${CLI_LABELS[detection.cli]}'s own configuration to add Applyer as an MCP server (backing up the original first). Continue?`}
+        message={`This will edit ${CLI_LABELS[detection.cli]}'s own configuration to add Applyer as an MCP server for ${SCOPE_LABELS[scope]} (backing up the original first). Continue?`}
         confirmLabel="Configure"
         onConfirm={handleAutoConfigure}
         onCancel={() => setConfirmOpen(false)}

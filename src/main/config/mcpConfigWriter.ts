@@ -10,6 +10,7 @@ import type {
   McpAutoConfigureResult,
   McpCliId,
   McpConfigDetection,
+  McpScope,
   McpVerifyResult
 } from '@shared/types/ipcEvents'
 
@@ -43,23 +44,30 @@ export async function detectMcpConfigs(): Promise<McpConfigDetection[]> {
   const results: McpConfigDetection[] = []
   for (const adapter of Object.values(ADAPTERS)) {
     const available = await adapter.isCliAvailable()
-    const alreadyConfigured = available ? await adapter.isConfigured(SERVER_NAME) : false
+    const scopesToCheck: McpScope[] = adapter.supportsWorkspaceScope ? ['user', 'workspace'] : ['user']
+    const configuredScopes: McpScope[] = []
+    if (available) {
+      for (const scope of scopesToCheck) {
+        if (await adapter.isConfigured(SERVER_NAME, scope)) configuredScopes.push(scope)
+      }
+    }
     results.push({
       cli: adapter.id,
       configPath: adapter.cliCommand,
       exists: available,
-      alreadyConfigured
+      supportsWorkspaceScope: adapter.supportsWorkspaceScope,
+      configuredScopes
     })
   }
   return results
 }
 
-export function getMcpSnippet(cli: McpCliId): string {
-  return ADAPTERS[cli].getManualSnippet(SERVER_NAME, getMcpInvocation())
+export function getMcpSnippet(cli: McpCliId, scope: McpScope): string {
+  return ADAPTERS[cli].getManualSnippet(SERVER_NAME, getMcpInvocation(), scope)
 }
 
-export async function autoConfigureMcp(cli: McpCliId): Promise<McpAutoConfigureResult> {
-  return ADAPTERS[cli].configure(SERVER_NAME, getMcpInvocation())
+export async function autoConfigureMcp(cli: McpCliId, scope: McpScope): Promise<McpAutoConfigureResult> {
+  return ADAPTERS[cli].configure(SERVER_NAME, getMcpInvocation(), scope)
 }
 
 export async function verifyMcpConnection(): Promise<McpVerifyResult> {

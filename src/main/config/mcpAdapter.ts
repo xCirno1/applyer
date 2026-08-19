@@ -1,4 +1,4 @@
-import type { McpCliId } from '@shared/types/ipcEvents'
+import type { McpCliId, McpScope } from '@shared/types/ipcEvents'
 
 export interface McpInvocation {
   command: string
@@ -15,8 +15,10 @@ export interface McpAdapter {
   id: McpCliId
   displayName: string
   cliCommand: string
+  /** Whether this CLI has a per-project/cwd-scoped config Applyer can target for `workspace` scope. */
+  supportsWorkspaceScope: boolean
   isCliAvailable(): Promise<boolean>
-  isConfigured(serverName: string): Promise<boolean>
-  configure(serverName: string, invocation: McpInvocation): Promise<McpConfigureResult>
-  getManualSnippet(serverName: string, invocation: McpInvocation): string
+  isConfigured(serverName: string, scope: McpScope): Promise<boolean>
+  configure(serverName: string, invocation: McpInvocation, scope: McpScope): Promise<McpConfigureResult>
+  getManualSnippet(serverName: string, invocation: McpInvocation, scope: McpScope): string
 }

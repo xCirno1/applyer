@@ -17,12 +17,21 @@ See the [README](README.md) for prerequisites and a walkthrough of how the app w
 ```bash
 npm run typecheck
 npm run lint
+npm run test        # unit test suite (Vitest)
 npm run smoke:mcp   # exercises the MCP server end to end against a running dev instance
 ```
 
-All three should pass clean. There's no unit/component test suite yet (see the README's
-"Is it ready to use?" section) — the smoke script plus manual testing through the UI is
-the current bar.
+All four should pass clean. `npm run test` covers logic and data (job-source parsing,
+MCP schemas/tools, database repositories, encryption, config/CLI adapters, renderer
+preference logic and state stores) — it does not cover rendered React components yet, so
+UI changes still need manual verification through the app (see the README's "Is it ready
+to use?" section for the current coverage bar).
+
+When adding logic worth testing, prefer a black-box style: exercise the module's real
+exported behavior with real inputs (mocking only genuine boundaries — network, a CLI
+subprocess, Electron/OS APIs) rather than mocking the module's own internals. See
+`test/mocks/electron.ts` and `src/main/db/testDb.ts` for the shared Electron mock and the
+real-migrations SQLite test-database helper most repository/tool tests build on.
 
 ## Making changes
 

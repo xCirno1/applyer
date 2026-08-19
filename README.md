@@ -126,6 +126,8 @@ npm run build       # production build (out/)
 npm run package      # build + package into a distributable (release/) via electron-builder
 npm run typecheck    # tsc, no emit
 npm run lint          # eslint
+npm run test          # unit test suite (Vitest)
+npm run test:watch  # unit test suite in watch mode
 npm run smoke:mcp    # exercises the MCP server end-to-end against a running dev instance
 ```
 
@@ -137,6 +139,11 @@ Yes, for personal, single-user use on Linux. Concretely, what's been verified:
   later from Settings) → MCP connection, working end to end.
 - All seven MCP tools pass a scripted protocol smoke test (`npm run smoke:mcp`),
   including validation/error paths, against both dev mode and a packaged build.
+- A [Vitest](https://vitest.dev) unit suite (`npm run test`) covers the pure/business
+  logic across the app — job-source parsing, MCP schema validation, the MCP tool
+  handlers, database repositories (against a real SQLite instance with real migrations,
+  not a mock), encryption, MCP CLI adapters, and the renderer's localStorage-backed
+  preference logic (theme, shortcuts, workspace layout) and state stores.
 - The **packaged app** (`npm run package`) was built, launched standalone, and driven
   through the real MCP bridge exactly as an installed CLI would — including a live
   `search_jobs` call that launched the bundled Chromium and returned real Indeed
@@ -147,8 +154,9 @@ Yes, for personal, single-user use on Linux. Concretely, what's been verified:
 
 What to know before relying on it further:
 
-- **No automated test suite** beyond the MCP smoke script and manual verification — no
-  unit/component tests exist yet.
+- **No component/UI test coverage yet** — the Vitest suite covers logic and data, not
+  rendered React components, and there's no end-to-end browser-automation test beyond
+  the manual/smoke verification above.
 - **Only exercised on Linux.** The `mac`/`win` electron-builder targets are configured
   but never actually built or run.
 - **Not code-signed**, and `electron-updater` is a dependency but auto-update isn't

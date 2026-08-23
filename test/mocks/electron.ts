@@ -32,6 +32,7 @@ function getPath(name: string): string {
 export const app = {
   getPath,
   getAppPath: (): string => process.cwd(),
+  getVersion: (): string => '0.0.0-test',
   isPackaged: false
 }
 

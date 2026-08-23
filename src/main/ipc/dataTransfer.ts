@@ -2,109 +2,21 @@ import { ipcMain, dialog, app } from 'electron'
 import { writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { IPC } from '@shared/types/ipcEvents'
-import { EXPORT_SCHEMA_VERSION } from '@shared/types/dataTransfer'
 import type {
-  ExportBundle,
   ExportSelection,
   ExportSizes,
   CsvTable,
-  ImportSummary,
   ExportFileResult,
   ImportPickResult,
   ImportApplyResult
 } from '@shared/types/dataTransfer'
-import { listAllJobs, importJobs } from '../db/repositories/jobsRepository'
-import { listAllExclusions, importExclusions } from '../db/repositories/jobExclusionsRepository'
-import { getProfile, saveProfile } from '../db/repositories/profileRepository'
-import {
-  getAutoStartCommand,
-  setAutoStartCommand,
-  getIndexedJobsRetentionDays,
-  setIndexedJobsRetentionDays
-} from '../db/repositories/settingsRepository'
+import { listAllJobs } from '../db/repositories/jobsRepository'
+import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
 import { jobsToCsv, exclusionsToCsv } from '../dataTransfer/csv'
 import { validateExportBundle } from '../dataTransfer/importSchema'
-
-function buildExportBundle(selection: ExportSelection): ExportBundle {
-  const data: ExportBundle['data'] = {}
-  if (selection.jobs) data.jobs = listAllJobs()
-  if (selection.exclusions) data.exclusions = listAllExclusions()
-  if (selection.profile) data.profile = getProfile()
-  if (selection.settings) {
-    data.settings = {
-      autoStartCommand: getAutoStartCommand(),
-      indexedJobsRetentionDays: getIndexedJobsRetentionDays()
-    }
-  }
-  return { schemaVersion: EXPORT_SCHEMA_VERSION, exportedAt: new Date().toISOString(), appVersion: app.getVersion(), data }
-}
-
-/** Filesystem-safe timestamp for default export filenames, e.g. 2026-08-23-14-05-30. */
-function filenameTimestamp(): string {
-  return new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
-}
-
-/**
- * Bytes of `data` inside the real bundle wrapper, serialized exactly the way
- * `IPC.data.exportJson` writes it (compact — this format is round-trip-only,
- * never meant for a human to read or hand-edit, so indentation would only
- * cost disk space). Using the identical `JSON.stringify(bundle)` call here
- * as the real write means these sizes are exact, not an estimate.
- */
-function bundleJsonBytes(data: ExportBundle['data']): number {
-  const bundle: ExportBundle = {
-    schemaVersion: EXPORT_SCHEMA_VERSION,
-    exportedAt: new Date().toISOString(),
-    appVersion: app.getVersion(),
-    data
-  }
-  return Buffer.byteLength(JSON.stringify(bundle), 'utf-8')
-}
-
-/**
- * Each domain's size is its *marginal* contribution to the bundle (with-domain
- * bytes minus the empty-bundle baseline) rather than a standalone
- * `JSON.stringify(value)` of the value, so the four sizes plus `wrapperBytes`
- * sum to exactly the bytes of the real exported file.
- */
-function computeExportSizes(): ExportSizes {
-  const jobs = listAllJobs()
-  const exclusions = listAllExclusions()
-  const profile = getProfile()
-  const settings = {
-    autoStartCommand: getAutoStartCommand(),
-    indexedJobsRetentionDays: getIndexedJobsRetentionDays()
-  }
-
-  const empty = bundleJsonBytes({})
-  return {
-    jobs: { json: bundleJsonBytes({ jobs }) - empty, csv: Buffer.byteLength(jobsToCsv(jobs), 'utf-8') },
-    exclusions: {
-      json: bundleJsonBytes({ exclusions }) - empty,
-      csv: Buffer.byteLength(exclusionsToCsv(exclusions), 'utf-8')
-    },
-    profile: { json: bundleJsonBytes({ profile }) - empty },
-    settings: { json: bundleJsonBytes({ settings }) - empty },
-    wrapperBytes: empty
-  }
-}
-
-function applyImport(bundle: ExportBundle, selection: ExportSelection): ImportSummary {
-  const summary: ImportSummary = {}
-  if (selection.jobs && bundle.data.jobs) summary.jobs = importJobs(bundle.data.jobs)
-  if (selection.exclusions && bundle.data.exclusions) summary.exclusions = importExclusions(bundle.data.exclusions)
-  if (selection.profile && bundle.data.profile) {
-    saveProfile(bundle.data.profile)
-    summary.profile = true
-  }
-  if (selection.settings && bundle.data.settings) {
-    setAutoStartCommand(bundle.data.settings.autoStartCommand)
-    setIndexedJobsRetentionDays(bundle.data.settings.indexedJobsRetentionDays)
-    summary.settings = true
-  }
-  return summary
-}
+import { buildExportBundle, computeExportSizes, filenameTimestamp } from '../dataTransfer/exportBundle'
+import { applyImport } from '../dataTransfer/applyImport'
 
 export function registerDataTransferIpc(): void {
   ipcMain.handle(IPC.data.exportJson, async (_event, { selection }: { selection: ExportSelection }): Promise<ExportFileResult> => {

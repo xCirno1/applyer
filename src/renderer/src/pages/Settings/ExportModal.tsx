@@ -6,7 +6,7 @@ import Select from '../../components/ui/Select'
 import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/useToast'
 import { formatBytes } from '../../lib/formatBytes'
-import { allDomainsSelected } from '@shared/types/dataTransfer'
+import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
 import type { ExportSelection, ExportDomain, ExportSizes, CsvTable } from '@shared/types/dataTransfer'
 
 const DOMAIN_LABELS: Record<ExportDomain, { label: string; hint: string }> = {
@@ -50,12 +50,7 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
 
   const selectedCount = DOMAIN_ORDER.filter((d) => selection[d]).length
 
-  const totalBytes =
-    format === 'json'
-      ? selectedCount === 0 || !sizes
-        ? 0
-        : sizes.wrapperBytes + DOMAIN_ORDER.filter((d) => selection[d]).reduce((sum, d) => sum + sizes[d].json, 0)
-      : (sizes?.[csvTable].csv ?? 0)
+  const totalBytes = format === 'json' ? (sizes ? totalJsonBytes(sizes, selection) : 0) : (sizes?.[csvTable].csv ?? 0)
 
   const handleExport = async (): Promise<void> => {
     setExporting(true)

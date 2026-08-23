@@ -53,6 +53,20 @@ export interface ExportSizes {
   wrapperBytes: number
 }
 
+/**
+ * Total bytes of a compact JSON export bundle containing exactly the
+ * selected domains. Not simply `wrapperBytes + sum(domain sizes)` — compact
+ * `JSON.stringify` inserts a `,` between each key present in `data`, so N
+ * selected domains need N-1 extra separator bytes beyond their individually
+ * measured marginal sizes.
+ */
+export function totalJsonBytes(sizes: ExportSizes, selection: ExportSelection): number {
+  const domains = ALL_EXPORT_DOMAINS.filter((d) => selection[d])
+  if (domains.length === 0) return 0
+  const sum = domains.reduce((total, d) => total + sizes[d].json, 0)
+  return sizes.wrapperBytes + sum + (domains.length - 1)
+}
+
 export interface ExportFileResult {
   ok: boolean
   canceled?: boolean

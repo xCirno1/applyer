@@ -15,6 +15,7 @@ import { registerBrowserControlIpc } from './ipc/browserControl'
 import { registerSettingsIpc } from './ipc/settings'
 import { registerLogsIpc } from './ipc/logs'
 import { registerAppIpc } from './ipc/app'
+import { registerDataTransferIpc } from './ipc/dataTransfer'
 import { registerJobsBroadcastTarget } from './ipc/jobsBroadcast'
 import { disposeAllSessions } from './terminal/ptyManager'
 import { applyProductionCsp } from './security'
@@ -63,6 +64,7 @@ app.whenReady().then(() => {
   registerSettingsIpc()
   registerLogsIpc()
   registerAppIpc()
+  registerDataTransferIpc()
 
   mcpSocketServer = startMcpSocketServer(mcpSocketPath())
 

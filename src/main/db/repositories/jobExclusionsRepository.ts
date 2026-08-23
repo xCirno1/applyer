@@ -88,3 +88,33 @@ export function listExclusions(query: ListExclusionsQuery): ListExclusionsResult
 export function removeExclusion(id: string): void {
   getDb().delete(jobExclusions).where(eq(jobExclusions.id, id)).run()
 }
+
+/** Unpaginated read of every exclusion, for a one-shot data export rather than a page render. */
+export function listAllExclusions(): ExclusionRecord[] {
+  return getDb().select().from(jobExclusions).orderBy(sql`${jobExclusions.createdAt} DESC`).all().map(toExclusionRecord)
+}
+
+/** Bulk-inserts exclusions from an imported export bundle, skipping any whose URL already exists. Ids are regenerated (see `importJobs`). */
+export function importExclusions(records: ExclusionRecord[]): { imported: number; skipped: number } {
+  const db = getDb()
+  let imported = 0
+  let skipped = 0
+  for (const r of records) {
+    const result = db
+      .insert(jobExclusions)
+      .values({
+        id: randomUUID(),
+        url: r.url,
+        title: r.title,
+        company: r.company,
+        reason: r.reason,
+        excludedBy: r.excludedBy,
+        createdAt: r.createdAt
+      })
+      .onConflictDoNothing({ target: jobExclusions.url })
+      .run()
+    if (result.changes > 0) imported++
+    else skipped++
+  }
+  return { imported, skipped }
+}

@@ -5,6 +5,7 @@ import StorageSection from './StorageSection'
 import AgentSection from './AgentSection'
 import AppearanceSection from './AppearanceSection'
 import ShortcutsSection from './ShortcutsSection'
+import DataSection from './DataSection'
 
 const SECTIONS = [
   { id: 'profile', label: 'Profile' },
@@ -12,12 +13,21 @@ const SECTIONS = [
   { id: 'storage', label: 'Storage' },
   { id: 'agent', label: 'Agent' },
   { id: 'appearance', label: 'Appearance' },
-  { id: 'shortcuts', label: 'Shortcuts' }
+  { id: 'shortcuts', label: 'Shortcuts' },
+  { id: 'data', label: 'Data' }
 ] as const
 
 export type SectionId = (typeof SECTIONS)[number]['id']
 
-export default function SettingsPage({ initialSection = 'profile' }: { initialSection?: SectionId }): ReactElement {
+export default function SettingsPage({
+  initialSection = 'profile',
+  onOpenExport,
+  onOpenImport
+}: {
+  initialSection?: SectionId
+  onOpenExport: () => void
+  onOpenImport: () => void
+}): ReactElement {
   const [section, setSection] = useState<SectionId>(initialSection)
 
   return (
@@ -42,6 +52,7 @@ export default function SettingsPage({ initialSection = 'profile' }: { initialSe
         {section === 'agent' && <AgentSection />}
         {section === 'appearance' && <AppearanceSection />}
         {section === 'shortcuts' && <ShortcutsSection />}
+        {section === 'data' && <DataSection onOpenExport={onOpenExport} onOpenImport={onOpenImport} />}
       </div>
     </div>
   )

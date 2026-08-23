@@ -5,6 +5,7 @@
 - Never assume that any received data is valid, always verify. This means that if some data is malfunctioned, the app doesn't break and we receive proper logs.
 - Always create reusable UI components in a dedicated directory.
 - Use proper error handling for ALL code paths with possible errors.
+- Always write tests for core logic, capturing all path and edge-cases.
 
 ## Design Guidelines
 - For buttons and other clickable elements, use cursor-pointer on hover.

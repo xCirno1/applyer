@@ -1,0 +1,142 @@
+import { useEffect, useState, type ReactElement } from 'react'
+import Modal from '../../components/ui/Modal'
+import Button from '../../components/ui/Button'
+import Checkbox from '../../components/ui/Checkbox'
+import Select from '../../components/ui/Select'
+import Skeleton from '../../components/ui/Skeleton'
+import { useToast } from '../../components/ui/useToast'
+import { formatBytes } from '../../lib/formatBytes'
+import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
+import type { ExportSelection, ExportDomain, ExportSizes, CsvTable } from '@shared/types/dataTransfer'
+
+const DOMAIN_LABELS: Record<ExportDomain, { label: string; hint: string }> = {
+  jobs: { label: 'Job applications', hint: 'Queued, filled, submitted, and failed jobs on the board.' },
+  exclusions: { label: 'Excluded jobs', hint: 'The blacklist of job URLs to never surface again.' },
+  profile: { label: 'Profile', hint: 'Your candidate profile fields (uploaded documents are not included).' },
+  settings: { label: 'App settings', hint: 'Auto-start command and the indexed-jobs retention period.' }
+}
+
+const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'profile', 'settings']
+
+export default function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }): ReactElement | null {
+  const toast = useToast()
+  const [format, setFormat] = useState<'json' | 'csv'>('json')
+  const [selection, setSelection] = useState<ExportSelection>(allDomainsSelected())
+  const [csvTable, setCsvTable] = useState<CsvTable>('jobs')
+  const [exporting, setExporting] = useState(false)
+  const [sizes, setSizes] = useState<ExportSizes | null>(null)
+
+  // Sizes are intrinsic per-domain values, independent of which checkboxes
+  // are currently ticked — fetched once per open so toggling a checkbox
+  // just re-sums already-known numbers instead of round-tripping again.
+  // Stale sizes from a previous open are left showing (rather than cleared
+  // to a skeleton) while the refetch is in flight, to avoid a layout flicker
+  // on every reopen — only the very first open in a session shows a loading
+  // state.
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    window.api.data.getExportSizes().then((result) => {
+      if (!cancelled) setSizes(result)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [open])
+
+  if (!open) return null
+
+  const toggle = (domain: ExportDomain, checked: boolean): void => setSelection((prev) => ({ ...prev, [domain]: checked }))
+
+  const selectedCount = DOMAIN_ORDER.filter((d) => selection[d]).length
+
+  const totalBytes = format === 'json' ? (sizes ? totalJsonBytes(sizes, selection) : 0) : (sizes?.[csvTable].csv ?? 0)
+
+  const handleExport = async (): Promise<void> => {
+    setExporting(true)
+    const result = format === 'json' ? await window.api.data.exportJson(selection) : await window.api.data.exportCsv(csvTable)
+    setExporting(false)
+    if (result.canceled) return
+    if (!result.ok) {
+      toast.error(result.error ?? 'Export failed.')
+      return
+    }
+    toast.success(`Exported to ${result.filePath}`)
+    onClose()
+  }
+
+  return (
+    <Modal open={open} onClose={onClose} title="Export data" width="max-w-md">
+      <div className="flex flex-col gap-3.5">
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[12px] font-medium text-text-muted">Format</span>
+          <div className="flex gap-1.5">
+            <Button variant={format === 'json' ? 'primary' : 'secondary'} size="sm" onClick={() => setFormat('json')}>
+              JSON
+            </Button>
+            <Button variant={format === 'csv' ? 'primary' : 'secondary'} size="sm" onClick={() => setFormat('csv')}>
+              CSV
+            </Button>
+          </div>
+          <span className="text-[11px] text-text-faint">
+            {format === 'json'
+              ? 'One file bundling everything selected below — this is also the only format Import accepts.'
+              : 'A flat, spreadsheet-friendly table of a single list. CSV exports cannot be re-imported.'}
+          </span>
+        </div>
+
+        {format === 'json' ? (
+          <div className="flex flex-col gap-2.5 border-t border-border-soft pt-3">
+            {DOMAIN_ORDER.map((domain) => (
+              <div key={domain} className="flex items-start justify-between gap-2">
+                <Checkbox
+                  label={DOMAIN_LABELS[domain].label}
+                  hint={DOMAIN_LABELS[domain].hint}
+                  checked={selection[domain]}
+                  onChange={(checked) => toggle(domain, checked)}
+                />
+                <span className="mt-0.5 shrink-0 text-[11px] text-text-faint">
+                  {!sizes ? <Skeleton className="h-3 w-10" /> : formatBytes(sizes[domain].json)}
+                </span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5 border-t border-border-soft pt-3">
+            <Select
+              label="Table to export"
+              options={[
+                { value: 'jobs', label: 'Job applications' },
+                { value: 'exclusions', label: 'Excluded jobs' }
+              ]}
+              value={csvTable}
+              onChange={(v) => setCsvTable(v as CsvTable)}
+            />
+            <span className="text-[11px] text-text-faint">
+              {!sizes ? <Skeleton className="h-3 w-10" /> : formatBytes(sizes[csvTable].csv)}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2 border-t border-border-soft pt-3">
+          <span className="text-[12px] text-text-muted">
+            Total: {!sizes ? <Skeleton className="inline-block h-3 w-12 align-middle" /> : formatBytes(totalBytes)}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={onClose} disabled={exporting}>
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              loading={exporting}
+              disabled={format === 'json' && selectedCount === 0}
+              onClick={handleExport}
+            >
+              Export
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Modal>
+  )
+}

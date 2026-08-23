@@ -293,4 +293,58 @@ export function listBlockedJobs(): JobRecord[] {
   return getDb().select().from(jobs).where(isNotNull(jobs.blockingTaskId)).all().map(toJobRecord)
 }
 
+/** Unpaginated read of every job, for a one-shot data export rather than a page render. */
+export function listAllJobs(): JobRecord[] {
+  return getDb().select().from(jobs).orderBy(desc(jobs.createdAt)).all().map(toJobRecord)
+}
+
+/**
+ * Bulk-inserts jobs from an imported export bundle, skipping any whose URL
+ * already exists (URL is a job's identity elsewhere in this file too — see
+ * `queueJob`/`getJobByUrl`). Ids are regenerated rather than reused from the
+ * file, since two independently-exported bundles could theoretically carry
+ * colliding ids; `screenshotPath` and the in-memory-only blocking fields are
+ * dropped since they'd point at another machine's filesystem/live task.
+ */
+export function importJobs(records: JobRecord[]): { imported: number; skipped: number } {
+  const db = getDb()
+  let imported = 0
+  let skipped = 0
+  for (const r of records) {
+    const result = db
+      .insert(jobs)
+      .values({
+        id: randomUUID(),
+        externalId: r.externalId,
+        source: r.source,
+        title: r.title,
+        company: r.company,
+        location: r.location,
+        url: r.url,
+        description: r.description,
+        salaryRange: r.salaryRange,
+        status: r.status,
+        matchScore: r.matchScore,
+        matchReasons: r.matchReasons,
+        applicationUrl: r.applicationUrl,
+        applyMethod: r.applyMethod,
+        screenshotPath: null,
+        failureTag: r.failureTag,
+        failureMessage: r.failureMessage,
+        blockingReason: null,
+        blockingTaskId: null,
+        queuedAt: r.queuedAt,
+        filledAt: r.filledAt,
+        submittedAt: r.submittedAt,
+        createdAt: r.createdAt,
+        updatedAt: r.updatedAt
+      })
+      .onConflictDoNothing({ target: jobs.url })
+      .run()
+    if (result.changes > 0) imported++
+    else skipped++
+  }
+  return { imported, skipped }
+}
+
 export { IllegalTransitionError }

@@ -12,6 +12,7 @@ import { useToast } from '../ui/useToast'
 export function useJobActions(): {
   retryMany: (ids: string[]) => Promise<void>
   excludeMany: (ids: string[]) => Promise<void>
+  unqueueMany: (ids: string[]) => Promise<void>
 } {
   const applyUpdate = useJobsStore((s) => s.applyUpdate)
   const removeJobLocal = useJobsStore((s) => s.removeJobLocal)
@@ -39,5 +40,16 @@ export function useJobActions(): {
     toast.success(`Excluded ${result.excludedIds.length} job${result.excludedIds.length === 1 ? '' : 's'}.`)
   }
 
-  return { retryMany, excludeMany }
+  const unqueueMany = async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return
+    const result = await window.api.jobs.unqueueMany(ids)
+    if (!result.ok) {
+      toast.error('Failed to unqueue the selected jobs.')
+      return
+    }
+    for (const id of result.unqueuedIds) removeJobLocal(id)
+    toast.success(`Unqueued ${result.unqueuedIds.length} job${result.unqueuedIds.length === 1 ? '' : 's'}.`)
+  }
+
+  return { retryMany, excludeMany, unqueueMany }
 }

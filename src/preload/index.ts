@@ -61,6 +61,10 @@ const jobsApi = {
     ipcRenderer.invoke(IPC.jobs.exclude, { jobId, reason }),
   excludeMany: (jobIds: string[]): Promise<{ ok: boolean; excludedIds: string[] }> =>
     ipcRenderer.invoke(IPC.jobs.excludeMany, { jobIds }),
+  unqueue: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: string }> =>
+    ipcRenderer.invoke(IPC.jobs.unqueue, { jobId }),
+  unqueueMany: (jobIds: string[]): Promise<{ ok: boolean; unqueuedIds: string[] }> =>
+    ipcRenderer.invoke(IPC.jobs.unqueueMany, { jobIds }),
   onUpdated: (callback: (job: JobRecord) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, job: JobRecord): void => callback(job)
     ipcRenderer.on(IPC.jobs.onUpdated, listener)

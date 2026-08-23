@@ -66,62 +66,61 @@ function MainShell(): ReactElement {
               the other is showing (or Settings is open) — Workspace owns
               the terminal's live pty session and the jobs live-update
               subscription, and Indexed Jobs owns its own live-update
-              subscription, both of which a remount would kill/drop.
+              subscription, both of which a remount would kill/drop. Toggled
+              via `hidden` rather than conditional rendering for that reason.
               Settings mounts fresh each visit since it holds no state worth
               preserving. */}
-          {screen !== 'settings' && (
-            <div className="flex h-full flex-col">
-              <header className="flex h-nav shrink-0 items-center gap-2 border-b border-border bg-canvas px-3">
-                <img src={logo} alt="Applyer" className="h-5 w-5 shrink-0" draggable={false} />
-                <AppMenuBar
-                  onOpenSettings={openSettings}
-                  onOpenExport={() => setExportOpen(true)}
-                  onOpenImport={() => setImportOpen(true)}
-                  sidebarVisible={layout.sidebarVisible}
-                  onToggleSidebar={() => setSidebarVisible(!layout.sidebarVisible)}
-                  dockVisible={layout.dockVisible}
-                  onToggleDock={() => setDockVisible(!layout.dockVisible)}
-                  onShowTerminalTab={showTerminalTab}
-                />
-                <div className="ml-auto flex items-center gap-1.5">
-                  <button
-                    onClick={() => openSettings()}
-                    title="Settings"
-                    aria-label="Settings"
-                    className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
-                  >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path
-                        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinejoin="round"
-                      />
-                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-                    </svg>
-                  </button>
-                </div>
-              </header>
-              <div className="flex min-h-0 flex-1">
-                <IconRail active={screen} onSelect={setScreen} />
-                <div className="min-h-0 min-w-0 flex-1">
-                  <div className={screen === 'workspace' ? 'h-full' : 'hidden'}>
-                    <WorkspacePage
-                      layout={layout}
-                      setSidebarVisible={setSidebarVisible}
-                      setDockVisible={setDockVisible}
-                      setDockTab={setDockTab}
-                      setSidebarWidth={setSidebarWidth}
-                      setDockHeight={setDockHeight}
+          <div className={screen !== 'settings' ? 'flex h-full flex-col' : 'hidden'}>
+            <header className="flex h-nav shrink-0 items-center gap-2 border-b border-border bg-canvas px-3">
+              <img src={logo} alt="Applyer" className="h-5 w-5 shrink-0" draggable={false} />
+              <AppMenuBar
+                onOpenSettings={openSettings}
+                onOpenExport={() => setExportOpen(true)}
+                onOpenImport={() => setImportOpen(true)}
+                sidebarVisible={layout.sidebarVisible}
+                onToggleSidebar={() => setSidebarVisible(!layout.sidebarVisible)}
+                dockVisible={layout.dockVisible}
+                onToggleDock={() => setDockVisible(!layout.dockVisible)}
+                onShowTerminalTab={showTerminalTab}
+              />
+              <div className="ml-auto flex items-center gap-1.5">
+                <button
+                  onClick={() => openSettings()}
+                  title="Settings"
+                  aria-label="Settings"
+                  className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
+                >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path
+                      d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
                     />
-                  </div>
-                  <div className={screen === 'indexedJobs' ? 'h-full' : 'hidden'}>
-                    <IndexedJobsPage />
-                  </div>
+                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+                  </svg>
+                </button>
+              </div>
+            </header>
+            <div className="flex min-h-0 flex-1">
+              <IconRail active={screen === 'settings' ? 'workspace' : screen} onSelect={setScreen} />
+              <div className="min-h-0 min-w-0 flex-1">
+                <div className={screen === 'workspace' ? 'h-full' : 'hidden'}>
+                  <WorkspacePage
+                    layout={layout}
+                    setSidebarVisible={setSidebarVisible}
+                    setDockVisible={setDockVisible}
+                    setDockTab={setDockTab}
+                    setSidebarWidth={setSidebarWidth}
+                    setDockHeight={setDockHeight}
+                  />
+                </div>
+                <div className={screen === 'indexedJobs' ? 'h-full' : 'hidden'}>
+                  <IndexedJobsPage />
                 </div>
               </div>
             </div>
-          )}
+          </div>
           {screen === 'settings' && (
             <div className="flex h-full flex-col">
               <div className="flex h-nav shrink-0 items-center border-b border-border bg-canvas px-3">

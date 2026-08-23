@@ -1,7 +1,12 @@
 import type { WebContents } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
 import type { JobRecord } from '@shared/types/job'
-import type { CaptchaDetectedPayload, CaptchaResolvedPayload } from '@shared/types/ipcEvents'
+import type {
+  CaptchaDetectedPayload,
+  CaptchaResolvedPayload,
+  BrowserDownloadProgressPayload,
+  BrowserSetupStatusPayload
+} from '@shared/types/ipcEvents'
 
 let webContentsRef: WebContents | null = null
 
@@ -37,5 +42,17 @@ export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void 
 export function broadcastCaptchaResolved(payload: CaptchaResolvedPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaResolved, payload)
+  }
+}
+
+export function broadcastBrowserSetupProgress(payload: BrowserDownloadProgressPayload): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.browserSetup.onProgress, payload)
+  }
+}
+
+export function broadcastBrowserSetupStatus(payload: BrowserSetupStatusPayload): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.browserSetup.onStatus, payload)
   }
 }

@@ -55,6 +55,11 @@ export const IPC = {
     onCaptchaDetected: 'browser:captchaDetected',
     onCaptchaResolved: 'browser:captchaResolved'
   },
+  browserSetup: {
+    retryDownload: 'browserSetup:retryDownload',
+    onProgress: 'browserSetup:progress',
+    onStatus: 'browserSetup:status'
+  },
   settings: {
     changeStorageMode: 'settings:changeStorageMode',
     getAutoStartCommand: 'settings:getAutoStartCommand',
@@ -147,3 +152,13 @@ export interface CaptchaResolvedPayload {
   taskId: string
   jobId: string
 }
+
+export interface BrowserDownloadProgressPayload {
+  percent: number
+  totalSize: string
+}
+
+export type BrowserSetupStatusPayload =
+  | { status: 'downloading' }
+  | { status: 'ready' }
+  | { status: 'error'; message: string }

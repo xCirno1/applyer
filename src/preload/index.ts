@@ -12,7 +12,9 @@ import {
   type OnboardingStatus,
   type UploadDocumentRequest,
   type CaptchaDetectedPayload,
-  type CaptchaResolvedPayload
+  type CaptchaResolvedPayload,
+  type BrowserDownloadProgressPayload,
+  type BrowserSetupStatusPayload
 } from '@shared/types/ipcEvents'
 import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job'
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
@@ -149,6 +151,22 @@ const browserControlApi = {
   }
 }
 
+const browserSetupApi = {
+  retryDownload: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke(IPC.browserSetup.retryDownload),
+  onProgress: (callback: (payload: BrowserDownloadProgressPayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: BrowserDownloadProgressPayload): void =>
+      callback(payload)
+    ipcRenderer.on(IPC.browserSetup.onProgress, listener)
+    return () => ipcRenderer.removeListener(IPC.browserSetup.onProgress, listener)
+  },
+  onStatus: (callback: (payload: BrowserSetupStatusPayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: BrowserSetupStatusPayload): void =>
+      callback(payload)
+    ipcRenderer.on(IPC.browserSetup.onStatus, listener)
+    return () => ipcRenderer.removeListener(IPC.browserSetup.onStatus, listener)
+  }
+}
+
 const settingsApi = {
   changeStorageMode: (mode: StorageMode): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke(IPC.settings.changeStorageMode, { mode }),
@@ -186,6 +204,7 @@ const api = {
   profile: profileApi,
   onboarding: onboardingApi,
   browserControl: browserControlApi,
+  browserSetup: browserSetupApi,
   settings: settingsApi,
   logs: logsApi,
   app: appApi,

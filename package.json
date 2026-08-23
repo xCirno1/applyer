@@ -89,7 +89,12 @@
     "files": [
       "out/**/*",
       "package.json",
-      "!**/*.map"
+      "!**/*.map",
+      "!**/node_modules/playwright-core/.local-browsers/**",
+      "!**/node_modules/@napi-rs/canvas*/**"
+    ],
+    "electronLanguages": [
+      "en-US"
     ],
     "asar": false,
     "icon": "resources/icon.png",

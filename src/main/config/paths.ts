@@ -38,6 +38,13 @@ export function agentWorkspaceDir(): string {
   return dir
 }
 
+/** Where a packaged build downloads its own managed Chromium, if no system Chrome/Edge is found — writable, unlike the (often read-only) app resources directory. */
+export function playwrightBrowsersDir(): string {
+  const dir = join(app.getPath('userData'), 'playwright-browsers')
+  mkdirSync(dir, { recursive: true })
+  return dir
+}
+
 export function mcpSocketPath(): string {
   if (process.platform === 'win32') {
     return '\\\\.\\pipe\\applyer-mcp'

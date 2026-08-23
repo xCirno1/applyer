@@ -12,6 +12,7 @@ import { registerExclusionsIpc } from './ipc/exclusions'
 import { registerProfileIpc } from './ipc/profile'
 import { registerOnboardingIpc } from './ipc/onboarding'
 import { registerBrowserControlIpc } from './ipc/browserControl'
+import { registerBrowserSetupIpc } from './ipc/browserSetup'
 import { registerSettingsIpc } from './ipc/settings'
 import { registerLogsIpc } from './ipc/logs'
 import { registerAppIpc } from './ipc/app'
@@ -61,6 +62,7 @@ app.whenReady().then(() => {
   registerProfileIpc()
   registerOnboardingIpc()
   registerBrowserControlIpc()
+  registerBrowserSetupIpc()
   registerSettingsIpc()
   registerLogsIpc()
   registerAppIpc()

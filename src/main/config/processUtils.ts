@@ -9,12 +9,15 @@ export interface RunResult {
 export interface RunCommandOptions {
   timeoutMs?: number
   cwd?: string
+  env?: NodeJS.ProcessEnv
+  /** Called with each raw stdout chunk as it arrives, in addition to the buffered `result.stdout` — for streaming progress out of a long-running command. */
+  onStdout?: (chunk: string) => void
 }
 
 export function runCommand(command: string, args: string[], options: RunCommandOptions = {}): Promise<RunResult> {
-  const { timeoutMs = 15000, cwd } = options
+  const { timeoutMs = 15000, cwd, env, onStdout } = options
   return new Promise((resolve) => {
-    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], cwd })
+    const child = spawn(command, args, { stdio: ['ignore', 'pipe', 'pipe'], cwd, env })
     let stdout = ''
     let stderr = ''
     let settled = false
@@ -27,7 +30,11 @@ export function runCommand(command: string, args: string[], options: RunCommandO
       }
     }, timeoutMs)
 
-    child.stdout.on('data', (d: Buffer) => (stdout += d.toString()))
+    child.stdout.on('data', (d: Buffer) => {
+      const chunk = d.toString()
+      stdout += chunk
+      onStdout?.(chunk)
+    })
     child.stderr.on('data', (d: Buffer) => (stderr += d.toString()))
 
     child.on('error', (err) => {

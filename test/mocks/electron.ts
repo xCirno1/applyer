@@ -18,6 +18,7 @@ export function __resetElectronMock(): void {
   root = mkdtempSync(join(tmpdir(), 'applyer-test-'))
   pathCache = {}
   __encryptionAvailable = true
+  __packaged = false
 }
 
 function getPath(name: string): string {
@@ -29,11 +30,20 @@ function getPath(name: string): string {
   return pathCache[name]
 }
 
+let __packaged = false
+
+/** Test-only control for `app.isPackaged`, same rationale as `__setEncryptionAvailable`. */
+export function __setPackaged(value: boolean): void {
+  __packaged = value
+}
+
 export const app = {
   getPath,
   getAppPath: (): string => process.cwd(),
   getVersion: (): string => '0.0.0-test',
-  isPackaged: false
+  get isPackaged(): boolean {
+    return __packaged
+  }
 }
 
 let __encryptionAvailable = true

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { app } from 'electron'
+import { __setPackaged } from '../../../test/mocks/electron'
 
 const { claudeAdapter, codexAdapter } = vi.hoisted(() => ({
   claudeAdapter: {
@@ -36,12 +36,12 @@ beforeEach(() => {
   codexAdapter.isCliAvailable.mockReset().mockResolvedValue(false)
   codexAdapter.isConfigured.mockReset().mockResolvedValue(false)
   codexAdapter.configure.mockReset()
-  ;(app as { isPackaged: boolean }).isPackaged = false
+  __setPackaged(false)
 })
 
 describe('getMcpInvocation', () => {
   it('spawns via node + resources/mcp-bridge.mjs in dev mode', () => {
-    ;(app as { isPackaged: boolean }).isPackaged = false
+    __setPackaged(false)
     const invocation = getMcpInvocation()
     expect(invocation.command).toBe('node')
     expect(invocation.args[0]).toContain('mcp-bridge.mjs')
@@ -55,7 +55,7 @@ describe('getMcpInvocation', () => {
     const original = mutableProcess.resourcesPath
     mutableProcess.resourcesPath = '/fake/resources'
     try {
-      ;(app as { isPackaged: boolean }).isPackaged = true
+      __setPackaged(true)
       const invocation = getMcpInvocation()
       expect(invocation.command).toBe(process.execPath)
       expect(invocation.args[0]).toBe('/fake/resources/mcp-bridge.mjs')
@@ -133,7 +133,7 @@ describe('autoConfigureMcp', () => {
 
 describe('verifyMcpConnection', () => {
   it('returns success:false (not a thrown error) when the configured command cannot be spawned/connected to', async () => {
-    ;(app as { isPackaged: boolean }).isPackaged = false
+    __setPackaged(false)
     // Dev-mode invocation points `node` at resources/mcp-bridge.mjs under
     // app.getAppPath(), which our electron mock sets to process.cwd() (the
     // real repo root) — that file exists for real, but nothing is listening

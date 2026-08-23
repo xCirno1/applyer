@@ -58,13 +58,13 @@ describe('browserController — launch resolution', () => {
     launchMock.mockResolvedValueOnce(createFakeBrowser())
     const first = await launchHeadedContext()
     expect(first.browser).toBeTruthy()
-    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, channel: 'chrome' })
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'], channel: 'chrome' })
 
     // Even if chrome would now fail, a cached resolution shouldn't re-probe other channels.
     launchMock.mockRejectedValueOnce(new Error('chrome not found this time'))
     await expect(launchHeadedContext()).rejects.toThrow('chrome not found this time')
     expect(launchMock).toHaveBeenCalledTimes(2)
-    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, channel: 'chrome' })
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'], channel: 'chrome' })
   })
 
   it('packaged: falls back to msedge when chrome is unavailable', async () => {
@@ -76,8 +76,8 @@ describe('browserController — launch resolution', () => {
     })
     const { browser } = await launchHeadedContext()
     expect(browser).toBeTruthy()
-    expect(launchMock).toHaveBeenNthCalledWith(1, { headless: false, channel: 'chrome' })
-    expect(launchMock).toHaveBeenNthCalledWith(2, { headless: false, channel: 'msedge' })
+    expect(launchMock).toHaveBeenNthCalledWith(1, { headless: false, args: ['--start-maximized'], channel: 'chrome' })
+    expect(launchMock).toHaveBeenNthCalledWith(2, { headless: false, args: ['--start-maximized'], channel: 'msedge' })
   })
 
   it('packaged: both channels fail but the browser is already downloaded — launches with no channel, skips the download', async () => {
@@ -91,7 +91,7 @@ describe('browserController — launch resolution', () => {
     const { browser } = await launchHeadedContext()
     expect(browser).toBeTruthy()
     expect(runCommandMock).not.toHaveBeenCalled()
-    expect(launchMock).toHaveBeenLastCalledWith({ headless: false })
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'] })
   })
 
   it('packaged: both channels fail and not yet downloaded — downloads then launches with no channel', async () => {
@@ -109,7 +109,7 @@ describe('browserController — launch resolution', () => {
     const [, args] = runCommandMock.mock.calls[0] as [string, string[]]
     expect(args).toContain('install')
     expect(args).toContain('chromium')
-    expect(launchMock).toHaveBeenLastCalledWith({ headless: false })
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'] })
   })
 
   it('packaged: a failed download resets state so a later call retries', async () => {

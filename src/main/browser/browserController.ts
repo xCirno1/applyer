@@ -55,17 +55,21 @@ let downloadPromise: Promise<void> | null = null
  */
 async function launchWithResolution(headless: boolean): Promise<Browser> {
   const chromium = await getChromium()
+  // Only meaningful for a real, visible window (paired with the headed context's
+  // viewport: null) — opens it filling the screen instead of Chromium's small default,
+  // rather than leaving the user to manually resize/reposition it every time.
+  const args = headless ? undefined : ['--start-maximized']
 
   if (!app.isPackaged) {
-    return chromium.launch({ headless })
+    return chromium.launch({ headless, args })
   }
   if (resolvedLaunchOptions) {
-    return chromium.launch({ headless, ...resolvedLaunchOptions })
+    return chromium.launch({ headless, args, ...resolvedLaunchOptions })
   }
 
   for (const channel of ['chrome', 'msedge'] as const) {
     try {
-      const browser = await chromium.launch({ headless, channel })
+      const browser = await chromium.launch({ headless, args, channel })
       resolvedLaunchOptions = { channel }
       return browser
     } catch (err) {
@@ -82,7 +86,7 @@ async function launchWithResolution(headless: boolean): Promise<Browser> {
     )
   }
   resolvedLaunchOptions = {}
-  return chromium.launch({ headless })
+  return chromium.launch({ headless, args })
 }
 
 /** Downloads Playwright's managed Chromium into a writable per-user directory, if not already present. Safe to call concurrently — a second caller awaits the same in-flight download rather than starting another. */
@@ -147,7 +151,11 @@ export async function launchHeadedContext(): Promise<{ browser: Browser; context
   const browser = await launchWithResolution(false)
   const context = await browser.newContext({
     userAgent: REALISTIC_USER_AGENT,
-    viewport: { width: 1280, height: 900 },
+    // null (not a fixed size) lets the page's rendering area follow the real OS window as the
+    // user drags/resizes it, instead of Playwright pinning content to a fixed viewport
+    // regardless of the window's actual size — the headless context's fixed viewport (below)
+    // is deliberately different, since that one is never resized by a human.
+    viewport: null,
     locale: 'en-US'
   })
   return { browser, context }

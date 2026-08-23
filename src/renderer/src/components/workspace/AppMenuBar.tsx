@@ -19,6 +19,8 @@ import type { SectionId } from '../../pages/Settings/SettingsPage'
  */
 export default function AppMenuBar({
   onOpenSettings,
+  onOpenExport,
+  onOpenImport,
   sidebarVisible,
   onToggleSidebar,
   dockVisible,
@@ -26,6 +28,8 @@ export default function AppMenuBar({
   onShowTerminalTab
 }: {
   onOpenSettings: (section?: SectionId) => void
+  onOpenExport: () => void
+  onOpenImport: () => void
   sidebarVisible: boolean
   onToggleSidebar: () => void
   dockVisible: boolean
@@ -76,6 +80,9 @@ export default function AppMenuBar({
 
   const fileItems: MenuEntry[] = [
     { type: 'action', key: 'settings', label: 'Settings', shortcut: shortcutLabel('app.toggleSettings'), onSelect: () => onOpenSettings() },
+    { type: 'separator', key: 'sep-data' },
+    { type: 'action', key: 'export', label: 'Export Data…', onSelect: onOpenExport },
+    { type: 'action', key: 'import', label: 'Import Data…', onSelect: onOpenImport },
     { type: 'separator', key: 'sep' },
     { type: 'action', key: 'quit', label: 'Quit', onSelect: () => window.close() }
   ]

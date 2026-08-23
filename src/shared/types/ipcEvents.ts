@@ -64,6 +64,13 @@ export const IPC = {
   logs: {
     list: 'logs:list'
   },
+  data: {
+    exportJson: 'data:exportJson',
+    exportCsv: 'data:exportCsv',
+    getExportSizes: 'data:getExportSizes',
+    pickImportFile: 'data:pickImportFile',
+    import: 'data:import'
+  },
   app: {
     getVersion: 'app:getVersion'
   }

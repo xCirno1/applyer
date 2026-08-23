@@ -20,6 +20,15 @@ import type { ListActivityQuery, ListActivityResult } from '@shared/types/activi
 import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
 import type { IndexedJobsRetention, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
 import type { StorageStats } from '@shared/types/storage'
+import type {
+  ExportSelection,
+  ExportSizes,
+  CsvTable,
+  ExportFileResult,
+  ImportPickResult,
+  ImportApplyResult,
+  ExportBundle
+} from '@shared/types/dataTransfer'
 
 const terminalApi = {
   create: (options: TerminalCreateOptions): Promise<TerminalCreateResult> =>
@@ -159,6 +168,16 @@ const appApi = {
   getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.app.getVersion)
 }
 
+const dataApi = {
+  exportJson: (selection: ExportSelection): Promise<ExportFileResult> =>
+    ipcRenderer.invoke(IPC.data.exportJson, { selection }),
+  exportCsv: (table: CsvTable): Promise<ExportFileResult> => ipcRenderer.invoke(IPC.data.exportCsv, { table }),
+  getExportSizes: (): Promise<ExportSizes> => ipcRenderer.invoke(IPC.data.getExportSizes),
+  pickImportFile: (): Promise<ImportPickResult> => ipcRenderer.invoke(IPC.data.pickImportFile),
+  import: (bundle: ExportBundle, selection: ExportSelection): Promise<ImportApplyResult> =>
+    ipcRenderer.invoke(IPC.data.import, { bundle, selection })
+}
+
 const api = {
   terminal: terminalApi,
   jobs: jobsApi,
@@ -169,7 +188,8 @@ const api = {
   browserControl: browserControlApi,
   settings: settingsApi,
   logs: logsApi,
-  app: appApi
+  app: appApi,
+  data: dataApi
 }
 
 contextBridge.exposeInMainWorld('api', api)

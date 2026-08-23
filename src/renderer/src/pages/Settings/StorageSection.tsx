@@ -4,20 +4,9 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/useToast'
+import { formatBytes } from '../../lib/formatBytes'
 import type { StorageMode } from '@shared/types/profile'
 import type { StorageStats } from '@shared/types/storage'
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  const units = ['KB', 'MB', 'GB', 'TB']
-  let value = bytes / 1024
-  let unitIndex = 0
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024
-    unitIndex++
-  }
-  return `${value.toFixed(value < 10 ? 2 : 1)} ${units[unitIndex]}`
-}
 
 export default function StorageSection(): ReactElement {
   const [currentMode, setCurrentMode] = useState<StorageMode | null>(null)

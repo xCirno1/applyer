@@ -25,8 +25,11 @@ import {
   clearBlocking,
   removeJob,
   listBlockedJobs,
+  listAllJobs,
+  importJobs,
   IllegalTransitionError
 } from './jobsRepository'
+import type { JobRecord } from '@shared/types/job'
 
 function baseInput(overrides: Partial<Parameters<typeof queueJob>[0]> = {}): Parameters<typeof queueJob>[0] {
   return { title: 'Backend Engineer', company: 'Acme', url: 'https://example.com/1', ...overrides }
@@ -251,5 +254,66 @@ describe('removeJob', () => {
 
   it('is a no-op for an unknown id', () => {
     expect(() => removeJob('does-not-exist')).not.toThrow()
+  })
+})
+
+describe('listAllJobs', () => {
+  it('returns every job regardless of status, unpaginated', () => {
+    queueJob(baseInput({ url: 'https://x.com/1' }))
+    queueJob(baseInput({ url: 'https://x.com/2' }))
+    expect(listAllJobs()).toHaveLength(2)
+  })
+})
+
+describe('importJobs', () => {
+  function fixture(overrides: Partial<JobRecord> = {}): JobRecord {
+    return {
+      id: 'external-id',
+      externalId: null,
+      source: 'linkedin',
+      title: 'Backend Engineer',
+      company: 'Acme',
+      location: null,
+      url: 'https://example.com/imported',
+      description: null,
+      salaryRange: null,
+      status: 'submitted',
+      matchScore: 90,
+      matchReasons: null,
+      applicationUrl: null,
+      applyMethod: null,
+      screenshotPath: '/some/other/machine/path.png',
+      failureTag: null,
+      failureMessage: null,
+      blockingReason: 'stale',
+      blockingTaskId: 'task-1',
+      queuedAt: '2020-01-01T00:00:00.000Z',
+      filledAt: '2020-01-02T00:00:00.000Z',
+      submittedAt: '2020-01-03T00:00:00.000Z',
+      createdAt: '2020-01-01T00:00:00.000Z',
+      updatedAt: '2020-01-03T00:00:00.000Z',
+      ...overrides
+    }
+  }
+
+  it('inserts a new job, preserving status and dates but regenerating the id and dropping machine-local fields', () => {
+    const result = importJobs([fixture()])
+    expect(result).toEqual({ imported: 1, skipped: 0 })
+
+    const job = getJobByUrl('https://example.com/imported')
+    expect(job).not.toBeNull()
+    expect(job!.id).not.toBe('external-id')
+    expect(job!.status).toBe('submitted')
+    expect(job!.queuedAt).toBe('2020-01-01T00:00:00.000Z')
+    expect(job!.screenshotPath).toBeNull()
+    expect(job!.blockingReason).toBeNull()
+    expect(job!.blockingTaskId).toBeNull()
+  })
+
+  it('skips a job whose URL already exists, without touching the existing record', () => {
+    queueJob(baseInput({ url: 'https://example.com/imported' }))
+    const result = importJobs([fixture()])
+    expect(result).toEqual({ imported: 0, skipped: 1 })
+    expect(listAllJobs()).toHaveLength(1)
   })
 })

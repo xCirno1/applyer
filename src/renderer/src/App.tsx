@@ -8,6 +8,8 @@ import ToastProvider from './components/ui/ToastProvider'
 import Skeleton from './components/ui/Skeleton'
 import IconRail, { type RailPage } from './components/navigation/IconRail'
 import JobDetailModal from './components/board/JobDetailModal'
+import ExportModal from './pages/Settings/ExportModal'
+import ImportModal from './pages/Settings/ImportModal'
 import AppMenuBar from './components/workspace/AppMenuBar'
 import { useWorkspaceLayout } from './components/workspace/useWorkspaceLayout'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
@@ -22,6 +24,8 @@ type BootState = 'loading' | 'onboarding' | 'ready'
 function MainShell(): ReactElement {
   const [screen, setScreen] = useState<Screen>('workspace')
   const [settingsSection, setSettingsSection] = useState<SectionId>('profile')
+  const [exportOpen, setExportOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const activeJob = useJobsStore((s) => s.activeJob)
   const closeJob = useJobsStore((s) => s.closeJob)
   useShortcutHandler('app.toggleSettings', () => setScreen((s) => (s === 'settings' ? 'workspace' : 'settings')))
@@ -68,6 +72,8 @@ function MainShell(): ReactElement {
                 <img src={logo} alt="Applyer" className="h-5 w-5 shrink-0" draggable={false} />
                 <AppMenuBar
                   onOpenSettings={openSettings}
+                  onOpenExport={() => setExportOpen(true)}
+                  onOpenImport={() => setImportOpen(true)}
                   sidebarVisible={layout.sidebarVisible}
                   onToggleSidebar={() => setSidebarVisible(!layout.sidebarVisible)}
                   dockVisible={layout.dockVisible}
@@ -124,7 +130,11 @@ function MainShell(): ReactElement {
                 </button>
               </div>
               <div className="min-h-0 flex-1">
-                <SettingsPage initialSection={settingsSection} />
+                <SettingsPage
+                  initialSection={settingsSection}
+                  onOpenExport={() => setExportOpen(true)}
+                  onOpenImport={() => setImportOpen(true)}
+                />
               </div>
             </div>
           )}
@@ -133,6 +143,10 @@ function MainShell(): ReactElement {
       {/* Global — driven entirely by jobsStore's openJobId/activeJob, so any
           panel on any screen (board, sidebar, Indexed Jobs) can open it. */}
       <JobDetailModal job={activeJob} onClose={closeJob} />
+      {/* Global too, for the same reason — the File menu pops these directly
+          without navigating to Settings > Data first. */}
+      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
+      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
     </div>
   )
 }

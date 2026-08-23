@@ -12,7 +12,8 @@ beforeEach(() => {
 
 import { eq } from 'drizzle-orm'
 import { jobExclusions } from '../schema'
-import { isUrlExcluded, excludeUrl, listExclusions, removeExclusion } from './jobExclusionsRepository'
+import { isUrlExcluded, excludeUrl, listExclusions, removeExclusion, listAllExclusions, importExclusions } from './jobExclusionsRepository'
+import type { ExclusionRecord } from '@shared/types/exclusion'
 
 describe('isUrlExcluded', () => {
   it('is false for a URL never excluded', () => {
@@ -91,5 +92,42 @@ describe('removeExclusion', () => {
     const { exclusion } = excludeUrl({ url: 'https://example.com/1', excludedBy: 'user' })
     removeExclusion(exclusion.id)
     expect(isUrlExcluded('https://example.com/1')).toBe(false)
+  })
+})
+
+describe('listAllExclusions', () => {
+  it('returns every exclusion, unpaginated', () => {
+    excludeUrl({ url: 'https://acme.com/1', excludedBy: 'user' })
+    excludeUrl({ url: 'https://beta.com/1', excludedBy: 'agent' })
+    expect(listAllExclusions()).toHaveLength(2)
+  })
+})
+
+describe('importExclusions', () => {
+  function fixture(overrides: Partial<ExclusionRecord> = {}): ExclusionRecord {
+    return {
+      id: 'external-id',
+      url: 'https://example.com/imported',
+      title: 'Bad Job',
+      company: 'Acme',
+      reason: 'not remote',
+      excludedBy: 'user',
+      createdAt: '2020-01-01T00:00:00.000Z',
+      ...overrides
+    }
+  }
+
+  it('inserts a new exclusion, regenerating the id', () => {
+    const result = importExclusions([fixture()])
+    expect(result).toEqual({ imported: 1, skipped: 0 })
+    expect(isUrlExcluded('https://example.com/imported')).toBe(true)
+    expect(listAllExclusions()[0]!.id).not.toBe('external-id')
+  })
+
+  it('skips an exclusion whose URL already exists', () => {
+    excludeUrl({ url: 'https://example.com/imported', excludedBy: 'agent' })
+    const result = importExclusions([fixture()])
+    expect(result).toEqual({ imported: 0, skipped: 1 })
+    expect(listAllExclusions()).toHaveLength(1)
   })
 })

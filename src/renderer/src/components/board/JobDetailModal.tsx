@@ -20,8 +20,10 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   const [submitting, setSubmitting] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [excluding, setExcluding] = useState(false)
+  const [unqueueing, setUnqueueing] = useState(false)
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false)
   const [confirmExcludeOpen, setConfirmExcludeOpen] = useState(false)
+  const [confirmUnqueueOpen, setConfirmUnqueueOpen] = useState(false)
   const [activity, setActivity] = useState<ActivityLogEntry[]>([])
 
   useEffect(() => {
@@ -79,6 +81,20 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
       onClose()
     } else {
       toast.error(result.error ?? 'Failed to exclude this job.')
+    }
+  }
+
+  const handleUnqueue = async (): Promise<void> => {
+    setConfirmUnqueueOpen(false)
+    setUnqueueing(true)
+    const result = await window.api.jobs.unqueue(job.id)
+    setUnqueueing(false)
+    if (result.ok) {
+      removeJobLocal(job.id)
+      toast.success('Removed from the queue.')
+      onClose()
+    } else {
+      toast.error(result.error ?? 'Failed to unqueue this job.')
     }
   }
 
@@ -154,6 +170,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
             Open original listing ↗
           </a>
           <div className="flex gap-2">
+            {job.status === 'queued' && (
+              <Button size="sm" variant="secondary" onClick={() => setConfirmUnqueueOpen(true)} loading={unqueueing}>
+                Unqueue
+              </Button>
+            )}
             {job.status !== 'submitted' && (
               <Button size="sm" variant="danger" onClick={() => setConfirmExcludeOpen(true)} loading={excluding}>
                 Exclude
@@ -190,6 +211,15 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
         danger
         onConfirm={handleExclude}
         onCancel={() => setConfirmExcludeOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmUnqueueOpen}
+        title="Unqueue this job"
+        message="This removes it from the board, but its URL isn't blacklisted — the agent can still find and re-queue it again later."
+        confirmLabel="Unqueue"
+        onConfirm={handleUnqueue}
+        onCancel={() => setConfirmUnqueueOpen(false)}
       />
     </Modal>
   )

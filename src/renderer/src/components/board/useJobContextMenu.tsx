@@ -18,10 +18,12 @@ interface BulkConfirmState {
  * Right-clicking a card outside the current selection replaces the
  * selection with just that card (standard file-manager convention);
  * right-clicking a card that's already part of a multi-selection scopes
- * Retry/Exclude to the whole selection instead of just the one card. Retry
- * only confirms when it would touch more than one job (single-job retry
- * matches `JobDetailModal`'s immediate behavior); Exclude always confirms,
- * matching its existing single-job dialog — it's a permanent blacklist.
+ * Retry/Unqueue/Exclude to the whole selection instead of just the one
+ * card. Retry only confirms when it would touch more than one job
+ * (single-job retry matches `JobDetailModal`'s immediate behavior);
+ * Unqueue and Exclude always confirm, matching their existing single-job
+ * dialogs — both remove the job from the board (Exclude also permanently
+ * blacklists its URL; Unqueue does not).
  */
 export function useJobContextMenu(): {
   openContextMenu: (e: MouseEvent, job: JobRecord, onOpen: () => void) => void
@@ -30,9 +32,11 @@ export function useJobContextMenu(): {
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null)
   const [confirmRetry, setConfirmRetry] = useState<BulkConfirmState | null>(null)
   const [confirmExclude, setConfirmExclude] = useState<BulkConfirmState | null>(null)
+  const [confirmUnqueue, setConfirmUnqueue] = useState<BulkConfirmState | null>(null)
   const [retrying, setRetrying] = useState(false)
   const [excluding, setExcluding] = useState(false)
-  const { retryMany, excludeMany } = useJobActions()
+  const [unqueueing, setUnqueueing] = useState(false)
+  const { retryMany, excludeMany, unqueueMany } = useJobActions()
 
   const openContextMenu = (e: MouseEvent, job: JobRecord, onOpen: () => void): void => {
     e.preventDefault()
@@ -51,6 +55,7 @@ export function useJobContextMenu(): {
 
     const retryableIds = targetJobs.filter((j) => j.status === 'failed').map((j) => j.id)
     const excludableIds = targetJobs.filter((j) => j.status !== 'submitted').map((j) => j.id)
+    const unqueueableIds = targetJobs.filter((j) => j.status === 'queued').map((j) => j.id)
 
     const items: MenuEntry[] = []
     if (!isBulk) {
@@ -65,6 +70,14 @@ export function useJobContextMenu(): {
           if (retryableIds.length > 1) setConfirmRetry({ ids: retryableIds })
           else void retryMany(retryableIds)
         }
+      })
+    }
+    if (unqueueableIds.length > 0) {
+      items.push({
+        type: 'action',
+        key: 'unqueue',
+        label: isBulk ? `Unqueue (${unqueueableIds.length})` : 'Unqueue',
+        onSelect: () => setConfirmUnqueue({ ids: unqueueableIds })
       })
     }
     if (excludableIds.length > 0) {
@@ -120,6 +133,22 @@ export function useJobContextMenu(): {
           setConfirmExclude(null)
         }}
         onCancel={() => setConfirmExclude(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmUnqueue !== null}
+        title={confirmUnqueue && confirmUnqueue.ids.length > 1 ? 'Unqueue these jobs?' : 'Unqueue this job?'}
+        message="This removes the job(s) from the board, but their URLs aren't blacklisted — the agent can still find and re-queue them again later."
+        confirmLabel="Unqueue"
+        loading={unqueueing}
+        onConfirm={async () => {
+          if (!confirmUnqueue) return
+          setUnqueueing(true)
+          await unqueueMany(confirmUnqueue.ids)
+          setUnqueueing(false)
+          setConfirmUnqueue(null)
+        }}
+        onCancel={() => setConfirmUnqueue(null)}
       />
     </>
   )

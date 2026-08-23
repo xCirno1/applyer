@@ -11,7 +11,7 @@ import {
   IllegalTransitionError
 } from '../db/repositories/jobsRepository'
 import { broadcastJobUpdate } from './jobsBroadcast'
-import { excludeJob, excludeJobsByIds } from '../jobActions'
+import { excludeJob, excludeJobsByIds, unqueueJob, unqueueJobsByIds } from '../jobActions'
 import type { ListJobsQuery } from '@shared/types/job'
 
 export function registerJobsIpc(): void {
@@ -74,5 +74,18 @@ export function registerJobsIpc(): void {
   ipcMain.handle(IPC.jobs.excludeMany, (_event, { jobIds }: { jobIds: string[] }) => {
     const excludedIds = excludeJobsByIds(jobIds)
     return { ok: true, excludedIds }
+  })
+
+  ipcMain.handle(IPC.jobs.unqueue, (_event, { jobId }: { jobId: string }) => {
+    const job = unqueueJob(jobId)
+    if (!job) {
+      return { ok: false, error: 'Job not found or no longer Queued.' }
+    }
+    return { ok: true, job }
+  })
+
+  ipcMain.handle(IPC.jobs.unqueueMany, (_event, { jobIds }: { jobIds: string[] }) => {
+    const unqueuedIds = unqueueJobsByIds(jobIds)
+    return { ok: true, unqueuedIds }
   })
 }

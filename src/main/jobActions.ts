@@ -89,3 +89,33 @@ export function excludeJobsByIds(jobIds: string[]): string[] {
   }
   return excludedIds
 }
+
+/**
+ * Removes a Queued job from the board without touching the exclusion list —
+ * the lightweight counterpart to `excludeJob` for a job the user just
+ * doesn't want auto-processed right now, but wouldn't mind the agent
+ * re-discovering and re-queueing later. Restricted to `queued` jobs; once a
+ * job has started moving through the pipeline it has Retry/Exclude instead.
+ */
+export function unqueueJob(jobId: string): JobRecord | null {
+  const job = getJob(jobId)
+  if (!job || job.status !== 'queued') return null
+  removeJob(jobId)
+  broadcastJobRemoved(jobId)
+  logActivity('info', `Unqueued job: ${job.title}`, { jobId, url: job.url })
+  return job
+}
+
+/**
+ * Bulk form of `unqueueJob` for the board's multi-select toolbar and the
+ * per-card right-click menu — ids that don't exist or aren't Queued are
+ * silently skipped. Returns the ids actually unqueued, so the renderer can
+ * drop exactly those from local state without waiting on the broadcast.
+ */
+export function unqueueJobsByIds(jobIds: string[]): string[] {
+  const unqueuedIds: string[] = []
+  for (const id of jobIds) {
+    if (unqueueJob(id)) unqueuedIds.push(id)
+  }
+  return unqueuedIds
+}

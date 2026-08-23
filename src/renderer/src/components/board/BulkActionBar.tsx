@@ -25,17 +25,20 @@ export default function BulkActionBar(): ReactElement | null {
   const selectedJobs = Object.values(columns)
     .flatMap((c) => c.jobs)
     .filter((j) => selectedJobIds.has(j.id))
-  const { retryMany, excludeMany } = useJobActions()
+  const { retryMany, excludeMany, unqueueMany } = useJobActions()
 
   const [confirmRetryOpen, setConfirmRetryOpen] = useState(false)
   const [confirmExcludeOpen, setConfirmExcludeOpen] = useState(false)
+  const [confirmUnqueueOpen, setConfirmUnqueueOpen] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [excluding, setExcluding] = useState(false)
+  const [unqueueing, setUnqueueing] = useState(false)
 
   if (selectedJobIds.size === 0) return null
 
   const retryableIds = selectedJobs.filter((j) => j.status === 'failed').map((j) => j.id)
   const excludableIds = selectedJobs.filter((j) => j.status !== 'submitted').map((j) => j.id)
+  const unqueueableIds = selectedJobs.filter((j) => j.status === 'queued').map((j) => j.id)
 
   const handleRetry = async (): Promise<void> => {
     setConfirmRetryOpen(false)
@@ -53,6 +56,14 @@ export default function BulkActionBar(): ReactElement | null {
     clearSelection()
   }
 
+  const handleUnqueue = async (): Promise<void> => {
+    setConfirmUnqueueOpen(false)
+    setUnqueueing(true)
+    await unqueueMany(unqueueableIds)
+    setUnqueueing(false)
+    clearSelection()
+  }
+
   return (
     <div className="flex h-7 shrink-0 items-center gap-2 border-b border-border-soft bg-canvas-soft px-2">
       <span className="text-[12px] font-medium text-text">{selectedJobIds.size} selected</span>
@@ -67,6 +78,15 @@ export default function BulkActionBar(): ReactElement | null {
           onClick={() => (retryableIds.length > 1 ? setConfirmRetryOpen(true) : void handleRetry())}
         >
           Retry{retryableIds.length > 0 ? ` (${retryableIds.length})` : ''}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={unqueueableIds.length === 0}
+          loading={unqueueing}
+          onClick={() => setConfirmUnqueueOpen(true)}
+        >
+          Unqueue{unqueueableIds.length > 0 ? ` (${unqueueableIds.length})` : ''}
         </Button>
         <Button
           size="sm"
@@ -99,6 +119,17 @@ export default function BulkActionBar(): ReactElement | null {
         loading={excluding}
         onConfirm={handleExclude}
         onCancel={() => setConfirmExcludeOpen(false)}
+      />
+      <ConfirmDialog
+        open={confirmUnqueueOpen}
+        title="Unqueue selected jobs?"
+        message={`This removes ${unqueueableIds.length} job${unqueueableIds.length === 1 ? '' : 's'} from the board, but ${
+          unqueueableIds.length === 1 ? 'its URL isn’t' : 'their URLs aren’t'
+        } blacklisted — the agent can still find and re-queue them again later.`}
+        confirmLabel="Unqueue"
+        loading={unqueueing}
+        onConfirm={handleUnqueue}
+        onCancel={() => setConfirmUnqueueOpen(false)}
       />
     </div>
   )

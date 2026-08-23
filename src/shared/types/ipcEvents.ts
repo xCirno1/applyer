@@ -17,6 +17,8 @@ export const IPC = {
     remove: 'jobs:remove',
     exclude: 'jobs:exclude',
     excludeMany: 'jobs:excludeMany',
+    unqueue: 'jobs:unqueue',
+    unqueueMany: 'jobs:unqueueMany',
     onUpdated: 'jobs:updated',
     onRemoved: 'jobs:removed'
   },

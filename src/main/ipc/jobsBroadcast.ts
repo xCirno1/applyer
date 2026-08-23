@@ -21,6 +21,13 @@ export function broadcastJobRemoved(jobId: string): void {
   }
 }
 
+/** Payload-less — the renderer just refetches its currently-loaded page on signal. */
+export function broadcastIndexedJobsChanged(): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.indexedJobs.onChanged)
+  }
+}
+
 export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaDetected, payload)

@@ -15,6 +15,13 @@
       "when": 1786886346039,
       "tag": "0001_acoustic_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787145872063,
+      "tag": "0002_yielding_komodo",
+      "breakpoints": true
     }
   ]
 }

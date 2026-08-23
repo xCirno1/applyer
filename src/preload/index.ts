@@ -18,6 +18,7 @@ import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
 import type { ListActivityQuery, ListActivityResult } from '@shared/types/activity'
 import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
+import type { IndexedJobsRetention, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
 
 const terminalApi = {
   create: (options: TerminalCreateOptions): Promise<TerminalCreateResult> =>
@@ -44,6 +45,7 @@ const terminalApi = {
 
 const jobsApi = {
   list: (query: ListJobsQuery): Promise<ListJobsResult> => ipcRenderer.invoke(IPC.jobs.list, query),
+  get: (jobId: string): Promise<{ job: JobRecord | null }> => ipcRenderer.invoke(IPC.jobs.get, { jobId }),
   markSubmitted: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: string }> =>
     ipcRenderer.invoke(IPC.jobs.markSubmitted, { jobId }),
   retry: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: string }> =>
@@ -68,6 +70,19 @@ const jobsApi = {
     const listener = (_event: Electron.IpcRendererEvent, payload: { jobId: string }): void => callback(payload)
     ipcRenderer.on(IPC.jobs.onRemoved, listener)
     return () => ipcRenderer.removeListener(IPC.jobs.onRemoved, listener)
+  }
+}
+
+const indexedJobsApi = {
+  list: (query: ListIndexedJobsQuery): Promise<ListIndexedJobsResult> =>
+    ipcRenderer.invoke(IPC.indexedJobs.list, query),
+  getRetention: (): Promise<IndexedJobsRetention> => ipcRenderer.invoke(IPC.indexedJobs.getRetention),
+  setRetention: (value: IndexedJobsRetention): Promise<{ ok: boolean; deletedCount?: number; error?: string }> =>
+    ipcRenderer.invoke(IPC.indexedJobs.setRetention, { value }),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.indexedJobs.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.indexedJobs.onChanged, listener)
   }
 }
 
@@ -141,6 +156,7 @@ const appApi = {
 const api = {
   terminal: terminalApi,
   jobs: jobsApi,
+  indexedJobs: indexedJobsApi,
   exclusions: exclusionsApi,
   profile: profileApi,
   onboarding: onboardingApi,

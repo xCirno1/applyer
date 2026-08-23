@@ -3,10 +3,13 @@ import { getDb } from '../index'
 import { appSettings } from '../schema'
 import type { StorageMode } from '@shared/types/profile'
 import type { AutoStartCommand } from '@shared/types/ipcEvents'
+import type { IndexedJobsRetention } from '@shared/types/indexedJob'
+import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
 
 const STORAGE_MODE_KEY = 'storage_mode'
 const ONBOARDING_COMPLETED_KEY = 'onboarding_completed'
 const AUTO_START_COMMAND_KEY = 'auto_start_command'
+const INDEXED_JOBS_RETENTION_KEY = 'indexed_jobs_retention_days'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -44,4 +47,15 @@ export function getAutoStartCommand(): AutoStartCommand {
 
 export function setAutoStartCommand(command: AutoStartCommand): void {
   setSetting(AUTO_START_COMMAND_KEY, command)
+}
+
+export function getIndexedJobsRetentionDays(): IndexedJobsRetention {
+  const value = getSetting(INDEXED_JOBS_RETENTION_KEY)
+  if (value === 'unlimited') return 'unlimited'
+  const parsed = value ? Number.parseInt(value, 10) : NaN
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : INDEXED_JOBS_RETENTION_DEFAULT_DAYS
+}
+
+export function setIndexedJobsRetentionDays(value: IndexedJobsRetention): void {
+  setSetting(INDEXED_JOBS_RETENTION_KEY, value === 'unlimited' ? 'unlimited' : String(value))
 }

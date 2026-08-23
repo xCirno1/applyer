@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { JobRecord, ListJobsResult } from '@shared/types/job'
 
 const listMock = vi.fn<(...args: unknown[]) => Promise<ListJobsResult>>()
+const getMock = vi.fn<(...args: unknown[]) => Promise<{ job: JobRecord | null }>>()
 const onUpdatedHandlers: ((job: JobRecord) => void)[] = []
 const onRemovedHandlers: ((payload: { jobId: string }) => void)[] = []
 
@@ -12,6 +13,8 @@ beforeEach(() => {
   // store instead of accumulating state left over from earlier tests.
   vi.resetModules()
   listMock.mockReset()
+  getMock.mockReset()
+  getMock.mockResolvedValue({ job: null })
   onUpdatedHandlers.length = 0
   onRemovedHandlers.length = 0
   Object.defineProperty(window, 'api', {
@@ -19,6 +22,7 @@ beforeEach(() => {
     value: {
       jobs: {
         list: listMock,
+        get: getMock,
         onUpdated: (fn: (job: JobRecord) => void) => {
           onUpdatedHandlers.push(fn)
           return () => {
@@ -217,6 +221,74 @@ describe('jobsStore', () => {
       expect(useJobsStore.getState().openJobId).toBe('job-1')
       useJobsStore.getState().closeJob()
       expect(useJobsStore.getState().openJobId).toBeNull()
+    })
+
+    it('openJob sets activeJob instantly from an already-loaded column, without hitting IPC', async () => {
+      const { useJobsStore } = await import('./jobsStore')
+      useJobsStore.getState().applyUpdate(job({ id: 'job-1', title: 'Loaded' }))
+
+      useJobsStore.getState().openJob('job-1')
+
+      expect(useJobsStore.getState().activeJob?.title).toBe('Loaded')
+      expect(getMock).not.toHaveBeenCalled()
+    })
+
+    it('openJob falls back to window.api.jobs.get when the job is not in any loaded column', async () => {
+      const { useJobsStore } = await import('./jobsStore')
+      getMock.mockResolvedValue({ job: job({ id: 'job-9', title: 'Fetched' }) })
+
+      useJobsStore.getState().openJob('job-9')
+      expect(useJobsStore.getState().activeJob).toBeNull()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(getMock).toHaveBeenCalledWith('job-9')
+      expect(useJobsStore.getState().activeJob?.title).toBe('Fetched')
+    })
+
+    it('a stale jobs.get response is discarded if the modal was closed (or a different job opened) first', async () => {
+      const { useJobsStore } = await import('./jobsStore')
+      let resolveGet!: (value: { job: JobRecord | null }) => void
+      getMock.mockReturnValue(new Promise((resolve) => (resolveGet = resolve)))
+
+      useJobsStore.getState().openJob('job-9')
+      useJobsStore.getState().closeJob()
+      resolveGet({ job: job({ id: 'job-9' }) })
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(useJobsStore.getState().activeJob).toBeNull()
+    })
+
+    it('closeJob clears activeJob along with openJobId', async () => {
+      const { useJobsStore } = await import('./jobsStore')
+      useJobsStore.getState().applyUpdate(job({ id: 'job-1' }))
+      useJobsStore.getState().openJob('job-1')
+
+      useJobsStore.getState().closeJob()
+
+      expect(useJobsStore.getState().activeJob).toBeNull()
+    })
+
+    it('applyUpdate patches activeJob in place when it matches the currently-open job', async () => {
+      const { useJobsStore } = await import('./jobsStore')
+      useJobsStore.getState().applyUpdate(job({ id: 'job-1', title: 'Old Title' }))
+      useJobsStore.getState().openJob('job-1')
+
+      useJobsStore.getState().applyUpdate(job({ id: 'job-1', title: 'New Title' }))
+
+      expect(useJobsStore.getState().activeJob?.title).toBe('New Title')
+    })
+
+    it('applyUpdate leaves activeJob untouched when it does not match the currently-open job', async () => {
+      const { useJobsStore } = await import('./jobsStore')
+      useJobsStore.getState().applyUpdate(job({ id: 'job-1', title: 'Open Job' }))
+      useJobsStore.getState().openJob('job-1')
+
+      useJobsStore.getState().applyUpdate(job({ id: 'other-job', title: 'Someone Else' }))
+
+      expect(useJobsStore.getState().activeJob?.id).toBe('job-1')
+      expect(useJobsStore.getState().activeJob?.title).toBe('Open Job')
     })
   })
 })

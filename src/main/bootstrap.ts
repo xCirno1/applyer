@@ -7,6 +7,7 @@ import { createMainWindow } from './window'
 import { initDatabase, closeDatabase } from './db'
 import { registerTerminalIpc } from './ipc/terminal'
 import { registerJobsIpc } from './ipc/jobs'
+import { registerIndexedJobsIpc } from './ipc/indexedJobs'
 import { registerExclusionsIpc } from './ipc/exclusions'
 import { registerProfileIpc } from './ipc/profile'
 import { registerOnboardingIpc } from './ipc/onboarding'
@@ -23,6 +24,7 @@ import { closeAllBrowsers } from './browser/browserController'
 import { mcpSocketPath } from './config/paths'
 import { writeAgentInstructions } from './config/agentInstructions'
 import { reconcileOrphanedBlockedJobs } from './jobActions'
+import { pruneIndexedJobs } from './db/repositories/indexedJobsRepository'
 
 let mcpSocketServer: ReturnType<typeof startMcpSocketServer> | undefined
 
@@ -49,9 +51,11 @@ app.whenReady().then(() => {
   }
 
   reconcileOrphanedBlockedJobs()
+  pruneIndexedJobs()
   writeAgentInstructions()
 
   registerJobsIpc()
+  registerIndexedJobsIpc()
   registerExclusionsIpc()
   registerProfileIpc()
   registerOnboardingIpc()

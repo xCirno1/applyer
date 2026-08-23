@@ -19,9 +19,12 @@ describe('COMMANDS / COMMAND_LIST', () => {
     expect(new Set(combos).size).toBe(combos.length)
   })
 
-  it('every default combo requires the mod key, per the app-wide convention', () => {
+  it('every default combo requires the mod key, except bare function keys', () => {
+    const FUNCTION_KEY_ONLY = /^f([1-9]|1[0-9]|2[0-4])$/
     for (const def of COMMAND_LIST) {
-      if (def.defaultCombo) expect(def.defaultCombo.startsWith('mod+')).toBe(true)
+      if (!def.defaultCombo) continue
+      const requiresMod = def.defaultCombo.startsWith('mod+') || FUNCTION_KEY_ONLY.test(def.defaultCombo)
+      expect(requiresMod).toBe(true)
     }
   })
 

@@ -10,6 +10,7 @@ export const IPC = {
   },
   jobs: {
     list: 'jobs:list',
+    get: 'jobs:get',
     markSubmitted: 'jobs:markSubmitted',
     retry: 'jobs:retry',
     retryAll: 'jobs:retryAll',
@@ -21,6 +22,12 @@ export const IPC = {
     unqueueMany: 'jobs:unqueueMany',
     onUpdated: 'jobs:updated',
     onRemoved: 'jobs:removed'
+  },
+  indexedJobs: {
+    list: 'indexedJobs:list',
+    getRetention: 'indexedJobs:getRetention',
+    setRetention: 'indexedJobs:setRetention',
+    onChanged: 'indexedJobs:changed'
   },
   exclusions: {
     list: 'exclusions:list',

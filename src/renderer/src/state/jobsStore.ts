@@ -20,8 +20,14 @@ export interface JobFilters {
 interface JobsState {
   columns: Record<JobStatus, ColumnState>
   filters: JobFilters
-  /** Job currently open in the detail modal — shared so any panel (board, sidebar) can drive it. */
+  /** Job currently open in the detail modal — shared so any panel (board, sidebar, indexed jobs) can drive it. */
   openJobId: string | null
+  /**
+   * The open job's full record. Populated instantly from a loaded column
+   * when available; otherwise fetched directly (e.g. a job opened from the
+   * Indexed Jobs page may not be in any currently-loaded board page).
+   */
+  activeJob: JobRecord | null
   /** Checked job ids for the board's bulk-action toolbar and per-card right-click menu. */
   selectedJobIds: Set<string>
   setFilters: (partial: Partial<JobFilters>) => void
@@ -53,6 +59,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
   filters: DEFAULT_FILTERS,
   openJobId: null,
+  activeJob: null,
   selectedJobIds: new Set(),
 
   setFilters: (partial) => {
@@ -137,7 +144,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
           total: targetColumn.total + 1
         }
       }
-      return { columns }
+      return { columns, activeJob: state.activeJob?.id === job.id ? job : state.activeJob }
     })
   },
 
@@ -168,8 +175,17 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     }
   },
 
-  openJob: (id) => set({ openJobId: id }),
-  closeJob: () => set({ openJobId: null }),
+  openJob: (id) => {
+    const fromColumns = Object.values(get().columns)
+      .flatMap((c) => c.jobs)
+      .find((j) => j.id === id)
+    set({ openJobId: id, activeJob: fromColumns ?? null })
+    if (fromColumns) return
+    window.api.jobs.get(id).then(({ job }) => {
+      if (get().openJobId === id) set({ activeJob: job })
+    })
+  },
+  closeJob: () => set({ openJobId: null, activeJob: null }),
 
   toggleSelected: (id) =>
     set((state) => {

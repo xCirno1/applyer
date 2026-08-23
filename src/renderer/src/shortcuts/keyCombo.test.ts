@@ -75,6 +75,22 @@ describe('comboIdFromEvent', () => {
     stubPlatform('Linux')
     expect(comboIdFromEvent(keydown({ key: 'Enter', code: 'Enter', ctrlKey: true }))).toBe('mod+enter')
   })
+
+  it('allows a bare function key with no mod held', () => {
+    stubPlatform('Linux')
+    expect(comboIdFromEvent(keydown({ key: 'F2', code: 'F2', ctrlKey: false }))).toBe('f2')
+    expect(comboIdFromEvent(keydown({ key: 'F12', code: 'F12', ctrlKey: false }))).toBe('f12')
+  })
+
+  it('still layers mod/shift/alt onto a function key when they are held', () => {
+    stubPlatform('Linux')
+    expect(comboIdFromEvent(keydown({ key: 'F2', code: 'F2', ctrlKey: true, shiftKey: true }))).toBe('mod+shift+f2')
+  })
+
+  it('rejects a non-function key with no mod held, even if it looks similar', () => {
+    stubPlatform('Linux')
+    expect(comboIdFromEvent(keydown({ key: 'f', code: 'KeyF', ctrlKey: false }))).toBeNull()
+  })
 })
 
 describe('comboIdToLabel', () => {

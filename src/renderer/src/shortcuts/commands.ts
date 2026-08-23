@@ -37,6 +37,12 @@ export const COMMANDS = {
     category: 'Terminal',
     defaultCombo: 'mod+shift+['
   },
+  'terminal.rename': {
+    id: 'terminal.rename',
+    label: 'Rename terminal',
+    category: 'Terminal',
+    defaultCombo: 'f2'
+  },
   'view.toggleOverview': {
     id: 'view.toggleOverview',
     label: 'Toggle overview panel',

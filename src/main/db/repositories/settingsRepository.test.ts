@@ -16,8 +16,11 @@ import {
   isOnboardingCompleted,
   markOnboardingCompleted,
   getAutoStartCommand,
-  setAutoStartCommand
+  setAutoStartCommand,
+  getIndexedJobsRetentionDays,
+  setIndexedJobsRetentionDays
 } from './settingsRepository'
+import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
 
 describe('storage mode', () => {
   it('defaults to null (unset)', () => {
@@ -53,6 +56,22 @@ describe('auto-start command', () => {
     expect(getAutoStartCommand()).toBe('claude')
     setAutoStartCommand('')
     expect(getAutoStartCommand()).toBe('')
+  })
+})
+
+describe('indexed jobs retention', () => {
+  it('defaults to INDEXED_JOBS_RETENTION_DEFAULT_DAYS', () => {
+    expect(getIndexedJobsRetentionDays()).toBe(INDEXED_JOBS_RETENTION_DEFAULT_DAYS)
+  })
+
+  it('round-trips a day count', () => {
+    setIndexedJobsRetentionDays(90)
+    expect(getIndexedJobsRetentionDays()).toBe(90)
+  })
+
+  it('round-trips "unlimited"', () => {
+    setIndexedJobsRetentionDays('unlimited')
+    expect(getIndexedJobsRetentionDays()).toBe('unlimited')
   })
 })
 

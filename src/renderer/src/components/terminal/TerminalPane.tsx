@@ -89,7 +89,15 @@ export default function TerminalPane(): ReactElement {
     window.api.terminal
       .create({ cols: term.cols, rows: term.rows })
       .then((result) => {
-        if (disposed) return
+        if (disposed) {
+          // Cleanup already ran before this resolved (e.g. StrictMode's
+          // dev-only double-mount) — `sessionId` in the closure below never
+          // gets set, so the outer cleanup's dispose call is a no-op. Without
+          // this, the pty it just spawned (auto-start command and all) would
+          // leak until the whole app quits.
+          window.api.terminal.dispose(result.sessionId)
+          return
+        }
         sessionId = result.sessionId
 
         removeDataListener = window.api.terminal.onData((payload) => {

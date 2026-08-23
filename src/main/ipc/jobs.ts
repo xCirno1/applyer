@@ -19,6 +19,10 @@ export function registerJobsIpc(): void {
     return listJobs(query ?? {})
   })
 
+  ipcMain.handle(IPC.jobs.get, (_event, { jobId }: { jobId: string }) => {
+    return { job: getJob(jobId) }
+  })
+
   ipcMain.handle(IPC.jobs.markSubmitted, (_event, { jobId }: { jobId: string }) => {
     try {
       const job = setSubmitted(jobId)

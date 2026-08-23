@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import TerminalPane from './TerminalPane'
 import TerminalTabBar from './TerminalTabBar'
 import { useTerminalTabs } from './useTerminalTabs'
@@ -12,10 +12,26 @@ import { useShortcutHandler } from '../../providers/ShortcutsContext'
  * hidden via CSS rather than unmounted, same reasoning as the outer
  * Terminal/Activity-Log dock switch: a remount would kill the session.
  * Actually closing a tab does unmount it (and with it, dispose the session)
- * since that's the whole point of closing.
+ * since that's the whole point of closing. Panes are mapped from
+ * `useTerminalTabs`' `paneOrder` (append-only, untouched by reordering) —
+ * see the comment there for why that has to be a separate list from `tabs`'
+ * reorderable display order.
  */
 export default function TerminalGroup(): ReactElement {
-  const { tabs, activeId, atMax, addTerminal, closeTerminal, setActiveId } = useTerminalTabs()
+  const {
+    tabs,
+    activeId,
+    paneOrder,
+    atMax,
+    addTerminal,
+    closeTerminal,
+    setActiveId,
+    renameTerminal,
+    reorderTerminal,
+    moveTerminalToEnd
+  } = useTerminalTabs()
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [draftTitle, setDraftTitle] = useState('')
 
   const cycleTab = (direction: 1 | -1): void => {
     if (tabs.length === 0) return
@@ -25,12 +41,26 @@ export default function TerminalGroup(): ReactElement {
     if (next) setActiveId(next.id)
   }
 
+  const startRename = (id: string, title: string): void => {
+    setRenamingId(id)
+    setDraftTitle(title)
+  }
+
+  const commitRename = (): void => {
+    if (renamingId) renameTerminal(renamingId, draftTitle)
+    setRenamingId(null)
+  }
+
   useShortcutHandler('terminal.new', addTerminal)
   useShortcutHandler('terminal.close', () => {
     if (activeId) closeTerminal(activeId)
   })
   useShortcutHandler('terminal.nextTab', () => cycleTab(1))
   useShortcutHandler('terminal.prevTab', () => cycleTab(-1))
+  useShortcutHandler('terminal.rename', () => {
+    const activeTab = tabs.find((t) => t.id === activeId)
+    if (activeTab) startRename(activeTab.id, activeTab.title)
+  })
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -41,6 +71,14 @@ export default function TerminalGroup(): ReactElement {
         onSelect={setActiveId}
         onClose={closeTerminal}
         onAdd={addTerminal}
+        onReorder={reorderTerminal}
+        onMoveToEnd={moveTerminalToEnd}
+        renamingId={renamingId}
+        draftTitle={draftTitle}
+        onStartRename={(t) => startRename(t.id, t.title)}
+        onDraftTitleChange={setDraftTitle}
+        onCommitRename={commitRename}
+        onCancelRename={() => setRenamingId(null)}
       />
       <div className="min-h-0 flex-1 bg-canvas-raised">
         {tabs.length === 0 ? (
@@ -51,8 +89,8 @@ export default function TerminalGroup(): ReactElement {
             </Button>
           </div>
         ) : (
-          tabs.map((t) => (
-            <div key={t.id} className={t.id === activeId ? 'h-full' : 'hidden'}>
+          paneOrder.map((id) => (
+            <div key={id} className={id === activeId ? 'h-full' : 'hidden'}>
               <TerminalPane />
             </div>
           ))

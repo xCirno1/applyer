@@ -89,6 +89,23 @@ export const jobExclusions = sqliteTable('job_exclusions', {
   createdAt: text('created_at').notNull().default(nowIso)
 })
 
+export const indexedJobs = sqliteTable('indexed_jobs', {
+  id: text('id').primaryKey(),
+  url: text('url').notNull().unique(),
+  title: text('title').notNull(),
+  company: text('company').notNull(),
+  location: text('location'),
+  source: text('source'),
+  snippet: text('snippet'),
+  salaryRange: text('salary_range'),
+  postedAt: text('posted_at'),
+  searchQuery: text('search_query').notNull(),
+  searchLocation: text('search_location'),
+  firstSeenAt: text('first_seen_at').notNull().default(nowIso),
+  lastSeenAt: text('last_seen_at').notNull().default(nowIso),
+  seenCount: integer('seen_count').notNull().default(1)
+})
+
 export const failureTags = sqliteTable('failure_tags', {
   id: text('id').primaryKey(),
   label: text('label').notNull(),

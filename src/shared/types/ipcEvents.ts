@@ -58,7 +58,8 @@ export const IPC = {
   settings: {
     changeStorageMode: 'settings:changeStorageMode',
     getAutoStartCommand: 'settings:getAutoStartCommand',
-    setAutoStartCommand: 'settings:setAutoStartCommand'
+    setAutoStartCommand: 'settings:setAutoStartCommand',
+    getStorageStats: 'settings:getStorageStats'
   },
   logs: {
     list: 'logs:list'

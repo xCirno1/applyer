@@ -1,10 +1,10 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import Button from '../../components/ui/Button'
-import TextField from '../../components/ui/TextField'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import Tag from '../../components/ui/Tag'
-import Skeleton from '../../components/ui/Skeleton'
-import { useToast } from '../../components/ui/useToast'
+import Button from '../ui/Button'
+import TextField from '../ui/TextField'
+import ConfirmDialog from '../ui/ConfirmDialog'
+import Tag from '../ui/Tag'
+import Skeleton from '../ui/Skeleton'
+import { useToast } from '../ui/useToast'
 import type { ExclusionRecord } from '@shared/types/exclusion'
 
 const PAGE_SIZE = 20
@@ -14,7 +14,12 @@ function formatDate(iso: string): string {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleDateString()
 }
 
-export default function ExclusionsSection(): ReactElement {
+/**
+ * URLs the search index/agent will never surface or queue again — lives on
+ * the Indexed Jobs page (as the "Excluded" tab) rather than Settings, since
+ * it's really a view onto the same job-discovery pipeline that page audits.
+ */
+export default function ExclusionsPanel(): ReactElement {
   const [exclusions, setExclusions] = useState<ExclusionRecord[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -75,7 +80,7 @@ export default function ExclusionsSection(): ReactElement {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 p-3">
       <p className="text-[13px] text-text-muted">
         URLs on this list are never returned by a job search and can't be queued, whether you or the agent tries to.
         Exclude a job from its detail view on the board, or add one directly here.

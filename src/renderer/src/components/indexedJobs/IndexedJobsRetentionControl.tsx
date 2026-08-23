@@ -1,8 +1,8 @@
 import { useEffect, useState, type ReactElement } from 'react'
-import Select from '../../components/ui/Select'
-import Button from '../../components/ui/Button'
-import ConfirmDialog from '../../components/ui/ConfirmDialog'
-import { useToast } from '../../components/ui/useToast'
+import Dropdown from '../ui/Dropdown'
+import ConfirmDialog from '../ui/ConfirmDialog'
+import Tooltip from '../ui/Tooltip'
+import { useToast } from '../ui/useToast'
 import type { IndexedJobsRetention } from '@shared/types/indexedJob'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
 
@@ -22,9 +22,15 @@ function toValue(retention: IndexedJobsRetention): string {
   return retention === 'unlimited' ? 'unlimited' : String(retention)
 }
 
-export default function IndexedJobsSection(): ReactElement {
+/**
+ * How long an indexed job is kept since it was last seen — a setting for
+ * this page's own list, so it lives here (in the "Indexed" tab's toolbar)
+ * rather than in Settings. Choosing a value applies immediately behind a
+ * confirm, since shortening the window can delete rows right away.
+ */
+export default function IndexedJobsRetentionControl({ className = '' }: { className?: string }): ReactElement {
   const [current, setCurrent] = useState<IndexedJobsRetention>(INDEXED_JOBS_RETENTION_DEFAULT_DAYS)
-  const [draft, setDraft] = useState<string>(toValue(INDEXED_JOBS_RETENTION_DEFAULT_DAYS))
+  const [loaded, setLoaded] = useState(false)
   const [pending, setPending] = useState<IndexedJobsRetention | null>(null)
   const [saving, setSaving] = useState(false)
   const toast = useToast()
@@ -32,7 +38,7 @@ export default function IndexedJobsSection(): ReactElement {
   useEffect(() => {
     window.api.indexedJobs.getRetention().then((retention) => {
       setCurrent(retention)
-      setDraft(toValue(retention))
+      setLoaded(true)
     })
   }, [])
 
@@ -50,38 +56,24 @@ export default function IndexedJobsSection(): ReactElement {
           : 'Retention updated.'
       )
     } else {
-      setDraft(toValue(current))
       toast.error(result.error ?? 'Failed to update retention.')
     }
   }
 
-  const draftRetention = toRetention(draft)
-
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-[13px] text-text-muted">
-        Every job search an agent runs is indexed here, whether or not it was chosen — so you can audit what got
-        found and skipped, not just what was queued. Old entries are pruned automatically after this window.
-      </p>
-
-      <div className="max-w-xs">
-        <Select label="Keep indexed job history for" options={OPTIONS} value={draft} onChange={setDraft} />
-      </div>
-
-      {draftRetention === 'unlimited' && (
-        <p className="max-w-md text-[12px] text-warning">
-          Indexed job history will be kept forever. Since agents can index far more jobs than they ever queue, this
-          may grow the database significantly over time.
-        </p>
-      )}
-
-      {draft !== toValue(current) && (
-        <div>
-          <Button variant="primary" onClick={() => setPending(draftRetention)}>
-            Save
-          </Button>
-        </div>
-      )}
+    <div className={`flex items-center gap-1.5 ${className}`}>
+      <Tooltip label="How long indexed jobs are kept before being pruned automatically.">
+        <span className="text-[11px] text-text-faint">Keep for</span>
+      </Tooltip>
+      <Dropdown
+        size="sm"
+        className="w-28"
+        ariaLabel="Indexed job retention"
+        options={OPTIONS}
+        value={toValue(current)}
+        onChange={(v) => setPending(toRetention(v))}
+        disabled={!loaded || saving}
+      />
 
       <ConfirmDialog
         open={pending !== null}
@@ -94,10 +86,7 @@ export default function IndexedJobsSection(): ReactElement {
         confirmLabel="Change"
         loading={saving}
         onConfirm={handleConfirm}
-        onCancel={() => {
-          setPending(null)
-          setDraft(toValue(current))
-        }}
+        onCancel={() => setPending(null)}
       />
     </div>
   )

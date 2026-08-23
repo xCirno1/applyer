@@ -17,7 +17,7 @@ const SCOPE_LABELS: Record<McpScope, string> = {
   workspace: 'this workspace only'
 }
 
-/** Used by both onboarding's McpSetup step and the Settings > Connections section. */
+/** Used by both onboarding's McpSetup step and the Settings > Agent section's Connections subsection. */
 export default function McpCliCard({ detection }: { detection: McpConfigDetection }): ReactElement {
   const toast = useToast()
   const [scope, setScope] = useState<McpScope>('user')

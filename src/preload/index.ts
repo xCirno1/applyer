@@ -19,6 +19,7 @@ import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode 
 import type { ListActivityQuery, ListActivityResult } from '@shared/types/activity'
 import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
 import type { IndexedJobsRetention, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
+import type { StorageStats } from '@shared/types/storage'
 
 const terminalApi = {
   create: (options: TerminalCreateOptions): Promise<TerminalCreateResult> =>
@@ -146,7 +147,8 @@ const settingsApi = {
   setAutoStartCommand: (
     command: AutoStartCommand
   ): Promise<{ ok: boolean; command?: AutoStartCommand; error?: string }> =>
-    ipcRenderer.invoke(IPC.settings.setAutoStartCommand, { command })
+    ipcRenderer.invoke(IPC.settings.setAutoStartCommand, { command }),
+  getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats)
 }
 
 const logsApi = {

@@ -18,7 +18,7 @@ export const LIST_EXCLUSIONS_DEFAULT_LIMIT = 20
 export const LIST_INDEXED_JOBS_MAX_LIMIT = 50
 export const LIST_INDEXED_JOBS_DEFAULT_LIMIT = 20
 
-/** Retention options offered in Settings > Indexed Jobs, in days; `'unlimited'` disables pruning entirely. */
+/** Retention options offered on the Indexed Jobs page, in days; `'unlimited'` disables pruning entirely. */
 export const INDEXED_JOBS_RETENTION_OPTIONS = [7, 14, 30, 90, 'unlimited'] as const
 export const INDEXED_JOBS_RETENTION_DEFAULT_DAYS = 30
 

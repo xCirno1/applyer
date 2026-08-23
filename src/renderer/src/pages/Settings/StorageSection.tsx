@@ -1,14 +1,31 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useState, type ReactElement } from 'react'
 import StorageModeCard from '../../components/onboarding/StorageModeCard'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import Button from '../../components/ui/Button'
+import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/useToast'
 import type { StorageMode } from '@shared/types/profile'
+import type { StorageStats } from '@shared/types/storage'
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  const units = ['KB', 'MB', 'GB', 'TB']
+  let value = bytes / 1024
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex++
+  }
+  return `${value.toFixed(value < 10 ? 2 : 1)} ${units[unitIndex]}`
+}
 
 export default function StorageSection(): ReactElement {
   const [currentMode, setCurrentMode] = useState<StorageMode | null>(null)
   const [encryptionAvailable, setEncryptionAvailable] = useState(true)
   const [pendingMode, setPendingMode] = useState<StorageMode | null>(null)
   const [changing, setChanging] = useState(false)
+  const [stats, setStats] = useState<StorageStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(true)
   const toast = useToast()
 
   const refresh = (): void => {
@@ -18,7 +35,20 @@ export default function StorageSection(): ReactElement {
     })
   }
 
+  const loadStats = useCallback((): void => {
+    window.api.settings.getStorageStats().then((result) => {
+      setStats(result)
+      setStatsLoading(false)
+    })
+  }, [])
+
+  const handleRefreshStats = (): void => {
+    setStatsLoading(true)
+    loadStats()
+  }
+
   useEffect(refresh, [])
+  useEffect(loadStats, [loadStats])
 
   const handleConfirm = async (): Promise<void> => {
     if (!pendingMode) return
@@ -29,6 +59,7 @@ export default function StorageSection(): ReactElement {
     if (result.ok) {
       toast.success('Storage mode changed — your profile and documents were re-written in the new format.')
       refresh()
+      handleRefreshStats()
     } else {
       toast.error(result.error ?? 'Failed to change storage mode.')
     }
@@ -57,6 +88,57 @@ export default function StorageSection(): ReactElement {
           selected={currentMode === 'plaintext'}
           onSelect={() => setPendingMode('plaintext')}
         />
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-border-soft pt-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[13px] font-semibold text-text">Usage</h2>
+          <Button size="sm" variant="ghost" loading={statsLoading} onClick={handleRefreshStats}>
+            Refresh
+          </Button>
+        </div>
+
+        {!stats && (
+          <div className="flex flex-col gap-1">
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-full" />
+            <Skeleton className="h-7 w-full" />
+          </div>
+        )}
+
+        {stats && (
+          <>
+            <div className="flex flex-col divide-y divide-border-soft border border-border-soft">
+              {stats.breakdown.map((item) => {
+                const pct = stats.totalBytes > 0 ? (item.bytes / stats.totalBytes) * 100 : 0
+                return (
+                  <div key={item.key} className="flex h-7 items-center gap-2 px-2">
+                    <span className="w-24 shrink-0 text-[12px] text-text">{item.label}</span>
+                    <div className="h-1.5 flex-1 bg-canvas-inset">
+                      <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
+                    </div>
+                    <span className="w-16 shrink-0 text-right text-[12px] text-text-muted">
+                      {formatBytes(item.bytes)}
+                    </span>
+                  </div>
+                )
+              })}
+              <div className="flex h-7 items-center justify-between bg-canvas-soft px-2">
+                <span className="text-[12px] font-medium text-text">Total</span>
+                <span className="text-[12px] font-medium text-text">{formatBytes(stats.totalBytes)}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 text-[12px] text-text-muted sm:grid-cols-3">
+              <span>Jobs · {stats.counts.jobs}</span>
+              <span>Indexed jobs · {stats.counts.indexedJobs}</span>
+              <span>Exclusions · {stats.counts.exclusions}</span>
+              <span>Documents · {stats.counts.documents}</span>
+              <span>Activity log entries · {stats.counts.activityLogEntries}</span>
+            </div>
+          </>
+        )}
       </div>
 
       <ConfirmDialog

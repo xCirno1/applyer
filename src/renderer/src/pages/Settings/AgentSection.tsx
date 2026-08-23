@@ -4,7 +4,8 @@ import TextField from '../../components/ui/TextField'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
 import { CLI_LABELS } from '../../components/settings/mcpCliLabels'
-import type { AutoStartCommand } from '@shared/types/ipcEvents'
+import McpCliCard from '../../components/settings/McpCliCard'
+import type { AutoStartCommand, McpConfigDetection } from '@shared/types/ipcEvents'
 
 type Preset = 'off' | 'claude' | 'codex' | 'custom'
 
@@ -27,6 +28,7 @@ export default function AgentSection(): ReactElement {
   const [preset, setPreset] = useState<Preset>('off')
   const [customCommand, setCustomCommand] = useState('')
   const [saving, setSaving] = useState(false)
+  const [detections, setDetections] = useState<McpConfigDetection[] | null>(null)
   const toast = useToast()
 
   useEffect(() => {
@@ -36,6 +38,7 @@ export default function AgentSection(): ReactElement {
       setPreset(derived)
       if (derived === 'custom') setCustomCommand(command)
     })
+    window.api.onboarding.detectMcpConfigs().then(setDetections)
   }, [])
 
   const save = async (command: string): Promise<void> => {
@@ -72,41 +75,62 @@ export default function AgentSection(): ReactElement {
   const customDirty = preset === 'custom' && customCommand.trim() !== (savedCommand ?? '')
 
   return (
-    <div className="flex flex-col gap-4">
-      <p className="text-[13px] text-text-muted">
-        Automatically type a command into every new terminal session Applyer opens — handy for dropping straight
-        into an agent CLI so it's ready to use the <code className="text-text">applyer</code> MCP tools without
-        typing the launch command yourself. Pick a preset, or enter any other command (a different agent CLI, a
-        launcher script, etc). This only affects new sessions.
-      </p>
-
-      <Select
-        label="Auto-start command"
-        options={PRESET_OPTIONS}
-        value={preset}
-        onChange={handlePresetChange}
-        disabled={savedCommand === null || saving}
-      />
-
-      {preset === 'custom' && (
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <TextField
-              label="Command"
-              placeholder="e.g. aider --model gpt-5, opencode, ./start-agent.sh"
-              value={customCommand}
-              onChange={(e) => setCustomCommand(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCustomSubmit()
-              }}
-              disabled={savedCommand === null || saving}
-            />
-          </div>
-          <Button onClick={handleCustomSubmit} loading={saving} disabled={!customDirty}>
-            Save
-          </Button>
+    <div className="flex max-w-xl flex-col gap-5">
+      <div className="flex flex-col gap-3">
+        <div>
+          <h2 className="text-[13px] font-semibold text-text">Auto-start command</h2>
+          <p className="mt-0.5 text-[12px] text-text-muted">
+            Automatically type a command into every new terminal session Applyer opens — handy for dropping straight
+            into an agent CLI so it's ready to use the <code className="text-text">applyer</code> MCP tools without
+            typing the launch command yourself. Pick a preset, or enter any other command (a different agent CLI, a
+            launcher script, etc). This only affects new sessions.
+          </p>
         </div>
-      )}
+
+        <Select
+          label="Auto-start command"
+          options={PRESET_OPTIONS}
+          value={preset}
+          onChange={handlePresetChange}
+          disabled={savedCommand === null || saving}
+        />
+
+        {preset === 'custom' && (
+          <div className="flex items-end gap-2">
+            <div className="flex-1">
+              <TextField
+                label="Command"
+                placeholder="e.g. aider --model gpt-5, opencode, ./start-agent.sh"
+                value={customCommand}
+                onChange={(e) => setCustomCommand(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleCustomSubmit()
+                }}
+                disabled={savedCommand === null || saving}
+              />
+            </div>
+            <Button onClick={handleCustomSubmit} loading={saving} disabled={!customDirty}>
+              Save
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-border-soft pt-5">
+        <div>
+          <h2 className="text-[13px] font-semibold text-text">Connections</h2>
+          <p className="mt-0.5 text-[12px] text-text-muted">
+            Applyer exposes tools (search, queue, fill applications, etc.) over MCP — connect one or more agent CLIs
+            here.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          {detections === null && <p className="text-[12px] text-text-faint">Detecting installed CLIs…</p>}
+          {detections?.map((d) => (
+            <McpCliCard key={d.cli} detection={d} />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

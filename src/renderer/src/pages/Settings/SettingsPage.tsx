@@ -2,21 +2,15 @@ import { useState, type ReactElement } from 'react'
 import ProfileSection from './ProfileSection'
 import DocumentsSection from './DocumentsSection'
 import StorageSection from './StorageSection'
-import ConnectionsSection from './ConnectionsSection'
 import AgentSection from './AgentSection'
-import ExclusionsSection from './ExclusionsSection'
 import AppearanceSection from './AppearanceSection'
 import ShortcutsSection from './ShortcutsSection'
-import IndexedJobsSection from './IndexedJobsSection'
 
 const SECTIONS = [
   { id: 'profile', label: 'Profile' },
   { id: 'documents', label: 'Documents' },
   { id: 'storage', label: 'Storage' },
-  { id: 'connections', label: 'Connections' },
   { id: 'agent', label: 'Agent' },
-  { id: 'exclusions', label: 'Exclusions' },
-  { id: 'indexedJobs', label: 'Indexed Jobs' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'shortcuts', label: 'Shortcuts' }
 ] as const
@@ -45,10 +39,7 @@ export default function SettingsPage({ initialSection = 'profile' }: { initialSe
         {section === 'profile' && <ProfileSection />}
         {section === 'documents' && <DocumentsSection />}
         {section === 'storage' && <StorageSection />}
-        {section === 'connections' && <ConnectionsSection />}
         {section === 'agent' && <AgentSection />}
-        {section === 'exclusions' && <ExclusionsSection />}
-        {section === 'indexedJobs' && <IndexedJobsSection />}
         {section === 'appearance' && <AppearanceSection />}
         {section === 'shortcuts' && <ShortcutsSection />}
       </div>

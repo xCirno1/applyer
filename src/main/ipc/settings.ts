@@ -10,8 +10,10 @@ import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileR
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
 import { isEncryptionAvailable } from '../db/encryption'
 import { logActivity } from '../db/repositories/activityLogRepository'
+import { computeStorageStats } from '../storageStats'
 import type { StorageMode } from '@shared/types/profile'
 import type { AutoStartCommand } from '@shared/types/ipcEvents'
+import type { StorageStats } from '@shared/types/storage'
 
 const AUTO_START_COMMAND_MAX_LENGTH = 500
 
@@ -71,4 +73,6 @@ export function registerSettingsIpc(): void {
     logActivity('info', sanitized ? `Auto-start command set to: ${sanitized}` : 'Auto-start command disabled')
     return { ok: true, command: sanitized }
   })
+
+  ipcMain.handle(IPC.settings.getStorageStats, (): StorageStats => computeStorageStats())
 }

@@ -20,7 +20,23 @@ function resolveCssColor(cssVarExpression: string): string {
   return resolved
 }
 
-function resolveTerminalTheme(): { background: string; foreground: string; cursor: string; cursorAccent: string } {
+/**
+ * Convert a resolved `rgb(r, g, b)` string to `rgba(r, g, b, alpha)` — used
+ * to give a solid theme color some translucency without needing a second
+ * design token per use site.
+ */
+function withAlpha(rgbColor: string, alpha: number): string {
+  const channels = rgbColor.match(/\d+(?:\.\d+)?/g) ?? []
+  return `rgba(${channels[0] ?? 0}, ${channels[1] ?? 0}, ${channels[2] ?? 0}, ${alpha})`
+}
+
+function resolveTerminalTheme(): {
+  background: string
+  foreground: string
+  cursor: string
+  cursorAccent: string
+  selectionBackground: string
+} {
   const background = resolveCssColor('var(--color-canvas-raised)')
   const foreground = resolveCssColor('var(--color-text)')
   return {
@@ -30,7 +46,12 @@ function resolveTerminalTheme(): { background: string; foreground: string; curso
     // light-mode background — pin it to the theme's own colors instead so
     // it's always a solid, visible block regardless of scheme.
     cursor: foreground,
-    cursorAccent: background
+    cursorAccent: background,
+    // xterm's default (unset) selection highlight is a translucent white
+    // overlay, which reads fine on a dark background but is nearly
+    // invisible on a light one — use the theme's accent color instead so
+    // selected text stays visible in both schemes.
+    selectionBackground: withAlpha(resolveCssColor('var(--color-accent)'), 0.35)
   }
 }
 

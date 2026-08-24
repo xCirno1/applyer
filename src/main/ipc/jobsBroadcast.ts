@@ -28,6 +28,20 @@ export function broadcastIndexedJobsChanged(): void {
   }
 }
 
+/**
+ * Payload-less, same reasoning as `broadcastIndexedJobsChanged`. Needed
+ * because `ExclusionsPanel` fetches once on mount and then stays mounted
+ * (Indexed Jobs is a mounted-but-hidden screen) — without this, a URL
+ * excluded elsewhere (the board's Exclude action, a bulk exclude, or the
+ * agent's exclude_job tool) never appears in an already-open panel even
+ * though queue_job/search_jobs correctly start refusing/hiding it.
+ */
+export function broadcastExclusionsChanged(): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.exclusions.onChanged)
+  }
+}
+
 export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaDetected, payload)

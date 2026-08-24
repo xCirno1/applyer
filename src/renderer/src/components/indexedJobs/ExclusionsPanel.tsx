@@ -53,6 +53,12 @@ export default function ExclusionsPanel(): ReactElement {
     }
   }, [])
 
+  // This panel stays mounted-but-hidden while the Indexed tab is showing, so
+  // without this it would keep displaying whatever it fetched on first
+  // mount forever — never picking up an exclusion added elsewhere (the
+  // board's Exclude action, a bulk exclude, or the agent's exclude_job tool).
+  useEffect(() => window.api.exclusions.onChanged(() => load(0)), [])
+
   const handleAdd = async (): Promise<void> => {
     if (!url.trim()) return
     setAdding(true)

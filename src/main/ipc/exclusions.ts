@@ -2,6 +2,7 @@ import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
 import { listExclusions, removeExclusion } from '../db/repositories/jobExclusionsRepository'
 import { excludeJob } from '../jobActions'
+import { broadcastExclusionsChanged } from './jobsBroadcast'
 import type { ListExclusionsQuery } from '@shared/types/exclusion'
 
 export function registerExclusionsIpc(): void {
@@ -29,6 +30,7 @@ export function registerExclusionsIpc(): void {
 
   ipcMain.handle(IPC.exclusions.remove, (_event, { id }: { id: string }) => {
     removeExclusion(id)
+    broadcastExclusionsChanged()
     return { ok: true }
   })
 }

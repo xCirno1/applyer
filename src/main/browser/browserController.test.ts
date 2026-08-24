@@ -22,9 +22,16 @@ vi.mock('fs', async (importOriginal) => {
   return { ...actual, existsSync: (...args: unknown[]) => existsSyncMock(...args) }
 })
 
+const getBrowserPreferenceMock = vi.fn()
+vi.mock('../db/repositories/settingsRepository', () => ({
+  getBrowserPreference: (...args: unknown[]) => getBrowserPreferenceMock(...args)
+}))
+
 import {
   newHeadlessContext,
   launchHeadedContext,
+  getResolvedBrowserStatus,
+  invalidateResolvedBrowser,
   __resetBrowserControllerForTests
 } from './browserController'
 
@@ -43,6 +50,7 @@ beforeEach(() => {
   executablePathMock.mockReset().mockReturnValue('/fake/path/to/chromium')
   runCommandMock.mockReset()
   existsSyncMock.mockReset()
+  getBrowserPreferenceMock.mockReset().mockReturnValue('auto')
 })
 
 describe('browserController — launch resolution', () => {
@@ -143,5 +151,115 @@ describe('browserController — launch resolution', () => {
     expect(r1.browser).toBeTruthy()
     expect(r2.browser).toBeTruthy()
     expect(runCommandMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('browserController — browser preference', () => {
+  it('preference "chrome": launches with only the chrome channel, never probes msedge', async () => {
+    __setPackaged(true)
+    getBrowserPreferenceMock.mockReturnValue('chrome')
+    launchMock.mockResolvedValue(createFakeBrowser())
+
+    const { browser } = await launchHeadedContext()
+    expect(browser).toBeTruthy()
+    expect(launchMock).toHaveBeenCalledTimes(1)
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'], channel: 'chrome' })
+  })
+
+  it('preference "chrome": fails loudly instead of falling back to msedge or a download when chrome is unavailable', async () => {
+    __setPackaged(true)
+    getBrowserPreferenceMock.mockReturnValue('chrome')
+    launchMock.mockRejectedValue(new Error('chrome not found'))
+
+    await expect(launchHeadedContext()).rejects.toThrow(/System Chrome/)
+    expect(launchMock).toHaveBeenCalledTimes(1)
+    expect(runCommandMock).not.toHaveBeenCalled()
+  })
+
+  it('preference "msedge": launches with only the msedge channel', async () => {
+    __setPackaged(true)
+    getBrowserPreferenceMock.mockReturnValue('msedge')
+    launchMock.mockResolvedValue(createFakeBrowser())
+
+    await launchHeadedContext()
+    expect(launchMock).toHaveBeenCalledTimes(1)
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'], channel: 'msedge' })
+  })
+
+  it('preference "managed": skips channel probing entirely and downloads/launches directly', async () => {
+    __setPackaged(true)
+    getBrowserPreferenceMock.mockReturnValue('managed')
+    launchMock.mockImplementation(async (opts: { channel?: string }) => {
+      if (opts.channel) throw new Error('should never probe a channel under "managed"')
+      return createFakeBrowser()
+    })
+    existsSyncMock.mockReturnValue(false)
+    runCommandMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+    const { browser } = await launchHeadedContext()
+    expect(browser).toBeTruthy()
+    expect(runCommandMock).toHaveBeenCalledTimes(1)
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'] })
+  })
+})
+
+describe('browserController — resolved status', () => {
+  it('is "unresolved" before any browser has been launched', () => {
+    expect(getResolvedBrowserStatus()).toEqual({ packaged: false, kind: 'unresolved', executablePath: null })
+  })
+
+  it('reports "dev-bundled" with the executable path once launched in dev mode', async () => {
+    launchMock.mockResolvedValue(createFakeBrowser())
+    await newHeadlessContext()
+    expect(getResolvedBrowserStatus()).toEqual({
+      packaged: false,
+      kind: 'dev-bundled',
+      executablePath: '/fake/path/to/chromium'
+    })
+  })
+
+  it('reports the resolved channel (no path) once launched via a system browser channel', async () => {
+    __setPackaged(true)
+    launchMock.mockResolvedValue(createFakeBrowser())
+    await launchHeadedContext()
+    expect(getResolvedBrowserStatus()).toEqual({ packaged: true, kind: 'chrome', executablePath: null })
+  })
+
+  it('reports "managed" with the executable path once resolved via a managed download', async () => {
+    __setPackaged(true)
+    getBrowserPreferenceMock.mockReturnValue('managed')
+    launchMock.mockResolvedValue(createFakeBrowser())
+    existsSyncMock.mockReturnValue(true)
+    await launchHeadedContext()
+    expect(getResolvedBrowserStatus()).toEqual({
+      packaged: true,
+      kind: 'managed',
+      executablePath: '/fake/path/to/chromium'
+    })
+  })
+})
+
+describe('browserController — invalidateResolvedBrowser', () => {
+  it('clears the cached resolution so the next launch re-resolves under the (new) preference', async () => {
+    __setPackaged(true)
+    launchMock.mockImplementation(async (opts: { channel?: string }) => {
+      if (opts.channel === 'chrome') return createFakeBrowser()
+      throw new Error(`${String(opts.channel)} not found`)
+    })
+
+    await launchHeadedContext()
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'], channel: 'chrome' })
+
+    // A cached resolution alone wouldn't re-probe (see the earlier "reuses the cached
+    // channel" test) — invalidating is what lets a preference change take effect live.
+    invalidateResolvedBrowser()
+    getBrowserPreferenceMock.mockReturnValue('msedge')
+    launchMock.mockImplementation(async (opts: { channel?: string }) => {
+      if (opts.channel === 'msedge') return createFakeBrowser()
+      throw new Error(`${String(opts.channel)} not found`)
+    })
+
+    await launchHeadedContext()
+    expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'], channel: 'msedge' })
   })
 })

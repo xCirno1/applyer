@@ -57,6 +57,9 @@ export const IPC = {
   },
   browserSetup: {
     retryDownload: 'browserSetup:retryDownload',
+    getPreference: 'browserSetup:getPreference',
+    setPreference: 'browserSetup:setPreference',
+    getStatus: 'browserSetup:getStatus',
     onProgress: 'browserSetup:progress',
     onStatus: 'browserSetup:status'
   },
@@ -162,3 +165,22 @@ export type BrowserSetupStatusPayload =
   | { status: 'downloading' }
   | { status: 'ready' }
   | { status: 'error'; message: string }
+
+/**
+ * `auto` (default) tries system Chrome, then system Edge, then falls back to a managed
+ * download. The other three pin resolution to exactly one option — if it's unavailable,
+ * launching fails with an explanatory error instead of silently trying something else,
+ * since the user explicitly chose it.
+ */
+export type BrowserPreference = 'auto' | 'chrome' | 'msedge' | 'managed'
+
+export type ResolvedBrowserKind = 'unresolved' | 'dev-bundled' | 'chrome' | 'msedge' | 'managed'
+
+export interface ResolvedBrowserStatus {
+  /** Whether this is a packaged build — the preference only affects resolution when true; a dev build always uses the bundled browser. */
+  packaged: boolean
+  /** 'unresolved' until the first browser launch actually happens (resolution is lazy). */
+  kind: ResolvedBrowserKind
+  /** Only known for 'dev-bundled'/'managed' — a system Chrome/Edge launch (via Playwright's `channel` option) doesn't expose its resolved binary path. */
+  executablePath: string | null
+}

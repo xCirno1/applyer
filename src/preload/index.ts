@@ -14,7 +14,9 @@ import {
   type CaptchaDetectedPayload,
   type CaptchaResolvedPayload,
   type BrowserDownloadProgressPayload,
-  type BrowserSetupStatusPayload
+  type BrowserSetupStatusPayload,
+  type BrowserPreference,
+  type ResolvedBrowserStatus
 } from '@shared/types/ipcEvents'
 import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job'
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
@@ -153,6 +155,10 @@ const browserControlApi = {
 
 const browserSetupApi = {
   retryDownload: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke(IPC.browserSetup.retryDownload),
+  getPreference: (): Promise<BrowserPreference> => ipcRenderer.invoke(IPC.browserSetup.getPreference),
+  setPreference: (preference: BrowserPreference): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke(IPC.browserSetup.setPreference, { preference }),
+  getStatus: (): Promise<ResolvedBrowserStatus> => ipcRenderer.invoke(IPC.browserSetup.getStatus),
   onProgress: (callback: (payload: BrowserDownloadProgressPayload) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, payload: BrowserDownloadProgressPayload): void =>
       callback(payload)

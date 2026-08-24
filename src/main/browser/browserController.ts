@@ -8,6 +8,10 @@ import { playwrightBrowsersDir } from '../config/paths'
 import { runCommand } from '../config/processUtils'
 import { parseDownloadProgressLine } from './downloadProgress'
 import { broadcastBrowserSetupProgress, broadcastBrowserSetupStatus } from '../ipc/jobsBroadcast'
+import { getBrowserPreference } from '../db/repositories/settingsRepository'
+import type { ResolvedBrowserStatus } from '@shared/types/ipcEvents'
+
+const PREFERENCE_LABELS = { chrome: 'System Chrome', msedge: 'System Edge' } as const
 
 const REALISTIC_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
@@ -46,12 +50,16 @@ let resolvedLaunchOptions: { channel?: 'chrome' | 'msedge' } | null = null
 let downloadPromise: Promise<void> | null = null
 
 /**
- * In dev, launches straight from the bundled .local-browsers set. In a packaged
- * build, tries the system's installed Chrome, then Edge (Playwright's `channel`
- * option — a fresh isolated profile, not the user's real browser data), and only
- * falls back to downloading a managed Chromium if neither is found. Whichever
- * resolution succeeds is memoized for the rest of the process so it isn't
- * re-detected on every launch.
+ * In dev, launches straight from the bundled .local-browsers set. In a packaged build,
+ * resolution follows the user's `browser_preference` setting (Settings > Browser):
+ * "auto" (default) tries the system's installed Chrome, then Edge (Playwright's `channel`
+ * option — a fresh isolated profile, not the user's real browser data), then falls back to
+ * downloading a managed Chromium if neither is found; "chrome"/"msedge"/"managed" pin
+ * resolution to exactly that option, failing loudly instead of silently trying something
+ * else if it's unavailable, since the user explicitly chose it. Whichever resolution
+ * succeeds is memoized for the rest of the process so it isn't re-detected on every launch
+ * — see `invalidateResolvedBrowser()` for how a preference change takes effect without a
+ * restart.
  */
 async function launchWithResolution(headless: boolean): Promise<Browser> {
   const chromium = await getChromium()
@@ -67,13 +75,24 @@ async function launchWithResolution(headless: boolean): Promise<Browser> {
     return chromium.launch({ headless, args, ...resolvedLaunchOptions })
   }
 
-  for (const channel of ['chrome', 'msedge'] as const) {
-    try {
-      const browser = await chromium.launch({ headless, args, channel })
-      resolvedLaunchOptions = { channel }
-      return browser
-    } catch (err) {
-      appLogger.info(`Browser channel '${channel}' unavailable: ${String(err)}`)
+  const preference = getBrowserPreference()
+
+  if (preference !== 'managed') {
+    const channels = preference === 'auto' ? (['chrome', 'msedge'] as const) : ([preference] as const)
+    for (const channel of channels) {
+      try {
+        const browser = await chromium.launch({ headless, args, channel })
+        resolvedLaunchOptions = { channel }
+        return browser
+      } catch (err) {
+        appLogger.info(`Browser channel '${channel}' unavailable: ${String(err)}`)
+      }
+    }
+    if (preference !== 'auto') {
+      throw new Error(
+        `The selected browser (${PREFERENCE_LABELS[preference]}) could not be launched — it may not be ` +
+          `installed on this system. Pick a different option in Settings > Browser, or switch to "Auto".`
+      )
     }
   }
 
@@ -81,12 +100,33 @@ async function launchWithResolution(headless: boolean): Promise<Browser> {
     await ensureManagedChromiumDownloaded()
   } catch (err) {
     throw new Error(
-      `No usable browser found. Tried system Chrome, system Edge, and an automatic ` +
-        `Chromium download, but all failed. Last error: ${String(err)}`
+      preference === 'managed'
+        ? `Couldn't download a managed Chromium: ${String(err)}`
+        : `No usable browser found. Tried system Chrome, system Edge, and an automatic ` +
+            `Chromium download, but all failed. Last error: ${String(err)}`
     )
   }
   resolvedLaunchOptions = {}
   return chromium.launch({ headless, args })
+}
+
+/**
+ * Clears the cached channel/download resolution so the next launch re-resolves according
+ * to the (possibly just-changed) browser preference, without requiring an app restart.
+ * Any browser/context already open from a prior resolution is left running as-is.
+ */
+export function invalidateResolvedBrowser(): void {
+  resolvedLaunchOptions = null
+}
+
+/** What Settings > Browser shows as the currently active browser. */
+export function getResolvedBrowserStatus(): ResolvedBrowserStatus {
+  const packaged = app.isPackaged
+  if (!chromiumModule) return { packaged, kind: 'unresolved', executablePath: null }
+  if (!packaged) return { packaged, kind: 'dev-bundled', executablePath: chromiumModule.executablePath() }
+  if (resolvedLaunchOptions?.channel) return { packaged, kind: resolvedLaunchOptions.channel, executablePath: null }
+  if (resolvedLaunchOptions) return { packaged, kind: 'managed', executablePath: chromiumModule.executablePath() }
+  return { packaged, kind: 'unresolved', executablePath: null }
 }
 
 /** Downloads Playwright's managed Chromium into a writable per-user directory, if not already present. Safe to call concurrently — a second caller awaits the same in-flight download rather than starting another. */

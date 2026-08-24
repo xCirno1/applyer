@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Local Electron app for autonomous job hunting via CLI agents (Claude Code, Codex, etc.)",
   "main": "./out/main/index.js",
+  "desktopName": "com.applyer.app.desktop",
   "author": "xCirno1",
   "license": "MIT",
   "repository": {
@@ -96,7 +97,10 @@
     "electronLanguages": [
       "en-US"
     ],
-    "asar": false,
+    "asar": true,
+    "asarUnpack": [
+      "**/*.node"
+    ],
     "icon": "resources/icon.png",
     "extraResources": [
       {
@@ -112,7 +116,8 @@
       "target": [
         "AppImage"
       ],
-      "category": "Office"
+      "category": "Office",
+      "syncDesktopName": true
     },
     "mac": {
       "target": [

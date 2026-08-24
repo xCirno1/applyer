@@ -37,7 +37,16 @@ export function MenuList({
             <button
               type="button"
               disabled={item.type === 'action' && item.disabled}
-              onClick={() => {
+              onClick={(e) => {
+                // ContextMenu renders inline (fixed-positioned, not
+                // portaled) as a DOM descendant of whatever triggered it —
+                // for JobCard that's the row's own onClick. Without this,
+                // a menu item's click bubbles up to that row handler too,
+                // which (using its stale pre-click `hasSelection` closure)
+                // re-toggles the very selection this click just changed —
+                // e.g. clicking "Deselect" with one job selected cleared it
+                // then immediately re-added it via the bubbled click.
+                e.stopPropagation()
                 if (item.type === 'checkbox') item.onToggle()
                 else item.onSelect()
                 onItemActivated()

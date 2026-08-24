@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { createTestDb } from '../testDb'
+import { appSettings } from '../schema'
 import type * as schema from '../schema'
 
 let testDb: ReturnType<typeof drizzle<typeof schema>>
@@ -18,7 +19,9 @@ import {
   getAutoStartCommand,
   setAutoStartCommand,
   getIndexedJobsRetentionDays,
-  setIndexedJobsRetentionDays
+  setIndexedJobsRetentionDays,
+  getBrowserPreference,
+  setBrowserPreference
 } from './settingsRepository'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
 
@@ -72,6 +75,27 @@ describe('indexed jobs retention', () => {
   it('round-trips "unlimited"', () => {
     setIndexedJobsRetentionDays('unlimited')
     expect(getIndexedJobsRetentionDays()).toBe('unlimited')
+  })
+})
+
+describe('browser preference', () => {
+  it('defaults to "auto"', () => {
+    expect(getBrowserPreference()).toBe('auto')
+  })
+
+  it('round-trips chrome/msedge/managed', () => {
+    setBrowserPreference('chrome')
+    expect(getBrowserPreference()).toBe('chrome')
+    setBrowserPreference('msedge')
+    expect(getBrowserPreference()).toBe('msedge')
+    setBrowserPreference('managed')
+    expect(getBrowserPreference()).toBe('managed')
+  })
+
+  it('falls back to "auto" for an unrecognized stored value', () => {
+    // Simulates a value from a future/older app version rather than one this app wrote itself.
+    testDb.insert(appSettings).values({ key: 'browser_preference', value: 'firefox' }).run()
+    expect(getBrowserPreference()).toBe('auto')
   })
 })
 

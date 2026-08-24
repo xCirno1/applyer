@@ -10,6 +10,8 @@ import IconRail, { type RailPage } from './components/navigation/IconRail'
 import JobDetailModal from './components/board/JobDetailModal'
 import ExportModal from './pages/Settings/ExportModal'
 import ImportModal from './pages/Settings/ImportModal'
+import BrowserSetupModal from './components/browser/BrowserSetupModal'
+import { useBrowserSetupState } from './components/browser/useBrowserSetupState'
 import AppMenuBar from './components/workspace/AppMenuBar'
 import { useWorkspaceLayout } from './components/workspace/useWorkspaceLayout'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
@@ -28,6 +30,7 @@ function MainShell(): ReactElement {
   const [importOpen, setImportOpen] = useState(false)
   const activeJob = useJobsStore((s) => s.activeJob)
   const closeJob = useJobsStore((s) => s.closeJob)
+  const browserSetup = useBrowserSetupState()
   useShortcutHandler('app.toggleSettings', () => setScreen((s) => (s === 'settings' ? 'workspace' : 'settings')))
 
   // Owned here (not inside WorkspacePage) so the top bar it drives — logo,
@@ -146,6 +149,13 @@ function MainShell(): ReactElement {
           without navigating to Settings > Data first. */}
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
+      <BrowserSetupModal
+        state={browserSetup.state}
+        dismissed={browserSetup.dismissed}
+        onRetry={browserSetup.retry}
+        onRespondInstall={browserSetup.respondInstall}
+        onDismiss={browserSetup.dismiss}
+      />
     </div>
   )
 }

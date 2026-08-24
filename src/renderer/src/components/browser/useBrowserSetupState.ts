@@ -3,6 +3,7 @@ import { useToast } from '../ui/useToast'
 
 export type BrowserSetupState =
   | { status: 'idle' }
+  | { status: 'confirm' }
   | { status: 'downloading'; percent: number; totalSize: string }
   | { status: 'error'; message: string }
 
@@ -11,6 +12,8 @@ interface BrowserSetupHook {
   dismissed: boolean
   dismiss: () => void
   retry: () => Promise<void>
+  /** Answers a pending 'confirm' prompt — true to start the download, false to decline. */
+  respondInstall: (accept: boolean) => Promise<void>
 }
 
 /** Push-driven, not click-driven — a background download can start on its own the first time a job action needs a browser, so unlike ExportModal/ImportModal there's no explicit "open" call site. */
@@ -25,7 +28,10 @@ export function useBrowserSetupState(): BrowserSetupHook {
       setState({ status: 'downloading', percent: payload.percent, totalSize: payload.totalSize })
     })
     const offStatus = window.api.browserSetup.onStatus((payload) => {
-      if (payload.status === 'downloading') {
+      if (payload.status === 'confirm') {
+        setDismissed(false)
+        setState({ status: 'confirm' })
+      } else if (payload.status === 'downloading') {
         setDismissed(false)
         setState((prev) => (prev.status === 'downloading' ? prev : { status: 'downloading', percent: 0, totalSize: '' }))
       } else if (payload.status === 'ready') {
@@ -56,5 +62,10 @@ export function useBrowserSetupState(): BrowserSetupHook {
     }
   }
 
-  return { state, dismissed, dismiss: () => setDismissed(true), retry }
+  const respondInstall = async (accept: boolean): Promise<void> => {
+    setState(accept ? { status: 'downloading', percent: 0, totalSize: '' } : { status: 'idle' })
+    await window.api.browserSetup.respondInstall(accept)
+  }
+
+  return { state, dismissed, dismiss: () => setDismissed(true), retry, respondInstall }
 }

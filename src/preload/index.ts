@@ -160,6 +160,8 @@ const browserControlApi = {
 
 const browserSetupApi = {
   retryDownload: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke(IPC.browserSetup.retryDownload),
+  respondInstall: (accept: boolean): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke(IPC.browserSetup.respondInstall, { accept }),
   getPreference: (): Promise<BrowserPreference> => ipcRenderer.invoke(IPC.browserSetup.getPreference),
   setPreference: (preference: BrowserPreference): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke(IPC.browserSetup.setPreference, { preference }),

@@ -32,8 +32,19 @@ import {
   launchHeadedContext,
   getResolvedBrowserStatus,
   invalidateResolvedBrowser,
+  ensureManagedChromiumDownloaded,
+  resolveManagedDownloadConfirmation,
+  __hasPendingInstallConfirmation,
   __resetBrowserControllerForTests
 } from './browserController'
+
+/** Waits for a confirmManagedDownload() prompt to actually be pending, then answers it — avoids racing the several `await`s launchWithResolution() takes to get there. */
+async function answerInstallPrompt(accept: boolean): Promise<void> {
+  await vi.waitFor(() => {
+    if (!__hasPendingInstallConfirmation()) throw new Error('no pending install confirmation yet')
+  })
+  resolveManagedDownloadConfirmation(accept)
+}
 
 function createFakeBrowser(): { isConnected: () => boolean; newContext: () => Promise<object>; close: () => Promise<void> } {
   return {
@@ -102,7 +113,7 @@ describe('browserController — launch resolution', () => {
     expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'] })
   })
 
-  it('packaged: both channels fail and not yet downloaded — downloads then launches with no channel', async () => {
+  it('packaged: both channels fail and not yet downloaded — prompts, then downloads and launches with no channel once confirmed', async () => {
     __setPackaged(true)
     launchMock.mockImplementation(async (opts: { channel?: string }) => {
       if (opts.channel) throw new Error(`${opts.channel} not found`)
@@ -111,7 +122,9 @@ describe('browserController — launch resolution', () => {
     existsSyncMock.mockReturnValue(false)
     runCommandMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
-    const { browser } = await launchHeadedContext()
+    const pending = launchHeadedContext()
+    await answerInstallPrompt(true)
+    const { browser } = await pending
     expect(browser).toBeTruthy()
     expect(runCommandMock).toHaveBeenCalledTimes(1)
     const [, args] = runCommandMock.mock.calls[0] as [string, string[]]
@@ -120,7 +133,7 @@ describe('browserController — launch resolution', () => {
     expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'] })
   })
 
-  it('packaged: a failed download resets state so a later call retries', async () => {
+  it('packaged: a failed download resets state so a later call prompts and retries', async () => {
     __setPackaged(true)
     launchMock.mockImplementation(async (opts: { channel?: string }) => {
       if (opts.channel) throw new Error(`${opts.channel} not found`)
@@ -129,16 +142,20 @@ describe('browserController — launch resolution', () => {
     existsSyncMock.mockReturnValue(false)
     runCommandMock.mockResolvedValueOnce({ code: 1, stdout: '', stderr: 'network error' })
 
-    await expect(launchHeadedContext()).rejects.toThrow(/network error/)
+    const firstAttempt = launchHeadedContext()
+    await answerInstallPrompt(true)
+    await expect(firstAttempt).rejects.toThrow(/network error/)
     expect(runCommandMock).toHaveBeenCalledTimes(1)
 
     runCommandMock.mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
-    const { browser } = await launchHeadedContext()
+    const secondAttempt = launchHeadedContext()
+    await answerInstallPrompt(true)
+    const { browser } = await secondAttempt
     expect(browser).toBeTruthy()
     expect(runCommandMock).toHaveBeenCalledTimes(2)
   })
 
-  it('packaged: concurrent callers during an in-flight download share one download, not two', async () => {
+  it('packaged: concurrent callers during an in-flight download share one prompt and one download, not two', async () => {
     __setPackaged(true)
     launchMock.mockImplementation(async (opts: { channel?: string }) => {
       if (opts.channel) throw new Error(`${opts.channel} not found`)
@@ -147,9 +164,58 @@ describe('browserController — launch resolution', () => {
     existsSyncMock.mockReturnValue(false)
     runCommandMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
-    const [r1, r2] = await Promise.all([launchHeadedContext(), launchHeadedContext()])
+    const promise1 = launchHeadedContext()
+    const promise2 = launchHeadedContext()
+    await answerInstallPrompt(true)
+    const [r1, r2] = await Promise.all([promise1, promise2])
     expect(r1.browser).toBeTruthy()
     expect(r2.browser).toBeTruthy()
+    expect(runCommandMock).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('browserController — install confirmation', () => {
+  beforeEach(() => {
+    __setPackaged(true)
+    getBrowserPreferenceMock.mockReturnValue('managed')
+    existsSyncMock.mockReturnValue(false)
+  })
+
+  it('does not download until the prompt is answered', async () => {
+    launchMock.mockResolvedValue(createFakeBrowser())
+    runCommandMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+    const pending = launchHeadedContext()
+    await vi.waitFor(() => {
+      if (!__hasPendingInstallConfirmation()) throw new Error('not yet prompted')
+    })
+    expect(runCommandMock).not.toHaveBeenCalled()
+
+    resolveManagedDownloadConfirmation(true)
+    await pending
+    expect(runCommandMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('declining throws a clear error instead of downloading, and resets state so a later call re-prompts', async () => {
+    launchMock.mockResolvedValue(createFakeBrowser())
+
+    const pending = launchHeadedContext()
+    await answerInstallPrompt(false)
+    await expect(pending).rejects.toThrow(/declined/)
+    expect(runCommandMock).not.toHaveBeenCalled()
+
+    runCommandMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+    const retryPending = launchHeadedContext()
+    await answerInstallPrompt(true)
+    await retryPending
+    expect(runCommandMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('requireConfirmation: false (the Retry button path) skips the prompt entirely', async () => {
+    runCommandMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
+
+    await ensureManagedChromiumDownloaded({ requireConfirmation: false })
+    expect(__hasPendingInstallConfirmation()).toBe(false)
     expect(runCommandMock).toHaveBeenCalledTimes(1)
   })
 })
@@ -196,7 +262,9 @@ describe('browserController — browser preference', () => {
     existsSyncMock.mockReturnValue(false)
     runCommandMock.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
 
-    const { browser } = await launchHeadedContext()
+    const pending = launchHeadedContext()
+    await answerInstallPrompt(true)
+    const { browser } = await pending
     expect(browser).toBeTruthy()
     expect(runCommandMock).toHaveBeenCalledTimes(1)
     expect(launchMock).toHaveBeenLastCalledWith({ headless: false, args: ['--start-maximized'] })

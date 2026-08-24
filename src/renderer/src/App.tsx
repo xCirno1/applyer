@@ -153,6 +153,7 @@ function MainShell(): ReactElement {
         state={browserSetup.state}
         dismissed={browserSetup.dismissed}
         onRetry={browserSetup.retry}
+        onRespondInstall={browserSetup.respondInstall}
         onDismiss={browserSetup.dismiss}
       />
     </div>

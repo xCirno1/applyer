@@ -58,6 +58,7 @@ export const IPC = {
   },
   browserSetup: {
     retryDownload: 'browserSetup:retryDownload',
+    respondInstall: 'browserSetup:respondInstall',
     getPreference: 'browserSetup:getPreference',
     setPreference: 'browserSetup:setPreference',
     getStatus: 'browserSetup:getStatus',
@@ -163,6 +164,7 @@ export interface BrowserDownloadProgressPayload {
 }
 
 export type BrowserSetupStatusPayload =
+  | { status: 'confirm' }
   | { status: 'downloading' }
   | { status: 'ready' }
   | { status: 'error'; message: string }

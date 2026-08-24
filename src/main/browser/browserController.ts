@@ -49,6 +49,36 @@ async function getChromium(): Promise<typeof import('playwright').chromium> {
 let resolvedLaunchOptions: { channel?: 'chrome' | 'msedge' } | null = null
 let downloadPromise: Promise<void> | null = null
 
+const INSTALL_CONFIRMATION_TIMEOUT_MS = 10 * 60 * 1000
+
+let installConfirmationResolver: ((confirmed: boolean) => void) | null = null
+let installConfirmationPromise: Promise<boolean> | null = null
+
+/**
+ * Asks the renderer (via a `confirm` status broadcast, shown by `BrowserSetupModal`) whether
+ * it's OK to download a managed Chromium, and waits for the answer. Concurrent callers share
+ * one prompt/promise rather than each popping their own. Times out to "declined" if nobody
+ * answers, so a launch attempt can't hang forever on an unattended machine.
+ */
+function confirmManagedDownload(): Promise<boolean> {
+  if (!installConfirmationPromise) {
+    installConfirmationPromise = new Promise<boolean>((resolve) => {
+      installConfirmationResolver = resolve
+      broadcastBrowserSetupStatus({ status: 'confirm' })
+    }).finally(() => {
+      installConfirmationResolver = null
+      installConfirmationPromise = null
+    })
+    setTimeout(() => installConfirmationResolver?.(false), INSTALL_CONFIRMATION_TIMEOUT_MS).unref()
+  }
+  return installConfirmationPromise
+}
+
+/** Answers a pending `confirmManagedDownload()` prompt — called from the `browserSetup:respondInstall` IPC handler. A no-op if nothing is currently waiting. */
+export function resolveManagedDownloadConfirmation(confirmed: boolean): void {
+  installConfirmationResolver?.(confirmed)
+}
+
 /**
  * In dev, launches straight from the bundled .local-browsers set. In a packaged build,
  * resolution follows the user's `browser_preference` setting (Settings > Browser):
@@ -129,12 +159,33 @@ export function getResolvedBrowserStatus(): ResolvedBrowserStatus {
   return { packaged, kind: 'unresolved', executablePath: null }
 }
 
-/** Downloads Playwright's managed Chromium into a writable per-user directory, if not already present. Safe to call concurrently — a second caller awaits the same in-flight download rather than starting another. */
-export async function ensureManagedChromiumDownloaded(): Promise<void> {
+/**
+ * Downloads Playwright's managed Chromium into a writable per-user directory, if not already
+ * present. Safe to call concurrently — a second caller awaits the same in-flight
+ * confirmation/download rather than starting another. By default asks the user first (via
+ * `confirmManagedDownload()`) since this is an unattended, unprompted network download the
+ * user may not want; pass `requireConfirmation: false` only for a call that's already an
+ * explicit user action (the "Retry" button after a failed download — they already said yes once).
+ */
+export async function ensureManagedChromiumDownloaded(
+  options: { requireConfirmation?: boolean } = {}
+): Promise<void> {
+  const { requireConfirmation = true } = options
   const chromium = await getChromium()
   if (existsSync(chromium.executablePath())) return
   if (!downloadPromise) {
-    downloadPromise = downloadManagedChromium().catch((err) => {
+    downloadPromise = (async () => {
+      if (requireConfirmation) {
+        const confirmed = await confirmManagedDownload()
+        if (!confirmed) {
+          throw new Error(
+            'Browser download was declined — job automation needs a browser to continue. Answer the setup ' +
+              'prompt to try again, or pick "System Chrome"/"System Edge" in Settings > Browser if one is installed.'
+          )
+        }
+      }
+      await downloadManagedChromium()
+    })().catch((err) => {
       downloadPromise = null // allow a later call (e.g. the renderer's retry action) to try again
       throw err
     })
@@ -212,6 +263,11 @@ export async function closeAllBrowsers(): Promise<void> {
   }
 }
 
+/** Test-only: true while a managed-download confirmation prompt is awaiting an answer. */
+export function __hasPendingInstallConfirmation(): boolean {
+  return installConfirmationResolver !== null
+}
+
 /** Test-only: clears module-level resolution state between test cases. */
 export function __resetBrowserControllerForTests(): void {
   headlessBrowser = null
@@ -219,4 +275,6 @@ export function __resetBrowserControllerForTests(): void {
   chromiumImportPromise = null
   resolvedLaunchOptions = null
   downloadPromise = null
+  installConfirmationResolver = null
+  installConfirmationPromise = null
 }

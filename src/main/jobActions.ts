@@ -2,7 +2,7 @@ import { setFailed, listBlockedJobs, getJob, getJobByUrl, removeJob } from './db
 import { ensureFailureTag } from './db/repositories/failureTagsRepository'
 import { logActivity } from './db/repositories/activityLogRepository'
 import { excludeUrl } from './db/repositories/jobExclusionsRepository'
-import { broadcastJobUpdate, broadcastJobRemoved } from './ipc/jobsBroadcast'
+import { broadcastJobUpdate, broadcastJobRemoved, broadcastExclusionsChanged } from './ipc/jobsBroadcast'
 import type { JobRecord } from '@shared/types/job'
 import type { ExclusionRecord, ExcludedBy } from '@shared/types/exclusion'
 
@@ -66,6 +66,7 @@ export function excludeJob(input: ExcludeJobInput): { exclusion: ExclusionRecord
 
   if (!result.wasExisting) {
     logActivity('info', `Excluded job posting (${input.excludedBy}): ${input.url}`, { reason: input.reason ?? undefined })
+    broadcastExclusionsChanged()
   }
 
   return result

@@ -108,7 +108,12 @@ const exclusionsApi = {
   list: (query: ListExclusionsQuery): Promise<ListExclusionsResult> => ipcRenderer.invoke(IPC.exclusions.list, query),
   add: (url: string, reason?: string): Promise<{ ok: boolean; exclusion?: ExclusionRecord; error?: string }> =>
     ipcRenderer.invoke(IPC.exclusions.add, { url, reason }),
-  remove: (id: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.exclusions.remove, { id })
+  remove: (id: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.exclusions.remove, { id }),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.exclusions.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.exclusions.onChanged, listener)
+  }
 }
 
 const profileApi = {

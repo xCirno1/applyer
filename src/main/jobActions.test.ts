@@ -6,8 +6,16 @@ import type * as schema from './db/schema'
 let testDb: ReturnType<typeof drizzle<typeof schema>>
 vi.mock('./db/index', () => ({ getDb: () => testDb }))
 
+const { broadcastExclusionsChanged } = vi.hoisted(() => ({ broadcastExclusionsChanged: vi.fn() }))
+vi.mock('./ipc/jobsBroadcast', () => ({
+  broadcastJobUpdate: vi.fn(),
+  broadcastJobRemoved: vi.fn(),
+  broadcastExclusionsChanged
+}))
+
 beforeEach(() => {
   testDb = createTestDb().db
+  broadcastExclusionsChanged.mockClear()
 })
 
 import { failJob, reconcileOrphanedBlockedJobs, excludeJob, excludeJobsByIds, unqueueJob, unqueueJobsByIds } from './jobActions'
@@ -89,6 +97,13 @@ describe('excludeJob', () => {
     excludeJob({ url: 'https://example.com/1', excludedBy: 'user' })
     const { entries } = listActivity({})
     expect(entries.filter((e) => e.message.includes('Excluded job posting'))).toHaveLength(1)
+  })
+
+  it('broadcasts exclusions:changed only the first time a URL is excluded', () => {
+    excludeJob({ url: 'https://example.com/1', excludedBy: 'user' })
+    expect(broadcastExclusionsChanged).toHaveBeenCalledTimes(1)
+    excludeJob({ url: 'https://example.com/1', excludedBy: 'user' })
+    expect(broadcastExclusionsChanged).toHaveBeenCalledTimes(1)
   })
 })
 

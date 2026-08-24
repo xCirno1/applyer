@@ -32,7 +32,8 @@ export const IPC = {
   exclusions: {
     list: 'exclusions:list',
     add: 'exclusions:add',
-    remove: 'exclusions:remove'
+    remove: 'exclusions:remove',
+    onChanged: 'exclusions:changed'
   },
   profile: {
     get: 'profile:get',

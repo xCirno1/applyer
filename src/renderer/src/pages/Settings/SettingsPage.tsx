@@ -2,6 +2,7 @@ import { useState, type ReactElement } from 'react'
 import ProfileSection from './ProfileSection'
 import DocumentsSection from './DocumentsSection'
 import StorageSection from './StorageSection'
+import BrowserSection from './BrowserSection'
 import AgentSection from './AgentSection'
 import AppearanceSection from './AppearanceSection'
 import ShortcutsSection from './ShortcutsSection'
@@ -11,6 +12,7 @@ const SECTIONS = [
   { id: 'profile', label: 'Profile' },
   { id: 'documents', label: 'Documents' },
   { id: 'storage', label: 'Storage' },
+  { id: 'browser', label: 'Browser' },
   { id: 'agent', label: 'Agent' },
   { id: 'appearance', label: 'Appearance' },
   { id: 'shortcuts', label: 'Shortcuts' },
@@ -49,6 +51,7 @@ export default function SettingsPage({
         {section === 'profile' && <ProfileSection />}
         {section === 'documents' && <DocumentsSection />}
         {section === 'storage' && <StorageSection />}
+        {section === 'browser' && <BrowserSection />}
         {section === 'agent' && <AgentSection />}
         {section === 'appearance' && <AppearanceSection />}
         {section === 'shortcuts' && <ShortcutsSection />}

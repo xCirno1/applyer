@@ -154,11 +154,17 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
   const targetUrl = job.applicationUrl || job.url
 
   let browser: Browser
-  let page: Page
+  let context: BrowserContext
   try {
     const headed = await launchHeadedContext()
     browser = headed.browser
-    const context: BrowserContext = headed.context
+    context = headed.context
+  } catch (err) {
+    return failAndReturn(jobId, 'browser_unavailable', `Couldn't prepare a browser: ${String(err)}`)
+  }
+
+  let page: Page
+  try {
     page = await context.newPage()
     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
     // Client-rendered application forms (Ashby, Workday) finish mounting fields shortly after load.

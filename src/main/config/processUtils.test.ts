@@ -33,6 +33,25 @@ describe('runCommand', () => {
     // Resolve symlinks (e.g. macOS /tmp -> /private/tmp) rather than assuming string equality.
     expect(result.stdout.endsWith('tmp')).toBe(true)
   })
+
+  it('passes the given env to the child process', async () => {
+    const result = await runCommand(process.execPath, ['-e', 'process.stdout.write(process.env.APPLYER_TEST_VAR ?? "")'], {
+      env: { ...process.env, APPLYER_TEST_VAR: 'hello-env' }
+    })
+    expect(result.code).toBe(0)
+    expect(result.stdout).toBe('hello-env')
+  })
+
+  it('streams stdout chunks to onStdout as they arrive, in addition to the buffered result', async () => {
+    const chunks: string[] = []
+    const result = await runCommand(
+      process.execPath,
+      ['-e', 'process.stdout.write("a"); process.stdout.write("b")'],
+      { onStdout: (chunk) => chunks.push(chunk) }
+    )
+    expect(result.stdout).toBe('ab')
+    expect(chunks.join('')).toBe('ab')
+  })
 })
 
 describe('commandExists', () => {

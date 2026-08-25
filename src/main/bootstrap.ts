@@ -17,20 +17,19 @@ import { registerSettingsIpc } from './ipc/settings'
 import { registerLogsIpc } from './ipc/logs'
 import { registerAppIpc } from './ipc/app'
 import { registerDataTransferIpc } from './ipc/dataTransfer'
+import { registerStorageLocationIpc } from './ipc/storageLocation'
 import { registerJobsBroadcastTarget } from './ipc/jobsBroadcast'
+import { fallbackToDefaultStorageAfterOpenFailure, resolveActiveStorageRoot } from './config/storageLocation'
+import { startMcpServerIfStorageResolved, closeMcpSocketServer } from './storageLocation/bootGate'
 import { disposeAllSessions } from './terminal/ptyManager'
 import { applyProductionCsp } from './security'
 import { configureApplicationMenu } from './menu'
-import { startMcpSocketServer } from './mcp-server/transportSocket'
 import { closeAllBrowsers } from './browser/browserController'
-import { mcpSocketPath } from './config/paths'
 import { writeAgentInstructions } from './config/agentInstructions'
 import { reconcileOrphanedBlockedJobs } from './jobActions'
 import { pruneIndexedJobs } from './db/repositories/indexedJobsRepository'
 
-let mcpSocketServer: ReturnType<typeof startMcpSocketServer> | undefined
-
-app.whenReady().then(() => {
+function initializeApp(): void {
   electronApp.setAppUserModelId('com.applyer.app')
 
   if (!is.dev) {
@@ -44,12 +43,24 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
+  resolveActiveStorageRoot()
+
   try {
     initDatabase()
   } catch (err) {
-    appLogger.error(`Database initialization failed: ${String(err)}`)
-    app.quit()
-    return
+    closeDatabase()
+    if (!fallbackToDefaultStorageAfterOpenFailure(String(err))) {
+      appLogger.error(`Database initialization failed: ${String(err)}`)
+      app.quit()
+      return
+    }
+    try {
+      initDatabase()
+    } catch (fallbackErr) {
+      appLogger.error(`Default fallback database initialization failed: ${String(fallbackErr)}`)
+      app.quit()
+      return
+    }
   }
 
   reconcileOrphanedBlockedJobs()
@@ -67,8 +78,11 @@ app.whenReady().then(() => {
   registerLogsIpc()
   registerAppIpc()
   registerDataTransferIpc()
+  registerStorageLocationIpc()
 
-  mcpSocketServer = startMcpSocketServer(mcpSocketPath())
+  // No-op if storage-location recovery is currently needed — started once
+  // the user resolves it, from the recovery IPC handlers instead.
+  startMcpServerIfStorageResolved()
 
   const mainWindow = createMainWindow()
   registerTerminalIpc(mainWindow.webContents)
@@ -81,7 +95,23 @@ app.whenReady().then(() => {
       registerJobsBroadcastTarget(window.webContents)
     }
   })
-})
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+
+if (!gotSingleInstanceLock) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const [window] = BrowserWindow.getAllWindows()
+    if (window) {
+      if (window.isMinimized()) window.restore()
+      window.focus()
+    }
+  })
+
+  void app.whenReady().then(initializeApp)
+}
 
 app.on('window-all-closed', () => {
   disposeAllSessions()
@@ -93,6 +123,6 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   disposeAllSessions()
-  mcpSocketServer?.close()
+  closeMcpSocketServer()
   void closeAllBrowsers()
 })

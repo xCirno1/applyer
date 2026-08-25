@@ -4,7 +4,9 @@ import WorkspacePage from './pages/Workspace/WorkspacePage'
 import IndexedJobsPage from './pages/IndexedJobs/IndexedJobsPage'
 import SettingsPage, { type SectionId } from './pages/Settings/SettingsPage'
 import OnboardingFlow from './pages/Onboarding/OnboardingFlow'
+import StorageRecoveryFlow from './pages/StorageRecovery/StorageRecoveryFlow'
 import ToastProvider from './components/ui/ToastProvider'
+import { useToast } from './components/ui/useToast'
 import Skeleton from './components/ui/Skeleton'
 import IconRail, { type RailPage } from './components/navigation/IconRail'
 import JobDetailModal from './components/board/JobDetailModal'
@@ -19,9 +21,14 @@ import ThemeProvider from './providers/ThemeProvider'
 import ShortcutsProvider from './providers/ShortcutsProvider'
 import { useShortcutHandler } from './providers/ShortcutsContext'
 import { useJobsStore } from './state/jobsStore'
+import type { StorageLocationStatus } from '@shared/types/storageLocation'
 
 type Screen = RailPage | 'settings'
-type BootState = 'loading' | 'onboarding' | 'ready'
+type BootState =
+  | { phase: 'loading' }
+  | { phase: 'storage-recovery'; status: StorageLocationStatus }
+  | { phase: 'onboarding' }
+  | { phase: 'ready' }
 
 function MainShell(): ReactElement {
   const [screen, setScreen] = useState<Screen>('workspace')
@@ -160,27 +167,67 @@ function MainShell(): ReactElement {
   )
 }
 
-export default function App(): ReactElement {
-  const [boot, setBoot] = useState<BootState>('loading')
-
+/**
+ * Fires the storage location's one-shot startup warning (pointer file was
+ * corrupt/unreadable — nothing concrete to retry, so it's a toast rather
+ * than the blocking StorageRecoveryFlow) exactly once it arrives. Rendered
+ * inside ToastProvider since App's boot check itself runs above that
+ * provider in the tree and can't call useToast() directly — and App's own
+ * getStatus() call is what consumes the warning server-side, so this
+ * component only ever receives it via props, never fetches its own.
+ */
+function StartupWarningToast({ warning }: { warning: string | null }): null {
+  const toast = useToast()
   useEffect(() => {
-    window.api.onboarding.getStatus().then((status) => {
-      setBoot(status.completed ? 'ready' : 'onboarding')
+    if (warning) toast.error(warning)
+    // Fires once per distinct warning value — `toast` dispatches to a stable context value.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [warning])
+  return null
+}
+
+export default function App(): ReactElement {
+  const [boot, setBoot] = useState<BootState>({ phase: 'loading' })
+  const [startupWarning, setStartupWarning] = useState<string | null>(null)
+
+  const checkBootState = (): void => {
+    // Storage checked first and exclusively: onboarding.getStatus() reflects
+    // whichever database happens to be open right now, which — while a
+    // configured custom location is unavailable — is a substitute the app
+    // booted into, not necessarily the user's real one. A fresh substitute
+    // would claim `completed: false` even though the user finished
+    // onboarding against their actual (currently unreachable) database, so
+    // onboarding must not be checked until storage is resolved.
+    window.api.storageLocation.getStatus().then((status) => {
+      if (status.startupFallbackWarning) setStartupWarning(status.startupFallbackWarning)
+      if (status.needsRecovery) {
+        setBoot({ phase: 'storage-recovery', status })
+        return
+      }
+      window.api.onboarding.getStatus().then((onboardingStatus) => {
+        setBoot({ phase: onboardingStatus.completed ? 'ready' : 'onboarding' })
+      })
     })
-  }, [])
+  }
+
+  useEffect(checkBootState, [])
 
   return (
     <ShortcutsProvider>
       <ThemeProvider>
         <ToastProvider>
-          {boot === 'loading' && (
+          <StartupWarningToast warning={startupWarning} />
+          {boot.phase === 'loading' && (
             <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
               <Skeleton className="h-6 w-48" />
               <Skeleton className="h-32 w-full" />
             </div>
           )}
-          {boot === 'onboarding' && <OnboardingFlow onComplete={() => setBoot('ready')} />}
-          {boot === 'ready' && <MainShell />}
+          {boot.phase === 'storage-recovery' && (
+            <StorageRecoveryFlow status={boot.status} onResolved={checkBootState} />
+          )}
+          {boot.phase === 'onboarding' && <OnboardingFlow onComplete={() => setBoot({ phase: 'ready' })} />}
+          {boot.phase === 'ready' && <MainShell />}
         </ToastProvider>
       </ThemeProvider>
     </ShortcutsProvider>

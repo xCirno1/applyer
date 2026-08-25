@@ -83,8 +83,8 @@ export function registerProfileIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.profile.deleteDocument, (_event, { documentId }: { documentId: string }) => {
-    deleteDocument(documentId)
+  ipcMain.handle(IPC.profile.deleteDocument, async (_event, { documentId }: { documentId: string }) => {
+    await deleteDocument(documentId)
     return { ok: true }
   })
 }

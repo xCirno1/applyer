@@ -25,6 +25,13 @@ import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from 
 import type { IndexedJobsRetention, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
 import type { StorageStats } from '@shared/types/storage'
 import type {
+  StorageLocationStatus,
+  StorageLocationValidation,
+  StorageLocationMigrationResult,
+  StorageLocationPickResult,
+  StorageLocationProgressPayload
+} from '@shared/types/storageLocation'
+import type {
   ExportSelection,
   ExportSizes,
   CsvTable,
@@ -191,6 +198,27 @@ const settingsApi = {
   getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats)
 }
 
+const storageLocationApi = {
+  getStatus: (): Promise<StorageLocationStatus> => ipcRenderer.invoke(IPC.storageLocation.getStatus),
+  pickFolder: (): Promise<StorageLocationPickResult> => ipcRenderer.invoke(IPC.storageLocation.pickFolder),
+  validate: (path: string): Promise<StorageLocationValidation> =>
+    ipcRenderer.invoke(IPC.storageLocation.validate, { path }),
+  migrate: (path: string): Promise<StorageLocationMigrationResult> =>
+    ipcRenderer.invoke(IPC.storageLocation.migrate, { path }),
+  connectExisting: (path: string): Promise<StorageLocationMigrationResult> =>
+    ipcRenderer.invoke(IPC.storageLocation.connectExisting, { path }),
+  retryCustomLocation: (): Promise<StorageLocationMigrationResult> =>
+    ipcRenderer.invoke(IPC.storageLocation.retryCustomLocation),
+  useDefaultLocation: (): Promise<StorageLocationMigrationResult> =>
+    ipcRenderer.invoke(IPC.storageLocation.useDefaultLocation),
+  onProgress: (callback: (payload: StorageLocationProgressPayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: StorageLocationProgressPayload): void =>
+      callback(payload)
+    ipcRenderer.on(IPC.storageLocation.onProgress, listener)
+    return () => ipcRenderer.removeListener(IPC.storageLocation.onProgress, listener)
+  }
+}
+
 const logsApi = {
   list: (query: ListActivityQuery): Promise<ListActivityResult> => ipcRenderer.invoke(IPC.logs.list, query)
 }
@@ -219,6 +247,7 @@ const api = {
   browserControl: browserControlApi,
   browserSetup: browserSetupApi,
   settings: settingsApi,
+  storageLocation: storageLocationApi,
   logs: logsApi,
   app: appApi,
   data: dataApi

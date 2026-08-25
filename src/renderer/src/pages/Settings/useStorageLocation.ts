@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import type { StorageLocationStatus, StorageLocationProgressPayload } from '@shared/types/storageLocation'
 
 type LocationUiState =
@@ -24,7 +26,9 @@ interface UseStorageLocationResult {
 export function useStorageLocation(): UseStorageLocationResult {
   const [status, setStatus] = useState<StorageLocationStatus | null>(null)
   const [ui, setUi] = useState<LocationUiState>({ phase: 'idle' })
+  const { t } = useTranslation('settings')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
 
   // startupFallbackWarning is intentionally not surfaced here — App.tsx's
   // boot check calls getStatus() before Settings is ever reachable, and
@@ -43,26 +47,32 @@ export function useStorageLocation(): UseStorageLocationResult {
 
   const pick = async (): Promise<void> => {
     try {
-      const picked = await window.api.storageLocation.pickFolder()
+      const picked = await window.api.storageLocation.pickFolder({
+        title: t('storage.pickFolderTitle'),
+        filterName: ''
+      })
       if (!picked.ok) return
       const validation = await window.api.storageLocation.validate(picked.path)
       if (!validation.ok) {
-        toast.error(validation.error)
+        toast.error(errorMessage(validation.error))
         return
       }
       setUi({ phase: 'pendingConfirm', path: picked.path })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not choose a storage location.')
+      toast.error(err instanceof Error ? err.message : t('storage.pickFailed'))
     }
   }
 
   const pickExisting = async (): Promise<void> => {
     try {
-      const picked = await window.api.storageLocation.pickFolder()
+      const picked = await window.api.storageLocation.pickFolder({
+        title: t('storage.pickFolderTitle'),
+        filterName: ''
+      })
       if (!picked.ok) return
       setUi({ phase: 'pendingExistingConfirm', path: picked.path })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not choose a storage location.')
+      toast.error(err instanceof Error ? err.message : t('storage.pickFailed'))
     }
   }
 
@@ -75,13 +85,13 @@ export function useStorageLocation(): UseStorageLocationResult {
     try {
       const result = await window.api.storageLocation.migrate(path)
       if (result.ok) {
-        toast.success('Storage location updated.')
+        toast.success(t('storage.locationUpdated'))
         refreshStatus()
       } else {
-        toast.error(result.error ?? 'Failed to change storage location.')
+        toast.error(errorMessage(result.error))
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to change storage location.')
+      toast.error(err instanceof Error ? err.message : t('storage.locationChangeFailed'))
     } finally {
       setUi({ phase: 'idle' })
     }
@@ -94,12 +104,12 @@ export function useStorageLocation(): UseStorageLocationResult {
     try {
       const result = await window.api.storageLocation.connectExisting(path)
       if (result.ok) {
-        toast.success('Storage location selected. Restarting Applyer…')
+        toast.success(t('storage.locationSelected'))
       } else {
-        toast.error(result.error ?? 'Failed to connect to that storage location.')
+        toast.error(errorMessage(result.error))
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to connect to that storage location.')
+      toast.error(err instanceof Error ? err.message : t('storage.connectFailed'))
     } finally {
       setUi({ phase: 'idle' })
     }

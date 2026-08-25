@@ -1,0 +1,64 @@
+{
+  "tabs": {
+    "indexed": "Terindeks",
+    "excluded": "Dikecualikan"
+  },
+  "filters": {
+    "searchPlaceholder": "Cari posisi atau perusahaan…",
+    "sourceLabel": "Filter sumber",
+    "allSources": "Semua sumber",
+    "matchLabel": "Filter status kecocokan",
+    "matchAll": "Semua",
+    "matchMatched": "Cocok",
+    "matchUnmatched": "Tidak dipilih",
+    "toCompact": "Ganti ke tampilan rapat",
+    "toComfortable": "Ganti ke tampilan longgar",
+    "compactTitle": "Tampilan rapat",
+    "comfortableTitle": "Tampilan longgar"
+  },
+  "row": {
+    "matched": "Cocok",
+    "notSelected": "Tidak dipilih",
+    "viewListing": "Lihat lowongan",
+    "viewListingLong": "Lihat lowongan ↗",
+    "seen": "terlihat {{time}}",
+    "justNow": "baru saja",
+    "minutesAgo": "{{count}} mnt lalu",
+    "hoursAgo": "{{count}} jam lalu",
+    "daysAgo": "{{count}} hr lalu"
+  },
+  "list": {
+    "empty": "Belum ada yang terindeks. Hasilnya muncul di sini begitu agen menjalankan pencarian lowongan."
+  },
+  "retention": {
+    "keepFor": "Simpan selama",
+    "tooltip": "Berapa lama lowongan terindeks disimpan sebelum dihapus otomatis.",
+    "ariaLabel": "Retensi lowongan terindeks",
+    "days": "{{count}} hari",
+    "unlimited": "Selamanya",
+    "title": "Ubah lama penyimpanan lowongan terindeks",
+    "messageUnlimited": "Tidak ada lowongan terindeks yang akan dihapus. Riwayatnya disimpan selamanya.",
+    "messageDays": "Lowongan terindeks yang terakhir terlihat lebih dari {{count}} hari lalu akan langsung dihapus.",
+    "confirm": "Ubah",
+    "updated": "Lama penyimpanan diperbarui.",
+    "updatedDeleted_other": "Lama penyimpanan diperbarui. {{count}} lowongan terindeks yang sudah lewat batas waktu ikut dihapus.",
+    "failed": "Gagal memperbarui lama penyimpanan."
+  },
+  "exclusions": {
+    "intro": "Link di daftar ini tidak akan pernah muncul di pencarian lowongan dan tidak bisa diantre, baik olehmu maupun oleh agen. Kecualikan lowongan lewat halaman detailnya di papan, atau tambahkan langsung di sini.",
+    "urlLabel": "Link lowongan",
+    "urlPlaceholder": "https://example.com/careers/123",
+    "reasonLabel": "Alasan (opsional)",
+    "reasonPlaceholder": "misal: tidak remote",
+    "add": "Tambah",
+    "empty": "Belum ada yang dikecualikan.",
+    "byAgent": "agen",
+    "byYou": "kamu",
+    "remove": "Hapus",
+    "removeTitle": "Hapus dari daftar",
+    "removeMessage": "Lowongan ini bisa dicari dan diantre lagi.",
+    "added": "Ditambahkan ke daftar pengecualian.",
+    "addFailed": "Gagal menambahkan ke daftar pengecualian.",
+    "removed": "Dihapus dari daftar pengecualian. Lowongan ini bisa muncul di pencarian dan diantre lagi."
+  }
+}

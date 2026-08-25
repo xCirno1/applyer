@@ -49,7 +49,7 @@ beforeEach(() => {
 describe('resolveCustomStorageRoot', () => {
   it('fails when no recovery is currently needed', async () => {
     resolveActiveStorageRoot()
-    await expect(resolveCustomStorageRoot()).resolves.toEqual({ ok: false, error: expect.any(String) })
+    await expect(resolveCustomStorageRoot()).resolves.toEqual({ ok: false, error: expect.objectContaining({ code: expect.any(String) }) })
   })
 
   it('fails while the custom root is still unavailable', async () => {
@@ -58,7 +58,7 @@ describe('resolveCustomStorageRoot', () => {
 
     const result = await resolveCustomStorageRoot()
 
-    expect(result).toEqual({ ok: false, error: expect.any(String) })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: expect.any(String) }) })
     expect(getStorageRecoveryState().needed).toBe(true)
     expect(activeStorageRoot()).not.toBe(missingRoot)
   })
@@ -151,7 +151,7 @@ describe('connectToExistingLocation', () => {
 
     const result = await connectToExistingLocation(emptyRoot)
 
-    expect(result).toEqual({ ok: false, error: expect.any(String) })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: expect.any(String) }) })
     expect(activeStorageRoot()).toBe(previousRoot)
     rmSync(emptyRoot, { recursive: true, force: true })
   })
@@ -168,7 +168,7 @@ describe('connectToExistingLocation', () => {
 
     const result = await connectToExistingLocation(existingRoot)
 
-    expect(result).toEqual({ ok: false, error: expect.any(String) })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: expect.any(String) }) })
     expect(activeStorageRoot()).toBe(previousRoot)
     expect(() => dbModule.getDb().select().from(profile).all()).not.toThrow()
     const verification = new Database(unrelatedPath, { readonly: true })
@@ -191,7 +191,7 @@ describe('connectToExistingLocation', () => {
 
     const result = await connectToExistingLocation(existingRoot)
 
-    expect(result).toEqual({ ok: false, error: expect.any(String) })
+    expect(result).toEqual({ ok: false, error: expect.objectContaining({ code: expect.any(String) }) })
     expect(activeStorageRoot()).toBe(previousRoot)
     expect(readStorageLocationPointer().pointer.customRoot).toBeNull()
     expect(() => dbModule.getDb().select().from(profile).all()).not.toThrow()
@@ -204,7 +204,7 @@ describe('connectToExistingLocation', () => {
 describe('useDefaultStorageLocation', () => {
   it('fails when no recovery is currently needed', () => {
     resolveActiveStorageRoot()
-    expect(useDefaultStorageLocation()).toEqual({ ok: false, error: expect.any(String) })
+    expect(useDefaultStorageLocation()).toEqual({ ok: false, error: expect.objectContaining({ code: expect.any(String) }) })
   })
 
   it('clears the pointer and recovery state, leaving the already-open fallback database active', () => {
@@ -241,7 +241,7 @@ describe('useDefaultStorageLocation', () => {
       throw new Error('simulated pointer failure')
     })
 
-    expect(useDefaultStorageLocation()).toEqual({ ok: false, error: expect.any(String) })
+    expect(useDefaultStorageLocation()).toEqual({ ok: false, error: expect.objectContaining({ code: expect.any(String) }) })
     expect(getStorageRecoveryState().needed).toBe(true)
 
     pointerSpy.mockRestore()

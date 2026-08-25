@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTransfer'
+import { appError, type AppError } from '@shared/types/errorCodes'
 
 const jobStatusSchema = z.enum(['queued', 'filled', 'submitted', 'failed'])
 const applyMethodSchema = z.enum(['external_form', 'easy_apply', 'email', 'unknown'])
@@ -78,7 +79,7 @@ const exportBundleSchema = z.object({
   })
 })
 
-export type ValidateBundleResult = { ok: true; bundle: ExportBundle } | { ok: false; error: string }
+export type ValidateBundleResult = { ok: true; bundle: ExportBundle } | { ok: false; error: AppError }
 
 /**
  * Import is round-trip only — the sole accepted input is a file this app
@@ -89,7 +90,7 @@ export type ValidateBundleResult = { ok: true; bundle: ExportBundle } | { ok: fa
 export function validateExportBundle(raw: unknown): ValidateBundleResult {
   const result = exportBundleSchema.safeParse(raw)
   if (!result.success) {
-    return { ok: false, error: 'This file is not a valid Applyer export.' }
+    return { ok: false, error: appError('invalidExport') }
   }
   return { ok: true, bundle: result.data }
 }

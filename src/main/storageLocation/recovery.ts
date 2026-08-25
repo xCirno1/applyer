@@ -16,6 +16,7 @@ import { reconcileOrphanedBlockedJobs } from '../jobActions'
 import { appLogger } from '../logger'
 import { withStorageWriteLock } from '../storageWriteLock'
 import type { StorageLocationMigrationResult } from '@shared/types/storageLocation'
+import { appError } from '@shared/types/errorCodes'
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
@@ -52,10 +53,10 @@ function logResolutionBestEffort(message: string, meta: Record<string, unknown>)
  */
 function switchToExistingRoot(root: string, persistPointer: boolean): StorageLocationMigrationResult {
   if (!isAbsolute(root) || root.trim() === '') {
-    return { ok: false, error: 'That is not a valid folder path.' }
+    return { ok: false, error: appError('invalidFolderPath') }
   }
   if (!isCustomRootAvailable(root)) {
-    return { ok: false, error: `No Applyer database found at "${root}".` }
+    return { ok: false, error: appError('noDatabaseAt', { root }) }
   }
 
   const targetRoot = canonicalPath(root)
@@ -83,7 +84,7 @@ function switchToExistingRoot(root: string, persistPointer: boolean): StorageLoc
         `Failed to reopen the previous database after a failed storage-location connection: ${errorMessage(reopenErr)}`
       )
     }
-    return { ok: false, error: `Could not open the database at "${root}": ${errorMessage(err)}` }
+    return { ok: false, error: appError('cannotOpenDatabase', { root, message: errorMessage(err) }) }
   }
 
   return { ok: true }
@@ -99,12 +100,12 @@ export function resolveCustomStorageRoot(): Promise<StorageLocationMigrationResu
   return withStorageWriteLock(() => {
     const state = getStorageRecoveryState()
     if (!state.needed || !state.unavailableCustomRoot) {
-      return { ok: false, error: 'No storage location recovery is currently needed.' }
+      return { ok: false, error: appError('noRecoveryNeeded') }
     }
     const customRoot = state.unavailableCustomRoot
 
     if (!isCustomRootAvailable(customRoot)) {
-      return { ok: false, error: `"${customRoot}" is still not available. Reconnect it and try again.` }
+      return { ok: false, error: appError('customRootUnavailable', { root: customRoot }) }
     }
 
     const fallbackRoot = activeStorageRoot()
@@ -127,10 +128,10 @@ export function resolveCustomStorageRoot(): Promise<StorageLocationMigrationResu
  */
 export function connectToExistingLocation(root: string): StorageLocationMigrationResult {
   if (!isAbsolute(root) || root.trim() === '') {
-    return { ok: false, error: 'That is not a valid folder path.' }
+    return { ok: false, error: appError('invalidFolderPath') }
   }
   if (!isCustomRootAvailable(root)) {
-    return { ok: false, error: `No valid Applyer database found at "${root}".` }
+    return { ok: false, error: appError('noValidDatabaseAt', { root }) }
   }
 
   const targetRoot = canonicalPath(root)
@@ -142,7 +143,7 @@ export function connectToExistingLocation(root: string): StorageLocationMigratio
     // write so no continuation can resume against the selected database.
     writeStorageLocationPointer({ schemaVersion: 1, customRoot: isDefault ? null : targetRoot })
   } catch (err) {
-    return { ok: false, error: `Could not save the selected storage location: ${errorMessage(err)}` }
+    return { ok: false, error: appError('cannotSaveLocation', { message: errorMessage(err) }) }
   }
 
   logResolutionBestEffort('Selected an existing Applyer storage location; restarting to connect', {
@@ -160,13 +161,13 @@ export function connectToExistingLocation(root: string): StorageLocationMigratio
 export function useDefaultStorageLocation(): StorageLocationMigrationResult {
   const state = getStorageRecoveryState()
   if (!state.needed) {
-    return { ok: false, error: 'No storage location recovery is currently needed.' }
+    return { ok: false, error: appError('noRecoveryNeeded') }
   }
 
   try {
     writeStorageLocationPointer({ schemaVersion: 1, customRoot: null })
   } catch (err) {
-    return { ok: false, error: `Could not save the default storage location: ${errorMessage(err)}` }
+    return { ok: false, error: appError('cannotSaveDefaultLocation', { message: errorMessage(err) }) }
   }
 
   clearStorageRecoveryState()

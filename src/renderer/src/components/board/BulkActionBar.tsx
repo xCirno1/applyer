@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { useJobsStore } from '../../state/jobsStore'
@@ -13,6 +14,7 @@ import { useJobActions } from './useJobActions'
  * `JobDetailModal`'s existing single-job behavior; Exclude always confirms.
  */
 export default function BulkActionBar(): ReactElement | null {
+  const { t } = useTranslation('board')
   const selectedJobIds = useJobsStore((s) => s.selectedJobIds)
   const clearSelection = useJobsStore((s) => s.clearSelection)
   // Derived in the render body rather than inside the store selector — a
@@ -66,9 +68,9 @@ export default function BulkActionBar(): ReactElement | null {
 
   return (
     <div className="flex h-7 shrink-0 items-center gap-2 border-b border-border-soft bg-canvas-soft px-2">
-      <span className="text-[12px] font-medium text-text">{selectedJobIds.size} selected</span>
+      <span className="text-[12px] font-medium text-text">{t('selection.count', { count: selectedJobIds.size })}</span>
       <Button size="sm" variant="ghost" onClick={clearSelection}>
-        Clear
+        {t('selection.clear')}
       </Button>
       <div className="ml-auto flex gap-2">
         <Button
@@ -77,7 +79,7 @@ export default function BulkActionBar(): ReactElement | null {
           loading={retrying}
           onClick={() => (retryableIds.length > 1 ? setConfirmRetryOpen(true) : void handleRetry())}
         >
-          Retry{retryableIds.length > 0 ? ` (${retryableIds.length})` : ''}
+          {retryableIds.length > 0 ? t('actions.retryCount', { count: retryableIds.length }) : t('actions.retry')}
         </Button>
         <Button
           size="sm"
@@ -86,7 +88,7 @@ export default function BulkActionBar(): ReactElement | null {
           loading={unqueueing}
           onClick={() => setConfirmUnqueueOpen(true)}
         >
-          Unqueue{unqueueableIds.length > 0 ? ` (${unqueueableIds.length})` : ''}
+          {unqueueableIds.length > 0 ? t('actions.unqueueCount', { count: unqueueableIds.length }) : t('actions.unqueue')}
         </Button>
         <Button
           size="sm"
@@ -95,26 +97,24 @@ export default function BulkActionBar(): ReactElement | null {
           loading={excluding}
           onClick={() => setConfirmExcludeOpen(true)}
         >
-          Exclude{excludableIds.length > 0 ? ` (${excludableIds.length})` : ''}
+          {excludableIds.length > 0 ? t('actions.excludeCount', { count: excludableIds.length }) : t('actions.exclude')}
         </Button>
       </div>
 
       <ConfirmDialog
         open={confirmRetryOpen}
-        title="Retry selected jobs?"
-        message={`This moves ${retryableIds.length} failed job${retryableIds.length === 1 ? '' : 's'} back to Queued so they're attempted again.`}
-        confirmLabel="Retry all"
+        title={t('confirm.retryTitle')}
+        message={t('confirm.retryMessage', { count: retryableIds.length })}
+        confirmLabel={t('actions.retryAll')}
         loading={retrying}
         onConfirm={handleRetry}
         onCancel={() => setConfirmRetryOpen(false)}
       />
       <ConfirmDialog
         open={confirmExcludeOpen}
-        title="Exclude selected jobs?"
-        message={`This removes ${excludableIds.length} job${excludableIds.length === 1 ? '' : 's'} from the board and permanently blacklists ${
-          excludableIds.length === 1 ? 'its URL' : 'their URLs'
-        } — they'll never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Settings > Exclusions.`}
-        confirmLabel="Exclude"
+        title={t('confirm.excludeTitle', { count: excludableIds.length })}
+        message={t('confirm.excludeMessage', { count: excludableIds.length })}
+        confirmLabel={t('actions.exclude')}
         danger
         loading={excluding}
         onConfirm={handleExclude}
@@ -122,11 +122,9 @@ export default function BulkActionBar(): ReactElement | null {
       />
       <ConfirmDialog
         open={confirmUnqueueOpen}
-        title="Unqueue selected jobs?"
-        message={`This removes ${unqueueableIds.length} job${unqueueableIds.length === 1 ? '' : 's'} from the board, but ${
-          unqueueableIds.length === 1 ? 'its URL isn’t' : 'their URLs aren’t'
-        } blacklisted — the agent can still find and re-queue them again later.`}
-        confirmLabel="Unqueue"
+        title={t('confirm.unqueueTitle', { count: unqueueableIds.length })}
+        message={t('confirm.unqueueMessage', { count: unqueueableIds.length })}
+        confirmLabel={t('actions.unqueue')}
         loading={unqueueing}
         onConfirm={handleUnqueue}
         onCancel={() => setConfirmUnqueueOpen(false)}

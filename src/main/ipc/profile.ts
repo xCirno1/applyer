@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import { z } from 'zod'
 import { IPC } from '@shared/types/ipcEvents'
+import { appError, unexpectedError } from '@shared/types/errorCodes'
 import { getProfile, saveProfile } from '../db/repositories/profileRepository'
 import { listDocuments, addDocument, deleteDocument } from '../db/repositories/documentsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
@@ -49,7 +50,7 @@ export function registerProfileIpc(): void {
     const parsed = profileFieldsSchema.safeParse(fields)
     if (!parsed.success) {
       logActivity('warn', 'Rejected invalid profile save from renderer', { error: parsed.error.message })
-      return { ok: false, error: 'Invalid profile data.' }
+      return { ok: false, error: appError('invalidProfileData') }
     }
     saveProfile(parsed.data)
     return { ok: true }
@@ -58,15 +59,15 @@ export function registerProfileIpc(): void {
   ipcMain.handle(IPC.profile.uploadDocument, async (_event, request: unknown) => {
     const parsed = uploadDocumentSchema.safeParse(request)
     if (!parsed.success) {
-      return { ok: false, error: 'Invalid upload request.' }
+      return { ok: false, error: appError('invalidUploadRequest') }
     }
     const req = parsed.data as UploadDocumentRequest
 
     if (!ALLOWED_MIME_TYPES.has(req.mimeType)) {
-      return { ok: false, error: `Unsupported file type: ${req.mimeType}. Use PDF, DOCX, or plain text.` }
+      return { ok: false, error: appError('unsupportedFileType', { mimeType: req.mimeType }) }
     }
     if (req.data.byteLength > MAX_DOCUMENT_SIZE_BYTES) {
-      return { ok: false, error: `File exceeds the ${MAX_DOCUMENT_SIZE_BYTES / (1024 * 1024)}MB limit.` }
+      return { ok: false, error: appError('fileTooLarge', { limit: MAX_DOCUMENT_SIZE_BYTES / (1024 * 1024) }) }
     }
 
     try {
@@ -79,7 +80,7 @@ export function registerProfileIpc(): void {
       return { ok: true, document: summary }
     } catch (err) {
       logActivity('error', 'Document upload failed', { error: String(err) })
-      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      return { ok: false, error: unexpectedError(err) }
     }
   })
 

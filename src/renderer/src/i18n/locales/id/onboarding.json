@@ -1,0 +1,51 @@
+{
+  "welcome": {
+    "title": "Selamat datang di Applyer",
+    "intro": "Applyer mengubah asisten coding yang jalan di terminal bawaan (Claude Code, Codex, atau agen lain yang mendukung MCP) jadi asisten pencari kerja. Kira-kira begini alurnya:",
+    "step1Title": "1. Ceritakan tentang dirimu.",
+    "step1Body": "Isi profil dan unggah resume di langkah berikutnya. Ini yang dipakai agen buat menilai kecocokan dan mengisi lamaran.",
+    "step2Title": "2. Minta agen mencari lowongan.",
+    "step2Body": "Agen mencari di web dan menaruh yang cocok ke papan tugas di aplikasi ini. Tidak ada yang dikirim otomatis.",
+    "step3Title": "3. Kamu yang pegang kendali.",
+    "step3Body": "Agen bisa menyiapkan lamaran yang sudah terisi buat kamu cek, tapi cuma kamu yang menekan tombol kirim.",
+    "getStarted": "Mulai"
+  },
+  "storage": {
+    "title": "Datamu mau disimpan seperti apa di komputer ini?",
+    "intro": "Pilih yang mana pun, semuanya tetap ada di komputer ini. Yang berubah cuma cara penyimpanannya di disk.",
+    "encrypted": "Terenkripsi",
+    "encryptedDescription": "Dikunci pakai penyimpanan aman bawaan komputer ini, sama seperti cara browser menyimpan password. Cuma bisa dibaca di perangkat ini, lewat akunmu.",
+    "plaintext": "Teks biasa",
+    "plaintextDescription": "Disimpan sebagai file biasa yang bisa dibaca. Lebih gampang di-backup atau dicek sendiri, tapi siapa pun yang bisa mengakses file di komputer ini juga bisa membacanya.",
+    "unavailable": "Tidak tersedia di sistem ini (tidak ada keychain OS yang terdeteksi).",
+    "saveFailed": "Gagal menyimpan pilihan penyimpanan."
+  },
+  "documents": {
+    "title": "Dokumenmu",
+    "intro": "Resume wajib ada. Agen membaca dokumen ini buat menilai kecocokan, dan bisa melampirkannya waktu mengisi formulir.",
+    "remove": "Hapus",
+    "removeLabel": "Hapus {{filename}}",
+    "uploadingResume": "Mengunggah resume…",
+    "resumeRequired": "Resume (wajib)",
+    "uploadingCoverLetter": "Mengunggah cover letter…",
+    "coverLetterOptional": "Cover letter (opsional)",
+    "uploaded": "{{filename}} berhasil diunggah.",
+    "uploadFailed": "Unggahan gagal."
+  },
+  "card": {
+    "recommended": "Disarankan"
+  },
+  "nav": {
+    "back": "Kembali",
+    "next": "Lanjut"
+  },
+  "profileForm": {
+    "title": "Profilmu",
+    "intro": "Agen pakai data ini buat menilai kecocokan lowongan dan mengisi formulir lamaran."
+  },
+  "mcp": {
+    "title": "Sambungkan agenmu",
+    "intro": "Applyer menyediakan tools (cari, antre, dan lain-lain) lewat MCP, cara standar buat agen coding memanggil sebuah aplikasi. Setel sekali per agen, entah otomatis atau dengan menyalin perintah di bawah ke konfigurasinya.",
+    "finish": "Selesai"
+  }
+}

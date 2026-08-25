@@ -1,19 +1,20 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Tag from '../ui/Tag'
 import { useToast } from '../ui/useToast'
 import { useJobsStore } from '../../state/jobsStore'
+import { useErrorMessage } from '../../i18n/formatError'
+import { useFormatters } from '../../i18n/format'
 import type { JobRecord } from '@shared/types/job'
 import type { ActivityLogEntry } from '@shared/types/activity'
 
-function formatTime(iso: string): string {
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleTimeString()
-}
-
 export default function JobDetailModal({ job, onClose }: { job: JobRecord | null; onClose: () => void }): ReactElement | null {
+  const { t } = useTranslation('board')
+  const errorMessage = useErrorMessage()
+  const format = useFormatters()
   const applyUpdate = useJobsStore((s) => s.applyUpdate)
   const removeJobLocal = useJobsStore((s) => s.removeJobLocal)
   const toast = useToast()
@@ -50,10 +51,10 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
     setSubmitting(false)
     if (result.ok && result.job) {
       applyUpdate(result.job)
-      toast.success('Marked as submitted.')
+      toast.success(t('toast.markedSubmitted'))
       onClose()
     } else {
-      toast.error(result.error ?? 'Failed to mark as submitted.')
+      toast.error(result.error ? errorMessage(result.error) : t('toast.markSubmittedFailed'))
     }
   }
 
@@ -63,10 +64,10 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
     setRetrying(false)
     if (result.ok && result.job) {
       applyUpdate(result.job)
-      toast.success('Moved back to Queued.')
+      toast.success(t('toast.movedToQueued'))
       onClose()
     } else {
-      toast.error(result.error ?? 'Failed to retry.')
+      toast.error(result.error ? errorMessage(result.error) : t('toast.retrySingleFailed'))
     }
   }
 
@@ -77,10 +78,10 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
     setExcluding(false)
     if (result.ok) {
       removeJobLocal(job.id)
-      toast.success("Excluded — it won't be shown again or resurfaced by search.")
+      toast.success(t('toast.excludedSingle'))
       onClose()
     } else {
-      toast.error(result.error ?? 'Failed to exclude this job.')
+      toast.error(result.error ? errorMessage(result.error) : t('toast.excludeSingleFailed'))
     }
   }
 
@@ -91,10 +92,10 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
     setUnqueueing(false)
     if (result.ok) {
       removeJobLocal(job.id)
-      toast.success('Removed from the queue.')
+      toast.success(t('toast.unqueuedSingle'))
       onClose()
     } else {
-      toast.error(result.error ?? 'Failed to unqueue this job.')
+      toast.error(result.error ? errorMessage(result.error) : t('toast.unqueueSingleFailed'))
     }
   }
 
@@ -105,7 +106,7 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
           <span className="font-medium text-text">{job.company}</span>
           {job.location && <span>· {job.location}</span>}
           {job.salaryRange && <span>· {job.salaryRange}</span>}
-          {job.matchScore !== null && <span>· {job.matchScore}% match</span>}
+          {job.matchScore !== null && <span>· {t('detail.match', { score: job.matchScore })}</span>}
         </div>
 
         {job.failureTag && (
@@ -117,7 +118,7 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
 
         {job.matchReasons && job.matchReasons.length > 0 && (
           <div>
-            <p className="text-[12px] font-medium text-text-muted">Why it matched</p>
+            <p className="text-[12px] font-medium text-text-muted">{t('detail.whyMatched')}</p>
             <ul className="mt-1 list-disc pl-4 text-[12px] text-text-muted">
               {job.matchReasons.map((reason, i) => (
                 <li key={i}>{reason}</li>
@@ -128,10 +129,10 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
 
         {job.screenshotPath && (
           <div>
-            <p className="text-[12px] font-medium text-text-muted">Filled application (screenshot)</p>
+            <p className="text-[12px] font-medium text-text-muted">{t('detail.screenshot')}</p>
             <img
               src={`applyer-file://screenshots/${job.id}.png`}
-              alt="Screenshot of the filled application form"
+              alt={t('detail.screenshotAlt')}
               className="mt-1 max-h-64 w-full border border-border-soft object-contain object-top"
             />
           </div>
@@ -146,11 +147,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
 
         {activity.length > 0 && (
           <div>
-            <p className="text-[12px] font-medium text-text-muted">Activity</p>
+            <p className="text-[12px] font-medium text-text-muted">{t('detail.activity')}</p>
             <ul className="mt-1 flex flex-col gap-0.5">
               {activity.map((entry) => (
                 <li key={entry.id} className="flex gap-2 text-[11px]">
-                  <span className="shrink-0 text-text-faint">{formatTime(entry.createdAt)}</span>
+                  <span className="shrink-0 text-text-faint">{format.time(entry.createdAt)}</span>
                   <span className={entry.level === 'error' ? 'text-danger' : entry.level === 'warn' ? 'text-warning' : 'text-text-muted'}>
                     {entry.message}
                   </span>
@@ -167,27 +168,27 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
             rel="noreferrer"
             className="text-[12px] text-accent hover:underline"
           >
-            Open original listing ↗
+            {t('detail.openListing')}
           </a>
           <div className="flex gap-2">
             {job.status === 'queued' && (
               <Button size="sm" variant="secondary" onClick={() => setConfirmUnqueueOpen(true)} loading={unqueueing}>
-                Unqueue
+                {t('actions.unqueue')}
               </Button>
             )}
             {job.status !== 'submitted' && (
               <Button size="sm" variant="danger" onClick={() => setConfirmExcludeOpen(true)} loading={excluding}>
-                Exclude
+                {t('actions.exclude')}
               </Button>
             )}
             {job.status === 'failed' && (
               <Button size="sm" onClick={handleRetry} loading={retrying}>
-                Retry
+                {t('actions.retry')}
               </Button>
             )}
             {job.status === 'filled' && (
               <Button size="sm" variant="primary" onClick={() => setConfirmSubmitOpen(true)} loading={submitting}>
-                Mark Submitted
+                {t('actions.markSubmitted')}
               </Button>
             )}
           </div>
@@ -196,18 +197,18 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
 
       <ConfirmDialog
         open={confirmSubmitOpen}
-        title="Mark as submitted"
-        message="Confirm you've actually submitted this application yourself — this action doesn't submit anything on your behalf, it just records that you did."
-        confirmLabel="Mark submitted"
+        title={t('confirm.markSubmittedTitle')}
+        message={t('confirm.markSubmittedMessage')}
+        confirmLabel={t('confirm.markSubmittedConfirm')}
         onConfirm={handleMarkSubmitted}
         onCancel={() => setConfirmSubmitOpen(false)}
       />
 
       <ConfirmDialog
         open={confirmExcludeOpen}
-        title="Exclude this job posting"
-        message="This removes it from the board and permanently blacklists its URL — it will never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Settings > Exclusions."
-        confirmLabel="Exclude"
+        title={t('confirm.excludeTitle', { count: 1 })}
+        message={t('confirm.excludeMessage', { count: 1 })}
+        confirmLabel={t('actions.exclude')}
         danger
         onConfirm={handleExclude}
         onCancel={() => setConfirmExcludeOpen(false)}
@@ -215,9 +216,9 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
 
       <ConfirmDialog
         open={confirmUnqueueOpen}
-        title="Unqueue this job"
-        message="This removes it from the board, but its URL isn't blacklisted — the agent can still find and re-queue it again later."
-        confirmLabel="Unqueue"
+        title={t('confirm.unqueueTitle', { count: 1 })}
+        message={t('confirm.unqueueMessage', { count: 1 })}
+        confirmLabel={t('actions.unqueue')}
         onConfirm={handleUnqueue}
         onCancel={() => setConfirmUnqueueOpen(false)}
       />

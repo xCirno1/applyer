@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import IndexedJobsFilters from '../../components/indexedJobs/IndexedJobsFilters'
 import IndexedJobsList from '../../components/indexedJobs/IndexedJobsList'
 import IndexedJobsRetentionControl from '../../components/indexedJobs/IndexedJobsRetentionControl'
@@ -6,10 +7,7 @@ import ExclusionsPanel from '../../components/indexedJobs/ExclusionsPanel'
 
 type Tab = 'indexed' | 'excluded'
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'indexed', label: 'Indexed' },
-  { id: 'excluded', label: 'Excluded' }
-]
+const TAB_IDS: Tab[] = ['indexed', 'excluded']
 
 /**
  * Every job an agent's search has surfaced — matched (queued) and not —
@@ -23,20 +21,21 @@ const TABS: { id: Tab; label: string }[] = [
  * doesn't repeat itself below the top bar.
  */
 export default function IndexedJobsPage(): ReactElement {
+  const { t } = useTranslation('indexedJobs')
   const [tab, setTab] = useState<Tab>('indexed')
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-7 shrink-0 items-center gap-1 border-b border-border-soft bg-canvas px-2">
-        {TABS.map((t) => (
+        {TAB_IDS.map((id) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={id}
+            onClick={() => setTab(id)}
             className={`h-full cursor-pointer px-2.5 text-[12px] font-medium ${
-              tab === t.id ? 'border-b-2 border-accent text-text' : 'text-text-muted hover:text-text'
+              tab === id ? 'border-b-2 border-accent text-text' : 'text-text-muted hover:text-text'
             }`}
           >
-            {t.label}
+            {t(`tabs.${id}`)}
           </button>
         ))}
         {tab === 'indexed' && <IndexedJobsRetentionControl className="ml-auto" />}

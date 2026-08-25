@@ -1,0 +1,65 @@
+{
+  "tabs": {
+    "indexed": "Indexed",
+    "excluded": "Excluded"
+  },
+  "filters": {
+    "searchPlaceholder": "Search title or company…",
+    "sourceLabel": "Filter by source",
+    "allSources": "All sources",
+    "matchLabel": "Filter by match status",
+    "matchAll": "All",
+    "matchMatched": "Matched",
+    "matchUnmatched": "Not selected",
+    "toCompact": "Switch to compact rows",
+    "toComfortable": "Switch to comfortable rows",
+    "compactTitle": "Compact rows",
+    "comfortableTitle": "Comfortable rows"
+  },
+  "row": {
+    "matched": "Matched",
+    "notSelected": "Not selected",
+    "viewListing": "View listing",
+    "viewListingLong": "View listing ↗",
+    "seen": "seen {{time}}",
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  },
+  "list": {
+    "empty": "Nothing indexed yet. Results appear here as soon as an agent runs a job search."
+  },
+  "retention": {
+    "keepFor": "Keep for",
+    "tooltip": "How long indexed jobs are kept before being pruned automatically.",
+    "ariaLabel": "Indexed job retention",
+    "days": "{{count}} days",
+    "unlimited": "Unlimited",
+    "title": "Change indexed jobs retention",
+    "messageUnlimited": "No indexed jobs will be deleted. History will be kept indefinitely.",
+    "messageDays": "Indexed jobs last seen more than {{count}} days ago will be deleted now.",
+    "confirm": "Change",
+    "updated": "Retention updated.",
+    "updatedDeleted_one": "Retention updated. {{count}} indexed job older than the window was deleted.",
+    "updatedDeleted_other": "Retention updated. {{count}} indexed jobs older than the window were deleted.",
+    "failed": "Failed to update retention."
+  },
+  "exclusions": {
+    "intro": "URLs on this list are never returned by a job search and can't be queued, whether you or the agent tries to. Exclude a job from its detail view on the board, or add one directly here.",
+    "urlLabel": "Job posting URL",
+    "urlPlaceholder": "https://example.com/careers/123",
+    "reasonLabel": "Reason (optional)",
+    "reasonPlaceholder": "e.g. not remote",
+    "add": "Add",
+    "empty": "Nothing excluded yet.",
+    "byAgent": "agent",
+    "byYou": "you",
+    "remove": "Remove",
+    "removeTitle": "Remove exclusion",
+    "removeMessage": "This job posting will be searchable and queueable again.",
+    "added": "Added to the exclusion list.",
+    "addFailed": "Failed to add exclusion.",
+    "removed": "Removed from the exclusion list. It can be found by search and queued again."
+  }
+}

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { COMMANDS, COMMAND_LIST, COMMAND_CATEGORIES } from './commands'
+import workspaceEn from '../i18n/locales/en/workspace.json'
 
 describe('COMMANDS / COMMAND_LIST', () => {
   it('keeps COMMAND_LIST in sync with the COMMANDS map', () => {
@@ -7,10 +8,18 @@ describe('COMMANDS / COMMAND_LIST', () => {
     expect(COMMAND_LIST.map((c) => c.id).sort()).toEqual(Object.keys(COMMANDS).sort())
   })
 
-  it('gives every command a matching id key and a non-empty label', () => {
+  it('gives every command a matching id key', () => {
     for (const [key, def] of Object.entries(COMMANDS)) {
       expect(def.id).toBe(key)
-      expect(def.label.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('has an English label for every command', () => {
+    // Labels live in the i18n catalog rather than on the definition, so this
+    // is what catches a command added without a corresponding string.
+    for (const id of Object.keys(COMMANDS)) {
+      const label = (workspaceEn.commands as Record<string, unknown>)[id]
+      expect(label, `missing workspace.commands.${id}`).toBeTruthy()
     }
   })
 

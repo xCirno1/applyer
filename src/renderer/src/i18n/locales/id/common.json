@@ -1,0 +1,65 @@
+{
+  "actions": {
+    "cancel": "Batal",
+    "confirm": "Lanjutkan",
+    "save": "Simpan",
+    "saving": "Menyimpan…",
+    "close": "Tutup",
+    "retry": "Coba lagi",
+    "remove": "Hapus",
+    "add": "Tambah",
+    "loadMore": "Muat lagi",
+    "copy": "Salin",
+    "copied": "Tersalin",
+    "back": "Kembali",
+    "next": "Lanjut",
+    "skip": "Lewati",
+    "browse": "Pilih…"
+  },
+  "dropdown": {
+    "placeholder": "Pilih…"
+  },
+  "pagination": {
+    "label": "Halaman",
+    "previous": "Halaman sebelumnya",
+    "next": "Halaman berikutnya"
+  },
+  "fileDrop": {
+    "hint": "Klik atau tarik file ke sini"
+  },
+  "states": {
+    "loading": "Memuat…",
+    "empty": "Belum ada apa-apa di sini.",
+    "none": "Tidak ada"
+  },
+  "units": {
+    "characters": "{{used}} / {{max}} karakter"
+  },
+  "profile": {
+    "fullName": "Nama lengkap",
+    "email": "Email",
+    "phone": "No. HP",
+    "location": "Lokasi",
+    "linkedinUrl": "Link LinkedIn",
+    "githubUrl": "Link GitHub",
+    "portfolioUrl": "Link portfolio",
+    "workAuthorization": "Izin kerja",
+    "desiredRoles": "Posisi yang dicari",
+    "desiredLocations": "Lokasi yang dicari",
+    "remotePreference": "Preferensi kerja",
+    "remoteNoPreference": "Bebas",
+    "remoteRemote": "Remote",
+    "remoteHybrid": "Hybrid",
+    "remoteOnsite": "Di kantor",
+    "yearsExperience": "Pengalaman (tahun)",
+    "salaryMin": "Gaji minimum",
+    "salaryMax": "Gaji maksimum",
+    "salaryCurrency": "Mata uang",
+    "skills": "Skill",
+    "commaSeparated": "pisahkan pakai koma",
+    "summary": "Ringkasan",
+    "nameEmailRequired": "Nama lengkap dan email harus diisi.",
+    "saved": "Profil tersimpan.",
+    "saveFailed": "Gagal menyimpan profil."
+  }
+}

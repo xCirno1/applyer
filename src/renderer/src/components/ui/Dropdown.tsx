@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 
 export interface DropdownOption {
@@ -45,6 +46,7 @@ export default function Dropdown({
   disabled = false,
   className = ''
 }: DropdownProps): ReactElement {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
   const [pos, setPos] = useState<{ top: number; left: number; width: number; flip: boolean } | null>(null)
@@ -166,7 +168,7 @@ export default function Dropdown({
           open ? 'border-accent bg-canvas-soft' : 'border-border bg-canvas-soft hover:border-text-faint'
         } ${!selected ? 'text-text-faint' : 'text-text'}`}
       >
-        <span className="truncate">{selected ? selected.label : (placeholder ?? 'Select…')}</span>
+        <span className="truncate">{selected ? selected.label : (placeholder ?? t('dropdown.placeholder'))}</span>
         <ChevronIcon open={open} />
       </button>
 

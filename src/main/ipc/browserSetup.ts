@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { IPC, type BrowserPreference } from '@shared/types/ipcEvents'
+import { unexpectedError } from '@shared/types/errorCodes'
 import {
   ensureManagedChromiumDownloaded,
   getResolvedBrowserStatus,
@@ -15,7 +16,7 @@ export function registerBrowserSetupIpc(): void {
       await ensureManagedChromiumDownloaded({ requireConfirmation: false })
       return { ok: true }
     } catch (err) {
-      return { ok: false, error: String(err) }
+      return { ok: false, error: unexpectedError(err) }
     }
   })
 

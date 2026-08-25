@@ -27,6 +27,7 @@ import type {
   StorageLocationMigrationResult,
   StorageLocationProgressPayload
 } from '@shared/types/storageLocation'
+import { appError } from '@shared/types/errorCodes'
 
 const FREE_SPACE_MARGIN = 1.05
 const MOVABLE_NAMES = ['applyer.db', 'documents', 'screenshots', 'logs']
@@ -67,10 +68,10 @@ function isNoOp(destinationRoot: string): boolean {
  */
 export function validateStorageDestination(destinationRoot: string): StorageLocationValidation {
   if (typeof destinationRoot !== 'string' || destinationRoot.trim() === '') {
-    return { ok: false, error: 'Choose a folder.' }
+    return { ok: false, error: appError('chooseFolder') }
   }
   if (!isAbsolute(destinationRoot)) {
-    return { ok: false, error: 'That is not a valid folder path.' }
+    return { ok: false, error: appError('invalidFolderPath') }
   }
   if (isNoOp(destinationRoot)) {
     return { ok: true }
@@ -79,15 +80,15 @@ export function validateStorageDestination(destinationRoot: string): StorageLoca
   try {
     mkdirSync(destinationRoot, { recursive: true })
   } catch (err) {
-    return { ok: false, error: `Could not create that folder: ${errorMessage(err)}` }
+    return { ok: false, error: appError('cannotCreateFolder', { message: errorMessage(err) }) }
   }
 
   try {
     if (!statSync(destinationRoot).isDirectory()) {
-      return { ok: false, error: 'That path is not a folder.' }
+      return { ok: false, error: appError('pathNotFolder') }
     }
   } catch (err) {
-    return { ok: false, error: `Could not access that folder: ${errorMessage(err)}` }
+    return { ok: false, error: appError('cannotAccessFolder', { message: errorMessage(err) }) }
   }
 
   const probePath = join(
@@ -98,14 +99,14 @@ export function validateStorageDestination(destinationRoot: string): StorageLoca
     writeFileSync(probePath, '', { flag: 'wx' })
     unlinkSync(probePath)
   } catch (err) {
-    return { ok: false, error: `That folder is not writable — check permissions and try again. (${errorMessage(err)})` }
+    return { ok: false, error: appError('folderNotWritable', { message: errorMessage(err) }) }
   }
 
   let entries: string[]
   try {
     entries = readdirSync(destinationRoot)
   } catch (err) {
-    return { ok: false, error: `Could not read that folder: ${errorMessage(err)}` }
+    return { ok: false, error: appError('cannotReadFolder', { message: errorMessage(err) }) }
   }
   // Only the names we'd actually write are treated as a conflict — not "must
   // be completely empty". The OS-default userData dir permanently holds
@@ -122,7 +123,7 @@ export function validateStorageDestination(destinationRoot: string): StorageLoca
   if (conflict) {
     return {
       ok: false,
-      error: `That folder already has Applyer data in it ("${conflict}"). Choose a different folder, or remove that data first.`
+      error: appError('folderHasData', { conflict })
     }
   }
 
@@ -131,7 +132,7 @@ export function validateStorageDestination(destinationRoot: string): StorageLoca
     const availableBytes = stats.bavail * stats.bsize
     const neededBytes = Math.ceil(computeStorageStats().totalBytes * FREE_SPACE_MARGIN)
     if (availableBytes < neededBytes) {
-      return { ok: false, error: 'Not enough free space at that location.', neededBytes, availableBytes }
+      return { ok: false, error: appError('notEnoughSpace'), neededBytes, availableBytes }
     }
   } catch (err) {
     // statfsSync isn't guaranteed on every platform — don't hard-block the
@@ -216,7 +217,7 @@ export async function migrateStorageLocation(
   }
 
   if (migrationInProgress) {
-    return { ok: false, error: 'A storage location change is already in progress.' }
+    return { ok: false, error: appError('migrationInProgress') }
   }
   migrationInProgress = true
 
@@ -290,7 +291,7 @@ async function runMigration(
       onProgress({ phase: 'logs', percent: 100 })
     } catch (err) {
       discardDestination(canonicalDestination)
-      return { ok: false, error: `Could not copy your data to the new location: ${errorMessage(err)}` }
+      return { ok: false, error: appError('cannotCopyData', { message: errorMessage(err) }) }
     }
 
     // Phase 2 — DB snapshot + verify + absolute-path rewrite. Still pre-commit.
@@ -327,7 +328,7 @@ async function runMigration(
       // here never touches the live DB's values — just discard the whole
       // destination and leave the old location fully in charge.
       discardDestination(canonicalDestination)
-      return { ok: false, error: `Could not prepare the database at the new location: ${errorMessage(err)}` }
+      return { ok: false, error: appError('cannotPrepareDatabase', { message: errorMessage(err) }) }
     }
 
     // Phase 3 — commit point. Opening the new DB, persisting the pointer,
@@ -372,8 +373,8 @@ async function runMigration(
       return {
         ok: false,
         error: reopenedPrevious
-          ? 'Could not finish moving to the new location — your data is unchanged and Applyer is still using the previous location.'
-          : `Could not finish moving or reopen the previous database. A complete copy was preserved at "${canonicalDestination}"; restart Applyer before continuing.`
+          ? appError('migrationRolledBack')
+          : appError('migrationStranded', { destination: canonicalDestination })
       }
     }
 

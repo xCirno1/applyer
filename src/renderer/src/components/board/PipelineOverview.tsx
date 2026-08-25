@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { JobStatus } from '@shared/types/job'
 import { useJobsStore } from '../../state/jobsStore'
 import { usePendingCaptchaAlerts } from '../../providers/CaptchaAlertContext'
@@ -6,13 +7,6 @@ import Tag from '../ui/Tag'
 import DonutChart from '../ui/DonutChart'
 
 const STATUS_ORDER: JobStatus[] = ['queued', 'filled', 'submitted', 'failed']
-
-const STATUS_LABEL: Record<JobStatus, string> = {
-  queued: 'Queued',
-  filled: 'Filled',
-  submitted: 'Submitted',
-  failed: 'Failed'
-}
 
 /** Same status → color mapping `JobCard`'s left-border accent uses, so the
  * chart reads as the same language as the board it summarizes. */
@@ -38,6 +32,7 @@ const STATUS_SWATCH: Record<JobStatus, string> = {
  * work, alongside the board rather than requiring a separate page.
  */
 export default function PipelineOverview({ onHide }: { onHide: () => void }): ReactElement {
+  const { t } = useTranslation('board')
   const columns = useJobsStore((s) => s.columns)
   const openJob = useJobsStore((s) => s.openJob)
   const pendingAlerts = usePendingCaptchaAlerts()
@@ -47,11 +42,11 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-7 shrink-0 items-center border-b border-border-soft bg-canvas px-2">
-        <span className="text-[12px] font-medium text-text">Overview</span>
+        <span className="text-[12px] font-medium text-text">{t('overview.title')}</span>
         <button
           onClick={onHide}
-          title="Hide overview"
-          aria-label="Hide overview"
+          title={t('overview.hide')}
+          aria-label={t('overview.hide')}
           className="ml-auto flex h-5 w-5 cursor-pointer items-center justify-center text-text-faint hover:text-text"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
@@ -62,13 +57,13 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="border-b border-border-soft px-3 py-2.5">
-          <span className="text-2xs font-medium uppercase tracking-wide text-text-faint">Pipeline</span>
+          <span className="text-2xs font-medium uppercase tracking-wide text-text-faint">{t('overview.pipeline')}</span>
           <div className="mt-2 flex items-center gap-3">
             <DonutChart
               size={84}
               thickness={11}
               centerLabel={String(totalTracked)}
-              centerSublabel="jobs"
+              centerSublabel={t('overview.jobs')}
               segments={STATUS_ORDER.map((status) => ({
                 key: status,
                 value: columns[status].total,
@@ -82,7 +77,7 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
                 return (
                   <div key={status} className="flex items-center gap-1.5">
                     <span className={`h-2 w-2 shrink-0 ${STATUS_SWATCH[status]}`} aria-hidden="true" />
-                    <span className="min-w-0 flex-1 truncate text-[11px] text-text-muted">{STATUS_LABEL[status]}</span>
+                    <span className="min-w-0 flex-1 truncate text-[11px] text-text-muted">{t(`status.${status}`)}</span>
                     <span className="shrink-0 text-[11px] tabular-nums text-text">
                       {count}
                       {totalTracked > 0 && <span className="text-text-faint"> · {share}%</span>}
@@ -96,7 +91,7 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
 
         <div className="px-3 py-2.5">
           <div className="flex items-center gap-1.5">
-            <span className="text-2xs font-medium uppercase tracking-wide text-text-faint">Needs verification</span>
+            <span className="text-2xs font-medium uppercase tracking-wide text-text-faint">{t('overview.needsVerification')}</span>
             {pendingAlerts.length > 0 && (
               <span className="text-2xs tabular-nums text-warning">{pendingAlerts.length}</span>
             )}
@@ -104,7 +99,7 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
 
           {pendingAlerts.length === 0 ? (
             <p className="mt-2 text-[11px] leading-snug text-text-faint">
-              No jobs are waiting on a verification challenge right now.
+              {t('overview.noneWaiting')}
             </p>
           ) : (
             <div className="mt-2 flex flex-col gap-1.5">
@@ -117,7 +112,7 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
                   <span className="text-[12px] font-medium leading-tight text-text">{item.jobTitle}</span>
                   <span className="text-[11px] text-text-muted">{item.company}</span>
                   <div className="mt-0.5">
-                    <Tag label="needs verification" tone="warning" />
+                    <Tag label={t('card.needsVerification')} tone="warning" />
                   </div>
                 </button>
               ))}

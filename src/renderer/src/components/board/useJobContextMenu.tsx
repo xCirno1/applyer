@@ -1,4 +1,5 @@
 import { useState, type MouseEvent, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { JobRecord } from '@shared/types/job'
 import ContextMenu, { type ContextMenuState } from '../ui/ContextMenu'
 import ConfirmDialog from '../ui/ConfirmDialog'
@@ -29,6 +30,7 @@ export function useJobContextMenu(): {
   openContextMenu: (e: MouseEvent, job: JobRecord, onOpen: () => void) => void
   menuNode: ReactElement
 } {
+  const { t } = useTranslation('board')
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null)
   const [confirmRetry, setConfirmRetry] = useState<BulkConfirmState | null>(null)
   const [confirmExclude, setConfirmExclude] = useState<BulkConfirmState | null>(null)
@@ -59,13 +61,13 @@ export function useJobContextMenu(): {
 
     const items: MenuEntry[] = []
     if (!isBulk) {
-      items.push({ type: 'action', key: 'open', label: 'Open', onSelect: onOpen })
+      items.push({ type: 'action', key: 'open', label: t('actions.open'), onSelect: onOpen })
     }
     if (retryableIds.length > 0) {
       items.push({
         type: 'action',
         key: 'retry',
-        label: isBulk ? `Retry (${retryableIds.length})` : 'Retry',
+        label: isBulk ? t('actions.retryCount', { count: retryableIds.length }) : t('actions.retry'),
         onSelect: () => {
           if (retryableIds.length > 1) setConfirmRetry({ ids: retryableIds })
           else void retryMany(retryableIds)
@@ -76,7 +78,7 @@ export function useJobContextMenu(): {
       items.push({
         type: 'action',
         key: 'unqueue',
-        label: isBulk ? `Unqueue (${unqueueableIds.length})` : 'Unqueue',
+        label: isBulk ? t('actions.unqueueCount', { count: unqueueableIds.length }) : t('actions.unqueue'),
         onSelect: () => setConfirmUnqueue({ ids: unqueueableIds })
       })
     }
@@ -84,15 +86,15 @@ export function useJobContextMenu(): {
       items.push({
         type: 'action',
         key: 'exclude',
-        label: isBulk ? `Exclude (${excludableIds.length})` : 'Exclude',
+        label: isBulk ? t('actions.excludeCount', { count: excludableIds.length }) : t('actions.exclude'),
         onSelect: () => setConfirmExclude({ ids: excludableIds })
       })
     }
     items.push({ type: 'separator', key: 'sep' })
     items.push(
       isBulk
-        ? { type: 'action', key: 'clear', label: 'Clear Selection', onSelect: store.clearSelection }
-        : { type: 'action', key: 'deselect', label: 'Deselect', onSelect: store.clearSelection }
+        ? { type: 'action', key: 'clear', label: t('actions.clearSelection'), onSelect: store.clearSelection }
+        : { type: 'action', key: 'deselect', label: t('actions.deselect'), onSelect: store.clearSelection }
     )
 
     setMenuState({ x: e.clientX, y: e.clientY, items })
@@ -104,9 +106,9 @@ export function useJobContextMenu(): {
 
       <ConfirmDialog
         open={confirmRetry !== null}
-        title="Retry these jobs?"
-        message={`This moves ${confirmRetry?.ids.length ?? 0} failed job${confirmRetry?.ids.length === 1 ? '' : 's'} back to Queued so they're attempted again.`}
-        confirmLabel="Retry all"
+        title={t('confirm.retryTitleMenu')}
+        message={t('confirm.retryMessage', { count: confirmRetry?.ids.length ?? 0 })}
+        confirmLabel={t('actions.retryAll')}
         loading={retrying}
         onConfirm={async () => {
           if (!confirmRetry) return
@@ -120,9 +122,9 @@ export function useJobContextMenu(): {
 
       <ConfirmDialog
         open={confirmExclude !== null}
-        title={confirmExclude && confirmExclude.ids.length > 1 ? 'Exclude these job postings' : 'Exclude this job posting'}
-        message="This removes the job(s) from the board and permanently blacklists their URLs — they'll never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Settings > Exclusions."
-        confirmLabel="Exclude"
+        title={t('confirm.excludeTitle', { count: confirmExclude?.ids.length ?? 0 })}
+        message={t('confirm.excludeMessage', { count: confirmExclude?.ids.length ?? 0 })}
+        confirmLabel={t('actions.exclude')}
         danger
         loading={excluding}
         onConfirm={async () => {
@@ -137,9 +139,9 @@ export function useJobContextMenu(): {
 
       <ConfirmDialog
         open={confirmUnqueue !== null}
-        title={confirmUnqueue && confirmUnqueue.ids.length > 1 ? 'Unqueue these jobs?' : 'Unqueue this job?'}
-        message="This removes the job(s) from the board, but their URLs aren't blacklisted — the agent can still find and re-queue them again later."
-        confirmLabel="Unqueue"
+        title={t('confirm.unqueueTitle', { count: confirmUnqueue?.ids.length ?? 0 })}
+        message={t('confirm.unqueueMessage', { count: confirmUnqueue?.ids.length ?? 0 })}
+        confirmLabel={t('actions.unqueue')}
         loading={unqueueing}
         onConfirm={async () => {
           if (!confirmUnqueue) return

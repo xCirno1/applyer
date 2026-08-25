@@ -3,10 +3,23 @@ import StorageModeCard from '../../components/onboarding/StorageModeCard'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
+import ProgressBar from '../../components/ui/ProgressBar'
+import Tag from '../../components/ui/Tag'
 import { useToast } from '../../components/ui/useToast'
 import { formatBytes } from '../../lib/formatBytes'
+import { useStorageLocation } from './useStorageLocation'
 import type { StorageMode } from '@shared/types/profile'
 import type { StorageStats } from '@shared/types/storage'
+import type { StorageLocationProgressPhase } from '@shared/types/storageLocation'
+
+const PHASE_LABELS: Record<StorageLocationProgressPhase, string> = {
+  documents: 'Copying documents…',
+  screenshots: 'Copying screenshots…',
+  logs: 'Copying logs…',
+  database: 'Copying database…',
+  verifying: 'Verifying…',
+  finalizing: 'Finishing up…'
+}
 
 export default function StorageSection(): ReactElement {
   const [currentMode, setCurrentMode] = useState<StorageMode | null>(null)
@@ -16,6 +29,10 @@ export default function StorageSection(): ReactElement {
   const [stats, setStats] = useState<StorageStats | null>(null)
   const [statsLoading, setStatsLoading] = useState(true)
   const toast = useToast()
+  const location = useStorageLocation()
+  const locationMigrating = location.ui.phase === 'migrating'
+  const locationConnecting = location.ui.phase === 'connecting'
+  const locationBusy = locationMigrating || locationConnecting
 
   const refresh = (): void => {
     window.api.onboarding.getStatus().then((status) => {
@@ -54,6 +71,11 @@ export default function StorageSection(): ReactElement {
     }
   }
 
+  const handleConfirmLocation = async (): Promise<void> => {
+    await location.confirm()
+    handleRefreshStats()
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[13px] text-text-muted">
@@ -67,16 +89,59 @@ export default function StorageSection(): ReactElement {
           recommended
           description="Locked using this computer's built-in secure storage — only readable on this device, by your user account."
           selected={currentMode === 'encrypted'}
-          disabled={!encryptionAvailable}
-          disabledReason="Not available on this system (no OS keychain detected)."
+          disabled={!encryptionAvailable || locationBusy}
+          disabledReason={
+            !encryptionAvailable ? 'Not available on this system (no OS keychain detected).' : undefined
+          }
           onSelect={() => setPendingMode('encrypted')}
         />
         <StorageModeCard
           title="Plain text"
           description="Stored as regular, readable files. Simpler to back up or inspect, but readable by anyone with access to this computer's files."
           selected={currentMode === 'plaintext'}
+          disabled={locationBusy}
           onSelect={() => setPendingMode('plaintext')}
         />
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-border-soft pt-4">
+        <h2 className="text-[13px] font-semibold text-text">Location</h2>
+        <p className="text-[12px] text-text-muted">
+          Where your database, documents, screenshots, and logs are kept. Applyer keeps running while a move is in
+          progress.
+        </p>
+        <div className="flex h-8 items-center gap-2 border border-border-soft px-2">
+          <Tag label={!location.status || location.status.isDefault ? 'Default' : 'Custom'} />
+          <span className="min-w-0 flex-1 truncate text-[12px] text-text" title={location.status?.activeRoot}>
+            {location.status?.activeRoot ?? '—'}
+          </span>
+          <Button
+            size="sm"
+            variant="secondary"
+            disabled={changing || locationBusy || !location.status}
+            onClick={location.pick}
+          >
+            Change…
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            loading={locationConnecting}
+            disabled={changing || locationBusy || !location.status}
+            onClick={location.pickExisting}
+          >
+            Connect existing…
+          </Button>
+        </div>
+
+        {location.ui.phase === 'migrating' && (
+          <div className="flex flex-col gap-1 px-1">
+            <span className="text-[12px] text-text-muted">
+              {location.ui.progress ? PHASE_LABELS[location.ui.progress.phase] : 'Starting…'}
+            </span>
+            <ProgressBar percent={location.ui.progress?.percent ?? 0} />
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2 border-t border-border-soft pt-4">
@@ -138,6 +203,28 @@ export default function StorageSection(): ReactElement {
         loading={changing}
         onConfirm={handleConfirm}
         onCancel={() => setPendingMode(null)}
+      />
+
+      <ConfirmDialog
+        open={location.ui.phase === 'pendingConfirm'}
+        title="Change storage location"
+        message={`Move your database, documents, screenshots, and logs to "${
+          location.ui.phase === 'pendingConfirm' ? location.ui.path : ''
+        }"? This may take a moment and Applyer will keep running throughout.`}
+        confirmLabel="Move"
+        onConfirm={handleConfirmLocation}
+        onCancel={location.cancel}
+      />
+
+      <ConfirmDialog
+        open={location.ui.phase === 'pendingExistingConfirm'}
+        title="Connect to existing storage?"
+        message={`Switch to the Applyer database already stored in "${
+          location.ui.phase === 'pendingExistingConfirm' ? location.ui.path : ''
+        }"? This replaces the currently active dataset with the selected one. Nothing is copied, deleted, or merged, so you can reconnect to the current location later.`}
+        confirmLabel="Connect"
+        onConfirm={location.confirmExisting}
+        onCancel={location.cancel}
       />
     </div>
   )

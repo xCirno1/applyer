@@ -7,6 +7,7 @@ import type {
   BrowserDownloadProgressPayload,
   BrowserSetupStatusPayload
 } from '@shared/types/ipcEvents'
+import type { StorageLocationProgressPayload } from '@shared/types/storageLocation'
 
 let webContentsRef: WebContents | null = null
 
@@ -68,5 +69,11 @@ export function broadcastBrowserSetupProgress(payload: BrowserDownloadProgressPa
 export function broadcastBrowserSetupStatus(payload: BrowserSetupStatusPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserSetup.onStatus, payload)
+  }
+}
+
+export function broadcastStorageLocationProgress(payload: StorageLocationProgressPayload): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.storageLocation.onProgress, payload)
   }
 }

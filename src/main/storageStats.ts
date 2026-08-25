@@ -1,8 +1,8 @@
-import { app } from 'electron'
 import { join } from 'path'
 import { readdirSync, statSync, type Dirent } from 'fs'
 import { documentsDir, screenshotsDir, logsDir } from './config/paths'
 import { getStorageRowCounts } from './db/repositories/storageStatsRepository'
+import { dbPath } from './db'
 import type { StorageStats } from '@shared/types/storage'
 
 function fileSizeOrZero(path: string): number {
@@ -33,11 +33,11 @@ function dirSizeBytes(dir: string): number {
 }
 
 function databaseSizeBytes(): number {
-  const dbPath = join(app.getPath('userData'), 'applyer.db')
+  const path = dbPath()
   // WAL journal mode keeps recent writes in -wal/-shm sidecar files rather
   // than the main file until a checkpoint, so all three must be summed to
   // reflect what's actually on disk.
-  return fileSizeOrZero(dbPath) + fileSizeOrZero(`${dbPath}-wal`) + fileSizeOrZero(`${dbPath}-shm`)
+  return fileSizeOrZero(path) + fileSizeOrZero(`${path}-wal`) + fileSizeOrZero(`${path}-shm`)
 }
 
 export function computeStorageStats(): StorageStats {

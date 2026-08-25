@@ -18,7 +18,7 @@ import type { StorageStats } from '@shared/types/storage'
 const AUTO_START_COMMAND_MAX_LENGTH = 500
 
 export function registerSettingsIpc(): void {
-  ipcMain.handle(IPC.settings.changeStorageMode, (_event, { mode }: { mode: StorageMode }) => {
+  ipcMain.handle(IPC.settings.changeStorageMode, async (_event, { mode }: { mode: StorageMode }) => {
     if (mode !== 'encrypted' && mode !== 'plaintext') {
       return { ok: false, error: 'Invalid storage mode.' }
     }
@@ -40,7 +40,7 @@ export function registerSettingsIpc(): void {
       }
 
       for (const doc of listDocuments()) {
-        rewriteDocumentStorageMode(doc.id, mode)
+        await rewriteDocumentStorageMode(doc.id, mode)
       }
 
       logActivity('info', `Storage mode changed to ${mode}`)

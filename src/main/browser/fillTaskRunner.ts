@@ -12,6 +12,7 @@ import { openGate, resumeGate, isGateOpen, type GateOutcome } from './captchaGat
 import { failJob } from '../jobActions'
 import { broadcastJobUpdate, broadcastCaptchaDetected, broadcastCaptchaResolved } from '../ipc/jobsBroadcast'
 import { screenshotsDir, tempDir } from '../config/paths'
+import { withStorageWriteLock } from '../storageWriteLock'
 import { mcpLogger } from '../logger'
 import type { ProfileFields } from '@shared/types/profile'
 
@@ -104,8 +105,13 @@ async function performFill(
       return failAndReturn(jobId, 'form_not_supported', "Couldn't identify any recognizable fields on this application form — it may need to be filled manually.")
     }
 
-    const screenshotPath = await captureScreenshot(page, jobId)
-    const job = setFilled(jobId, { screenshotPath })
+    // Screenshot capture + the DB row it's referenced from are what a
+    // storage-location migration's copy-then-snapshot must never race — see
+    // storageWriteLock.ts.
+    const { screenshotPath, job } = await withStorageWriteLock(async () => {
+      const capturedPath = await captureScreenshot(page, jobId)
+      return { screenshotPath: capturedPath, job: setFilled(jobId, { screenshotPath: capturedPath }) }
+    })
     broadcastJobUpdate(job)
 
     // The browser window is deliberately left open — the user reviews,

@@ -88,13 +88,13 @@ describe('getExtractedText / readDocumentBytes for unknown id', () => {
 describe('deleteDocument', () => {
   it('removes the row and the underlying file', async () => {
     const doc = await addDocument(textFile('content'))
-    deleteDocument(doc.id)
+    await deleteDocument(doc.id)
     expect(listDocuments()).toEqual([])
     expect(readDocumentBytes(doc.id)).toBeNull()
   })
 
-  it('is a no-op for an unknown id', () => {
-    expect(() => deleteDocument('nope')).not.toThrow()
+  it('is a no-op for an unknown id', async () => {
+    await expect(deleteDocument('nope')).resolves.not.toThrow()
   })
 })
 
@@ -103,7 +103,7 @@ describe('rewriteDocumentStorageMode', () => {
     setStorageMode('plaintext')
     const doc = await addDocument(textFile('sensitive content'))
 
-    rewriteDocumentStorageMode(doc.id, 'encrypted')
+    await rewriteDocumentStorageMode(doc.id, 'encrypted')
 
     expect(readDocumentBytes(doc.id)?.toString('utf-8')).toBe('sensitive content')
     expect(getExtractedText(doc.id)).toBe('sensitive content')
@@ -113,12 +113,12 @@ describe('rewriteDocumentStorageMode', () => {
     setStorageMode('encrypted')
     const doc = await addDocument(textFile('sensitive content'))
 
-    rewriteDocumentStorageMode(doc.id, 'plaintext')
+    await rewriteDocumentStorageMode(doc.id, 'plaintext')
 
     expect(readDocumentBytes(doc.id)?.toString('utf-8')).toBe('sensitive content')
   })
 
-  it('is a no-op for an unknown id', () => {
-    expect(() => rewriteDocumentStorageMode('nope', 'plaintext')).not.toThrow()
+  it('is a no-op for an unknown id', async () => {
+    await expect(rewriteDocumentStorageMode('nope', 'plaintext')).resolves.not.toThrow()
   })
 })

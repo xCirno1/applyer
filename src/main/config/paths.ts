@@ -1,21 +1,26 @@
 import { app } from 'electron'
 import { join } from 'path'
 import { mkdirSync } from 'fs'
+import { activeStorageRoot } from './storageLocation'
+
+// documentsDir/screenshotsDir/logsDir are relocatable (see storageLocation.ts) —
+// everything below this comment stays pinned to the OS-default userData dir
+// regardless of the active storage location.
 
 export function documentsDir(): string {
-  const dir = join(app.getPath('userData'), 'documents')
+  const dir = join(activeStorageRoot(), 'documents')
   mkdirSync(dir, { recursive: true })
   return dir
 }
 
 export function screenshotsDir(): string {
-  const dir = join(app.getPath('userData'), 'screenshots')
+  const dir = join(activeStorageRoot(), 'screenshots')
   mkdirSync(dir, { recursive: true })
   return dir
 }
 
 export function logsDir(): string {
-  const dir = join(app.getPath('userData'), 'logs')
+  const dir = join(activeStorageRoot(), 'logs')
   mkdirSync(dir, { recursive: true })
   return dir
 }

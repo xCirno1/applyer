@@ -71,6 +71,16 @@ export const IPC = {
     setAutoStartCommand: 'settings:setAutoStartCommand',
     getStorageStats: 'settings:getStorageStats'
   },
+  storageLocation: {
+    getStatus: 'storageLocation:getStatus',
+    pickFolder: 'storageLocation:pickFolder',
+    validate: 'storageLocation:validate',
+    migrate: 'storageLocation:migrate',
+    connectExisting: 'storageLocation:connectExisting',
+    retryCustomLocation: 'storageLocation:retryCustomLocation',
+    useDefaultLocation: 'storageLocation:useDefaultLocation',
+    onProgress: 'storageLocation:progress'
+  },
   logs: {
     list: 'logs:list'
   },

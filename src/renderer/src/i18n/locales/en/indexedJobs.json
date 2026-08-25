@@ -28,7 +28,7 @@
     "daysAgo": "{{count}}d ago"
   },
   "list": {
-    "empty": "Nothing indexed yet — results appear here as soon as an agent runs a job search."
+    "empty": "Nothing indexed yet. Results appear here as soon as an agent runs a job search."
   },
   "retention": {
     "keepFor": "Keep for",
@@ -37,12 +37,12 @@
     "days": "{{count}} days",
     "unlimited": "Unlimited",
     "title": "Change indexed jobs retention",
-    "messageUnlimited": "No indexed jobs will be deleted — history will be kept indefinitely.",
+    "messageUnlimited": "No indexed jobs will be deleted. History will be kept indefinitely.",
     "messageDays": "Indexed jobs last seen more than {{count}} days ago will be deleted now.",
     "confirm": "Change",
     "updated": "Retention updated.",
-    "updatedDeleted_one": "Retention updated — {{count}} indexed job older than the window was deleted.",
-    "updatedDeleted_other": "Retention updated — {{count}} indexed jobs older than the window were deleted.",
+    "updatedDeleted_one": "Retention updated. {{count}} indexed job older than the window was deleted.",
+    "updatedDeleted_other": "Retention updated. {{count}} indexed jobs older than the window were deleted.",
     "failed": "Failed to update retention."
   },
   "exclusions": {
@@ -60,6 +60,6 @@
     "removeMessage": "This job posting will be searchable and queueable again.",
     "added": "Added to the exclusion list.",
     "addFailed": "Failed to add exclusion.",
-    "removed": "Removed from the exclusion list — it can be found by search and queued again."
+    "removed": "Removed from the exclusion list. It can be found by search and queued again."
   }
 }

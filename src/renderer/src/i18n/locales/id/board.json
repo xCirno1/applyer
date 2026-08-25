@@ -10,7 +10,7 @@
   },
   "filters": {
     "searchPlaceholder": "Cari posisi atau perusahaan…",
-    "sourceLabel": "Saring menurut sumber",
+    "sourceLabel": "Filter sumber",
     "sortLabel": "Urutkan lowongan",
     "allSources": "Semua sumber",
     "otherSource": "Lainnya",
@@ -40,55 +40,55 @@
     "markSubmitted": "Tandai Terkirim"
   },
   "confirm": {
-    "retryTitle": "Coba lagi lowongan terpilih?",
+    "retryTitle": "Coba lagi lowongan yang dipilih?",
     "retryTitleMenu": "Coba lagi lowongan ini?",
-    "retryMessage_other": "Ini memindahkan {{count}} lowongan yang gagal kembali ke Antre agar dicoba lagi.",
-    "excludeTitle_other": "Kecualikan lowongan ini",
-    "excludeMessage_other": "Ini menghapus {{count}} lowongan dari papan dan memasukkan URL-nya ke daftar hitam secara permanen — lowongan itu tidak akan pernah muncul lagi dari pencarian atau bisa diantrekan ulang, baik oleh Anda maupun agen. Anda dapat membatalkannya nanti dari Lowongan Terindeks > Dikecualikan.",
+    "retryMessage_other": "{{count}} lowongan yang gagal akan dikembalikan ke Antre supaya dicoba lagi.",
+    "excludeTitle_other": "Kecualikan lowongan ini?",
+    "excludeMessage_other": "{{count}} lowongan akan dihapus dari papan dan link-nya masuk daftar blokir permanen. Lowongan itu tidak akan muncul lagi di pencarian dan tidak bisa diantre lagi, baik olehmu maupun oleh agen. Kalau berubah pikiran, batalkan lewat Lowongan Terindeks > Dikecualikan.",
     "unqueueTitle_other": "Keluarkan lowongan dari antrean?",
-    "unqueueMessage_other": "Ini menghapus {{count}} lowongan dari papan, tetapi URL-nya tidak masuk daftar hitam — agen masih bisa menemukan dan mengantrekannya lagi nanti.",
+    "unqueueMessage_other": "{{count}} lowongan akan dihapus dari papan, tapi link-nya tidak diblokir. Agen masih bisa menemukan dan mengantrekannya lagi nanti.",
     "markSubmittedTitle": "Tandai sebagai terkirim",
-    "markSubmittedMessage": "Konfirmasikan bahwa Anda benar-benar sudah mengirim lamaran ini sendiri — tindakan ini tidak mengirim apa pun atas nama Anda, hanya mencatat bahwa Anda sudah melakukannya.",
+    "markSubmittedMessage": "Pastikan kamu memang sudah mengirim lamaran ini sendiri. Tombol ini tidak mengirim apa pun, cuma mencatat kalau kamu sudah melakukannya.",
     "markSubmittedConfirm": "Tandai terkirim"
   },
   "toast": {
     "retried_other": "{{count}} lowongan dicoba lagi.",
-    "retryFailed": "Gagal mencoba lagi lowongan terpilih.",
+    "retryFailed": "Gagal mencoba lagi lowongan yang dipilih.",
     "excluded_other": "{{count}} lowongan dikecualikan.",
-    "excludeFailed": "Gagal mengecualikan lowongan terpilih.",
+    "excludeFailed": "Gagal mengecualikan lowongan yang dipilih.",
     "unqueued_other": "{{count}} lowongan dikeluarkan dari antrean.",
-    "unqueueFailed": "Gagal mengeluarkan lowongan terpilih dari antrean.",
+    "unqueueFailed": "Gagal mengeluarkan lowongan dari antrean.",
     "markedSubmitted": "Ditandai sebagai terkirim.",
     "markSubmittedFailed": "Gagal menandai sebagai terkirim.",
     "movedToQueued": "Dikembalikan ke Antre.",
     "retrySingleFailed": "Gagal mencoba lagi.",
-    "excludedSingle": "Dikecualikan — tidak akan ditampilkan lagi atau muncul kembali dari pencarian.",
+    "excludedSingle": "Dikecualikan. Lowongan ini tidak akan muncul lagi di pencarian.",
     "excludeSingleFailed": "Gagal mengecualikan lowongan ini.",
     "unqueuedSingle": "Dihapus dari antrean.",
     "unqueueSingleFailed": "Gagal mengeluarkan lowongan ini dari antrean."
   },
   "detail": {
-    "match": "kecocokan {{score}}%",
-    "whyMatched": "Alasan kecocokan",
-    "screenshot": "Lamaran terisi (tangkapan layar)",
-    "screenshotAlt": "Tangkapan layar formulir lamaran yang terisi",
+    "match": "cocok {{score}}%",
+    "whyMatched": "Kenapa cocok",
+    "screenshot": "Lamaran yang sudah diisi (screenshot)",
+    "screenshotAlt": "Screenshot formulir lamaran yang sudah diisi",
     "activity": "Aktivitas",
-    "openListing": "Buka lowongan asli ↗"
+    "openListing": "Buka lowongan aslinya ↗"
   },
   "overview": {
-    "title": "Ikhtisar",
-    "hide": "Sembunyikan ikhtisar",
+    "title": "Ringkasan",
+    "hide": "Sembunyikan ringkasan",
     "pipeline": "Alur",
     "jobs": "lowongan",
     "needsVerification": "Perlu verifikasi",
-    "noneWaiting": "Saat ini tidak ada lowongan yang menunggu tantangan verifikasi."
+    "noneWaiting": "Tidak ada lowongan yang lagi nunggu verifikasi."
   },
   "captcha": {
-    "message": "Tantangan verifikasi pada <1>{{title}}</1> @ {{company}} — selesaikan di jendela peramban yang terbuka.",
+    "message": "Ada verifikasi di <1>{{title}}</1> @ {{company}}. Selesaikan dulu di jendela browser yang kebuka.",
     "resume": "Lanjutkan",
     "cancel": "Batal",
     "resuming": "Melanjutkan \"{{title}}\"…",
     "movedToFailed": "\"{{title}}\" dipindahkan ke Gagal.",
-    "stillBlocked": "Masih terblokir — selesaikan dulu tantangannya di jendela peramban."
+    "stillBlocked": "Masih kena blokir. Selesaikan dulu verifikasinya di jendela browser."
   }
 }

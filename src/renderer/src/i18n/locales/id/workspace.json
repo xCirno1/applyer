@@ -1,6 +1,6 @@
 {
   "menu": {
-    "file": "Berkas",
+    "file": "File",
     "terminal": "Terminal",
     "jobs": "Lowongan",
     "view": "Tampilan",
@@ -16,9 +16,9 @@
     "prevTerminalTab": "Tab Terminal Sebelumnya",
     "refreshBoard": "Muat Ulang Papan",
     "retryAllFailed": "Coba Lagi Semua yang Gagal",
-    "overview": "Ikhtisar",
+    "overview": "Ringkasan",
     "console": "Konsol",
-    "keyboardShortcuts": "Pintasan Papan Ketik",
+    "keyboardShortcuts": "Pintasan Keyboard",
     "about": "Tentang Applyer"
   },
   "about": {
@@ -28,16 +28,16 @@
   },
   "retryAll": {
     "title": "Coba lagi semua lowongan yang gagal?",
-    "message_other": "Ini memindahkan {{count}} lowongan yang gagal kembali ke Antre agar dicoba lagi.",
+    "message_other": "{{count}} lowongan yang gagal akan dikembalikan ke Antre supaya dicoba lagi.",
     "confirm": "Coba lagi semua",
     "failed": "Gagal mencoba lagi lowongan.",
-    "none": "Tidak ada lowongan gagal untuk dicoba lagi.",
+    "none": "Tidak ada lowongan gagal yang bisa dicoba lagi.",
     "done_other": "{{count}} lowongan yang gagal dicoba lagi."
   },
   "dock": {
     "terminal": "Terminal",
     "logs": "Log Aktivitas",
-    "hide": "Sembunyikan dok"
+    "hide": "Sembunyikan dock"
   },
   "rail": {
     "jobBoard": "Papan Lowongan",
@@ -45,24 +45,24 @@
   },
   "topBar": {
     "settings": "Pengaturan",
-    "backToWorkspace": "← Kembali ke ruang kerja"
+    "backToWorkspace": "← Kembali ke workspace"
   },
   "terminal": {
-    "none": "Tidak ada terminal terbuka.",
+    "none": "Tidak ada terminal yang kebuka.",
     "new": "Terminal baru",
     "rename": "Ganti nama",
     "renameLabel": "Ganti nama {{title}}",
     "closeLabel": "Tutup {{title}}",
-    "atMax": "Anda dapat membuka paling banyak {{count}} terminal"
+    "atMax": "Maksimal cuma bisa buka {{count}} terminal"
   },
   "logs": {
     "title": "Log Aktivitas",
-    "levelLabel": "Saring menurut level",
+    "levelLabel": "Filter level",
     "allLevels": "Semua level",
     "info": "Info",
     "warn": "Peringatan",
-    "error": "Kesalahan",
-    "debug": "Awakutu",
+    "error": "Error",
+    "debug": "Debug",
     "entries_other": "{{count}} entri",
     "empty": "Belum ada aktivitas."
   },
@@ -77,12 +77,12 @@
     "terminal.nextTab": "Tab terminal berikutnya",
     "terminal.prevTab": "Tab terminal sebelumnya",
     "terminal.rename": "Ganti nama terminal",
-    "view.toggleOverview": "Alihkan panel ikhtisar",
-    "view.toggleConsole": "Alihkan dok konsol",
-    "dock.showTerminal": "Tampilkan tab terminal",
-    "dock.showLogs": "Tampilkan tab log aktivitas",
+    "view.toggleOverview": "Tampilkan/sembunyikan panel ringkasan",
+    "view.toggleConsole": "Tampilkan/sembunyikan dock konsol",
+    "dock.showTerminal": "Buka tab terminal",
+    "dock.showLogs": "Buka tab log aktivitas",
     "app.toggleSettings": "Buka/tutup pengaturan"
   },
-  "resizeOverview": "Ubah ukuran panel ikhtisar",
-  "resizeDock": "Ubah ukuran dok konsol"
+  "resizeOverview": "Ubah ukuran panel ringkasan",
+  "resizeDock": "Ubah ukuran dock konsol"
 }

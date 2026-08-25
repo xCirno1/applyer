@@ -1,35 +1,35 @@
 {
   "welcome": {
     "title": "Selamat datang di Applyer",
-    "intro": "Applyer mengubah asisten pemrograman yang berjalan di terminal bawaan (Claude Code, Codex, atau agen lain yang mendukung MCP) menjadi asisten pencari kerja. Begini gambarannya:",
-    "step1Title": "1. Ceritakan tentang diri Anda.",
-    "step1Body": "Tambahkan profil dan resume Anda berikutnya — inilah yang dipakai agen untuk menilai kecocokan dan mengisi lamaran.",
+    "intro": "Applyer mengubah asisten coding yang jalan di terminal bawaan (Claude Code, Codex, atau agen lain yang mendukung MCP) jadi asisten pencari kerja. Kira-kira begini alurnya:",
+    "step1Title": "1. Ceritakan tentang dirimu.",
+    "step1Body": "Isi profil dan unggah resume di langkah berikutnya. Ini yang dipakai agen buat menilai kecocokan dan mengisi lamaran.",
     "step2Title": "2. Minta agen mencari lowongan.",
-    "step2Body": "Agen menelusuri web dan menambahkan yang cocok ke papan tugas di dalam aplikasi ini — tidak ada yang dikirim secara otomatis.",
-    "step3Title": "3. Anda tetap memegang kendali.",
-    "step3Body": "Agen dapat menyusun lamaran yang sudah terisi untuk Anda tinjau, tetapi hanya Anda yang menekan kirim.",
+    "step2Body": "Agen mencari di web dan menaruh yang cocok ke papan tugas di aplikasi ini. Tidak ada yang dikirim otomatis.",
+    "step3Title": "3. Kamu yang pegang kendali.",
+    "step3Body": "Agen bisa menyiapkan lamaran yang sudah terisi buat kamu cek, tapi cuma kamu yang menekan tombol kirim.",
     "getStarted": "Mulai"
   },
   "storage": {
-    "title": "Bagaimana sebaiknya informasi Anda disimpan secara lokal?",
-    "intro": "Semuanya tetap berada di komputer ini apa pun pilihannya — ini hanya mengubah cara penyimpanannya di diska.",
+    "title": "Datamu mau disimpan seperti apa di komputer ini?",
+    "intro": "Pilih yang mana pun, semuanya tetap ada di komputer ini. Yang berubah cuma cara penyimpanannya di disk.",
     "encrypted": "Terenkripsi",
-    "encryptedDescription": "Dikunci memakai penyimpanan aman bawaan komputer ini — perlindungan yang sama seperti yang dipakai peramban Anda untuk kata sandi tersimpan. Hanya dapat dibaca di perangkat ini, oleh akun pengguna Anda.",
+    "encryptedDescription": "Dikunci pakai penyimpanan aman bawaan komputer ini, sama seperti cara browser menyimpan password. Cuma bisa dibaca di perangkat ini, lewat akunmu.",
     "plaintext": "Teks biasa",
-    "plaintextDescription": "Disimpan sebagai berkas biasa yang dapat dibaca di komputer ini. Lebih mudah dicadangkan atau diperiksa sendiri, tetapi dapat dibaca siapa pun yang punya akses ke berkas komputer ini.",
+    "plaintextDescription": "Disimpan sebagai file biasa yang bisa dibaca. Lebih gampang di-backup atau dicek sendiri, tapi siapa pun yang bisa mengakses file di komputer ini juga bisa membacanya.",
     "unavailable": "Tidak tersedia di sistem ini (tidak ada keychain OS yang terdeteksi).",
-    "saveFailed": "Gagal menyimpan preferensi penyimpanan."
+    "saveFailed": "Gagal menyimpan pilihan penyimpanan."
   },
   "documents": {
-    "title": "Dokumen Anda",
-    "intro": "Resume wajib ada. Agen membaca dokumen ini untuk menilai kecocokan dan dapat melampirkannya saat mengisi formulir.",
+    "title": "Dokumenmu",
+    "intro": "Resume wajib ada. Agen membaca dokumen ini buat menilai kecocokan, dan bisa melampirkannya waktu mengisi formulir.",
     "remove": "Hapus",
     "removeLabel": "Hapus {{filename}}",
     "uploadingResume": "Mengunggah resume…",
     "resumeRequired": "Resume (wajib)",
-    "uploadingCoverLetter": "Mengunggah surat lamaran…",
-    "coverLetterOptional": "Surat lamaran (opsional)",
-    "uploaded": "{{filename}} diunggah.",
+    "uploadingCoverLetter": "Mengunggah cover letter…",
+    "coverLetterOptional": "Cover letter (opsional)",
+    "uploaded": "{{filename}} berhasil diunggah.",
     "uploadFailed": "Unggahan gagal."
   },
   "card": {
@@ -40,12 +40,12 @@
     "next": "Lanjut"
   },
   "profileForm": {
-    "title": "Profil Anda",
-    "intro": "Agen memakai ini untuk menilai kecocokan lowongan dan mengisi formulir lamaran."
+    "title": "Profilmu",
+    "intro": "Agen pakai data ini buat menilai kecocokan lowongan dan mengisi formulir lamaran."
   },
   "mcp": {
-    "title": "Sambungkan agen Anda",
-    "intro": "Applyer menyediakan perkakas (pencarian, antrean, dsb.) lewat MCP — cara baku bagi agen pemrograman untuk memanggil sebuah aplikasi. Siapkan ini sekali per agen, secara otomatis atau dengan menyalin perintah di bawah ke konfigurasinya.",
+    "title": "Sambungkan agenmu",
+    "intro": "Applyer menyediakan tools (cari, antre, dan lain-lain) lewat MCP, cara standar buat agen coding memanggil sebuah aplikasi. Setel sekali per agen, entah otomatis atau dengan menyalin perintah di bawah ke konfigurasinya.",
     "finish": "Selesai"
   }
 }

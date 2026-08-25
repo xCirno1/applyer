@@ -1,7 +1,7 @@
 {
   "actions": {
     "cancel": "Batal",
-    "confirm": "Konfirmasi",
+    "confirm": "Lanjutkan",
     "save": "Simpan",
     "saving": "Menyimpan…",
     "close": "Tutup",
@@ -14,18 +14,18 @@
     "back": "Kembali",
     "next": "Lanjut",
     "skip": "Lewati",
-    "browse": "Telusuri…"
+    "browse": "Pilih…"
   },
   "dropdown": {
     "placeholder": "Pilih…"
   },
   "pagination": {
-    "label": "Penomoran halaman",
+    "label": "Halaman",
     "previous": "Halaman sebelumnya",
     "next": "Halaman berikutnya"
   },
   "fileDrop": {
-    "hint": "Klik atau seret berkas ke sini"
+    "hint": "Klik atau tarik file ke sini"
   },
   "states": {
     "loading": "Memuat…",
@@ -37,28 +37,28 @@
   },
   "profile": {
     "fullName": "Nama lengkap",
-    "email": "Surel",
-    "phone": "Telepon",
+    "email": "Email",
+    "phone": "No. HP",
     "location": "Lokasi",
-    "linkedinUrl": "URL LinkedIn",
-    "githubUrl": "URL GitHub",
-    "portfolioUrl": "URL portofolio",
+    "linkedinUrl": "Link LinkedIn",
+    "githubUrl": "Link GitHub",
+    "portfolioUrl": "Link portfolio",
     "workAuthorization": "Izin kerja",
-    "desiredRoles": "Posisi yang diinginkan",
-    "desiredLocations": "Lokasi yang diinginkan",
-    "remotePreference": "Preferensi kerja jarak jauh",
-    "remoteNoPreference": "Tanpa preferensi",
-    "remoteRemote": "Jarak jauh",
-    "remoteHybrid": "Hibrida",
+    "desiredRoles": "Posisi yang dicari",
+    "desiredLocations": "Lokasi yang dicari",
+    "remotePreference": "Preferensi kerja",
+    "remoteNoPreference": "Bebas",
+    "remoteRemote": "Remote",
+    "remoteHybrid": "Hybrid",
     "remoteOnsite": "Di kantor",
-    "yearsExperience": "Tahun pengalaman",
+    "yearsExperience": "Pengalaman (tahun)",
     "salaryMin": "Gaji minimum",
     "salaryMax": "Gaji maksimum",
-    "salaryCurrency": "Mata uang gaji",
-    "skills": "Keahlian",
-    "commaSeparated": "dipisahkan koma",
+    "salaryCurrency": "Mata uang",
+    "skills": "Skill",
+    "commaSeparated": "pisahkan pakai koma",
     "summary": "Ringkasan",
-    "nameEmailRequired": "Nama lengkap dan surel wajib diisi.",
+    "nameEmailRequired": "Nama lengkap dan email harus diisi.",
     "saved": "Profil tersimpan.",
     "saveFailed": "Gagal menyimpan profil."
   }

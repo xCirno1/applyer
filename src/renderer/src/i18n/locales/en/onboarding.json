@@ -3,18 +3,18 @@
     "title": "Welcome to Applyer",
     "intro": "Applyer turns a coding assistant running in the built-in terminal (Claude Code, Codex, or any other MCP-capable agent) into a job-search assistant. Here's the shape of it:",
     "step1Title": "1. Tell it about yourself.",
-    "step1Body": "Add your profile and resume next — this is what the agent uses to judge fit and fill out applications.",
+    "step1Body": "Add your profile and resume next. This is what the agent uses to judge fit and fill out applications.",
     "step2Title": "2. Ask the agent to find jobs.",
-    "step2Body": "It searches the web and adds matches to a task board here in the app — nothing gets submitted automatically.",
+    "step2Body": "It searches the web and adds matches to a task board here in the app. Nothing gets submitted automatically.",
     "step3Title": "3. You stay in control.",
     "step3Body": "The agent can draft a filled-out application for your review, but only you ever click submit.",
     "getStarted": "Get started"
   },
   "storage": {
     "title": "How should we store your information locally?",
-    "intro": "Everything stays on this computer either way — this only changes how it's stored on disk.",
+    "intro": "Everything stays on this computer either way. This only changes how it's stored on disk.",
     "encrypted": "Encrypted",
-    "encryptedDescription": "Locked using this computer's built-in secure storage — the same kind of protection your browser uses for saved passwords. Only readable on this device, by your user account.",
+    "encryptedDescription": "Locked using this computer's built-in secure storage, the same kind of protection your browser uses for saved passwords. Only readable on this device, by your user account.",
     "plaintext": "Plain text",
     "plaintextDescription": "Stored as regular, readable files on this computer. Simpler to back up or inspect yourself, but readable by anyone with access to this computer's files.",
     "unavailable": "Not available on this system (no OS keychain detected).",
@@ -45,7 +45,7 @@
   },
   "mcp": {
     "title": "Connect your agent",
-    "intro": "Applyer exposes tools (search, queue, etc.) over MCP — a standard way for coding agents to call into an app. Set this up once per agent, either automatically or by copying the command below into its config.",
+    "intro": "Applyer exposes tools (search, queue, etc.) over MCP, a standard way for coding agents to call into an app. Set this up once per agent, either automatically or by copying the command below into its config.",
     "finish": "Finish"
   }
 }

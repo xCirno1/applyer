@@ -54,7 +54,7 @@ app's structure (`common`, `board`, `settings`, `onboarding`, `indexedJobs`, `wo
 `errors`).
 
 **English (`en`) is the source of truth.** Every `t()` call is type-checked against it, so
-adding a string means adding it to the English catalog first — `npm run typecheck` fails on
+adding a string means adding it to the English catalog first. `npm run typecheck` fails on
 a key that doesn't exist there.
 
 ### Adding a language
@@ -62,9 +62,9 @@ a key that doesn't exist there.
 1. Copy `locales/en/` to `locales/<your-locale>/` and translate the values (leave the keys
    alone).
 2. Register it in `src/renderer/src/i18n/locale.ts` (`SUPPORTED_LOCALES`) with its name in
-   its own script — someone stuck in a language they can't read needs to recognise theirs.
+   its own script, since someone stuck in a language they can't read needs to recognise theirs.
 3. Import the namespaces in `src/renderer/src/i18n/config.ts`.
-4. Run `npm test` — `i18n/catalogs.test.ts` checks your catalog against English.
+4. Run `npm test`. `i18n/catalogs.test.ts` checks your catalog against English.
 
 You don't have to translate everything. Missing keys fall back to English, so a partial
 translation still ships and still works.
@@ -82,21 +82,21 @@ translation still ships and still works.
 
 ### Things that are deliberately *not* translated
 
-- **Agent-facing text** — `src/main/config/agentInstructions.ts` and the MCP tool
+- **Agent-facing text**: `src/main/config/agentInstructions.ts` and the MCP tool
   descriptions in `src/main/mcp-server/tools/`. Those are read by an LLM, not a person, and
   translating them measurably degrades tool use.
-- **Job data** — titles, companies, and descriptions come from the postings themselves.
+- **Job data**: titles, companies, and descriptions come from the postings themselves.
 - **Main-process errors.** The main process has no locale, and its errors also reach the
   logs and export bundles. Handlers return `{ code, params }` (see
   `src/shared/types/errorCodes.ts`) and the renderer turns that into a sentence via the
-  `errors` namespace. If you add an error, add the code *and* an English string — a
+  `errors` namespace. If you add an error, add the code *and* an English string. A
   compile-time check in `i18n/formatError.ts` enforces the pair.
 
 ### Right-to-left
 
 Not supported yet. The layout uses physical direction classes (`pl-`, `mr-`, `text-left`),
 so an RTL locale needs those converted to logical properties (`ps-`, `me-`, `text-start`)
-first. Please open an issue before starting that — it's a cross-cutting change.
+first. Please open an issue before starting that, since it's a cross-cutting change.
 
 ## Reporting bugs / requesting features
 

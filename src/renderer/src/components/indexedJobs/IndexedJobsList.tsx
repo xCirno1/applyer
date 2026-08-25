@@ -1,4 +1,5 @@
 import { useEffect, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useIndexedJobsStore } from '../../state/indexedJobsStore'
 import IndexedJobRow from './IndexedJobRow'
 import Skeleton from '../ui/Skeleton'
@@ -6,6 +7,7 @@ import Pagination from '../ui/Pagination'
 import { LIST_INDEXED_JOBS_DEFAULT_LIMIT } from '@shared/constants'
 
 export default function IndexedJobsList(): ReactElement {
+  const { t } = useTranslation('indexedJobs')
   const items = useIndexedJobsStore((s) => s.items)
   const total = useIndexedJobsStore((s) => s.total)
   const page = useIndexedJobsStore((s) => s.page)
@@ -38,7 +40,7 @@ export default function IndexedJobsList(): ReactElement {
         )}
         {loadedOnce && items.length === 0 && (
           <p className="p-2 text-[12px] text-text-faint">
-            Nothing indexed yet — results appear here as soon as an agent runs a job search.
+            {t('list.empty')}
           </p>
         )}
         <div className="flex flex-col gap-1.5">

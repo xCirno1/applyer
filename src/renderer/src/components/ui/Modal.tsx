@@ -1,4 +1,5 @@
 import { useEffect, type ReactElement, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface ModalProps {
   open: boolean
@@ -9,6 +10,7 @@ interface ModalProps {
 }
 
 export default function Modal({ open, onClose, title, children, width = 'max-w-lg' }: ModalProps): ReactElement | null {
+  const { t } = useTranslation()
   useEffect(() => {
     if (!open) return
     const onKeyDown = (e: KeyboardEvent): void => {
@@ -31,7 +33,7 @@ export default function Modal({ open, onClose, title, children, width = 'max-w-l
           <button
             onClick={onClose}
             className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
-            aria-label="Close"
+            aria-label={t('actions.close')}
           >
             ×
           </button>

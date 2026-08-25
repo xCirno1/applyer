@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import ProgressBar from '../ui/ProgressBar'
@@ -19,6 +20,7 @@ export default function BrowserSetupModal({
   onRespondInstall,
   onDismiss
 }: BrowserSetupModalProps): ReactElement | null {
+  const { t } = useTranslation('settings')
   const [retrying, setRetrying] = useState(false)
   const [responding, setResponding] = useState(false)
 
@@ -43,38 +45,39 @@ export default function BrowserSetupModal({
   const handleClose = state.status === 'confirm' ? () => handleRespond(false) : onDismiss
 
   return (
-    <Modal open title="Setting up a browser" onClose={handleClose}>
+    <Modal open title={t('browserSetup.title')} onClose={handleClose}>
       {state.status === 'confirm' && (
         <div className="flex flex-col gap-3">
-          <p className="text-[13px] text-text-muted">
-            No installed Chrome or Edge was found on this system. Applyer needs a Chromium browser to search and
-            apply to jobs — download one now? This only happens once.
-          </p>
+          <p className="text-[13px] text-text-muted">{t('browserSetup.confirm')}</p>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" disabled={responding} onClick={() => handleRespond(false)}>
-              Not now
+              {t('browserSetup.notNow')}
             </Button>
             <Button variant="primary" size="sm" loading={responding} onClick={() => handleRespond(true)}>
-              Install
+              {t('browserSetup.install')}
             </Button>
           </div>
         </div>
       )}
       {state.status === 'downloading' && (
         <div className="flex flex-col gap-2">
-          <p className="text-[13px] text-text-muted">Downloading a browser in the background — this is needed for job search and applications.</p>
+          <p className="text-[13px] text-text-muted">{t('browserSetup.downloading')}</p>
           <ProgressBar percent={state.percent} />
           <p className="text-[12px] text-text-muted">
-            {state.totalSize ? `${state.percent}% of ${state.totalSize}` : 'Starting…'}
+            {state.totalSize
+              ? t('browserSetup.progress', { percent: state.percent, total: state.totalSize })
+              : t('storage.phaseStarting')}
           </p>
         </div>
       )}
       {state.status === 'error' && (
         <div className="flex flex-col gap-2">
-          <p className="text-[13px] text-text-muted">The browser download failed: {state.message}</p>
+          <p className="text-[13px] text-text-muted">
+            {t('browserSetup.failed', { message: state.message })}
+          </p>
           <div className="flex justify-end">
             <Button variant="primary" size="sm" loading={retrying} onClick={handleRetry}>
-              Retry
+              {t('recovery.retry')}
             </Button>
           </div>
         </div>

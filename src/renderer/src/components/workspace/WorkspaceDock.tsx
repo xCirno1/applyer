@@ -1,12 +1,10 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import TerminalGroup from '../terminal/TerminalGroup'
 import LogsPage from '../../pages/Logs/LogsPage'
 import type { DockTab } from './workspaceLayout'
 
-const TABS: { id: DockTab; label: string }[] = [
-  { id: 'terminal', label: 'Terminal' },
-  { id: 'logs', label: 'Activity Log' }
-]
+const TAB_IDS: DockTab[] = ['terminal', 'logs']
 
 /**
  * The bottom dock: terminal (itself a `TerminalGroup` of one or more
@@ -25,24 +23,26 @@ export default function WorkspaceDock({
   onTabChange: (tab: DockTab) => void
   onHide: () => void
 }): ReactElement {
+  const { t } = useTranslation('workspace')
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-canvas-inset">
       <div className="flex h-7 shrink-0 items-center gap-1 border-b border-border-soft bg-canvas px-2">
-        {TABS.map((t) => (
+        {TAB_IDS.map((id) => (
           <button
-            key={t.id}
-            onClick={() => onTabChange(t.id)}
+            key={id}
+            onClick={() => onTabChange(id)}
             className={`h-full cursor-pointer px-2.5 text-[12px] font-medium ${
-              tab === t.id ? 'border-b-2 border-accent text-text' : 'text-text-muted hover:text-text'
+              tab === id ? 'border-b-2 border-accent text-text' : 'text-text-muted hover:text-text'
             }`}
           >
-            {t.label}
+            {t(`dock.${id}`)}
           </button>
         ))}
         <button
           onClick={onHide}
-          title="Hide dock"
-          aria-label="Hide dock"
+          title={t('dock.hide')}
+          aria-label={t('dock.hide')}
           className="ml-auto flex h-5 w-5 cursor-pointer items-center justify-center text-text-faint hover:text-text"
         >
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">

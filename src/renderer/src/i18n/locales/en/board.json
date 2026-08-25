@@ -1,0 +1,102 @@
+{
+  "status": {
+    "queued": "Queued",
+    "filled": "Filled",
+    "submitted": "Submitted",
+    "failed": "Failed"
+  },
+  "column": {
+    "empty": "No jobs here yet."
+  },
+  "filters": {
+    "searchPlaceholder": "Search title or company…",
+    "sourceLabel": "Filter by source",
+    "sortLabel": "Sort jobs",
+    "allSources": "All sources",
+    "otherSource": "Other",
+    "sortNewest": "Newest first",
+    "sortMatch": "Best match first"
+  },
+  "card": {
+    "select": "Select job",
+    "deselect": "Deselect job",
+    "needsVerification": "needs verification"
+  },
+  "selection": {
+    "count": "{{count}} selected",
+    "clear": "Clear"
+  },
+  "actions": {
+    "retry": "Retry",
+    "retryCount": "Retry ({{count}})",
+    "retryAll": "Retry all",
+    "unqueue": "Unqueue",
+    "unqueueCount": "Unqueue ({{count}})",
+    "exclude": "Exclude",
+    "excludeCount": "Exclude ({{count}})",
+    "open": "Open",
+    "clearSelection": "Clear Selection",
+    "deselect": "Deselect",
+    "markSubmitted": "Mark Submitted"
+  },
+  "confirm": {
+    "retryTitle": "Retry selected jobs?",
+    "retryTitleMenu": "Retry these jobs?",
+    "retryMessage_one": "This moves {{count}} failed job back to Queued so it's attempted again.",
+    "retryMessage_other": "This moves {{count}} failed jobs back to Queued so they're attempted again.",
+    "excludeTitle_one": "Exclude this job posting",
+    "excludeTitle_other": "Exclude these job postings",
+    "excludeMessage_one": "This removes {{count}} job from the board and permanently blacklists its URL. It will never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Indexed Jobs > Excluded.",
+    "excludeMessage_other": "This removes {{count}} jobs from the board and permanently blacklists their URLs. They'll never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Indexed Jobs > Excluded.",
+    "unqueueTitle_one": "Unqueue this job?",
+    "unqueueTitle_other": "Unqueue selected jobs?",
+    "unqueueMessage_one": "This removes {{count}} job from the board, but its URL isn't blacklisted, so the agent can still find and re-queue it again later.",
+    "unqueueMessage_other": "This removes {{count}} jobs from the board, but their URLs aren't blacklisted, so the agent can still find and re-queue them again later.",
+    "markSubmittedTitle": "Mark as submitted",
+    "markSubmittedMessage": "Confirm you've actually submitted this application yourself. This action doesn't submit anything on your behalf, it just records that you did.",
+    "markSubmittedConfirm": "Mark submitted"
+  },
+  "toast": {
+    "retried_one": "Retried {{count}} job.",
+    "retried_other": "Retried {{count}} jobs.",
+    "retryFailed": "Failed to retry the selected jobs.",
+    "excluded_one": "Excluded {{count}} job.",
+    "excluded_other": "Excluded {{count}} jobs.",
+    "excludeFailed": "Failed to exclude the selected jobs.",
+    "unqueued_one": "Unqueued {{count}} job.",
+    "unqueued_other": "Unqueued {{count}} jobs.",
+    "unqueueFailed": "Failed to unqueue the selected jobs.",
+    "markedSubmitted": "Marked as submitted.",
+    "markSubmittedFailed": "Failed to mark as submitted.",
+    "movedToQueued": "Moved back to Queued.",
+    "retrySingleFailed": "Failed to retry.",
+    "excludedSingle": "Excluded. It won't be shown again or resurfaced by search.",
+    "excludeSingleFailed": "Failed to exclude this job.",
+    "unqueuedSingle": "Removed from the queue.",
+    "unqueueSingleFailed": "Failed to unqueue this job."
+  },
+  "detail": {
+    "match": "{{score}}% match",
+    "whyMatched": "Why it matched",
+    "screenshot": "Filled application (screenshot)",
+    "screenshotAlt": "Screenshot of the filled application form",
+    "activity": "Activity",
+    "openListing": "Open original listing ↗"
+  },
+  "overview": {
+    "title": "Overview",
+    "hide": "Hide overview",
+    "pipeline": "Pipeline",
+    "jobs": "jobs",
+    "needsVerification": "Needs verification",
+    "noneWaiting": "No jobs are waiting on a verification challenge right now."
+  },
+  "captcha": {
+    "message": "Verification challenge on <1>{{title}}</1> @ {{company}}. Resolve it in the browser window that opened.",
+    "resume": "Resume",
+    "cancel": "Cancel",
+    "resuming": "Resuming \"{{title}}\"…",
+    "movedToFailed": "\"{{title}}\" moved to Failed.",
+    "stillBlocked": "Still blocked. Finish the challenge in the browser window first."
+  }
+}

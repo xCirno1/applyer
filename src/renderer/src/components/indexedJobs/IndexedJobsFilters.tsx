@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useIndexedJobsStore } from '../../state/indexedJobsStore'
 import Dropdown from '../ui/Dropdown'
 import type { IndexedJobMatchFilter } from '@shared/types/indexedJob'
@@ -11,19 +12,8 @@ function DensityIcon(): ReactElement {
   )
 }
 
-const SOURCE_OPTIONS = [
-  { value: '', label: 'All sources' },
-  { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'indeed', label: 'Indeed' }
-]
-
-const MATCH_OPTIONS: { value: IndexedJobMatchFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'matched', label: 'Matched' },
-  { value: 'unmatched', label: 'Not selected' }
-]
-
 export default function IndexedJobsFilters(): ReactElement {
+  const { t } = useTranslation('indexedJobs')
   const filters = useIndexedJobsStore((s) => s.filters)
   const setFilters = useIndexedJobsStore((s) => s.setFilters)
   const compact = useIndexedJobsStore((s) => s.compact)
@@ -41,27 +31,40 @@ export default function IndexedJobsFilters(): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchDraft])
 
+  // LinkedIn/Indeed are proper nouns and stay untranslated.
+  const sourceOptions = [
+    { value: '', label: t('filters.allSources') },
+    { value: 'linkedin', label: 'LinkedIn' },
+    { value: 'indeed', label: 'Indeed' }
+  ]
+
+  const matchOptions: { value: IndexedJobMatchFilter; label: string }[] = [
+    { value: 'all', label: t('filters.matchAll') },
+    { value: 'matched', label: t('filters.matchMatched') },
+    { value: 'unmatched', label: t('filters.matchUnmatched') }
+  ]
+
   return (
     <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border-soft bg-canvas px-3">
       <input
         value={searchDraft}
         onChange={(e) => setSearchDraft(e.target.value)}
-        placeholder="Search title or company…"
+        placeholder={t('filters.searchPlaceholder')}
         className="h-6 w-56 border border-border bg-canvas-soft px-2 text-[12px] text-text outline-none placeholder:text-text-faint focus:border-accent"
       />
       <Dropdown
         size="sm"
         className="w-36"
-        ariaLabel="Filter by source"
-        options={SOURCE_OPTIONS}
+        ariaLabel={t('filters.sourceLabel')}
+        options={sourceOptions}
         value={filters.source ?? ''}
         onChange={(v) => setFilters({ source: v || null })}
       />
       <Dropdown
         size="sm"
         className="w-40"
-        ariaLabel="Filter by match status"
-        options={MATCH_OPTIONS}
+        ariaLabel={t('filters.matchLabel')}
+        options={matchOptions}
         value={filters.matched}
         onChange={(v) => setFilters({ matched: v as IndexedJobMatchFilter })}
       />
@@ -69,8 +72,8 @@ export default function IndexedJobsFilters(): ReactElement {
         type="button"
         onClick={toggleCompact}
         aria-pressed={compact}
-        aria-label={compact ? 'Switch to comfortable rows' : 'Switch to compact rows'}
-        title={compact ? 'Comfortable rows' : 'Compact rows'}
+        aria-label={compact ? t('filters.toComfortable') : t('filters.toCompact')}
+        title={compact ? t('filters.comfortableTitle') : t('filters.compactTitle')}
         className={`ml-auto flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center border ${
           compact
             ? 'border-accent text-accent'

@@ -140,7 +140,7 @@ describe('resolveActiveStorageRoot', () => {
     const recovery = getStorageRecoveryState()
     expect(recovery.needed).toBe(true)
     expect(recovery.unavailableCustomRoot).toBe(missingRoot)
-    expect(recovery.reason).toContain(missingRoot)
+    expect(recovery.reason).toEqual({ code: 'recoveryUnavailable', params: { root: missingRoot } })
     // Stable, unlike the toast: a second read still reports it as needed.
     expect(getStorageRecoveryState().needed).toBe(true)
     clearStorageRecoveryState()
@@ -158,7 +158,7 @@ describe('resolveActiveStorageRoot', () => {
     expect(consumeStartupFallbackWarning()).toBeNull()
     expect(getStorageRecoveryState()).toEqual({
       needed: true,
-      reason: expect.any(String),
+      reason: { code: 'recoveryUnavailable', params: { root: emptyMountPoint } },
       unavailableCustomRoot: emptyMountPoint
     })
     clearStorageRecoveryState()

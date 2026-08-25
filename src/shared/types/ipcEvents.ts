@@ -216,3 +216,17 @@ export interface ResolvedBrowserStatus {
   /** Only known for 'dev-bundled'/'managed' — a system Chrome/Edge launch (via Playwright's `channel` option) doesn't expose its resolved binary path. */
   executablePath: string | null
 }
+
+/**
+ * Labels for a native OS dialog, supplied by the renderer.
+ *
+ * Native dialogs are the one user-facing main-process surface that can't use
+ * the error-code indirection: Electron wants finished strings, and main has
+ * no locale. The renderer already knows the language, so it translates and
+ * passes them down at call time.
+ */
+export interface DialogLabels {
+  title: string
+  /** Name shown next to the extension in the file-type filter (e.g. "JSON"). */
+  filterName: string
+}

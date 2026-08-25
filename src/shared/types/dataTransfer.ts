@@ -3,6 +3,7 @@ import type { ExclusionRecord } from './exclusion'
 import type { ProfileFields } from './profile'
 import type { AutoStartCommand } from './ipcEvents'
 import type { IndexedJobsRetention } from './indexedJob'
+import type { AppError } from './errorCodes'
 
 /** Bumped whenever the export bundle shape changes in a way older imports can't read. */
 export const EXPORT_SCHEMA_VERSION = 1
@@ -71,7 +72,7 @@ export interface ExportFileResult {
   ok: boolean
   canceled?: boolean
   filePath?: string
-  error?: string
+  error?: AppError
 }
 
 export interface ImportDomainCounts {
@@ -84,7 +85,7 @@ export interface ImportDomainCounts {
 export interface ImportPickResult {
   ok: boolean
   canceled?: boolean
-  error?: string
+  error?: AppError
   filePath?: string
   bundle?: ExportBundle
   counts?: ImportDomainCounts
@@ -99,6 +100,6 @@ export interface ImportSummary {
 
 export interface ImportApplyResult {
   ok: boolean
-  error?: string
+  error?: AppError
   summary?: ImportSummary
 }

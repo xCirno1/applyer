@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import TerminalPane from './TerminalPane'
 import TerminalTabBar from './TerminalTabBar'
 import { useTerminalTabs } from './useTerminalTabs'
@@ -18,6 +19,7 @@ import { useShortcutHandler } from '../../providers/ShortcutsContext'
  * reorderable display order.
  */
 export default function TerminalGroup(): ReactElement {
+  const { t } = useTranslation('workspace')
   const {
     tabs,
     activeId,
@@ -83,9 +85,9 @@ export default function TerminalGroup(): ReactElement {
       <div className="min-h-0 flex-1 bg-canvas-raised">
         {tabs.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-2">
-            <span className="text-[12px] text-text-faint">No terminals open.</span>
+            <span className="text-[12px] text-text-faint">{t('terminal.none')}</span>
             <Button size="sm" onClick={addTerminal}>
-              New terminal
+              {t('terminal.new')}
             </Button>
           </div>
         ) : (

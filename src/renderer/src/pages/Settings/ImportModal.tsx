@@ -1,17 +1,20 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import Checkbox from '../../components/ui/Checkbox'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import { useJobsStore } from '../../state/jobsStore'
+import { useFormatters } from '../../i18n/format'
 import type { ExportBundle, ExportDomain, ExportSelection, ImportDomainCounts } from '@shared/types/dataTransfer'
 
-const DOMAIN_LABELS: Record<ExportDomain, string> = {
-  jobs: 'Job applications',
-  exclusions: 'Excluded jobs',
-  profile: 'Profile',
-  settings: 'App settings'
-}
+const DOMAIN_KEYS = {
+  jobs: 'data.domainJobs',
+  exclusions: 'data.domainExclusions',
+  profile: 'data.domainProfile',
+  settings: 'data.domainSettings'
+} as const satisfies Record<ExportDomain, string>
 
 const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'profile', 'settings']
 
@@ -28,7 +31,10 @@ interface LoadedFile {
 }
 
 export default function ImportModal({ open, onClose }: { open: boolean; onClose: () => void }): ReactElement | null {
+  const { t } = useTranslation('settings')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
+  const format = useFormatters()
   const fetchAllColumns = useJobsStore((s) => s.fetchAllColumns)
   const [picking, setPicking] = useState(false)
   const [pickError, setPickError] = useState<string | null>(null)
@@ -52,11 +58,14 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const handlePickFile = async (): Promise<void> => {
     setPicking(true)
     setPickError(null)
-    const result = await window.api.data.pickImportFile()
+    const result = await window.api.data.pickImportFile({
+      title: t('data.importDialogTitle'),
+      filterName: 'JSON'
+    })
     setPicking(false)
     if (result.canceled) return
     if (!result.ok || !result.bundle) {
-      setPickError(result.error ?? 'Could not read that file.')
+      setPickError(result.error ? errorMessage(result.error) : t('data.readFailed'))
       return
     }
     const counts = result.counts ?? {}
@@ -82,16 +91,20 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
     const result = await window.api.data.import(file.bundle, selection)
     setImporting(false)
     if (!result.ok || !result.summary) {
-      toast.error(result.error ?? 'Import failed.')
+      toast.error(result.error ? errorMessage(result.error) : t('data.importFailed'))
       return
     }
     const parts: string[] = []
-    if (result.summary.jobs) parts.push(`${result.summary.jobs.imported} job${result.summary.jobs.imported === 1 ? '' : 's'} added`)
+    if (result.summary.jobs) parts.push(t('data.jobsAdded', { count: result.summary.jobs.imported }))
     if (result.summary.exclusions)
-      parts.push(`${result.summary.exclusions.imported} exclusion${result.summary.exclusions.imported === 1 ? '' : 's'} added`)
-    if (result.summary.profile) parts.push('profile updated')
-    if (result.summary.settings) parts.push('settings updated')
-    toast.success(parts.length > 0 ? `Import complete — ${parts.join(', ')}.` : 'Import complete — nothing new to add.')
+      parts.push(t('data.exclusionsAdded', { count: result.summary.exclusions.imported }))
+    if (result.summary.profile) parts.push(t('data.profileUpdated'))
+    if (result.summary.settings) parts.push(t('data.settingsUpdated'))
+    toast.success(
+      parts.length > 0
+        ? t('data.importComplete', { parts: parts.join(', ') })
+        : t('data.importCompleteEmpty')
+    )
 
     if (result.summary.jobs && result.summary.jobs.imported > 0) fetchAllColumns()
 
@@ -99,16 +112,14 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   }
 
   return (
-    <Modal open={open} onClose={handleClose} title="Import data" width="max-w-md">
+    <Modal open={open} onClose={handleClose} title={t('data.importModalTitle')} width="max-w-md">
       <div className="flex flex-col gap-3.5">
-        <p className="text-[12px] text-text-faint">
-          Only accepts a JSON file previously produced by Export — CSV files cannot be imported.
-        </p>
+        <p className="text-[12px] text-text-faint">{t('data.importOnlyJson')}</p>
 
         {!file && (
           <div className="flex flex-col gap-2">
             <Button variant="secondary" loading={picking} onClick={handlePickFile}>
-              Choose file…
+              {t('data.chooseFile')}
             </Button>
             {pickError && <span className="text-[12px] text-danger">{pickError}</span>}
           </div>
@@ -118,14 +129,14 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
           <>
             <div className="flex flex-col gap-0.5 border-t border-border-soft pt-3">
               <span className="text-[12px] text-text-muted">
-                Exported {new Date(file.bundle.exportedAt).toLocaleString()}
+                {t('data.exportedAt', { date: format.dateTime(file.bundle.exportedAt) })}
               </span>
               <button
                 onClick={reset}
                 className="w-fit cursor-pointer text-[11px] text-accent hover:underline"
                 disabled={importing}
               >
-                Choose a different file
+                {t('data.chooseDifferent')}
               </button>
             </div>
 
@@ -134,12 +145,12 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
                 const count = domainCount(domain, file.counts)
                 const hint =
                   domain === 'jobs' || domain === 'exclusions'
-                    ? `${count} record${count === 1 ? '' : 's'} in the file — existing ones (matched by URL) are skipped.`
-                    : 'Overwrites your current value.'
+                    ? t('data.recordsHint', { count: count ?? 0 })
+                    : t('data.overwritesHint')
                 return (
                   <Checkbox
                     key={domain}
-                    label={DOMAIN_LABELS[domain]}
+                    label={t(DOMAIN_KEYS[domain])}
                     hint={hint}
                     checked={selection[domain]}
                     onChange={(checked) => toggle(domain, checked)}
@@ -150,16 +161,20 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
 
             {willOverwrite && (
               <p className="border border-warning px-2 py-1.5 text-[12px] text-warning">
-                This will overwrite your current {OVERWRITE_DOMAINS.filter((d) => selection[d]).map((d) => DOMAIN_LABELS[d].toLowerCase()).join(' and ')}.
+                {t('data.willOverwrite', {
+                  domains: OVERWRITE_DOMAINS.filter((d) => selection[d])
+                    .map((d) => t(DOMAIN_KEYS[d]).toLowerCase())
+                    .join(' & ')
+                })}
               </p>
             )}
 
             <div className="flex justify-end gap-2 border-t border-border-soft pt-3">
               <Button variant="ghost" onClick={handleClose} disabled={importing}>
-                Cancel
+                {t('actions.cancel', { ns: 'common' })}
               </Button>
               <Button variant="primary" loading={importing} disabled={selectedCount === 0} onClick={handleImport}>
-                Import
+                {t('data.importAction')}
               </Button>
             </div>
           </>

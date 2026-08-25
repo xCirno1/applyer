@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import FileDrop from '../../components/ui/FileDrop'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import { useProfileStore } from '../../state/profileStore'
 import type { DocumentKind } from '@shared/types/profile'
 
@@ -22,7 +24,9 @@ export default function DocumentsSection(): ReactElement {
   const fetchProfile = useProfileStore((s) => s.fetch)
   const uploadDocument = useProfileStore((s) => s.uploadDocument)
   const deleteDocument = useProfileStore((s) => s.deleteDocument)
+  const { t } = useTranslation('settings')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
   const [uploadingKind, setUploadingKind] = useState<DocumentKind | null>(null)
 
   useEffect(() => {
@@ -36,9 +40,9 @@ export default function DocumentsSection(): ReactElement {
       const data = await fileToArrayBuffer(file)
       const result = await uploadDocument({ kind, filename: file.name, mimeType: file.type, data })
       if (!result.ok) {
-        toast.error(result.error ?? 'Upload failed.')
+        toast.error(result.error ? errorMessage(result.error) : t('documents.uploadFailed'))
       } else {
-        toast.success(`${file.name} uploaded.`)
+        toast.success(t('documents.uploaded', { filename: file.name }))
       }
     } finally {
       setUploadingKind(null)
@@ -47,7 +51,7 @@ export default function DocumentsSection(): ReactElement {
 
   const handleDelete = async (id: string, filename: string): Promise<void> => {
     await deleteDocument(id)
-    toast.info(`${filename} removed.`)
+    toast.info(t('documents.removed', { filename }))
   }
 
   return (
@@ -65,9 +69,9 @@ export default function DocumentsSection(): ReactElement {
               <button
                 onClick={() => handleDelete(doc.id, doc.originalFilename)}
                 className="cursor-pointer text-text-faint hover:text-danger"
-                aria-label={`Remove ${doc.originalFilename}`}
+                aria-label={t('documents.removeLabel', { filename: doc.originalFilename })}
               >
-                Remove
+                {t('documents.remove')}
               </button>
             </li>
           ))}
@@ -75,17 +79,21 @@ export default function DocumentsSection(): ReactElement {
       )}
 
       <FileDrop
-        label={uploadingKind === 'resume' ? 'Uploading resume…' : 'Add / replace resume'}
+        label={uploadingKind === 'resume' ? t('documents.uploadingResume') : t('documents.addResume')}
         accept={ACCEPT}
         onFile={(file) => handleFile('resume', file)}
       />
       <FileDrop
-        label={uploadingKind === 'cover_letter' ? 'Uploading cover letter…' : 'Add / replace cover letter'}
+        label={
+          uploadingKind === 'cover_letter'
+            ? t('documents.uploadingCoverLetter')
+            : t('documents.addCoverLetter')
+        }
         accept={ACCEPT}
         onFile={(file) => handleFile('cover_letter', file)}
       />
       <FileDrop
-        label={uploadingKind === 'other' ? 'Uploading…' : 'Add another document'}
+        label={uploadingKind === 'other' ? t('documents.uploadingOther') : t('documents.addOther')}
         accept={ACCEPT}
         onFile={(file) => handleFile('other', file)}
       />

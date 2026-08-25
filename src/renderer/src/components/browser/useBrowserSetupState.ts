@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/useToast'
 
 export type BrowserSetupState =
@@ -20,6 +21,7 @@ interface BrowserSetupHook {
 export function useBrowserSetupState(): BrowserSetupHook {
   const [state, setState] = useState<BrowserSetupState>({ status: 'idle' })
   const [dismissed, setDismissed] = useState(false)
+  const { t } = useTranslation('settings')
   const toast = useToast()
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function useBrowserSetupState(): BrowserSetupHook {
         setDismissed(false)
         setState((prev) => (prev.status === 'downloading' ? prev : { status: 'downloading', percent: 0, totalSize: '' }))
       } else if (payload.status === 'ready') {
-        toast.success('Browser setup complete — job automation is ready.')
+        toast.success(t('browserSetup.complete'))
         setState({ status: 'idle' })
       } else {
         toast.error(`Browser setup failed: ${payload.message}`)

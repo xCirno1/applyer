@@ -76,7 +76,7 @@ describe('validateStorageDestination', () => {
   })
 
   it('rejects a relative path', () => {
-    expect(validateStorageDestination('relative/path')).toEqual({ ok: false, error: expect.any(String) })
+    expect(validateStorageDestination('relative/path')).toEqual({ ok: false, error: { code: 'invalidFolderPath' } })
   })
 
   it('rejects a path that exists as a file, not a folder', () => {
@@ -249,7 +249,7 @@ describe('migrateStorageLocation', () => {
 
     const result = await migrateStorageLocation(dest)
 
-    expect(result).toEqual({ ok: false, error: expect.stringContaining('complete copy was preserved') })
+    expect(result).toEqual({ ok: false, error: { code: 'migrationStranded', params: { destination: dest } } })
     expect(existsSync(join(dest, 'applyer.db'))).toBe(true)
     expect(existsSync(join(dest, 'documents', 'doc1'))).toBe(true)
 
@@ -268,7 +268,7 @@ describe('migrateStorageLocation', () => {
     const first = migrateStorageLocation(destA)
     const second = await migrateStorageLocation(destB)
 
-    expect(second).toEqual({ ok: false, error: 'A storage location change is already in progress.' })
+    expect(second).toEqual({ ok: false, error: { code: 'migrationInProgress' } })
     // Critically: rejecting the second call must not have run any cleanup
     // against the first call's in-flight destination.
     const firstResult = await first

@@ -1,33 +1,30 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../../components/ui/Button'
 
 export default function Welcome({ onNext }: { onNext: () => void }): ReactElement {
+  const { t } = useTranslation('onboarding')
+
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-[16px] font-medium text-text">Welcome to Applyer</h1>
-        <p className="mt-1 text-[13px] text-text-muted">
-          Applyer turns a coding assistant running in the built-in terminal (Claude Code, Codex, or any other
-          MCP-capable agent) into a job-search assistant. Here&apos;s the shape of it:
-        </p>
+        <h1 className="text-[16px] font-medium text-text">{t('welcome.title')}</h1>
+        <p className="mt-1 text-[13px] text-text-muted">{t('welcome.intro')}</p>
       </div>
       <ol className="flex flex-col gap-2 text-[13px] text-text-muted">
         <li>
-          <span className="font-medium text-text">1. Tell it about yourself.</span> Add your profile and resume next
-          — this is what the agent uses to judge fit and fill out applications.
+          <span className="font-medium text-text">{t('welcome.step1Title')}</span> {t('welcome.step1Body')}
         </li>
         <li>
-          <span className="font-medium text-text">2. Ask the agent to find jobs.</span> It searches the web and adds
-          matches to a task board here in the app — nothing gets submitted automatically.
+          <span className="font-medium text-text">{t('welcome.step2Title')}</span> {t('welcome.step2Body')}
         </li>
         <li>
-          <span className="font-medium text-text">3. You stay in control.</span> The agent can draft a filled-out
-          application for your review, but only you ever click submit.
+          <span className="font-medium text-text">{t('welcome.step3Title')}</span> {t('welcome.step3Body')}
         </li>
       </ol>
       <div className="flex justify-end">
         <Button variant="primary" onClick={onNext}>
-          Get started
+          {t('welcome.getStarted')}
         </Button>
       </div>
     </div>

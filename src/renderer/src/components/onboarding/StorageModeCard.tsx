@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface StorageModeCardProps {
   title: string
@@ -19,6 +20,8 @@ export default function StorageModeCard({
   disabledReason,
   onSelect
 }: StorageModeCardProps): ReactElement {
+  const { t } = useTranslation('onboarding')
+
   return (
     <button
       type="button"
@@ -32,7 +35,9 @@ export default function StorageModeCard({
       <div className="flex items-center gap-2">
         <span className="text-[13px] font-medium text-text">{title}</span>
         {recommended && (
-          <span className="border border-success px-1 text-[10px] font-medium text-success">Recommended</span>
+          <span className="border border-success px-1 text-[10px] font-medium text-success">
+            {t('card.recommended')}
+          </span>
         )}
       </div>
       <p className="text-[12px] text-text-muted">{description}</p>

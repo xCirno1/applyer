@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { JobRecord, JobStatus } from '@shared/types/job'
 import Tag from '../ui/Tag'
 import { useBlockedJobIds } from '../../providers/CaptchaAlertContext'
@@ -13,6 +14,7 @@ const STATUS_ACCENT: Record<JobStatus, string> = {
 }
 
 export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () => void }): ReactElement {
+  const { t } = useTranslation('board')
   const blockedJobIds = useBlockedJobIds()
   const blocked = blockedJobIds.has(job.id)
   const selected = useJobsStore((s) => s.selectedJobIds.has(job.id))
@@ -55,7 +57,7 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
             toggleSelected(job.id)
           }}
           aria-pressed={selected}
-          aria-label={selected ? 'Deselect job' : 'Select job'}
+          aria-label={selected ? t('card.deselect') : t('card.select')}
           className={`mt-0.5 flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center border ${
             selected ? 'border-accent bg-accent' : 'border-border bg-canvas-raised'
           }`}
@@ -75,7 +77,7 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
         {job.location && <span className="text-[11px] text-text-faint">{job.location}</span>}
         {blocked && (
           <div className="mt-0.5">
-            <Tag label="needs verification" tone="warning" />
+            <Tag label={t('card.needsVerification')} tone="warning" />
           </div>
         )}
         {job.failureTag && (

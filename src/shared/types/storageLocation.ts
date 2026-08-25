@@ -1,3 +1,5 @@
+import type { AppError } from './errorCodes'
+
 export interface StorageLocationPointer {
   schemaVersion: 1
   /** Absolute path to the custom root, or null to use the fixed OS-default userData dir. */
@@ -9,7 +11,7 @@ export interface StorageLocationStatus {
   isDefault: boolean
   defaultRoot: string
   /** One-shot: set only when the pointer file itself was corrupt/unreadable (nothing concrete to retry). Consumed by the first getStatus() call. */
-  startupFallbackWarning: string | null
+  startupFallbackWarning: AppError | null
   /**
    * Stable (not one-shot) — true when a configured custom root is currently
    * unavailable and the app is running on a substitute (default) database
@@ -19,16 +21,16 @@ export interface StorageLocationStatus {
    * orphaning work in the substitute database.
    */
   needsRecovery: boolean
-  recoveryReason: string | null
+  recoveryReason: AppError | null
   /** The pointer's customRoot that couldn't be used, so the recovery UI can display/retry it. */
   unavailableCustomRoot: string | null
 }
 
 export type StorageLocationValidation =
   | { ok: true }
-  | { ok: false; error: string; neededBytes?: number; availableBytes?: number }
+  | { ok: false; error: AppError; neededBytes?: number; availableBytes?: number }
 
-export type StorageLocationMigrationResult = { ok: true } | { ok: false; error: string }
+export type StorageLocationMigrationResult = { ok: true } | { ok: false; error: AppError }
 
 export type StorageLocationPickResult = { ok: true; path: string } | { ok: false; canceled: true }
 

@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
+import { appError, unexpectedError } from '@shared/types/errorCodes'
 import {
   getStorageMode,
   setStorageMode,
@@ -20,10 +21,10 @@ const AUTO_START_COMMAND_MAX_LENGTH = 500
 export function registerSettingsIpc(): void {
   ipcMain.handle(IPC.settings.changeStorageMode, async (_event, { mode }: { mode: StorageMode }) => {
     if (mode !== 'encrypted' && mode !== 'plaintext') {
-      return { ok: false, error: 'Invalid storage mode.' }
+      return { ok: false, error: appError('invalidStorageMode') }
     }
     if (mode === 'encrypted' && !isEncryptionAvailable()) {
-      return { ok: false, error: 'Encrypted storage is not available on this system (no OS keychain detected).' }
+      return { ok: false, error: appError('keychainUnavailable') }
     }
 
     const currentMode = getStorageMode()
@@ -51,7 +52,7 @@ export function registerSettingsIpc(): void {
       // partial, inconsistent second migration back.
       if (currentMode) setStorageMode(currentMode)
       logActivity('error', 'Storage mode change failed', { error: String(err) })
-      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      return { ok: false, error: unexpectedError(err) }
     }
   })
 
@@ -59,7 +60,7 @@ export function registerSettingsIpc(): void {
 
   ipcMain.handle(IPC.settings.setAutoStartCommand, (_event, { command }: { command: unknown }) => {
     if (typeof command !== 'string') {
-      return { ok: false, error: 'Invalid command.' }
+      return { ok: false, error: appError('invalidCommand') }
     }
     // Strip newlines/carriage returns rather than rejecting them outright —
     // this is typed straight into a pty on session start, so a stray
@@ -67,7 +68,7 @@ export function registerSettingsIpc(): void {
     // of an obvious validation error.
     const sanitized = command.replace(/[\r\n]+/g, ' ').trim()
     if (sanitized.length > AUTO_START_COMMAND_MAX_LENGTH) {
-      return { ok: false, error: `Command is too long (max ${AUTO_START_COMMAND_MAX_LENGTH} characters).` }
+      return { ok: false, error: appError('commandTooLong', { max: AUTO_START_COMMAND_MAX_LENGTH }) }
     }
     setAutoStartCommand(sanitized)
     logActivity('info', sanitized ? `Auto-start command set to: ${sanitized}` : 'Auto-start command disabled')

@@ -1,7 +1,9 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import FileDrop from '../../components/ui/FileDrop'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import { useProfileStore } from '../../state/profileStore'
 import type { DocumentKind } from '@shared/types/profile'
 
@@ -20,7 +22,9 @@ export default function DocumentUpload({ onNext, onBack }: { onNext: () => void;
   const documents = useProfileStore((s) => s.documents)
   const uploadDocument = useProfileStore((s) => s.uploadDocument)
   const deleteDocument = useProfileStore((s) => s.deleteDocument)
+  const { t } = useTranslation('onboarding')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
   const [uploadingKind, setUploadingKind] = useState<DocumentKind | null>(null)
 
   const hasResume = documents.some((d) => d.kind === 'resume')
@@ -31,9 +35,9 @@ export default function DocumentUpload({ onNext, onBack }: { onNext: () => void;
       const data = await fileToArrayBuffer(file)
       const result = await uploadDocument({ kind, filename: file.name, mimeType: file.type, data })
       if (!result.ok) {
-        toast.error(result.error ?? 'Upload failed.')
+        toast.error(result.error ? errorMessage(result.error) : t('documents.uploadFailed'))
       } else {
-        toast.success(`${file.name} uploaded.`)
+        toast.success(t('documents.uploaded', { filename: file.name }))
       }
     } finally {
       setUploadingKind(null)
@@ -43,10 +47,8 @@ export default function DocumentUpload({ onNext, onBack }: { onNext: () => void;
   return (
     <div className="flex flex-col gap-4">
       <div>
-        <h1 className="text-[16px] font-medium text-text">Your documents</h1>
-        <p className="mt-1 text-[13px] text-text-muted">
-          A resume is required. The agent reads these to judge fit and can attach them when filling out forms.
-        </p>
+        <h1 className="text-[16px] font-medium text-text">{t('documents.title')}</h1>
+        <p className="mt-1 text-[13px] text-text-muted">{t('documents.intro')}</p>
       </div>
 
       {documents.length > 0 && (
@@ -62,9 +64,9 @@ export default function DocumentUpload({ onNext, onBack }: { onNext: () => void;
               <button
                 onClick={() => deleteDocument(doc.id)}
                 className="cursor-pointer text-text-faint hover:text-danger"
-                aria-label={`Remove ${doc.originalFilename}`}
+                aria-label={t('documents.removeLabel', { filename: doc.originalFilename })}
               >
-                Remove
+                {t('documents.remove')}
               </button>
             </li>
           ))}
@@ -72,22 +74,26 @@ export default function DocumentUpload({ onNext, onBack }: { onNext: () => void;
       )}
 
       <FileDrop
-        label={uploadingKind === 'resume' ? 'Uploading resume…' : 'Resume (required)'}
+        label={uploadingKind === 'resume' ? t('documents.uploadingResume') : t('documents.resumeRequired')}
         accept={ACCEPT}
         onFile={(file) => handleFile('resume', file)}
       />
       <FileDrop
-        label={uploadingKind === 'cover_letter' ? 'Uploading cover letter…' : 'Cover letter (optional)'}
+        label={
+          uploadingKind === 'cover_letter'
+            ? t('documents.uploadingCoverLetter')
+            : t('documents.coverLetterOptional')
+        }
         accept={ACCEPT}
         onFile={(file) => handleFile('cover_letter', file)}
       />
 
       <div className="flex justify-between">
         <Button variant="ghost" onClick={onBack}>
-          Back
+          {t('nav.back')}
         </Button>
         <Button variant="primary" onClick={onNext} disabled={!hasResume}>
-          Next
+          {t('nav.next')}
         </Button>
       </div>
     </div>

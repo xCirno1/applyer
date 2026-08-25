@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
+import { appError } from '@shared/types/errorCodes'
 import {
   getStorageMode,
   setStorageMode,
@@ -27,7 +28,7 @@ export function registerOnboardingIpc(): void {
 
   ipcMain.handle(IPC.onboarding.setStorageMode, (_event, { mode }: { mode: StorageMode }) => {
     if (mode !== 'encrypted' && mode !== 'plaintext') {
-      return { ok: false, error: 'Invalid storage mode.' }
+      return { ok: false, error: appError('invalidStorageMode') }
     }
     setStorageMode(mode)
     return { ok: true }

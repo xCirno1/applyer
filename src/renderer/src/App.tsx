@@ -1,4 +1,5 @@
 import { useState, useEffect, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import logo from './assets/logo.png'
 import WorkspacePage from './pages/Workspace/WorkspacePage'
 import IndexedJobsPage from './pages/IndexedJobs/IndexedJobsPage'
@@ -19,10 +20,13 @@ import DevBuildTag from './components/navigation/DevBuildTag'
 import { useWorkspaceLayout } from './components/workspace/useWorkspaceLayout'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
 import ThemeProvider from './providers/ThemeProvider'
+import LocaleProvider from './providers/LocaleProvider'
 import ShortcutsProvider from './providers/ShortcutsProvider'
 import { useShortcutHandler } from './providers/ShortcutsContext'
 import { useJobsStore } from './state/jobsStore'
+import { useErrorMessage } from './i18n/formatError'
 import type { StorageLocationStatus } from '@shared/types/storageLocation'
+import type { AppError } from '@shared/types/errorCodes'
 
 type Screen = RailPage | 'settings'
 type BootState =
@@ -32,6 +36,7 @@ type BootState =
   | { phase: 'ready' }
 
 function MainShell(): ReactElement {
+  const { t } = useTranslation('workspace')
   const [screen, setScreen] = useState<Screen>('workspace')
   const [settingsSection, setSettingsSection] = useState<SectionId>('profile')
   const [exportOpen, setExportOpen] = useState(false)
@@ -95,8 +100,8 @@ function MainShell(): ReactElement {
                 <DevBuildTag />
                 <button
                   onClick={() => openSettings()}
-                  title="Settings"
-                  aria-label="Settings"
+                  title={t('topBar.settings')}
+                  aria-label={t('topBar.settings')}
                   className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
                 >
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -137,7 +142,7 @@ function MainShell(): ReactElement {
                   onClick={() => setScreen('workspace')}
                   className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text"
                 >
-                  ← Back to workspace
+                  {t('topBar.backToWorkspace')}
                 </button>
                 <div className="ml-auto flex items-center">
                   <DevBuildTag />
@@ -181,10 +186,11 @@ function MainShell(): ReactElement {
  * getStatus() call is what consumes the warning server-side, so this
  * component only ever receives it via props, never fetches its own.
  */
-function StartupWarningToast({ warning }: { warning: string | null }): null {
+function StartupWarningToast({ warning }: { warning: AppError | null }): null {
   const toast = useToast()
+  const errorMessage = useErrorMessage()
   useEffect(() => {
-    if (warning) toast.error(warning)
+    if (warning) toast.error(errorMessage(warning))
     // Fires once per distinct warning value — `toast` dispatches to a stable context value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [warning])
@@ -193,7 +199,7 @@ function StartupWarningToast({ warning }: { warning: string | null }): null {
 
 export default function App(): ReactElement {
   const [boot, setBoot] = useState<BootState>({ phase: 'loading' })
-  const [startupWarning, setStartupWarning] = useState<string | null>(null)
+  const [startupWarning, setStartupWarning] = useState<AppError | null>(null)
 
   const checkBootState = (): void => {
     // Storage checked first and exclusively: onboarding.getStatus() reflects
@@ -219,22 +225,24 @@ export default function App(): ReactElement {
 
   return (
     <ShortcutsProvider>
-      <ThemeProvider>
-        <ToastProvider>
-          <StartupWarningToast warning={startupWarning} />
-          {boot.phase === 'loading' && (
-            <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          )}
-          {boot.phase === 'storage-recovery' && (
-            <StorageRecoveryFlow status={boot.status} onResolved={checkBootState} />
-          )}
-          {boot.phase === 'onboarding' && <OnboardingFlow onComplete={() => setBoot({ phase: 'ready' })} />}
-          {boot.phase === 'ready' && <MainShell />}
-        </ToastProvider>
-      </ThemeProvider>
+      <LocaleProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <StartupWarningToast warning={startupWarning} />
+            {boot.phase === 'loading' && (
+              <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-32 w-full" />
+              </div>
+            )}
+            {boot.phase === 'storage-recovery' && (
+              <StorageRecoveryFlow status={boot.status} onResolved={checkBootState} />
+            )}
+            {boot.phase === 'onboarding' && <OnboardingFlow onComplete={() => setBoot({ phase: 'ready' })} />}
+            {boot.phase === 'ready' && <MainShell />}
+          </ToastProvider>
+        </ThemeProvider>
+      </LocaleProvider>
     </ShortcutsProvider>
   )
 }

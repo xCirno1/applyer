@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type PageItem = number | 'ellipsis-left' | 'ellipsis-right'
 
@@ -33,15 +34,16 @@ export interface PaginationProps {
 
 /** Numbered page buttons with prev/next arrows. Renders nothing for a single page — there's nothing to paginate. */
 export default function Pagination({ page, totalPages, onPageChange, disabled = false }: PaginationProps): ReactElement | null {
+  const { t } = useTranslation()
   if (totalPages <= 1) return null
 
   return (
-    <nav className="flex items-center justify-center gap-1" aria-label="Pagination">
+    <nav className="flex items-center justify-center gap-1" aria-label={t('pagination.label')}>
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={disabled || page <= 1}
-        aria-label="Previous page"
+        aria-label={t('pagination.previous')}
         className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center border border-border text-text-muted hover:border-text-faint hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
       >
         <ChevronIcon direction="left" />
@@ -74,7 +76,7 @@ export default function Pagination({ page, totalPages, onPageChange, disabled = 
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={disabled || page >= totalPages}
-        aria-label="Next page"
+        aria-label={t('pagination.next')}
         className="flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center border border-border text-text-muted hover:border-text-faint hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
       >
         <ChevronIcon direction="right" />

@@ -17,7 +17,8 @@ import {
   type BrowserDownloadProgressPayload,
   type BrowserSetupStatusPayload,
   type BrowserPreference,
-  type ResolvedBrowserStatus
+  type ResolvedBrowserStatus,
+  type DialogLabels
 } from '@shared/types/ipcEvents'
 import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job'
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
@@ -201,7 +202,8 @@ const settingsApi = {
 
 const storageLocationApi = {
   getStatus: (): Promise<StorageLocationStatus> => ipcRenderer.invoke(IPC.storageLocation.getStatus),
-  pickFolder: (): Promise<StorageLocationPickResult> => ipcRenderer.invoke(IPC.storageLocation.pickFolder),
+  pickFolder: (labels: DialogLabels): Promise<StorageLocationPickResult> =>
+    ipcRenderer.invoke(IPC.storageLocation.pickFolder, { labels }),
   validate: (path: string): Promise<StorageLocationValidation> =>
     ipcRenderer.invoke(IPC.storageLocation.validate, { path }),
   migrate: (path: string): Promise<StorageLocationMigrationResult> =>
@@ -229,11 +231,13 @@ const appApi = {
 }
 
 const dataApi = {
-  exportJson: (selection: ExportSelection): Promise<ExportFileResult> =>
-    ipcRenderer.invoke(IPC.data.exportJson, { selection }),
-  exportCsv: (table: CsvTable): Promise<ExportFileResult> => ipcRenderer.invoke(IPC.data.exportCsv, { table }),
+  exportJson: (selection: ExportSelection, labels: DialogLabels): Promise<ExportFileResult> =>
+    ipcRenderer.invoke(IPC.data.exportJson, { selection, labels }),
+  exportCsv: (table: CsvTable, labels: DialogLabels): Promise<ExportFileResult> =>
+    ipcRenderer.invoke(IPC.data.exportCsv, { table, labels }),
   getExportSizes: (): Promise<ExportSizes> => ipcRenderer.invoke(IPC.data.getExportSizes),
-  pickImportFile: (): Promise<ImportPickResult> => ipcRenderer.invoke(IPC.data.pickImportFile),
+  pickImportFile: (labels: DialogLabels): Promise<ImportPickResult> =>
+    ipcRenderer.invoke(IPC.data.pickImportFile, { labels }),
   import: (bundle: ExportBundle, selection: ExportSelection): Promise<ImportApplyResult> =>
     ipcRenderer.invoke(IPC.data.import, { bundle, selection })
 }

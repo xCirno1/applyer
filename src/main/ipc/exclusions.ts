@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
+import { appError } from '@shared/types/errorCodes'
 import { listExclusions, removeExclusion } from '../db/repositories/jobExclusionsRepository'
 import { excludeJob } from '../jobActions'
 import { broadcastExclusionsChanged } from './jobsBroadcast'
@@ -12,13 +13,13 @@ export function registerExclusionsIpc(): void {
 
   ipcMain.handle(IPC.exclusions.add, (_event, { url, reason }: { url: unknown; reason?: unknown }) => {
     if (typeof url !== 'string') {
-      return { ok: false, error: 'A URL is required.' }
+      return { ok: false, error: appError('urlRequired') }
     }
     let normalized: string
     try {
       normalized = new URL(url.trim()).toString()
     } catch {
-      return { ok: false, error: 'That does not look like a valid URL.' }
+      return { ok: false, error: appError('invalidUrl') }
     }
     const { exclusion } = excludeJob({
       url: normalized,

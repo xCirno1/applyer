@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Menu, { MenuBar, type MenuEntry } from '../ui/Menu'
 import Modal from '../ui/Modal'
 import ConfirmDialog from '../ui/ConfirmDialog'
@@ -37,6 +38,7 @@ export default function AppMenuBar({
   onToggleDock: () => void
   onShowTerminalTab: () => void
 }): ReactElement {
+  const { t } = useTranslation('workspace')
   const { bindings, runCommand } = useShortcuts()
   const toast = useToast()
 
@@ -65,43 +67,43 @@ export default function AppMenuBar({
     const result = await window.api.jobs.retryAll()
     setRetryingAll(false)
     if (!result.ok) {
-      toast.error('Failed to retry jobs.')
+      toast.error(t('retryAll.failed'))
       return
     }
     for (const job of result.jobs) applyUpdate(job)
     toast.success(
-      result.jobs.length > 0 ? `Retried ${result.jobs.length} failed job${result.jobs.length === 1 ? '' : 's'}.` : 'No failed jobs to retry.'
+      result.jobs.length > 0 ? t('retryAll.done', { count: result.jobs.length }) : t('retryAll.none')
     )
   }
 
   const fileItems: MenuEntry[] = [
-    { type: 'action', key: 'settings', label: 'Settings', shortcut: shortcutLabel('app.toggleSettings'), onSelect: () => onOpenSettings() },
+    { type: 'action', key: 'settings', label: t('menu.settings'), shortcut: shortcutLabel('app.toggleSettings'), onSelect: () => onOpenSettings() },
     { type: 'separator', key: 'sep-data' },
-    { type: 'action', key: 'export', label: 'Export Data…', onSelect: onOpenExport },
-    { type: 'action', key: 'import', label: 'Import Data…', onSelect: onOpenImport },
+    { type: 'action', key: 'export', label: t('menu.exportData'), onSelect: onOpenExport },
+    { type: 'action', key: 'import', label: t('menu.importData'), onSelect: onOpenImport },
     { type: 'separator', key: 'sep' },
-    { type: 'action', key: 'quit', label: 'Quit', onSelect: () => window.close() }
+    { type: 'action', key: 'quit', label: t('menu.quit'), onSelect: () => window.close() }
   ]
 
   const terminalItems: MenuEntry[] = [
     {
       type: 'action',
       key: 'new',
-      label: 'New Terminal',
+      label: t('menu.newTerminal'),
       shortcut: shortcutLabel('terminal.new'),
       onSelect: () => runTerminalCommand('terminal.new')
     },
     {
       type: 'action',
       key: 'close',
-      label: 'Close Terminal',
+      label: t('menu.closeTerminal'),
       shortcut: shortcutLabel('terminal.close'),
       onSelect: () => runTerminalCommand('terminal.close')
     },
     {
       type: 'action',
       key: 'rename',
-      label: 'Rename Terminal',
+      label: t('menu.renameTerminal'),
       shortcut: shortcutLabel('terminal.rename'),
       onSelect: () => runTerminalCommand('terminal.rename')
     },
@@ -109,26 +111,26 @@ export default function AppMenuBar({
     {
       type: 'action',
       key: 'next',
-      label: 'Next Terminal Tab',
+      label: t('menu.nextTerminalTab'),
       shortcut: shortcutLabel('terminal.nextTab'),
       onSelect: () => runTerminalCommand('terminal.nextTab')
     },
     {
       type: 'action',
       key: 'prev',
-      label: 'Previous Terminal Tab',
+      label: t('menu.prevTerminalTab'),
       shortcut: shortcutLabel('terminal.prevTab'),
       onSelect: () => runTerminalCommand('terminal.prevTab')
     }
   ]
 
   const jobsItems: MenuEntry[] = [
-    { type: 'action', key: 'refresh', label: 'Refresh Board', onSelect: () => fetchAllColumns() },
+    { type: 'action', key: 'refresh', label: t('menu.refreshBoard'), onSelect: () => fetchAllColumns() },
     { type: 'separator', key: 'sep' },
     {
       type: 'action',
       key: 'retryAll',
-      label: 'Retry All Failed',
+      label: t('menu.retryAllFailed'),
       disabled: failedTotal === 0,
       onSelect: () => setConfirmRetryAllOpen(true)
     }
@@ -138,7 +140,7 @@ export default function AppMenuBar({
     {
       type: 'checkbox',
       key: 'overview',
-      label: 'Overview',
+      label: t('menu.overview'),
       checked: sidebarVisible,
       onToggle: onToggleSidebar,
       shortcut: shortcutLabel('view.toggleOverview')
@@ -146,7 +148,7 @@ export default function AppMenuBar({
     {
       type: 'checkbox',
       key: 'console',
-      label: 'Console',
+      label: t('menu.console'),
       checked: dockVisible,
       onToggle: onToggleDock,
       shortcut: shortcutLabel('view.toggleConsole')
@@ -154,38 +156,40 @@ export default function AppMenuBar({
   ]
 
   const helpItems: MenuEntry[] = [
-    { type: 'action', key: 'shortcuts', label: 'Keyboard Shortcuts', onSelect: () => onOpenSettings('shortcuts') },
+    { type: 'action', key: 'shortcuts', label: t('menu.keyboardShortcuts'), onSelect: () => onOpenSettings('shortcuts') },
     { type: 'separator', key: 'sep' },
-    { type: 'action', key: 'about', label: 'About Applyer', onSelect: () => setAboutOpen(true) }
+    { type: 'action', key: 'about', label: t('menu.about'), onSelect: () => setAboutOpen(true) }
   ]
 
   return (
     <div className="flex items-center">
       <MenuBar className="flex items-center">
-        <Menu label="File" items={fileItems} />
-        <Menu label="Terminal" items={terminalItems} />
-        <Menu label="Jobs" items={jobsItems} />
-        <Menu label="View" items={viewItems} />
-        <Menu label="Help" items={helpItems} />
+        <Menu label={t('menu.file')} items={fileItems} />
+        <Menu label={t('menu.terminal')} items={terminalItems} />
+        <Menu label={t('menu.jobs')} items={jobsItems} />
+        <Menu label={t('menu.view')} items={viewItems} />
+        <Menu label={t('menu.help')} items={helpItems} />
       </MenuBar>
 
       <ConfirmDialog
         open={confirmRetryAllOpen}
-        title="Retry all failed jobs?"
-        message={`This moves ${failedTotal} failed job${failedTotal === 1 ? '' : 's'} back to Queued so they're attempted again.`}
-        confirmLabel="Retry all"
+        title={t('retryAll.title')}
+        message={t('retryAll.message', { count: failedTotal })}
+        confirmLabel={t('retryAll.confirm')}
         loading={retryingAll}
         onConfirm={handleRetryAll}
         onCancel={() => setConfirmRetryAllOpen(false)}
       />
 
-      <Modal open={aboutOpen} onClose={() => setAboutOpen(false)} title="About Applyer" width="max-w-sm">
+      <Modal open={aboutOpen} onClose={() => setAboutOpen(false)} title={t('about.title')} width="max-w-sm">
         <div className="flex flex-col gap-1">
-          <span className="text-[13px] font-medium text-text">Applyer</span>
-          <span className="text-[12px] text-text-muted">Version {appInfo?.version ?? '—'}</span>
+          <span className="text-[13px] font-medium text-text">{t('about.name')}</span>
+          <span className="text-[12px] text-text-muted">
+            {t('about.version', { version: appInfo?.version ?? '—' })}
+          </span>
           {appInfo?.isDevBuild === true && (
             <span className="mt-1 text-[12px] text-text-muted">
-              Development build — data directory{' '}
+              {t('about.developmentBuildDataDirectory')}{' '}
               <span className="break-all text-text">{appInfo.userDataDir}</span>
             </span>
           )}

@@ -1,0 +1,92 @@
+{
+  "menu": {
+    "file": "File",
+    "terminal": "Terminal",
+    "jobs": "Jobs",
+    "view": "View",
+    "help": "Help",
+    "settings": "Settings",
+    "exportData": "Export Data…",
+    "importData": "Import Data…",
+    "quit": "Quit",
+    "newTerminal": "New Terminal",
+    "closeTerminal": "Close Terminal",
+    "renameTerminal": "Rename Terminal",
+    "nextTerminalTab": "Next Terminal Tab",
+    "prevTerminalTab": "Previous Terminal Tab",
+    "refreshBoard": "Refresh Board",
+    "retryAllFailed": "Retry All Failed",
+    "overview": "Overview",
+    "console": "Console",
+    "keyboardShortcuts": "Keyboard Shortcuts",
+    "about": "About Applyer"
+  },
+  "about": {
+    "title": "About Applyer",
+    "name": "Applyer",
+    "version": "Version {{version}}",
+    "developmentBuildDataDirectory": "Development build — data directory"
+  },
+  "retryAll": {
+    "title": "Retry all failed jobs?",
+    "message_one": "This moves {{count}} failed job back to Queued so it's attempted again.",
+    "message_other": "This moves {{count}} failed jobs back to Queued so they're attempted again.",
+    "confirm": "Retry all",
+    "failed": "Failed to retry jobs.",
+    "none": "No failed jobs to retry.",
+    "done_one": "Retried {{count}} failed job.",
+    "done_other": "Retried {{count}} failed jobs."
+  },
+  "dock": {
+    "terminal": "Terminal",
+    "logs": "Activity Log",
+    "hide": "Hide dock"
+  },
+  "rail": {
+    "jobBoard": "Job Board",
+    "indexedJobs": "Indexed Jobs"
+  },
+  "topBar": {
+    "settings": "Settings",
+    "backToWorkspace": "← Back to workspace"
+  },
+  "terminal": {
+    "none": "No terminals open.",
+    "new": "New terminal",
+    "rename": "Rename",
+    "renameLabel": "Rename {{title}}",
+    "closeLabel": "Close {{title}}",
+    "atMax": "You can have at most {{count}} terminals open"
+  },
+  "logs": {
+    "title": "Activity Log",
+    "levelLabel": "Filter by level",
+    "allLevels": "All levels",
+    "info": "Info",
+    "warn": "Warning",
+    "error": "Error",
+    "debug": "Debug",
+    "entries_one": "{{count}} entry",
+    "entries_other": "{{count}} entries",
+    "empty": "No activity yet."
+  },
+  "commands": {
+    "category": {
+      "Terminal": "Terminal",
+      "View": "View",
+      "Navigation": "Navigation"
+    },
+    "terminal.new": "New terminal",
+    "terminal.close": "Close terminal",
+    "terminal.nextTab": "Next terminal tab",
+    "terminal.prevTab": "Previous terminal tab",
+    "terminal.rename": "Rename terminal",
+    "view.toggleOverview": "Toggle overview panel",
+    "view.toggleConsole": "Toggle console dock",
+    "dock.showTerminal": "Show terminal tab",
+    "dock.showLogs": "Show activity log tab",
+    "app.toggleSettings": "Open/close settings"
+  },
+  "resizeOverview": "Resize overview panel",
+  "resizeDock": "Resize console dock"
+}

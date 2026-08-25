@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import KanbanBoard from '../../components/board/KanbanBoard'
 import PipelineOverview from '../../components/board/PipelineOverview'
 import WorkspaceDock from '../../components/workspace/WorkspaceDock'
@@ -29,6 +30,7 @@ export default function WorkspacePage({
   WorkspaceLayoutController,
   'layout' | 'setSidebarVisible' | 'setDockVisible' | 'setDockTab' | 'setSidebarWidth' | 'setDockHeight'
 >): ReactElement {
+  const { t } = useTranslation('workspace')
   // bodyRef is the column the board and dock share; topRef the row the
   // board and sidebar share — both measured to clamp a drag against what's
   // actually on screen.
@@ -75,7 +77,7 @@ export default function WorkspacePage({
               value={layout.sidebarWidth}
               min={SIDEBAR_MIN_PX}
               max={SIDEBAR_MAX_PX}
-              label="Resize overview panel"
+              label={t('resizeOverview')}
               onResize={handleSidebarResize}
             />
           </>
@@ -93,7 +95,7 @@ export default function WorkspacePage({
           min={DOCK_MIN_PX}
           max={DOCK_MAX_PX}
           invert
-          label="Resize console dock"
+          label={t('resizeDock')}
           onResize={handleDockResize}
         />
       )}

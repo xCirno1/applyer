@@ -3,6 +3,7 @@ import { accessSync, constants, existsSync, readFileSync, renameSync, writeFileS
 import { isAbsolute, join } from 'path'
 import Database from 'better-sqlite3'
 import type { StorageLocationPointer } from '@shared/types/storageLocation'
+import { appError, type AppError } from '@shared/types/errorCodes'
 
 const POINTER_FILENAME = 'storage-location.json'
 const DEFAULT_POINTER: StorageLocationPointer = { schemaVersion: 1, customRoot: null }
@@ -31,7 +32,7 @@ function isValidPointer(value: unknown): value is StorageLocationPointer {
 
 export function readStorageLocationPointer(): {
   pointer: StorageLocationPointer
-  fallbackReason: string | null
+  fallbackReason: AppError | null
 } {
   const path = pointerFilePath()
   if (!existsSync(path)) {
@@ -40,11 +41,11 @@ export function readStorageLocationPointer(): {
   try {
     const raw: unknown = JSON.parse(readFileSync(path, 'utf-8'))
     if (!isValidPointer(raw)) {
-      return { pointer: DEFAULT_POINTER, fallbackReason: 'The saved storage location file was invalid.' }
+      return { pointer: DEFAULT_POINTER, fallbackReason: appError('pointerInvalid') }
     }
     return { pointer: raw, fallbackReason: null }
   } catch {
-    return { pointer: DEFAULT_POINTER, fallbackReason: 'The saved storage location file could not be read.' }
+    return { pointer: DEFAULT_POINTER, fallbackReason: appError('pointerUnreadable') }
   }
 }
 
@@ -105,12 +106,12 @@ let activeRoot: string | null = null
 let activeRootRequiresExisting = false
 
 /** Lightweight, dismissible — set only when there's nothing concrete to retry (a corrupt/unreadable pointer file means we don't even know what the custom root was). One-shot: consumed by the first Settings-page status read. */
-let startupFallbackWarning: string | null = null
+let startupFallbackWarning: AppError | null = null
 
 export interface StorageRecoveryState {
   needed: boolean
-  /** Human-readable explanation, set together with `needed`. */
-  reason: string | null
+  /** Translatable explanation, set together with `needed`. */
+  reason: AppError | null
   /** The pointer's customRoot that couldn't be used, so the recovery UI can display/retry it. */
   unavailableCustomRoot: string | null
 }
@@ -148,7 +149,10 @@ export function resolveActiveStorageRoot(): void {
     // was, so this stays a lightweight, dismissible toast rather than a
     // full block (unlike the branch below, where the user CAN retry/reconnect).
     activeRoot = defaultRoot
-    startupFallbackWarning = `${fallbackReason} Using the default storage location instead.`
+    // Passed through as-is: both pointer-failure codes are self-contained
+    // sentences that already say the default location is being used, so
+    // translators control the whole message rather than a concatenation.
+    startupFallbackWarning = fallbackReason
     return
   }
 
@@ -167,7 +171,7 @@ export function resolveActiveStorageRoot(): void {
   activeRoot = defaultRoot
   recoveryState = {
     needed: true,
-    reason: `Your custom storage location ("${pointer.customRoot}") is no longer available (it may have been unplugged, unmounted, or removed).`,
+    reason: appError('recoveryUnavailable', { root: pointer.customRoot }),
     unavailableCustomRoot: pointer.customRoot
   }
 }
@@ -200,13 +204,13 @@ export function fallbackToDefaultStorageAfterOpenFailure(reason: string): boolea
   activeRootRequiresExisting = false
   recoveryState = {
     needed: true,
-    reason: `Your custom storage location ("${unavailableCustomRoot}") could not be opened: ${reason}`,
+    reason: appError('recoveryOpenFailed', { root: unavailableCustomRoot, message: reason }),
     unavailableCustomRoot
   }
   return true
 }
 
-export function consumeStartupFallbackWarning(): string | null {
+export function consumeStartupFallbackWarning(): AppError | null {
   const warning = startupFallbackWarning
   startupFallbackWarning = null
   return warning

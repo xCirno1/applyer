@@ -94,13 +94,7 @@ export function useStorageLocation(): UseStorageLocationResult {
     try {
       const result = await window.api.storageLocation.connectExisting(path)
       if (result.ok) {
-        toast.success('Connected to the existing storage location. Reloading Applyer…')
-        refreshStatus()
-        // The main process now serves a different database. Reload the
-        // renderer so every mounted store/page refetches from that dataset;
-        // otherwise Settings can switch successfully while the board keeps
-        // showing records cached from the previous connection.
-        window.setTimeout(() => window.location.reload(), 400)
+        toast.success('Storage location selected. Restarting Applyer…')
       } else {
         toast.error(result.error ?? 'Failed to connect to that storage location.')
       }

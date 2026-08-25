@@ -19,7 +19,7 @@ import { registerAppIpc } from './ipc/app'
 import { registerDataTransferIpc } from './ipc/dataTransfer'
 import { registerStorageLocationIpc } from './ipc/storageLocation'
 import { registerJobsBroadcastTarget } from './ipc/jobsBroadcast'
-import { resolveActiveStorageRoot } from './config/storageLocation'
+import { fallbackToDefaultStorageAfterOpenFailure, resolveActiveStorageRoot } from './config/storageLocation'
 import { startMcpServerIfStorageResolved, closeMcpSocketServer } from './storageLocation/bootGate'
 import { disposeAllSessions } from './terminal/ptyManager'
 import { applyProductionCsp } from './security'
@@ -48,9 +48,19 @@ function initializeApp(): void {
   try {
     initDatabase()
   } catch (err) {
-    appLogger.error(`Database initialization failed: ${String(err)}`)
-    app.quit()
-    return
+    closeDatabase()
+    if (!fallbackToDefaultStorageAfterOpenFailure(String(err))) {
+      appLogger.error(`Database initialization failed: ${String(err)}`)
+      app.quit()
+      return
+    }
+    try {
+      initDatabase()
+    } catch (fallbackErr) {
+      appLogger.error(`Default fallback database initialization failed: ${String(fallbackErr)}`)
+      app.quit()
+      return
+    }
   }
 
   reconcileOrphanedBlockedJobs()

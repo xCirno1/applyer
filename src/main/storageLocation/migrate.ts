@@ -8,6 +8,7 @@ import {
   statfsSync,
   statSync,
   copyFileSync,
+  cpSync,
   writeFileSync,
   unlinkSync
 } from 'fs'
@@ -242,11 +243,13 @@ async function runMigration(
   const canonicalDestination = canonicalPath(destinationRoot)
   const newDocumentsDir = join(canonicalDestination, 'documents')
   const newScreenshotsDir = join(canonicalDestination, 'screenshots')
+  const newLogsDir = join(canonicalDestination, 'logs')
   const destDbPath = join(canonicalDestination, 'applyer.db')
   let oldRoot = ''
   let oldDbPath = ''
   let oldDocumentsDir = ''
   let oldScreenshotsDir = ''
+  let oldLogsDir = ''
 
   // Copy + snapshot + commit all run under the storage write lock (see
   // storageWriteLock.ts): addDocument/deleteDocument/rewriteDocumentStorageMode
@@ -264,6 +267,7 @@ async function runMigration(
     oldDbPath = dbPath()
     oldDocumentsDir = documentsDir()
     oldScreenshotsDir = screenshotsDir()
+    oldLogsDir = logsDir()
 
     // Phase 1 — copy. Fully abortable: old location + pointer file untouched.
     try {
@@ -276,7 +280,13 @@ async function runMigration(
       onProgress({ phase: 'screenshots', percent: 100 })
 
       onProgress({ phase: 'logs', percent: 0 })
-      await fsPromises.cp(logsDir(), join(canonicalDestination, 'logs'), { recursive: true })
+      await fsPromises.cp(oldLogsDir, newLogsDir, { recursive: true })
+      // electron-log writes synchronously on the main thread. The async copy
+      // above can yield between files, so repeat it synchronously as the last
+      // yielding operation before the DB snapshot/root flip. No log call can
+      // interleave between this return and setActiveStorageRoot(), and all
+      // later writes resolve directly to newLogsDir.
+      cpSync(oldLogsDir, newLogsDir, { recursive: true, force: true })
       onProgress({ phase: 'logs', percent: 100 })
     } catch (err) {
       discardDestination(canonicalDestination)
@@ -337,16 +347,33 @@ async function runMigration(
       writeStorageLocationPointer({ schemaVersion: 1, customRoot: isMovingToDefault ? null : canonicalDestination })
       setActiveStorageRoot(canonicalDestination)
     } catch (err) {
+      let reopenedPrevious = false
       try {
         reopenAt(oldDbPath)
-        logActivity('error', 'Storage location change failed while committing the new location', { error: errorMessage(err) })
+        reopenedPrevious = true
       } catch (reopenErr) {
         appLogger.error(`Failed to reopen the database at the previous storage location after a failed move: ${errorMessage(reopenErr)}`)
       }
-      discardDestination(canonicalDestination)
+
+      if (reopenedPrevious) {
+        try {
+          logActivity('error', 'Storage location change failed while committing the new location', {
+            error: errorMessage(err)
+          })
+        } catch (logErr) {
+          appLogger.warn(`Could not record the failed storage-location commit: ${errorMessage(logErr)}`)
+        }
+        discardDestination(canonicalDestination)
+      } else {
+        appLogger.error(
+          `Preserving the complete storage-location copy at ${canonicalDestination} because the previous database could not be reopened.`
+        )
+      }
       return {
         ok: false,
-        error: 'Could not finish moving to the new location — your data is unchanged and Applyer is still using the previous location.'
+        error: reopenedPrevious
+          ? 'Could not finish moving to the new location — your data is unchanged and Applyer is still using the previous location.'
+          : `Could not finish moving or reopen the previous database. A complete copy was preserved at "${canonicalDestination}"; restart Applyer before continuing.`
       }
     }
 

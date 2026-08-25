@@ -3,7 +3,18 @@ import Database from 'better-sqlite3'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { migrate as runMigrations } from 'drizzle-orm/better-sqlite3/migrator'
 import { eq } from 'drizzle-orm'
-import { promises as fsPromises, mkdirSync, mkdtempSync, symlinkSync, unlinkSync, writeFileSync, readFileSync, existsSync, statfsSync } from 'fs'
+import {
+  appendFileSync,
+  promises as fsPromises,
+  mkdirSync,
+  mkdtempSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  statfsSync
+} from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { __resetElectronMock } from '../../../test/mocks/electron'
@@ -16,7 +27,8 @@ vi.mock('fs', async (importOriginal) => {
   return { ...actual, statfsSync: vi.fn(actual.statfsSync) }
 })
 import { resolveActiveStorageRoot, activeStorageRoot, readStorageLocationPointer } from '../config/storageLocation'
-import { documentsDir, screenshotsDir } from '../config/paths'
+import * as storageConfigModule from '../config/storageLocation'
+import { documentsDir, screenshotsDir, logsDir } from '../config/paths'
 import * as dbModule from '../db'
 import { documents, profile, jobs } from '../db/schema'
 import { addDocument, readDocumentBytes } from '../db/repositories/documentsRepository'
@@ -52,6 +64,7 @@ function makeEmptyTempDir(): string {
 }
 
 beforeEach(() => {
+  dbModule.closeDatabase()
   __resetElectronMock()
   resolveActiveStorageRoot()
 })
@@ -220,6 +233,30 @@ describe('migrateStorageLocation', () => {
     expect(() => dbModule.getDb().select().from(documents).all()).not.toThrow()
   })
 
+  it('preserves the verified destination when pointer persistence and fallback reopen both fail', async () => {
+    seedOldLocationDb()
+    const dest = makeEmptyTempDir()
+    const originalOpen = dbModule.openDatabaseAt
+    let openCalls = 0
+    const openSpy = vi.spyOn(dbModule, 'openDatabaseAt').mockImplementation((...args) => {
+      openCalls += 1
+      if (openCalls === 2) throw new Error('simulated fallback disappearance')
+      return originalOpen(...args)
+    })
+    const pointerSpy = vi.spyOn(storageConfigModule, 'writeStorageLocationPointer').mockImplementationOnce(() => {
+      throw new Error('simulated pointer failure')
+    })
+
+    const result = await migrateStorageLocation(dest)
+
+    expect(result).toEqual({ ok: false, error: expect.stringContaining('complete copy was preserved') })
+    expect(existsSync(join(dest, 'applyer.db'))).toBe(true)
+    expect(existsSync(join(dest, 'documents', 'doc1'))).toBe(true)
+
+    pointerSpy.mockRestore()
+    openSpy.mockRestore()
+  })
+
   it('rejects a second concurrent call while one is already running, without touching its data', async () => {
     seedOldLocationDb()
     const destA = makeEmptyTempDir()
@@ -303,6 +340,24 @@ describe('migrateStorageLocation', () => {
     expect(activeStorageRoot()).toBe(dest)
     expect(readDocumentBytes(addedDoc.id)?.toString('utf-8')).toBe('late upload')
     expect(existsSync(join(dest, 'documents', addedDoc.id))).toBe(true)
+  })
+
+  it('includes a log append that lands after the asynchronous log copy', async () => {
+    seedOldLocationDb()
+    const oldLogPath = join(logsDir(), 'race.log')
+    writeFileSync(oldLogPath, 'before\n')
+    const dest = makeEmptyTempDir()
+    const originalCp = fsPromises.cp.bind(fsPromises)
+    const cpSpy = vi.spyOn(fsPromises, 'cp').mockImplementation(async (...args) => {
+      await originalCp(...args)
+      if (args[0] === logsDir()) appendFileSync(oldLogPath, 'late\n')
+    })
+
+    const result = await migrateStorageLocation(dest)
+
+    expect(result).toEqual({ ok: true })
+    expect(readFileSync(join(dest, 'logs', 'race.log'), 'utf-8')).toBe('before\nlate\n')
+    cpSpy.mockRestore()
   })
 
   it('rewrites jobs.screenshot_path alongside documents.storedPath', async () => {

@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { accessSync, constants, existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { isAbsolute, join } from 'path'
+import Database from 'better-sqlite3'
 import type { StorageLocationPointer } from '@shared/types/storageLocation'
 
 const POINTER_FILENAME = 'storage-location.json'
@@ -70,13 +71,38 @@ export function writeStorageLocationPointer(pointer: StorageLocationPointer): vo
 export function isCustomRootAvailable(customRoot: string): boolean {
   try {
     accessSync(customRoot, constants.R_OK | constants.W_OK)
-    return existsSync(join(customRoot, 'applyer.db'))
+    const databasePath = join(customRoot, 'applyer.db')
+    if (!existsSync(databasePath)) return false
+
+    // Identity check only: never migrate or otherwise modify a database just
+    // because a folder happened to contain a file named applyer.db. Every
+    // Applyer database, including the oldest supported schema, has these core
+    // tables plus Drizzle's migration ledger.
+    const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true })
+    try {
+      const integrity = sqlite.pragma('quick_check') as { quick_check: string }[]
+      if (integrity[0]?.quick_check !== 'ok') return false
+      const rows = sqlite
+        .prepare(
+          `SELECT name FROM sqlite_master
+           WHERE type = 'table' AND name IN
+             ('__drizzle_migrations', 'activity_log', 'app_settings', 'documents', 'jobs', 'profile')`
+        )
+        .all() as { name: string }[]
+      const names = new Set(rows.map((row) => row.name))
+      return ['__drizzle_migrations', 'activity_log', 'app_settings', 'documents', 'jobs', 'profile'].every(
+        (name) => names.has(name)
+      )
+    } finally {
+      sqlite.close()
+    }
   } catch {
     return false
   }
 }
 
 let activeRoot: string | null = null
+let activeRootRequiresExisting = false
 
 /** Lightweight, dismissible — set only when there's nothing concrete to retry (a corrupt/unreadable pointer file means we don't even know what the custom root was). One-shot: consumed by the first Settings-page status read. */
 let startupFallbackWarning: string | null = null
@@ -114,6 +140,7 @@ export function resolveActiveStorageRoot(): void {
   const defaultRoot = defaultStorageRoot()
   startupFallbackWarning = null
   recoveryState = NO_RECOVERY_NEEDED
+  activeRootRequiresExisting = false
   const { pointer, fallbackReason } = readStorageLocationPointer()
 
   if (fallbackReason) {
@@ -133,6 +160,7 @@ export function resolveActiveStorageRoot(): void {
 
   if (isCustomRootAvailable(pointer.customRoot)) {
     activeRoot = pointer.customRoot
+    activeRootRequiresExisting = true
     return
   }
 
@@ -153,6 +181,29 @@ export function activeStorageRoot(): string {
 /** Migration-only setter — flips every location-aware path helper immediately. */
 export function setActiveStorageRoot(root: string): void {
   activeRoot = root
+  activeRootRequiresExisting = root !== defaultStorageRoot()
+}
+
+/** True only when startup selected a configured custom root; it must never be silently created. */
+export function activeStorageRootRequiresExistingDatabase(): boolean {
+  return activeRootRequiresExisting
+}
+
+/**
+ * Converts a custom-root open race into the same explicit recovery state as
+ * an unavailable root discovered during the earlier pointer check.
+ */
+export function fallbackToDefaultStorageAfterOpenFailure(reason: string): boolean {
+  if (!activeRootRequiresExisting || !activeRoot) return false
+  const unavailableCustomRoot = activeRoot
+  activeRoot = defaultStorageRoot()
+  activeRootRequiresExisting = false
+  recoveryState = {
+    needed: true,
+    reason: `Your custom storage location ("${unavailableCustomRoot}") could not be opened: ${reason}`,
+    unavailableCustomRoot
+  }
+  return true
 }
 
 export function consumeStartupFallbackWarning(): string | null {

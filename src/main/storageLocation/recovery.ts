@@ -121,22 +121,35 @@ export function resolveCustomStorageRoot(): Promise<StorageLocationMigrationResu
 }
 
 /**
- * Switches to a folder that already contains Applyer data. Unlike migration,
- * this deliberately does not copy or merge the currently-active dataset.
+ * Selects a folder that already contains Applyer data. Unlike migration,
+ * this deliberately does not copy or merge the currently-active dataset;
+ * the IPC layer restarts the process to make the selected database active.
  */
-export function connectToExistingLocation(root: string): Promise<StorageLocationMigrationResult> {
-  return withStorageWriteLock(() => {
-    const previousRoot = activeStorageRoot()
-    const result = switchToExistingRoot(root, true)
-    if (!result.ok) return result
+export function connectToExistingLocation(root: string): StorageLocationMigrationResult {
+  if (!isAbsolute(root) || root.trim() === '') {
+    return { ok: false, error: 'That is not a valid folder path.' }
+  }
+  if (!isCustomRootAvailable(root)) {
+    return { ok: false, error: `No valid Applyer database found at "${root}".` }
+  }
 
-    clearStorageRecoveryState()
-    logResolutionBestEffort('Connected to an existing Applyer storage location', {
-      root: activeStorageRoot(),
-      previousRoot
-    })
-    return { ok: true }
+  const targetRoot = canonicalPath(root)
+  const isDefault = targetRoot === canonicalPath(defaultStorageRoot())
+  try {
+    // Do not live-swap getDb()/activeStorageRoot() here. Browser and network
+    // work begun against the old dataset may still be awaiting; the IPC
+    // handler relaunches the whole main process after this durable pointer
+    // write so no continuation can resume against the selected database.
+    writeStorageLocationPointer({ schemaVersion: 1, customRoot: isDefault ? null : targetRoot })
+  } catch (err) {
+    return { ok: false, error: `Could not save the selected storage location: ${errorMessage(err)}` }
+  }
+
+  logResolutionBestEffort('Selected an existing Applyer storage location; restarting to connect', {
+    root: targetRoot,
+    previousRoot: activeStorageRoot()
   })
+  return { ok: true }
 }
 
 /**

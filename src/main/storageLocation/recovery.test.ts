@@ -124,8 +124,9 @@ describe('connectToExistingLocation', () => {
     dbModule.openDatabaseAt(dbModule.dbPath(), { runMigrations: false })
   }
 
-  it('connects to an existing Applyer folder and persists it', async () => {
+  it('persists an existing Applyer folder without live-swapping the active database', async () => {
     openDefaultDatabase()
+    const previousRoot = activeStorageRoot()
     const existingRoot = join(tmpdir(), `applyer-existing-${process.pid}-${Date.now()}`)
     mkdirSync(existingRoot, { recursive: true })
     createMigratedDbFile(join(existingRoot, 'applyer.db'))
@@ -133,7 +134,9 @@ describe('connectToExistingLocation', () => {
     const result = await connectToExistingLocation(existingRoot)
 
     expect(result).toEqual({ ok: true })
-    expect(activeStorageRoot()).toBe(existingRoot)
+    // The IPC handler restarts the main process after this result. Until
+    // then, continuations begun against the old dataset must stay on it.
+    expect(activeStorageRoot()).toBe(previousRoot)
     expect(readStorageLocationPointer().pointer.customRoot).toBe(existingRoot)
     expect(() => dbModule.getDb().select().from(profile).all()).not.toThrow()
 
@@ -153,23 +156,26 @@ describe('connectToExistingLocation', () => {
     rmSync(emptyRoot, { recursive: true, force: true })
   })
 
-  it('rolls back to the previous connection when the target cannot be opened', async () => {
+  it('rejects an unrelated SQLite database without modifying it', async () => {
     openDefaultDatabase()
     const previousRoot = activeStorageRoot()
-    const existingRoot = join(tmpdir(), `applyer-existing-open-failure-${process.pid}-${Date.now()}`)
+    const existingRoot = join(tmpdir(), `applyer-existing-unrelated-${process.pid}-${Date.now()}`)
     mkdirSync(existingRoot, { recursive: true })
-    createMigratedDbFile(join(existingRoot, 'applyer.db'))
-    const openSpy = vi.spyOn(dbModule, 'openDatabaseAt').mockImplementationOnce(() => {
-      throw new Error('simulated open failure')
-    })
+    const unrelatedPath = join(existingRoot, 'applyer.db')
+    const sqlite = new Database(unrelatedPath)
+    sqlite.exec('CREATE TABLE unrelated (value TEXT)')
+    sqlite.close()
 
     const result = await connectToExistingLocation(existingRoot)
 
     expect(result).toEqual({ ok: false, error: expect.any(String) })
     expect(activeStorageRoot()).toBe(previousRoot)
     expect(() => dbModule.getDb().select().from(profile).all()).not.toThrow()
+    const verification = new Database(unrelatedPath, { readonly: true })
+    expect(verification.prepare("SELECT name FROM sqlite_master WHERE name = 'unrelated'").get()).toBeTruthy()
+    expect(verification.prepare("SELECT name FROM sqlite_master WHERE name = 'app_settings'").get()).toBeUndefined()
+    verification.close()
 
-    openSpy.mockRestore()
     rmSync(existingRoot, { recursive: true, force: true })
   })
 

@@ -1,4 +1,4 @@
-import { ipcMain, dialog } from 'electron'
+import { app, ipcMain, dialog } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
 import type {
   StorageLocationStatus,
@@ -18,7 +18,7 @@ import {
   resolveCustomStorageRoot,
   useDefaultStorageLocation
 } from '../storageLocation/recovery'
-import { startMcpServerIfStorageResolved } from '../storageLocation/bootGate'
+import { closeMcpSocketServer, startMcpServerIfStorageResolved } from '../storageLocation/bootGate'
 import { appLogger } from '../logger'
 import { broadcastStorageLocationProgress } from './jobsBroadcast'
 
@@ -87,7 +87,21 @@ export function registerStorageLocationIpc(): void {
       }
       try {
         const result = await connectToExistingLocation(path)
-        if (result.ok) startMcpServerIfStorageResolved()
+        if (result.ok) {
+          // Stop accepting new agent work immediately. Relaunching the main
+          // process, rather than swapping its singleton DB live, terminates
+          // every old-dataset browser/network continuation before startup
+          // opens the selected location.
+          closeMcpSocketServer()
+          setTimeout(() => {
+            try {
+              app.relaunch()
+              app.quit()
+            } catch (err) {
+              appLogger.error(`Could not relaunch after selecting a storage location: ${errorMessage(err)}`)
+            }
+          }, 100)
+        }
         return result
       } catch (err) {
         const message = errorMessage(err)

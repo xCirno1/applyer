@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'fs'
+import { existsSync, mkdtempSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { app } from 'electron'
+import Database from 'better-sqlite3'
+import * as dbModule from '../db'
 import { __resetElectronMock } from '../../../test/mocks/electron'
 import {
   pointerFilePath,
@@ -10,12 +12,22 @@ import {
   writeStorageLocationPointer,
   resolveActiveStorageRoot,
   activeStorageRoot,
+  fallbackToDefaultStorageAfterOpenFailure,
   consumeStartupFallbackWarning,
   getStorageRecoveryState,
   clearStorageRecoveryState
 } from './storageLocation'
 
+function createApplyerDatabaseIdentity(path: string): void {
+  const sqlite = new Database(path)
+  for (const table of ['__drizzle_migrations', 'activity_log', 'app_settings', 'documents', 'jobs', 'profile']) {
+    sqlite.exec(`CREATE TABLE "${table}" (id INTEGER)`)
+  }
+  sqlite.close()
+}
+
 beforeEach(() => {
+  dbModule.closeDatabase()
   __resetElectronMock()
 })
 
@@ -69,11 +81,51 @@ describe('resolveActiveStorageRoot', () => {
 
   it('uses a valid, writable custom root that actually holds applyer.db', () => {
     const customRoot = mkdtempSync(join(tmpdir(), 'applyer-custom-root-'))
-    writeFileSync(join(customRoot, 'applyer.db'), '')
+    createApplyerDatabaseIdentity(join(customRoot, 'applyer.db'))
     writeStorageLocationPointer({ schemaVersion: 1, customRoot })
     resolveActiveStorageRoot()
     expect(activeStorageRoot()).toBe(customRoot)
     expect(consumeStartupFallbackWarning()).toBeNull()
+    rmSync(customRoot, { recursive: true, force: true })
+  })
+
+  it.each([
+    ['an empty file', (path: string) => writeFileSync(path, '')],
+    [
+      'an unrelated SQLite database',
+      (path: string) => {
+        const sqlite = new Database(path)
+        sqlite.exec('CREATE TABLE unrelated (id INTEGER)')
+        sqlite.close()
+      }
+    ],
+    ['non-SQLite contents', (path: string) => writeFileSync(path, 'not a database')]
+  ])('requests recovery instead of accepting %s named applyer.db', (_label, createFile) => {
+    const customRoot = mkdtempSync(join(tmpdir(), 'applyer-invalid-custom-root-'))
+    createFile(join(customRoot, 'applyer.db'))
+    writeStorageLocationPointer({ schemaVersion: 1, customRoot })
+
+    resolveActiveStorageRoot()
+
+    expect(activeStorageRoot()).toBe(app.getPath('userData'))
+    expect(getStorageRecoveryState()).toMatchObject({ needed: true, unavailableCustomRoot: customRoot })
+    rmSync(customRoot, { recursive: true, force: true })
+  })
+
+  it('does not recreate a configured custom database that disappears after resolution', () => {
+    const customRoot = mkdtempSync(join(tmpdir(), 'applyer-raced-custom-root-'))
+    const customDbPath = join(customRoot, 'applyer.db')
+    createApplyerDatabaseIdentity(customDbPath)
+    writeStorageLocationPointer({ schemaVersion: 1, customRoot })
+    resolveActiveStorageRoot()
+    unlinkSync(customDbPath)
+
+    expect(() => dbModule.initDatabase()).toThrow()
+    expect(existsSync(customDbPath)).toBe(false)
+    expect(fallbackToDefaultStorageAfterOpenFailure('database disappeared')).toBe(true)
+    expect(activeStorageRoot()).toBe(app.getPath('userData'))
+    expect(getStorageRecoveryState()).toMatchObject({ needed: true, unavailableCustomRoot: customRoot })
+    expect(() => dbModule.initDatabase()).not.toThrow()
     rmSync(customRoot, { recursive: true, force: true })
   })
 

@@ -1,11 +1,12 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Tooltip from '../ui/Tooltip'
 
 export type RailPage = 'workspace' | 'indexedJobs'
 
-const ITEMS: { page: RailPage; label: string; icon: (props: { className?: string }) => ReactElement }[] = [
-  { page: 'workspace', label: 'Job Board', icon: BoardIcon },
-  { page: 'indexedJobs', label: 'Indexed Jobs', icon: SearchIcon }
+const ITEMS: { page: RailPage; labelKey: 'rail.jobBoard' | 'rail.indexedJobs'; icon: (props: { className?: string }) => ReactElement }[] = [
+  { page: 'workspace', labelKey: 'rail.jobBoard', icon: BoardIcon },
+  { page: 'indexedJobs', labelKey: 'rail.indexedJobs', icon: SearchIcon }
 ]
 
 /**
@@ -20,10 +21,13 @@ export default function IconRail({
   active: RailPage
   onSelect: (page: RailPage) => void
 }): ReactElement {
+  const { t } = useTranslation('workspace')
+
   return (
     <nav className="flex w-10 shrink-0 flex-col items-center gap-0.5 border-r border-border bg-canvas py-2">
-      {ITEMS.map(({ page, label, icon: Icon }) => {
+      {ITEMS.map(({ page, labelKey, icon: Icon }) => {
         const isActive = active === page
+        const label = t(labelKey)
         return (
           <Tooltip key={page} label={label}>
             <button

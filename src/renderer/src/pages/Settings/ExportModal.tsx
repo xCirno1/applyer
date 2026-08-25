@@ -1,10 +1,12 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import Checkbox from '../../components/ui/Checkbox'
 import Select from '../../components/ui/Select'
 import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import { formatBytes } from '../../lib/formatBytes'
 import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
 import type { ExportSelection, ExportDomain, ExportSizes, CsvTable } from '@shared/types/dataTransfer'
@@ -19,7 +21,9 @@ const DOMAIN_LABELS: Record<ExportDomain, { label: string; hint: string }> = {
 const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'profile', 'settings']
 
 export default function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }): ReactElement | null {
+  const { t } = useTranslation('settings')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
   const [format, setFormat] = useState<'json' | 'csv'>('json')
   const [selection, setSelection] = useState<ExportSelection>(allDomainsSelected())
   const [csvTable, setCsvTable] = useState<CsvTable>('jobs')
@@ -54,11 +58,20 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
 
   const handleExport = async (): Promise<void> => {
     setExporting(true)
-    const result = format === 'json' ? await window.api.data.exportJson(selection) : await window.api.data.exportCsv(csvTable)
+    const result =
+      format === 'json'
+        ? await window.api.data.exportJson(selection, {
+            title: t('data.exportDialogTitle'),
+            filterName: 'JSON'
+          })
+        : await window.api.data.exportCsv(csvTable, {
+            title: t('data.exportCsvDialogTitle'),
+            filterName: 'CSV'
+          })
     setExporting(false)
     if (result.canceled) return
     if (!result.ok) {
-      toast.error(result.error ?? 'Export failed.')
+      toast.error(result.error ? errorMessage(result.error) : t('data.exportFailed'))
       return
     }
     toast.success(`Exported to ${result.filePath}`)

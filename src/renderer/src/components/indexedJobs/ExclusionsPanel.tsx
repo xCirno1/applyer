@@ -1,18 +1,16 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
 import TextField from '../ui/TextField'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Tag from '../ui/Tag'
 import Skeleton from '../ui/Skeleton'
 import { useToast } from '../ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
+import { useFormatters } from '../../i18n/format'
 import type { ExclusionRecord } from '@shared/types/exclusion'
 
 const PAGE_SIZE = 20
-
-function formatDate(iso: string): string {
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleDateString()
-}
 
 /**
  * URLs the search index/agent will never surface or queue again — lives on
@@ -29,7 +27,10 @@ export default function ExclusionsPanel(): ReactElement {
   const [adding, setAdding] = useState(false)
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null)
   const [removing, setRemoving] = useState(false)
+  const { t } = useTranslation('indexedJobs')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
+  const format = useFormatters()
 
   const load = async (offset: number): Promise<void> => {
     setLoading(true)
@@ -67,10 +68,10 @@ export default function ExclusionsPanel(): ReactElement {
     if (result.ok) {
       setUrl('')
       setReason('')
-      toast.success('Added to the exclusion list.')
+      toast.success(t('exclusions.added'))
       load(0)
     } else {
-      toast.error(result.error ?? 'Failed to add exclusion.')
+      toast.error(result.error ? errorMessage(result.error) : t('exclusions.addFailed'))
     }
   }
 
@@ -80,23 +81,22 @@ export default function ExclusionsPanel(): ReactElement {
     await window.api.exclusions.remove(pendingRemoveId)
     setRemoving(false)
     setExclusions((prev) => prev.filter((e) => e.id !== pendingRemoveId))
-    setTotal((t) => Math.max(0, t - 1))
+    setTotal((prevTotal) => Math.max(0, prevTotal - 1))
     setPendingRemoveId(null)
-    toast.success('Removed from the exclusion list — it can be found by search and queued again.')
+    toast.success(t('exclusions.removed'))
   }
 
   return (
     <div className="flex flex-col gap-4 p-3">
       <p className="text-[13px] text-text-muted">
-        URLs on this list are never returned by a job search and can't be queued, whether you or the agent tries to.
-        Exclude a job from its detail view on the board, or add one directly here.
+        {t('exclusions.intro')}
       </p>
 
       <div className="flex items-end gap-2">
         <div className="flex-1">
           <TextField
-            label="Job posting URL"
-            placeholder="https://example.com/careers/123"
+            label={t('exclusions.urlLabel')}
+            placeholder={t('exclusions.urlPlaceholder')}
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={(e) => {
@@ -106,8 +106,8 @@ export default function ExclusionsPanel(): ReactElement {
         </div>
         <div className="flex-1">
           <TextField
-            label="Reason (optional)"
-            placeholder="e.g. not remote"
+            label={t('exclusions.reasonLabel')}
+            placeholder={t('exclusions.reasonPlaceholder')}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             onKeyDown={(e) => {
@@ -116,7 +116,7 @@ export default function ExclusionsPanel(): ReactElement {
           />
         </div>
         <Button onClick={handleAdd} loading={adding} disabled={!url.trim()}>
-          Add
+          {t('exclusions.add')}
         </Button>
       </div>
 
@@ -129,7 +129,7 @@ export default function ExclusionsPanel(): ReactElement {
           </>
         )}
         {loadedOnce && exclusions.length === 0 && (
-          <p className="p-2 text-[12px] text-text-faint">Nothing excluded yet.</p>
+          <p className="p-2 text-[12px] text-text-faint">{t('exclusions.empty')}</p>
         )}
         {exclusions.map((e) => (
           <div
@@ -141,25 +141,25 @@ export default function ExclusionsPanel(): ReactElement {
                 <span className="truncate text-text" title={e.url}>
                   {e.title ? `${e.title}${e.company ? ` @ ${e.company}` : ''}` : e.url}
                 </span>
-                <Tag label={e.excludedBy === 'agent' ? 'agent' : 'you'} tone="neutral" />
+                <Tag label={e.excludedBy === 'agent' ? t('exclusions.byAgent') : t('exclusions.byYou')} tone="neutral" />
               </div>
               <div className="flex items-center gap-1.5 text-[11px] text-text-faint">
                 <span className="truncate" title={e.url}>
                   {e.url}
                 </span>
                 {e.reason && <span>· {e.reason}</span>}
-                <span className="shrink-0">· {formatDate(e.createdAt)}</span>
+                <span className="shrink-0">· {format.date(e.createdAt)}</span>
               </div>
             </div>
             <Button size="sm" variant="ghost" onClick={() => setPendingRemoveId(e.id)}>
-              Remove
+              {t('exclusions.remove')}
             </Button>
           </div>
         ))}
         {loadedOnce && exclusions.length < total && (
           <div className="mt-1 flex justify-center">
             <Button size="sm" variant="ghost" loading={loading} onClick={() => load(exclusions.length)}>
-              Load more
+              {t('actions.loadMore', { ns: 'common' })}
             </Button>
           </div>
         )}
@@ -167,9 +167,9 @@ export default function ExclusionsPanel(): ReactElement {
 
       <ConfirmDialog
         open={pendingRemoveId !== null}
-        title="Remove exclusion"
-        message="This job posting will be searchable and queueable again."
-        confirmLabel="Remove"
+        title={t('exclusions.removeTitle')}
+        message={t('exclusions.removeMessage')}
+        confirmLabel={t('exclusions.remove')}
         loading={removing}
         onConfirm={handleRemove}
         onCancel={() => setPendingRemoveId(null)}

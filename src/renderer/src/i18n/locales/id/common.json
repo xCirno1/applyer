@@ -1,0 +1,38 @@
+{
+  "actions": {
+    "cancel": "Batal",
+    "confirm": "Konfirmasi",
+    "save": "Simpan",
+    "saving": "Menyimpan…",
+    "close": "Tutup",
+    "retry": "Coba lagi",
+    "remove": "Hapus",
+    "add": "Tambah",
+    "loadMore": "Muat lagi",
+    "copy": "Salin",
+    "copied": "Tersalin",
+    "back": "Kembali",
+    "next": "Lanjut",
+    "skip": "Lewati",
+    "browse": "Telusuri…"
+  },
+  "dropdown": {
+    "placeholder": "Pilih…"
+  },
+  "pagination": {
+    "label": "Penomoran halaman",
+    "previous": "Halaman sebelumnya",
+    "next": "Halaman berikutnya"
+  },
+  "fileDrop": {
+    "hint": "Klik atau seret berkas ke sini"
+  },
+  "states": {
+    "loading": "Memuat…",
+    "empty": "Belum ada apa-apa di sini.",
+    "none": "Tidak ada"
+  },
+  "units": {
+    "characters": "{{used}} / {{max}} karakter"
+  }
+}

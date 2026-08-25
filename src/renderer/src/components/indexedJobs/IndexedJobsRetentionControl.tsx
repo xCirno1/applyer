@@ -1,18 +1,14 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Dropdown from '../ui/Dropdown'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Tooltip from '../ui/Tooltip'
 import { useToast } from '../ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import type { IndexedJobsRetention } from '@shared/types/indexedJob'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
 
-const OPTIONS = [
-  { value: '7', label: '7 days' },
-  { value: '14', label: '14 days' },
-  { value: '30', label: '30 days' },
-  { value: '90', label: '90 days' },
-  { value: 'unlimited', label: 'Unlimited' }
-]
+const DAY_OPTIONS = [7, 14, 30, 90] as const
 
 function toRetention(value: string): IndexedJobsRetention {
   return value === 'unlimited' ? 'unlimited' : Number.parseInt(value, 10)
@@ -33,7 +29,9 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
   const [loaded, setLoaded] = useState(false)
   const [pending, setPending] = useState<IndexedJobsRetention | null>(null)
   const [saving, setSaving] = useState(false)
+  const { t } = useTranslation('indexedJobs')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
 
   useEffect(() => {
     window.api.indexedJobs.getRetention().then((retention) => {
@@ -52,24 +50,29 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
       setCurrent(pending)
       toast.success(
         result.deletedCount
-          ? `Retention updated — ${result.deletedCount} indexed job${result.deletedCount === 1 ? '' : 's'} older than the window were deleted.`
-          : 'Retention updated.'
+          ? t('retention.updatedDeleted', { count: result.deletedCount })
+          : t('retention.updated')
       )
     } else {
-      toast.error(result.error ?? 'Failed to update retention.')
+      toast.error(result.error ? errorMessage(result.error) : t('retention.failed'))
     }
   }
 
+  const options = [
+    ...DAY_OPTIONS.map((days) => ({ value: String(days), label: t('retention.days', { count: days }) })),
+    { value: 'unlimited', label: t('retention.unlimited') }
+  ]
+
   return (
     <div className={`flex items-center gap-1.5 ${className}`}>
-      <Tooltip label="How long indexed jobs are kept before being pruned automatically.">
-        <span className="text-[11px] text-text-faint">Keep for</span>
+      <Tooltip label={t('retention.tooltip')}>
+        <span className="text-[11px] text-text-faint">{t('retention.keepFor')}</span>
       </Tooltip>
       <Dropdown
         size="sm"
         className="w-28"
-        ariaLabel="Indexed job retention"
-        options={OPTIONS}
+        ariaLabel={t('retention.ariaLabel')}
+        options={options}
         value={toValue(current)}
         onChange={(v) => setPending(toRetention(v))}
         disabled={!loaded || saving}
@@ -77,13 +80,13 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
 
       <ConfirmDialog
         open={pending !== null}
-        title="Change indexed jobs retention"
+        title={t('retention.title')}
         message={
           pending === 'unlimited'
-            ? 'No indexed jobs will be deleted — history will be kept indefinitely.'
-            : `Indexed jobs last seen more than ${pending} days ago will be deleted now.`
+            ? t('retention.messageUnlimited')
+            : t('retention.messageDays', { count: pending ?? 0 })
         }
-        confirmLabel="Change"
+        confirmLabel={t('retention.confirm')}
         loading={saving}
         onConfirm={handleConfirm}
         onCancel={() => setPending(null)}

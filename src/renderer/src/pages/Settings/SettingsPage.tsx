@@ -1,25 +1,30 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import ProfileSection from './ProfileSection'
 import DocumentsSection from './DocumentsSection'
 import StorageSection from './StorageSection'
 import BrowserSection from './BrowserSection'
 import AgentSection from './AgentSection'
 import AppearanceSection from './AppearanceSection'
+import LanguageSection from './LanguageSection'
 import ShortcutsSection from './ShortcutsSection'
 import DataSection from './DataSection'
 
+// Labels come from the `settings.nav.*` catalog keyed by id, so this list
+// only declares which sections exist and in what order.
 const SECTIONS = [
-  { id: 'profile', label: 'Profile' },
-  { id: 'documents', label: 'Documents' },
-  { id: 'storage', label: 'Storage' },
-  { id: 'browser', label: 'Browser' },
-  { id: 'agent', label: 'Agent' },
-  { id: 'appearance', label: 'Appearance' },
-  { id: 'shortcuts', label: 'Shortcuts' },
-  { id: 'data', label: 'Data' }
+  'profile',
+  'documents',
+  'storage',
+  'browser',
+  'agent',
+  'appearance',
+  'language',
+  'shortcuts',
+  'data'
 ] as const
 
-export type SectionId = (typeof SECTIONS)[number]['id']
+export type SectionId = (typeof SECTIONS)[number]
 
 export default function SettingsPage({
   initialSection = 'profile',
@@ -30,20 +35,21 @@ export default function SettingsPage({
   onOpenExport: () => void
   onOpenImport: () => void
 }): ReactElement {
+  const { t } = useTranslation('settings')
   const [section, setSection] = useState<SectionId>(initialSection)
 
   return (
     <div className="flex h-full bg-canvas-inset">
       <nav className="flex w-40 shrink-0 flex-col gap-0.5 border-r border-border-soft bg-canvas p-2">
-        {SECTIONS.map((s) => (
+        {SECTIONS.map((id) => (
           <button
-            key={s.id}
-            onClick={() => setSection(s.id)}
+            key={id}
+            onClick={() => setSection(id)}
             className={`h-7 cursor-pointer px-2 text-left text-[12px] font-medium ${
-              section === s.id ? 'bg-canvas-soft text-text' : 'text-text-muted hover:text-text'
+              section === id ? 'bg-canvas-soft text-text' : 'text-text-muted hover:text-text'
             }`}
           >
-            {s.label}
+            {t(`nav.${id}`)}
           </button>
         ))}
       </nav>
@@ -54,6 +60,7 @@ export default function SettingsPage({
         {section === 'browser' && <BrowserSection />}
         {section === 'agent' && <AgentSection />}
         {section === 'appearance' && <AppearanceSection />}
+        {section === 'language' && <LanguageSection />}
         {section === 'shortcuts' && <ShortcutsSection />}
         {section === 'data' && <DataSection onOpenExport={onOpenExport} onOpenImport={onOpenImport} />}
       </div>

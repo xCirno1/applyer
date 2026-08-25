@@ -1,0 +1,38 @@
+{
+  "actions": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "saving": "Saving…",
+    "close": "Close",
+    "retry": "Retry",
+    "remove": "Remove",
+    "add": "Add",
+    "loadMore": "Load more",
+    "copy": "Copy",
+    "copied": "Copied",
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "browse": "Browse…"
+  },
+  "dropdown": {
+    "placeholder": "Select…"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous page",
+    "next": "Next page"
+  },
+  "fileDrop": {
+    "hint": "Click or drag a file here"
+  },
+  "states": {
+    "loading": "Loading…",
+    "empty": "Nothing here yet.",
+    "none": "None"
+  },
+  "units": {
+    "characters": "{{used}} / {{max}} characters"
+  }
+}

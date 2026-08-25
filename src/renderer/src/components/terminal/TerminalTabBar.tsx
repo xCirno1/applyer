@@ -1,4 +1,5 @@
 import { useRef, useState, type DragEvent, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { TerminalTab } from './useTerminalTabs'
 import ContextMenu, { type ContextMenuState } from '../ui/ContextMenu'
 
@@ -33,6 +34,7 @@ export default function TerminalTabBar({
   onCommitRename: () => void
   onCancelRename: () => void
 }): ReactElement {
+  const { t: translate } = useTranslation('workspace')
   const [draggingId, setDraggingId] = useState<string | null>(null)
   const [dragOverId, setDragOverId] = useState<string | null>(null)
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null)
@@ -121,7 +123,7 @@ export default function TerminalTabBar({
             setMenuState({
               x: e.clientX,
               y: e.clientY,
-              items: [{ type: 'action', key: 'rename', label: 'Rename', onSelect: () => onStartRename(t) }]
+              items: [{ type: 'action', key: 'rename', label: translate('terminal.rename'), onSelect: () => onStartRename(t) }]
             })
           }}
           className={`group flex h-full shrink-0 cursor-pointer items-center gap-1 border-r border-border-soft border-l-2 px-2 text-[11px] ${
@@ -133,7 +135,7 @@ export default function TerminalTabBar({
           {renamingId === t.id ? (
             <input
               autoFocus
-              aria-label={`Rename ${t.title}`}
+              aria-label={translate('terminal.renameLabel', { title: t.title })}
               value={draftTitle}
               onChange={(e) => onDraftTitleChange(e.target.value)}
               onBlur={onCommitRename}
@@ -154,7 +156,7 @@ export default function TerminalTabBar({
               e.stopPropagation()
               onClose(t.id)
             }}
-            aria-label={`Close ${t.title}`}
+            aria-label={translate('terminal.closeLabel', { title: t.title })}
             className="flex h-3.5 w-3.5 shrink-0 cursor-pointer items-center justify-center text-text-faint opacity-0 hover:text-text group-hover:opacity-100"
           >
             <CloseIcon />
@@ -165,8 +167,8 @@ export default function TerminalTabBar({
         type="button"
         onClick={onAdd}
         disabled={atMax}
-        title={atMax ? `You can have at most ${tabs.length} terminals open` : 'New terminal'}
-        aria-label="New terminal"
+        title={atMax ? translate('terminal.atMax', { count: tabs.length }) : translate('terminal.new')}
+        aria-label={translate('terminal.new')}
         className="flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center text-text-faint hover:text-text disabled:cursor-not-allowed disabled:opacity-40"
       >
         <PlusIcon />

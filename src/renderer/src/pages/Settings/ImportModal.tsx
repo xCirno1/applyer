@@ -1,8 +1,10 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import Checkbox from '../../components/ui/Checkbox'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import { useJobsStore } from '../../state/jobsStore'
 import type { ExportBundle, ExportDomain, ExportSelection, ImportDomainCounts } from '@shared/types/dataTransfer'
 
@@ -28,7 +30,9 @@ interface LoadedFile {
 }
 
 export default function ImportModal({ open, onClose }: { open: boolean; onClose: () => void }): ReactElement | null {
+  const { t } = useTranslation('settings')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
   const fetchAllColumns = useJobsStore((s) => s.fetchAllColumns)
   const [picking, setPicking] = useState(false)
   const [pickError, setPickError] = useState<string | null>(null)
@@ -52,11 +56,14 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const handlePickFile = async (): Promise<void> => {
     setPicking(true)
     setPickError(null)
-    const result = await window.api.data.pickImportFile()
+    const result = await window.api.data.pickImportFile({
+      title: t('data.importDialogTitle'),
+      filterName: 'JSON'
+    })
     setPicking(false)
     if (result.canceled) return
     if (!result.ok || !result.bundle) {
-      setPickError(result.error ?? 'Could not read that file.')
+      setPickError(result.error ? errorMessage(result.error) : t('data.readFailed'))
       return
     }
     const counts = result.counts ?? {}
@@ -82,7 +89,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
     const result = await window.api.data.import(file.bundle, selection)
     setImporting(false)
     if (!result.ok || !result.summary) {
-      toast.error(result.error ?? 'Import failed.')
+      toast.error(result.error ? errorMessage(result.error) : t('data.importFailed'))
       return
     }
     const parts: string[] = []

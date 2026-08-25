@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface FileDropProps {
   label: string
@@ -7,6 +8,7 @@ interface FileDropProps {
 }
 
 export default function FileDrop({ label, accept, onFile }: FileDropProps): ReactElement {
+  const { t } = useTranslation()
   const [dragActive, setDragActive] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -29,7 +31,7 @@ export default function FileDrop({ label, accept, onFile }: FileDropProps): Reac
       }`}
     >
       <span className="text-[12px] text-text-muted">{label}</span>
-      <span className="text-[11px] text-text-faint">Click or drag a file here</span>
+      <span className="text-[11px] text-text-faint">{t('fileDrop.hint')}</span>
       <input
         ref={inputRef}
         type="file"

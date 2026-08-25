@@ -1,5 +1,6 @@
 import { app, ipcMain, dialog } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
+import type { DialogLabels } from '@shared/types/ipcEvents'
 import type {
   StorageLocationStatus,
   StorageLocationValidation,
@@ -21,6 +22,7 @@ import {
 import { closeMcpSocketServer, startMcpServerIfStorageResolved } from '../storageLocation/bootGate'
 import { appLogger } from '../logger'
 import { broadcastStorageLocationProgress } from './jobsBroadcast'
+import { appError, unexpectedError } from '@shared/types/errorCodes'
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
@@ -52,7 +54,7 @@ export function registerStorageLocationIpc(): void {
       } catch (err) {
         const message = errorMessage(err)
         appLogger.error(`Storage location retry failed unexpectedly: ${message}`)
-        return { ok: false, error: message }
+        return { ok: false, error: unexpectedError(err) }
       }
     }
   )
@@ -65,13 +67,13 @@ export function registerStorageLocationIpc(): void {
     } catch (err) {
       const message = errorMessage(err)
       appLogger.error(`Using the default storage location failed unexpectedly: ${message}`)
-      return { ok: false, error: message }
+      return { ok: false, error: unexpectedError(err) }
     }
   })
 
-  ipcMain.handle(IPC.storageLocation.pickFolder, async (): Promise<StorageLocationPickResult> => {
+  ipcMain.handle(IPC.storageLocation.pickFolder, async (_event, { labels }: { labels: DialogLabels }): Promise<StorageLocationPickResult> => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
-      title: 'Choose a storage location',
+      title: labels.title,
       properties: ['openDirectory', 'createDirectory']
     })
     const path = filePaths[0]
@@ -83,7 +85,7 @@ export function registerStorageLocationIpc(): void {
     IPC.storageLocation.connectExisting,
     async (_event, { path }: { path: unknown }): Promise<StorageLocationMigrationResult> => {
       if (typeof path !== 'string') {
-        return { ok: false, error: 'Invalid folder path.' }
+        return { ok: false, error: appError('invalidFolderPath') }
       }
       try {
         const result = await connectToExistingLocation(path)
@@ -106,7 +108,7 @@ export function registerStorageLocationIpc(): void {
       } catch (err) {
         const message = errorMessage(err)
         appLogger.error(`Connecting to an existing storage location failed unexpectedly: ${message}`)
-        return { ok: false, error: message }
+        return { ok: false, error: unexpectedError(err) }
       }
     }
   )
@@ -115,7 +117,7 @@ export function registerStorageLocationIpc(): void {
     IPC.storageLocation.validate,
     (_event, { path }: { path: unknown }): StorageLocationValidation => {
       if (typeof path !== 'string') {
-        return { ok: false, error: 'Invalid folder path.' }
+        return { ok: false, error: appError('invalidFolderPath') }
       }
       return validateStorageDestination(path)
     }
@@ -125,7 +127,7 @@ export function registerStorageLocationIpc(): void {
     IPC.storageLocation.migrate,
     async (_event, { path }: { path: unknown }): Promise<StorageLocationMigrationResult> => {
       if (typeof path !== 'string') {
-        return { ok: false, error: 'Invalid folder path.' }
+        return { ok: false, error: appError('invalidFolderPath') }
       }
       try {
         return await migrateStorageLocation(path, { onProgress: broadcastStorageLocationProgress })
@@ -136,7 +138,7 @@ export function registerStorageLocationIpc(): void {
         // and log via the file-backed logger instead.
         const message = errorMessage(err)
         appLogger.error(`Storage location change failed unexpectedly: ${message}`)
-        return { ok: false, error: message }
+        return { ok: false, error: unexpectedError(err) }
       }
     }
   )

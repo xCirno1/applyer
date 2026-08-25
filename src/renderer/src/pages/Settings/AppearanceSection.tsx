@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import CodeMirror from '@uiw/react-codemirror'
 import { css as cssLanguage } from '@codemirror/lang-css'
 import Select from '../../components/ui/Select'
@@ -7,19 +8,9 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import Collapsible from '../../components/ui/Collapsible'
 import Dropdown from '../../components/ui/Dropdown'
 import { useTheme } from '../../providers/ThemeContext'
+import { useFormatters } from '../../i18n/format'
 import { isValidHexColor, MAX_CUSTOM_CSS_LENGTH, type ThemeMode } from '../../theme/theme'
 import { TEMPLATE_PLACEHOLDER_ID, THEME_CSS_TEMPLATES } from '../../theme/themeTemplates'
-
-const MODE_OPTIONS = [
-  { value: 'system', label: 'Match system' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' }
-]
-
-const TEMPLATE_OPTIONS = [
-  { value: TEMPLATE_PLACEHOLDER_ID, label: 'Insert a template…' },
-  ...THEME_CSS_TEMPLATES.map((t) => ({ value: t.id, label: t.label }))
-]
 
 const FALLBACK_ACCENT: Record<'light' | 'dark', string> = {
   dark: '#3c83f6',
@@ -27,6 +18,8 @@ const FALLBACK_ACCENT: Record<'light' | 'dark', string> = {
 }
 
 export default function AppearanceSection(): ReactElement {
+  const { t } = useTranslation(['settings', 'common'])
+  const format = useFormatters()
   const { state, resolvedScheme, setMode, setAccent, setCustomCss, resetCustomCss, resetAccent } = useTheme()
   const [accentText, setAccentText] = useState(state.accent ?? FALLBACK_ACCENT[resolvedScheme])
   const [accentError, setAccentError] = useState(false)
@@ -69,27 +62,42 @@ export default function AppearanceSection(): ReactElement {
     applyTemplate(id)
   }
 
+  const modeOptions = [
+    { value: 'system', label: t('appearance.modeSystem') },
+    { value: 'light', label: t('appearance.modeLight') },
+    { value: 'dark', label: t('appearance.modeDark') }
+  ]
+
+  // Template labels stay as authored in themeTemplates.ts — they name
+  // specific visual presets, not UI chrome.
+  const templateOptions = [
+    { value: TEMPLATE_PLACEHOLDER_ID, label: t('appearance.insertTemplate') },
+    ...THEME_CSS_TEMPLATES.map((tpl) => ({ value: tpl.id, label: tpl.label }))
+  ]
+
   return (
     <div className="flex max-w-xl flex-col gap-4">
       <div>
-        <h2 className="text-[13px] font-semibold text-text">Appearance</h2>
-        <p className="mt-0.5 text-[12px] text-text-muted">Changes apply immediately and are remembered on this device.</p>
+        <h2 className="text-[13px] font-semibold text-text">{t('appearance.title')}</h2>
+        <p className="mt-0.5 text-[12px] text-text-muted">{t('appearance.intro')}</p>
       </div>
 
       <div className="flex flex-col gap-1">
-        <Select label="Theme" options={MODE_OPTIONS} value={state.mode} onChange={(value) => setMode(value as ThemeMode)} />
-        <p className="text-[11px] text-text-faint">
-          Terminal tab: the terminal itself updates immediately, but a CLI agent already running inside it (Codex,
-          Claude, etc.) only detects light/dark once at startup — restart it after changing the theme if it looks off.
-        </p>
+        <Select
+          label={t('appearance.theme')}
+          options={modeOptions}
+          value={state.mode}
+          onChange={(value) => setMode(value as ThemeMode)}
+        />
+        <p className="text-[11px] text-text-faint">{t('appearance.terminalNote')}</p>
       </div>
 
       <div className="flex flex-col gap-1">
-        <span className="text-[12px] font-medium text-text-muted">Accent color</span>
+        <span className="text-[12px] font-medium text-text-muted">{t('appearance.accent')}</span>
         <div className="flex items-center gap-2">
           <input
             type="color"
-            aria-label="Accent color"
+            aria-label={t('appearance.accentPicker')}
             value={isValidHexColor(accentText) ? accentText : FALLBACK_ACCENT[resolvedScheme]}
             onChange={(e) => {
               setAccentText(e.target.value)
@@ -99,7 +107,7 @@ export default function AppearanceSection(): ReactElement {
           />
           <input
             type="text"
-            aria-label="Accent color hex value"
+            aria-label={t('appearance.accentHex')}
             value={accentText}
             onChange={(e) => setAccentText(e.target.value)}
             onBlur={(e) => commitAccentText(e.target.value)}
@@ -111,24 +119,30 @@ export default function AppearanceSection(): ReactElement {
               accentError ? 'border-danger' : 'border-border'
             }`}
           />
-          {accentError && <span className="text-[11px] text-danger">Invalid hex</span>}
+          {accentError && <span className="text-[11px] text-danger">{t('appearance.invalidHex')}</span>}
           {state.accent && (
             <Button size="sm" variant="ghost" onClick={resetAccent}>
-              Reset
+              {t('appearance.reset')}
             </Button>
           )}
         </div>
       </div>
 
-      <Collapsible label="Advanced: custom CSS">
+      <Collapsible label={t('appearance.advanced')}>
         <div className="flex flex-col gap-2">
           <p className="text-[12px] text-text-muted">
-            Injected live into the app as you type. It can only change how things look, not how they work — if it ever
-            makes the UI unusable, press{' '}
-            <span className="font-mono text-text">Ctrl/Cmd + Shift + Backspace</span> anywhere to clear it instantly.
+            {/* The app's other markup-inside-a-sentence case (see
+                board/CaptchaAlertBanner) — <Trans> keeps it one translatable
+                string instead of three reorderable fragments. */}
+            <Trans
+              t={t}
+              i18nKey="appearance.cssIntro"
+              values={{ shortcut: t('appearance.cssShortcut') }}
+              components={{ 1: <span className="font-mono text-text" /> }}
+            />
           </p>
 
-          <Dropdown options={TEMPLATE_OPTIONS} value={TEMPLATE_PLACEHOLDER_ID} onChange={handleTemplateSelect} size="sm" />
+          <Dropdown options={templateOptions} value={TEMPLATE_PLACEHOLDER_ID} onChange={handleTemplateSelect} size="sm" />
 
           <div className="overflow-hidden border border-border">
             <CodeMirror
@@ -144,10 +158,14 @@ export default function AppearanceSection(): ReactElement {
 
           <div className="flex items-center justify-between">
             <span className="text-[11px] text-text-faint">
-              {state.customCss.length.toLocaleString()} / {MAX_CUSTOM_CSS_LENGTH.toLocaleString()} characters
+              {t('units.characters', {
+                ns: 'common',
+                used: format.number(state.customCss.length),
+                max: format.number(MAX_CUSTOM_CSS_LENGTH)
+              })}
             </span>
             <Button size="sm" variant="ghost" disabled={!state.customCss} onClick={() => setConfirmResetCssOpen(true)}>
-              Clear custom CSS
+              {t('appearance.clearCss')}
             </Button>
           </div>
         </div>
@@ -155,9 +173,9 @@ export default function AppearanceSection(): ReactElement {
 
       <ConfirmDialog
         open={pendingTemplateId !== null}
-        title="Replace custom CSS"
-        message="This overwrites what's currently in the custom CSS editor with the selected template."
-        confirmLabel="Replace"
+        title={t('appearance.replaceTitle')}
+        message={t('appearance.replaceMessage')}
+        confirmLabel={t('appearance.replaceConfirm')}
         onConfirm={() => {
           if (pendingTemplateId) applyTemplate(pendingTemplateId)
           setPendingTemplateId(null)
@@ -167,9 +185,9 @@ export default function AppearanceSection(): ReactElement {
 
       <ConfirmDialog
         open={confirmResetCssOpen}
-        title="Clear custom CSS"
-        message="This removes all custom CSS you've written. This can't be undone."
-        confirmLabel="Clear"
+        title={t('appearance.clearTitle')}
+        message={t('appearance.clearMessage')}
+        confirmLabel={t('appearance.clearConfirm')}
         danger
         onConfirm={() => {
           resetCustomCss()

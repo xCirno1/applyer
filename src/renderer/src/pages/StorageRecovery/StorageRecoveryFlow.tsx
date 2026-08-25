@@ -1,7 +1,9 @@
 import { useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../../components/ui/Button'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import type { StorageLocationStatus } from '@shared/types/storageLocation'
 import type { StorageStats } from '@shared/types/storage'
 
@@ -22,6 +24,8 @@ export default function StorageRecoveryFlow({
   status: StorageLocationStatus
   onResolved: () => void
 }): ReactElement {
+  const { t } = useTranslation('settings')
+  const errorMessage = useErrorMessage()
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
   const [checkingDefault, setCheckingDefault] = useState(false)
@@ -35,13 +39,13 @@ export default function StorageRecoveryFlow({
     try {
       const result = await window.api.storageLocation.retryCustomLocation()
       if (result.ok) {
-        toast.success('Reconnected to your storage location.')
+        toast.success(t('recovery.reconnected'))
         onResolved()
       } else {
-        setRetryError(result.error ?? 'Still not available.')
+        setRetryError(result.error ? errorMessage(result.error) : t('recovery.stillUnavailable'))
       }
     } catch (err) {
-      setRetryError(err instanceof Error ? err.message : 'Could not retry the storage location.')
+      setRetryError(err instanceof Error ? err.message : t('recovery.retryFailed'))
     } finally {
       setRetrying(false)
     }
@@ -56,7 +60,7 @@ export default function StorageRecoveryFlow({
       const stats = await window.api.settings.getStorageStats()
       setConfirmStats(stats)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not inspect the default storage location.')
+      toast.error(err instanceof Error ? err.message : t('recovery.inspectFailed'))
     } finally {
       setCheckingDefault(false)
     }
@@ -68,13 +72,13 @@ export default function StorageRecoveryFlow({
       const result = await window.api.storageLocation.useDefaultLocation()
       if (result.ok) {
         setConfirmStats(null)
-        toast.success('Using the default storage location.')
+        toast.success(t('recovery.usingDefault'))
         onResolved()
       } else {
-        toast.error(result.error ?? 'Failed to switch to the default location.')
+        toast.error(errorMessage(result.error))
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to switch to the default location.')
+      toast.error(err instanceof Error ? err.message : t('recovery.useDefaultFailed'))
     } finally {
       setUsingDefault(false)
     }
@@ -95,12 +99,11 @@ export default function StorageRecoveryFlow({
   return (
     <div className="flex h-full flex-col items-center overflow-y-auto bg-canvas-inset p-6">
       <div className="my-auto w-full max-w-2xl border border-border bg-canvas p-5 shadow-pop">
-        <h1 className="text-[16px] font-medium text-text">Your storage location isn&apos;t available</h1>
-        <p className="mt-1 text-[13px] text-text-muted">{status.recoveryReason}</p>
-        <p className="mt-3 text-[13px] text-text-muted">
-          Reconnect the drive or folder, then retry — or use the default location for now. You can switch back once
-          your custom location is available again.
+        <h1 className="text-[16px] font-medium text-text">{t('recovery.title')}</h1>
+        <p className="mt-1 text-[13px] text-text-muted">
+          {status.recoveryReason ? errorMessage(status.recoveryReason) : null}
         </p>
+        <p className="mt-3 text-[13px] text-text-muted">{t('recovery.help')}</p>
 
         <div className="mt-3 border border-border-soft bg-canvas-soft px-2 py-1.5">
           <span className="break-all text-[12px] text-text">{status.unavailableCustomRoot}</span>
@@ -110,23 +113,26 @@ export default function StorageRecoveryFlow({
 
         <div className="mt-4 flex justify-between gap-2">
           <Button variant="ghost" onClick={handleUseDefaultClick} loading={checkingDefault} disabled={retrying}>
-            Use the default location instead
+            {t('recovery.useDefault')}
           </Button>
           <Button variant="primary" onClick={handleRetry} loading={retrying} disabled={checkingDefault}>
-            Retry
+            {t('recovery.retry')}
           </Button>
         </div>
       </div>
 
       <ConfirmDialog
         open={confirmStats !== null}
-        title="Use the default storage location?"
+        title={t('recovery.confirmTitle')}
         message={
           hasExistingData
-            ? `The default location already has data in it — ${confirmStats?.counts.jobs ?? 0} jobs, ${confirmStats?.counts.documents ?? 0} documents. Using it now continues from that data; it won't merge with your custom location. You can switch back once your custom location is available again.`
-            : "This uses the default location until you reconnect your custom location and retry, or pick a new one in Settings."
+            ? t('recovery.confirmMessageExisting', {
+                jobs: confirmStats?.counts.jobs ?? 0,
+                documents: confirmStats?.counts.documents ?? 0
+              })
+            : t('recovery.confirmMessageEmpty')
         }
-        confirmLabel="Use Default"
+        confirmLabel={t('recovery.confirmLabel')}
         loading={usingDefault}
         onConfirm={handleConfirmDefault}
         onCancel={() => setConfirmStats(null)}

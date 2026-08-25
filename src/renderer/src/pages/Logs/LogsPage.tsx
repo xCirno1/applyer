@@ -1,19 +1,13 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../../components/ui/Button'
 import Skeleton from '../../components/ui/Skeleton'
 import Tag from '../../components/ui/Tag'
 import Dropdown from '../../components/ui/Dropdown'
+import { useFormatters } from '../../i18n/format'
 import type { ActivityLevel, ActivityLogEntry } from '@shared/types/activity'
 
 const PAGE_SIZE = 50
-
-const LEVEL_OPTIONS: { value: ActivityLevel | ''; label: string }[] = [
-  { value: '', label: 'All levels' },
-  { value: 'info', label: 'Info' },
-  { value: 'warn', label: 'Warning' },
-  { value: 'error', label: 'Error' },
-  { value: 'debug', label: 'Debug' }
-]
 
 const LEVEL_TONE: Record<ActivityLevel, 'neutral' | 'warning' | 'danger'> = {
   debug: 'neutral',
@@ -22,12 +16,9 @@ const LEVEL_TONE: Record<ActivityLevel, 'neutral' | 'warning' | 'danger'> = {
   error: 'danger'
 }
 
-function formatTime(iso: string): string {
-  const date = new Date(iso)
-  return Number.isNaN(date.getTime()) ? iso : date.toLocaleString()
-}
-
 export default function LogsPage(): ReactElement {
+  const { t } = useTranslation('workspace')
+  const format = useFormatters()
   const [entries, setEntries] = useState<ActivityLogEntry[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(false)
@@ -56,19 +47,27 @@ export default function LogsPage(): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [level])
 
+  const levelOptions: { value: ActivityLevel | ''; label: string }[] = [
+    { value: '', label: t('logs.allLevels') },
+    { value: 'info', label: t('logs.info') },
+    { value: 'warn', label: t('logs.warn') },
+    { value: 'error', label: t('logs.error') },
+    { value: 'debug', label: t('logs.debug') }
+  ]
+
   return (
     <div className="flex h-full flex-col bg-canvas-inset">
       <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border-soft bg-canvas px-3">
-        <span className="text-[12px] font-medium text-text">Activity Log</span>
+        <span className="text-[12px] font-medium text-text">{t('logs.title')}</span>
         <Dropdown
           size="sm"
           className="w-32"
-          ariaLabel="Filter by level"
-          options={LEVEL_OPTIONS}
+          ariaLabel={t('logs.levelLabel')}
+          options={levelOptions}
           value={level}
           onChange={(v) => setLevel(v as ActivityLevel | '')}
         />
-        <span className="ml-auto text-[11px] text-text-faint">{total} entries</span>
+        <span className="ml-auto text-[11px] text-text-faint">{t('logs.entries', { count: total })}</span>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -80,13 +79,13 @@ export default function LogsPage(): ReactElement {
           </div>
         )}
 
-        {loadedOnce && entries.length === 0 && <p className="text-[12px] text-text-faint">No activity yet.</p>}
+        {loadedOnce && entries.length === 0 && <p className="text-[12px] text-text-faint">{t('logs.empty')}</p>}
 
         <table className="w-full border-collapse text-[12px]">
           <tbody>
             {entries.map((entry) => (
               <tr key={entry.id} className="border-b border-border-soft align-top">
-                <td className="whitespace-nowrap py-1.5 pr-3 text-text-faint">{formatTime(entry.createdAt)}</td>
+                <td className="whitespace-nowrap py-1.5 pr-3 text-text-faint">{format.dateTime(entry.createdAt)}</td>
                 <td className="py-1.5 pr-3">
                   <Tag label={entry.level} tone={LEVEL_TONE[entry.level]} />
                 </td>
@@ -105,7 +104,7 @@ export default function LogsPage(): ReactElement {
         {loadedOnce && entries.length < total && (
           <div className="mt-2 flex justify-center">
             <Button size="sm" variant="ghost" loading={loading} onClick={() => fetchPage(entries.length, false)}>
-              Load more
+              {t('actions.loadMore', { ns: 'common' })}
             </Button>
           </div>
         )}

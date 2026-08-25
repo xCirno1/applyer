@@ -2,6 +2,7 @@ import { ipcMain, dialog, app } from 'electron'
 import { writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { IPC } from '@shared/types/ipcEvents'
+import type { DialogLabels } from '@shared/types/ipcEvents'
 import { appError, unexpectedError } from '@shared/types/errorCodes'
 import type {
   ExportSelection,
@@ -20,12 +21,12 @@ import { buildExportBundle, computeExportSizes, filenameTimestamp } from '../dat
 import { applyImport } from '../dataTransfer/applyImport'
 
 export function registerDataTransferIpc(): void {
-  ipcMain.handle(IPC.data.exportJson, async (_event, { selection }: { selection: ExportSelection }): Promise<ExportFileResult> => {
+  ipcMain.handle(IPC.data.exportJson, async (_event, { selection, labels }: { selection: ExportSelection; labels: DialogLabels }): Promise<ExportFileResult> => {
     const bundle = buildExportBundle(selection)
     const { canceled, filePath } = await dialog.showSaveDialog({
-      title: 'Export Applyer data',
+      title: labels.title,
       defaultPath: join(app.getPath('documents'), `applyer-export-${filenameTimestamp()}.json`),
-      filters: [{ name: 'JSON', extensions: ['json'] }]
+      filters: [{ name: labels.filterName, extensions: ['json'] }]
     })
     if (canceled || !filePath) return { ok: false, canceled: true }
     try {
@@ -37,15 +38,15 @@ export function registerDataTransferIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.data.exportCsv, async (_event, { table }: { table: CsvTable }): Promise<ExportFileResult> => {
+  ipcMain.handle(IPC.data.exportCsv, async (_event, { table, labels }: { table: CsvTable; labels: DialogLabels }): Promise<ExportFileResult> => {
     if (table !== 'jobs' && table !== 'exclusions') {
       return { ok: false, error: appError('invalidTable') }
     }
     const csv = table === 'jobs' ? jobsToCsv(listAllJobs()) : exclusionsToCsv(listAllExclusions())
     const { canceled, filePath } = await dialog.showSaveDialog({
-      title: 'Export as CSV',
+      title: labels.title,
       defaultPath: join(app.getPath('documents'), `applyer-${table}-${filenameTimestamp()}.csv`),
-      filters: [{ name: 'CSV', extensions: ['csv'] }]
+      filters: [{ name: labels.filterName, extensions: ['csv'] }]
     })
     if (canceled || !filePath) return { ok: false, canceled: true }
     try {
@@ -59,11 +60,11 @@ export function registerDataTransferIpc(): void {
 
   ipcMain.handle(IPC.data.getExportSizes, (): ExportSizes => computeExportSizes())
 
-  ipcMain.handle(IPC.data.pickImportFile, async (): Promise<ImportPickResult> => {
+  ipcMain.handle(IPC.data.pickImportFile, async (_event, { labels }: { labels: DialogLabels }): Promise<ImportPickResult> => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
-      title: 'Import Applyer data',
+      title: labels.title,
       properties: ['openFile'],
-      filters: [{ name: 'JSON', extensions: ['json'] }]
+      filters: [{ name: labels.filterName, extensions: ['json'] }]
     })
     const filePath = filePaths[0]
     if (canceled || !filePath) return { ok: false, canceled: true }

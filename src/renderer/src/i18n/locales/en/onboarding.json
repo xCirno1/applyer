@@ -1,0 +1,42 @@
+{
+  "welcome": {
+    "title": "Welcome to Applyer",
+    "intro": "Applyer turns a coding assistant running in the built-in terminal (Claude Code, Codex, or any other MCP-capable agent) into a job-search assistant. Here's the shape of it:",
+    "step1Title": "1. Tell it about yourself.",
+    "step1Body": "Add your profile and resume next — this is what the agent uses to judge fit and fill out applications.",
+    "step2Title": "2. Ask the agent to find jobs.",
+    "step2Body": "It searches the web and adds matches to a task board here in the app — nothing gets submitted automatically.",
+    "step3Title": "3. You stay in control.",
+    "step3Body": "The agent can draft a filled-out application for your review, but only you ever click submit.",
+    "getStarted": "Get started"
+  },
+  "storage": {
+    "title": "How should we store your information locally?",
+    "intro": "Everything stays on this computer either way — this only changes how it's stored on disk.",
+    "encrypted": "Encrypted",
+    "encryptedDescription": "Locked using this computer's built-in secure storage — the same kind of protection your browser uses for saved passwords. Only readable on this device, by your user account.",
+    "plaintext": "Plain text",
+    "plaintextDescription": "Stored as regular, readable files on this computer. Simpler to back up or inspect yourself, but readable by anyone with access to this computer's files.",
+    "unavailable": "Not available on this system (no OS keychain detected).",
+    "saveFailed": "Failed to save storage preference."
+  },
+  "documents": {
+    "title": "Your documents",
+    "intro": "A resume is required. The agent reads these to judge fit and can attach them when filling out forms.",
+    "remove": "Remove",
+    "removeLabel": "Remove {{filename}}",
+    "uploadingResume": "Uploading resume…",
+    "resumeRequired": "Resume (required)",
+    "uploadingCoverLetter": "Uploading cover letter…",
+    "coverLetterOptional": "Cover letter (optional)",
+    "uploaded": "{{filename}} uploaded.",
+    "uploadFailed": "Upload failed."
+  },
+  "card": {
+    "recommended": "Recommended"
+  },
+  "nav": {
+    "back": "Back",
+    "next": "Next"
+  }
+}

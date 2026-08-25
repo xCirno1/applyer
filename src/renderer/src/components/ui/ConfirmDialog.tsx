@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Modal from './Modal'
 import Button from './Button'
 
@@ -17,12 +18,13 @@ export default function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel,
   danger = false,
   loading = false,
   onConfirm,
   onCancel
 }: ConfirmDialogProps): ReactElement | null {
+  const { t } = useTranslation()
   if (!open) return null
 
   return (
@@ -30,10 +32,10 @@ export default function ConfirmDialog({
       <p className="text-[13px] text-text-muted">{message}</p>
       <div className="mt-3 flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel} disabled={loading}>
-          Cancel
+          {t('actions.cancel')}
         </Button>
         <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} loading={loading}>
-          {confirmLabel}
+          {confirmLabel ?? t('actions.confirm')}
         </Button>
       </div>
     </Modal>

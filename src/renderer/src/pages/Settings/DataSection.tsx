@@ -1,4 +1,5 @@
 import type { ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import Button from '../../components/ui/Button'
 
 /**
@@ -15,32 +16,26 @@ export default function DataSection({
   onOpenExport: () => void
   onOpenImport: () => void
 }): ReactElement {
+  const { t } = useTranslation('settings')
+
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-[13px] text-text-muted">
-        Everything here stays on this computer — export writes a file you choose, import reads one you pick.
-      </p>
+      <p className="text-[13px] text-text-muted">{t('data.intro')}</p>
 
       <div className="flex gap-3">
         <div className="flex flex-1 flex-col items-start gap-2 border border-border-soft p-3">
-          <h2 className="text-[13px] font-semibold text-text">Export</h2>
-          <p className="text-[12px] text-text-muted">
-            Save your job applications, exclusions, profile, and settings to a file — as one JSON bundle, or as a CSV
-            table for spreadsheets.
-          </p>
+          <h2 className="text-[13px] font-semibold text-text">{t('data.exportTitle')}</h2>
+          <p className="text-[12px] text-text-muted">{t('data.exportDescription')}</p>
           <Button size="sm" onClick={onOpenExport}>
-            Export…
+            {t('data.exportButton')}
           </Button>
         </div>
 
         <div className="flex flex-1 flex-col items-start gap-2 border border-border-soft p-3">
-          <h2 className="text-[13px] font-semibold text-text">Import</h2>
-          <p className="text-[12px] text-text-muted">
-            Restore data from a JSON file this app exported. New jobs and exclusions are added alongside what you
-            already have; profile and settings can optionally be overwritten.
-          </p>
+          <h2 className="text-[13px] font-semibold text-text">{t('data.importTitle')}</h2>
+          <p className="text-[12px] text-text-muted">{t('data.importDescription')}</p>
           <Button size="sm" onClick={onOpenImport}>
-            Import…
+            {t('data.importButton')}
           </Button>
         </div>
       </div>

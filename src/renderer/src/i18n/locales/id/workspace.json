@@ -1,0 +1,86 @@
+{
+  "menu": {
+    "file": "Berkas",
+    "terminal": "Terminal",
+    "jobs": "Lowongan",
+    "view": "Tampilan",
+    "help": "Bantuan",
+    "settings": "Pengaturan",
+    "exportData": "Ekspor Data…",
+    "importData": "Impor Data…",
+    "quit": "Keluar",
+    "newTerminal": "Terminal Baru",
+    "closeTerminal": "Tutup Terminal",
+    "renameTerminal": "Ganti Nama Terminal",
+    "nextTerminalTab": "Tab Terminal Berikutnya",
+    "prevTerminalTab": "Tab Terminal Sebelumnya",
+    "refreshBoard": "Muat Ulang Papan",
+    "retryAllFailed": "Coba Lagi Semua yang Gagal",
+    "overview": "Ikhtisar",
+    "console": "Konsol",
+    "keyboardShortcuts": "Pintasan Papan Ketik",
+    "about": "Tentang Applyer"
+  },
+  "about": {
+    "title": "Tentang Applyer",
+    "name": "Applyer",
+    "version": "Versi {{version}}"
+  },
+  "retryAll": {
+    "title": "Coba lagi semua lowongan yang gagal?",
+    "message_other": "Ini memindahkan {{count}} lowongan yang gagal kembali ke Antre agar dicoba lagi.",
+    "confirm": "Coba lagi semua",
+    "failed": "Gagal mencoba lagi lowongan.",
+    "none": "Tidak ada lowongan gagal untuk dicoba lagi.",
+    "done_other": "{{count}} lowongan yang gagal dicoba lagi."
+  },
+  "dock": {
+    "terminal": "Terminal",
+    "logs": "Log Aktivitas",
+    "hide": "Sembunyikan dok"
+  },
+  "rail": {
+    "jobBoard": "Papan Lowongan",
+    "indexedJobs": "Lowongan Terindeks"
+  },
+  "topBar": {
+    "settings": "Pengaturan",
+    "backToWorkspace": "← Kembali ke ruang kerja"
+  },
+  "terminal": {
+    "none": "Tidak ada terminal terbuka.",
+    "new": "Terminal baru",
+    "rename": "Ganti nama",
+    "renameLabel": "Ganti nama {{title}}",
+    "closeLabel": "Tutup {{title}}",
+    "atMax": "Anda dapat membuka paling banyak {{count}} terminal"
+  },
+  "logs": {
+    "title": "Log Aktivitas",
+    "levelLabel": "Saring menurut level",
+    "allLevels": "Semua level",
+    "info": "Info",
+    "warn": "Peringatan",
+    "error": "Kesalahan",
+    "debug": "Awakutu",
+    "entries_other": "{{count}} entri",
+    "empty": "Belum ada aktivitas."
+  },
+  "commands": {
+    "category": {
+      "Terminal": "Terminal",
+      "View": "Tampilan",
+      "Navigation": "Navigasi"
+    },
+    "terminal.new": "Terminal baru",
+    "terminal.close": "Tutup terminal",
+    "terminal.nextTab": "Tab terminal berikutnya",
+    "terminal.prevTab": "Tab terminal sebelumnya",
+    "terminal.rename": "Ganti nama terminal",
+    "view.toggleOverview": "Alihkan panel ikhtisar",
+    "view.toggleConsole": "Alihkan dok konsol",
+    "dock.showTerminal": "Tampilkan tab terminal",
+    "dock.showLogs": "Tampilkan tab log aktivitas",
+    "app.toggleSettings": "Buka/tutup pengaturan"
+  }
+}

@@ -20,7 +20,8 @@
 - Never use blocky UI, i.e. Plain box with rounded corners with some data inside.
 - Never use chips with dot on the left side.
 - Prioritize rectangle buttons rather than pills. 
-- Don't hand-tune radii, type sizes, or spacing to taste 
+- Don't hand-tune radii, type sizes, or spacing to taste.
+- Minimize the usage of em-dashes.
 - **Density is a feature.** Controls are fixed-height (`h-6`/`h-7`), table
   rows are `py-1.5`, panel padding is `px-3`. Whitespace between *sections* should be smaller than you'd use on a content page.
 - **Depth comes from 1px seams and the surface ramp**

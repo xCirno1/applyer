@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from 'react'
+import { useState, type ReactElement } from 'react'
 import Menu, { MenuBar, type MenuEntry } from '../ui/Menu'
 import Modal from '../ui/Modal'
 import ConfirmDialog from '../ui/ConfirmDialog'
@@ -7,6 +7,7 @@ import { useShortcuts } from '../../providers/ShortcutsContext'
 import { comboIdToLabel } from '../../shortcuts/keyCombo'
 import type { CommandId } from '../../shortcuts/commands'
 import { useJobsStore } from '../../state/jobsStore'
+import { useAppInfo } from '../../state/useAppInfo'
 import type { SectionId } from '../../pages/Settings/SettingsPage'
 
 /**
@@ -46,12 +47,7 @@ export default function AppMenuBar({
   const [confirmRetryAllOpen, setConfirmRetryAllOpen] = useState(false)
   const [retryingAll, setRetryingAll] = useState(false)
   const [aboutOpen, setAboutOpen] = useState(false)
-  const [version, setVersion] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!aboutOpen) return
-    window.api.app.getVersion().then(setVersion)
-  }, [aboutOpen])
+  const appInfo = useAppInfo()
 
   const shortcutLabel = (commandId: CommandId): string | undefined => {
     const combo = bindings[commandId]
@@ -186,7 +182,13 @@ export default function AppMenuBar({
       <Modal open={aboutOpen} onClose={() => setAboutOpen(false)} title="About Applyer" width="max-w-sm">
         <div className="flex flex-col gap-1">
           <span className="text-[13px] font-medium text-text">Applyer</span>
-          <span className="text-[12px] text-text-muted">Version {version ?? '—'}</span>
+          <span className="text-[12px] text-text-muted">Version {appInfo?.version ?? '—'}</span>
+          {appInfo?.isDevBuild === true && (
+            <span className="mt-1 text-[12px] text-text-muted">
+              Development build — data directory{' '}
+              <span className="break-all text-text">{appInfo.userDataDir}</span>
+            </span>
+          )}
         </div>
       </Modal>
     </div>

@@ -1,4 +1,4 @@
-import { app, ipcMain, dialog } from 'electron'
+import { ipcMain, dialog } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
 import type {
   StorageLocationStatus,
@@ -20,6 +20,7 @@ import {
 } from '../storageLocation/recovery'
 import { closeMcpSocketServer, startMcpServerIfStorageResolved } from '../storageLocation/bootGate'
 import { appLogger } from '../logger'
+import { relaunchApp } from '../relaunch'
 import { broadcastStorageLocationProgress } from './jobsBroadcast'
 
 function errorMessage(err: unknown): string {
@@ -93,14 +94,7 @@ export function registerStorageLocationIpc(): void {
           // every old-dataset browser/network continuation before startup
           // opens the selected location.
           closeMcpSocketServer()
-          setTimeout(() => {
-            try {
-              app.relaunch()
-              app.quit()
-            } catch (err) {
-              appLogger.error(`Could not relaunch after selecting a storage location: ${errorMessage(err)}`)
-            }
-          }, 100)
+          setTimeout(() => relaunchApp(), 100)
         }
         return result
       } catch (err) {

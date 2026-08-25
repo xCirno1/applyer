@@ -221,7 +221,7 @@ export default function StorageSection(): ReactElement {
         title="Connect to existing storage?"
         message={`Switch to the Applyer database already stored in "${
           location.ui.phase === 'pendingExistingConfirm' ? location.ui.path : ''
-        }"? This replaces the currently active dataset with the selected one. Nothing is copied, deleted, or merged, so you can reconnect to the current location later.`}
+        }"? This replaces the currently active dataset with the selected one. Nothing is copied, deleted, or merged, so you can reconnect to the current location later. Applyer will restart automatically.`}
         confirmLabel="Connect"
         onConfirm={location.confirmExisting}
         onCancel={location.cancel}

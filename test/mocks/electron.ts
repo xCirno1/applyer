@@ -30,6 +30,14 @@ function getPath(name: string): string {
   return pathCache[name]
 }
 
+/**
+ * Mirrors Electron's own behaviour: the override sticks for every later
+ * getPath of that name, and the directory is NOT created as a side effect.
+ */
+function setPath(name: string, path: string): void {
+  pathCache[name] = path
+}
+
 let __packaged = false
 
 /** Test-only control for `app.isPackaged`, same rationale as `__setEncryptionAvailable`. */
@@ -39,6 +47,7 @@ export function __setPackaged(value: boolean): void {
 
 export const app = {
   getPath,
+  setPath,
   getAppPath: (): string => process.cwd(),
   getVersion: (): string => '0.0.0-test',
   get isPackaged(): boolean {

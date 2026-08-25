@@ -2,6 +2,7 @@ import { ipcMain, dialog, app } from 'electron'
 import { writeFileSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { IPC } from '@shared/types/ipcEvents'
+import { appError, unexpectedError } from '@shared/types/errorCodes'
 import type {
   ExportSelection,
   ExportSizes,
@@ -32,13 +33,13 @@ export function registerDataTransferIpc(): void {
       logActivity('info', `Exported data to ${filePath}`)
       return { ok: true, filePath }
     } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      return { ok: false, error: unexpectedError(err) }
     }
   })
 
   ipcMain.handle(IPC.data.exportCsv, async (_event, { table }: { table: CsvTable }): Promise<ExportFileResult> => {
     if (table !== 'jobs' && table !== 'exclusions') {
-      return { ok: false, error: 'Invalid table.' }
+      return { ok: false, error: appError('invalidTable') }
     }
     const csv = table === 'jobs' ? jobsToCsv(listAllJobs()) : exclusionsToCsv(listAllExclusions())
     const { canceled, filePath } = await dialog.showSaveDialog({
@@ -52,7 +53,7 @@ export function registerDataTransferIpc(): void {
       logActivity('info', `Exported ${table} to ${filePath} (CSV)`)
       return { ok: true, filePath }
     } catch (err) {
-      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      return { ok: false, error: unexpectedError(err) }
     }
   })
 
@@ -71,7 +72,7 @@ export function registerDataTransferIpc(): void {
     try {
       raw = JSON.parse(readFileSync(filePath, 'utf-8'))
     } catch {
-      return { ok: false, error: 'That file is not valid JSON.' }
+      return { ok: false, error: appError('invalidJson') }
     }
 
     const validation = validateExportBundle(raw)
@@ -105,7 +106,7 @@ export function registerDataTransferIpc(): void {
         logActivity('info', 'Imported data from file', { summary })
         return { ok: true, summary }
       } catch (err) {
-        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+        return { ok: false, error: unexpectedError(err) }
       }
     }
   )

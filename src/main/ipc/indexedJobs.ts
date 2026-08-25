@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
+import { appError } from '@shared/types/errorCodes'
 import { listIndexedJobs, pruneIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { getIndexedJobsRetentionDays, setIndexedJobsRetentionDays } from '../db/repositories/settingsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
@@ -19,7 +20,7 @@ export function registerIndexedJobsIpc(): void {
 
   ipcMain.handle(IPC.indexedJobs.setRetention, (_event, { value }: { value: unknown }) => {
     if (!isValidRetention(value)) {
-      return { ok: false, error: 'Invalid retention value.' }
+      return { ok: false, error: appError('invalidRetention') }
     }
     setIndexedJobsRetentionDays(value)
     const deletedCount = pruneIndexedJobs()

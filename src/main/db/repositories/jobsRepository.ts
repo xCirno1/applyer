@@ -139,7 +139,13 @@ const LEGAL_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
 }
 
 class IllegalTransitionError extends Error {
-  constructor(from: JobStatus, to: JobStatus) {
+  // The statuses are kept as fields, not just baked into the message: the
+  // IPC layer turns this into a translatable error code and needs them as
+  // interpolation params (see ipc/jobs.ts's toJobError).
+  constructor(
+    readonly from: JobStatus,
+    readonly to: JobStatus
+  ) {
     super(`Illegal job state transition: ${from} -> ${to}`)
     this.name = 'IllegalTransitionError'
   }

@@ -11,12 +11,12 @@ import { formatBytes } from '../../lib/formatBytes'
 import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
 import type { ExportSelection, ExportDomain, ExportSizes, CsvTable } from '@shared/types/dataTransfer'
 
-const DOMAIN_LABELS: Record<ExportDomain, { label: string; hint: string }> = {
-  jobs: { label: 'Job applications', hint: 'Queued, filled, submitted, and failed jobs on the board.' },
-  exclusions: { label: 'Excluded jobs', hint: 'The blacklist of job URLs to never surface again.' },
-  profile: { label: 'Profile', hint: 'Your candidate profile fields (uploaded documents are not included).' },
-  settings: { label: 'App settings', hint: 'Auto-start command and the indexed-jobs retention period.' }
-}
+const DOMAIN_KEYS = {
+  jobs: { label: 'data.domainJobs', hint: 'data.domainJobsHint' },
+  exclusions: { label: 'data.domainExclusions', hint: 'data.domainExclusionsHint' },
+  profile: { label: 'data.domainProfile', hint: 'data.domainProfileHint' },
+  settings: { label: 'data.domainSettings', hint: 'data.domainSettingsHint' }
+} as const satisfies Record<ExportDomain, { label: string; hint: string }>
 
 const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'profile', 'settings']
 
@@ -74,15 +74,15 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
       toast.error(result.error ? errorMessage(result.error) : t('data.exportFailed'))
       return
     }
-    toast.success(`Exported to ${result.filePath}`)
+    toast.success(t('data.exportedTo', { path: result.filePath }))
     onClose()
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Export data" width="max-w-md">
+    <Modal open={open} onClose={onClose} title={t('data.exportModalTitle')} width="max-w-md">
       <div className="flex flex-col gap-3.5">
         <div className="flex flex-col gap-1.5">
-          <span className="text-[12px] font-medium text-text-muted">Format</span>
+          <span className="text-[12px] font-medium text-text-muted">{t('data.format')}</span>
           <div className="flex gap-1.5">
             <Button variant={format === 'json' ? 'primary' : 'secondary'} size="sm" onClick={() => setFormat('json')}>
               JSON
@@ -92,9 +92,7 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
             </Button>
           </div>
           <span className="text-[11px] text-text-faint">
-            {format === 'json'
-              ? 'One file bundling everything selected below — this is also the only format Import accepts.'
-              : 'A flat, spreadsheet-friendly table of a single list. CSV exports cannot be re-imported.'}
+            {format === 'json' ? t('data.formatJsonHint') : t('data.formatCsvHint')}
           </span>
         </div>
 
@@ -103,8 +101,8 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
             {DOMAIN_ORDER.map((domain) => (
               <div key={domain} className="flex items-start justify-between gap-2">
                 <Checkbox
-                  label={DOMAIN_LABELS[domain].label}
-                  hint={DOMAIN_LABELS[domain].hint}
+                  label={t(DOMAIN_KEYS[domain].label)}
+                  hint={t(DOMAIN_KEYS[domain].hint)}
                   checked={selection[domain]}
                   onChange={(checked) => toggle(domain, checked)}
                 />
@@ -117,10 +115,10 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
         ) : (
           <div className="flex flex-col gap-1.5 border-t border-border-soft pt-3">
             <Select
-              label="Table to export"
+              label={t('data.tableToExport')}
               options={[
-                { value: 'jobs', label: 'Job applications' },
-                { value: 'exclusions', label: 'Excluded jobs' }
+                { value: 'jobs', label: t('data.domainJobs') },
+                { value: 'exclusions', label: t('data.domainExclusions') }
               ]}
               value={csvTable}
               onChange={(v) => setCsvTable(v as CsvTable)}
@@ -133,11 +131,12 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
 
         <div className="flex items-center justify-between gap-2 border-t border-border-soft pt-3">
           <span className="text-[12px] text-text-muted">
-            Total: {!sizes ? <Skeleton className="inline-block h-3 w-12 align-middle" /> : formatBytes(totalBytes)}
+            {t('data.totalSize')}
+            {!sizes ? <Skeleton className="inline-block h-3 w-12 align-middle" /> : formatBytes(totalBytes)}
           </span>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={onClose} disabled={exporting}>
-              Cancel
+              {t('actions.cancel', { ns: 'common' })}
             </Button>
             <Button
               variant="primary"
@@ -145,7 +144,7 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
               disabled={format === 'json' && selectedCount === 0}
               onClick={handleExport}
             >
-              Export
+              {t('data.exportAction')}
             </Button>
           </div>
         </div>

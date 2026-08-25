@@ -34,5 +34,32 @@
   },
   "units": {
     "characters": "{{used}} / {{max}} characters"
+  },
+  "profile": {
+    "fullName": "Full name",
+    "email": "Email",
+    "phone": "Phone",
+    "location": "Location",
+    "linkedinUrl": "LinkedIn URL",
+    "githubUrl": "GitHub URL",
+    "portfolioUrl": "Portfolio URL",
+    "workAuthorization": "Work authorization",
+    "desiredRoles": "Desired roles",
+    "desiredLocations": "Desired locations",
+    "remotePreference": "Remote preference",
+    "remoteNoPreference": "No preference",
+    "remoteRemote": "Remote",
+    "remoteHybrid": "Hybrid",
+    "remoteOnsite": "Onsite",
+    "yearsExperience": "Years of experience",
+    "salaryMin": "Salary min",
+    "salaryMax": "Salary max",
+    "salaryCurrency": "Salary currency",
+    "skills": "Skills",
+    "commaSeparated": "comma-separated",
+    "summary": "Summary",
+    "nameEmailRequired": "Full name and email are required.",
+    "saved": "Profile saved.",
+    "saveFailed": "Failed to save profile."
   }
 }

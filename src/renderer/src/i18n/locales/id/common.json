@@ -34,5 +34,32 @@
   },
   "units": {
     "characters": "{{used}} / {{max}} karakter"
+  },
+  "profile": {
+    "fullName": "Nama lengkap",
+    "email": "Surel",
+    "phone": "Telepon",
+    "location": "Lokasi",
+    "linkedinUrl": "URL LinkedIn",
+    "githubUrl": "URL GitHub",
+    "portfolioUrl": "URL portofolio",
+    "workAuthorization": "Izin kerja",
+    "desiredRoles": "Posisi yang diinginkan",
+    "desiredLocations": "Lokasi yang diinginkan",
+    "remotePreference": "Preferensi kerja jarak jauh",
+    "remoteNoPreference": "Tanpa preferensi",
+    "remoteRemote": "Jarak jauh",
+    "remoteHybrid": "Hibrida",
+    "remoteOnsite": "Di kantor",
+    "yearsExperience": "Tahun pengalaman",
+    "salaryMin": "Gaji minimum",
+    "salaryMax": "Gaji maksimum",
+    "salaryCurrency": "Mata uang gaji",
+    "skills": "Keahlian",
+    "commaSeparated": "dipisahkan koma",
+    "summary": "Ringkasan",
+    "nameEmailRequired": "Nama lengkap dan surel wajib diisi.",
+    "saved": "Profil tersimpan.",
+    "saveFailed": "Gagal menyimpan profil."
   }
 }

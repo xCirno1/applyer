@@ -38,5 +38,14 @@
   "nav": {
     "back": "Back",
     "next": "Next"
+  },
+  "profileForm": {
+    "title": "Your profile",
+    "intro": "The agent uses this to judge job matches and fill application forms."
+  },
+  "mcp": {
+    "title": "Connect your agent",
+    "intro": "Applyer exposes tools (search, queue, etc.) over MCP — a standard way for coding agents to call into an app. Set this up once per agent, either automatically or by copying the command below into its config.",
+    "finish": "Finish"
   }
 }

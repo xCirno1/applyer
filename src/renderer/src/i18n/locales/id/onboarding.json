@@ -38,5 +38,14 @@
   "nav": {
     "back": "Kembali",
     "next": "Lanjut"
+  },
+  "profileForm": {
+    "title": "Profil Anda",
+    "intro": "Agen memakai ini untuk menilai kecocokan lowongan dan mengisi formulir lamaran."
+  },
+  "mcp": {
+    "title": "Sambungkan agen Anda",
+    "intro": "Applyer menyediakan perkakas (pencarian, antrean, dsb.) lewat MCP — cara baku bagi agen pemrograman untuk memanggil sebuah aplikasi. Siapkan ini sekali per agen, secara otomatis atau dengan menyalin perintah di bawah ke konfigurasinya.",
+    "finish": "Selesai"
   }
 }

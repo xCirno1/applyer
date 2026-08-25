@@ -85,5 +85,7 @@
     "dock.showTerminal": "Show terminal tab",
     "dock.showLogs": "Show activity log tab",
     "app.toggleSettings": "Open/close settings"
-  }
+  },
+  "resizeOverview": "Resize overview panel",
+  "resizeDock": "Resize console dock"
 }

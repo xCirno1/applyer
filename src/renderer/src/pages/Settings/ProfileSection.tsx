@@ -1,8 +1,10 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import TextField from '../../components/ui/TextField'
 import Select from '../../components/ui/Select'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import { useProfileStore } from '../../state/profileStore'
 import type { ProfileFields } from '@shared/types/profile'
 
@@ -18,7 +20,9 @@ export default function ProfileSection(): ReactElement {
   const loaded = useProfileStore((s) => s.loaded)
   const fetchProfile = useProfileStore((s) => s.fetch)
   const save = useProfileStore((s) => s.save)
+  const { t } = useTranslation(['settings', 'common'])
   const toast = useToast()
+  const errorMessage = useErrorMessage()
 
   const [fields, setFields] = useState<ProfileFields>(profile)
   const [saving, setSaving] = useState(false)
@@ -41,102 +45,102 @@ export default function ProfileSection(): ReactElement {
 
   const handleSave = async (): Promise<void> => {
     if (!fields.fullName.trim() || !fields.email.trim()) {
-      toast.error('Full name and email are required.')
+      toast.error(t('profile.nameEmailRequired', { ns: 'common' }))
       return
     }
     setSaving(true)
     const result = await save(fields)
     setSaving(false)
     if (result.ok) {
-      toast.success('Profile saved.')
+      toast.success(t('profile.saved', { ns: 'common' }))
     } else {
-      toast.error(result.error ?? 'Failed to save profile.')
+      toast.error(result.error ? errorMessage(result.error) : t('profile.saveFailed', { ns: 'common' }))
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
-        <TextField label="Full name" value={fields.fullName} onChange={(e) => set('fullName', e.target.value)} />
-        <TextField label="Email" type="email" value={fields.email} onChange={(e) => set('email', e.target.value)} />
-        <TextField label="Phone" value={fields.phone} onChange={(e) => set('phone', e.target.value)} />
-        <TextField label="Location" value={fields.location} onChange={(e) => set('location', e.target.value)} />
+        <TextField label={t('profile.fullName', { ns: 'common' })} value={fields.fullName} onChange={(e) => set('fullName', e.target.value)} />
+        <TextField label={t('profile.email', { ns: 'common' })} type="email" value={fields.email} onChange={(e) => set('email', e.target.value)} />
+        <TextField label={t('profile.phone', { ns: 'common' })} value={fields.phone} onChange={(e) => set('phone', e.target.value)} />
+        <TextField label={t('profile.location', { ns: 'common' })} value={fields.location} onChange={(e) => set('location', e.target.value)} />
         <TextField
-          label="LinkedIn URL"
+          label={t('profile.linkedinUrl', { ns: 'common' })}
           value={fields.linkedinUrl}
           onChange={(e) => set('linkedinUrl', e.target.value)}
         />
-        <TextField label="GitHub URL" value={fields.githubUrl} onChange={(e) => set('githubUrl', e.target.value)} />
+        <TextField label={t('profile.githubUrl', { ns: 'common' })} value={fields.githubUrl} onChange={(e) => set('githubUrl', e.target.value)} />
         <TextField
-          label="Portfolio URL"
+          label={t('profile.portfolioUrl', { ns: 'common' })}
           value={fields.portfolioUrl}
           onChange={(e) => set('portfolioUrl', e.target.value)}
         />
         <TextField
-          label="Work authorization"
+          label={t('profile.workAuthorization', { ns: 'common' })}
           value={fields.workAuthorization}
           onChange={(e) => set('workAuthorization', e.target.value)}
         />
         <TextField
-          label="Desired roles"
-          hint="comma-separated"
+          label={t('profile.desiredRoles', { ns: 'common' })}
+          hint={t('profile.commaSeparated', { ns: 'common' })}
           value={fields.desiredRoles.join(', ')}
           onChange={(e) => set('desiredRoles', splitList(e.target.value))}
         />
         <TextField
-          label="Desired locations"
-          hint="comma-separated"
+          label={t('profile.desiredLocations', { ns: 'common' })}
+          hint={t('profile.commaSeparated', { ns: 'common' })}
           value={fields.desiredLocations.join(', ')}
           onChange={(e) => set('desiredLocations', splitList(e.target.value))}
         />
         <Select
-          label="Remote preference"
+          label={t('profile.remotePreference', { ns: 'common' })}
           value={fields.remotePreference}
           onChange={(v) => set('remotePreference', v as ProfileFields['remotePreference'])}
           options={[
-            { value: 'no_preference', label: 'No preference' },
-            { value: 'remote', label: 'Remote' },
-            { value: 'hybrid', label: 'Hybrid' },
-            { value: 'onsite', label: 'Onsite' }
+            { value: 'no_preference', label: t('profile.remoteNoPreference', { ns: 'common' }) },
+            { value: 'remote', label: t('profile.remoteRemote', { ns: 'common' }) },
+            { value: 'hybrid', label: t('profile.remoteHybrid', { ns: 'common' }) },
+            { value: 'onsite', label: t('profile.remoteOnsite', { ns: 'common' }) }
           ]}
         />
         <TextField
-          label="Years of experience"
+          label={t('profile.yearsExperience', { ns: 'common' })}
           type="number"
           min={0}
           value={fields.yearsExperience ?? ''}
           onChange={(e) => set('yearsExperience', e.target.value === '' ? null : Number(e.target.value))}
         />
         <TextField
-          label="Salary min"
+          label={t('profile.salaryMin', { ns: 'common' })}
           type="number"
           min={0}
           value={fields.salaryMin ?? ''}
           onChange={(e) => set('salaryMin', e.target.value === '' ? null : Number(e.target.value))}
         />
         <TextField
-          label="Salary max"
+          label={t('profile.salaryMax', { ns: 'common' })}
           type="number"
           min={0}
           value={fields.salaryMax ?? ''}
           onChange={(e) => set('salaryMax', e.target.value === '' ? null : Number(e.target.value))}
         />
         <TextField
-          label="Salary currency"
+          label={t('profile.salaryCurrency', { ns: 'common' })}
           value={fields.salaryCurrency}
           onChange={(e) => set('salaryCurrency', e.target.value)}
         />
       </div>
 
       <TextField
-        label="Skills"
-        hint="comma-separated"
+        label={t('profile.skills', { ns: 'common' })}
+        hint={t('profile.commaSeparated', { ns: 'common' })}
         value={fields.skills.join(', ')}
         onChange={(e) => set('skills', splitList(e.target.value))}
       />
 
       <label className="flex flex-col gap-1">
-        <span className="text-[12px] font-medium text-text-muted">Summary</span>
+        <span className="text-[12px] font-medium text-text-muted">{t('profile.summary', { ns: 'common' })}</span>
         <textarea
           value={fields.summary}
           onChange={(e) => set('summary', e.target.value)}
@@ -147,7 +151,7 @@ export default function ProfileSection(): ReactElement {
 
       <div className="flex justify-end">
         <Button variant="primary" onClick={handleSave} loading={saving}>
-          Save
+          {t('actions.save', { ns: 'common' })}
         </Button>
       </div>
     </div>

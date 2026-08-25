@@ -1,20 +1,15 @@
 import { useEffect, useState, type ReactElement } from 'react'
+import { Trans, useTranslation } from 'react-i18next'
 import Select from '../../components/ui/Select'
 import TextField from '../../components/ui/TextField'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
+import { useErrorMessage } from '../../i18n/formatError'
 import { CLI_LABELS } from '../../components/settings/mcpCliLabels'
 import McpCliCard from '../../components/settings/McpCliCard'
 import type { AutoStartCommand, McpConfigDetection } from '@shared/types/ipcEvents'
 
 type Preset = 'off' | 'claude' | 'codex' | 'custom'
-
-const PRESET_OPTIONS = [
-  { value: 'off', label: 'Off — start a plain shell' },
-  { value: 'claude', label: CLI_LABELS.claude },
-  { value: 'codex', label: CLI_LABELS.codex },
-  { value: 'custom', label: 'Custom command…' }
-]
 
 function presetForCommand(command: string): Preset {
   if (command === '') return 'off'
@@ -29,7 +24,9 @@ export default function AgentSection(): ReactElement {
   const [customCommand, setCustomCommand] = useState('')
   const [saving, setSaving] = useState(false)
   const [detections, setDetections] = useState<McpConfigDetection[] | null>(null)
+  const { t } = useTranslation('settings')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
 
   useEffect(() => {
     window.api.settings.getAutoStartCommand().then((command) => {
@@ -49,10 +46,12 @@ export default function AgentSection(): ReactElement {
       const finalCommand = result.command ?? command
       setSavedCommand(finalCommand)
       toast.success(
-        finalCommand ? `The embedded terminal will now auto-run: ${finalCommand}` : 'The embedded terminal will open to a plain shell.'
+        finalCommand
+          ? t('agent.autoStartSet', { command: finalCommand })
+          : t('agent.autoStartCleared')
       )
     } else {
-      toast.error(result.error ?? 'Failed to update the setting.')
+      toast.error(result.error ? errorMessage(result.error) : t('agent.autoStartFailed'))
       if (savedCommand !== null) setPreset(presetForCommand(savedCommand))
     }
   }
@@ -74,22 +73,32 @@ export default function AgentSection(): ReactElement {
 
   const customDirty = preset === 'custom' && customCommand.trim() !== (savedCommand ?? '')
 
+  // CLI names are proper nouns and stay untranslated.
+  const presetOptions = [
+    { value: 'off', label: t('agent.presetOff') },
+    { value: 'claude', label: CLI_LABELS.claude },
+    { value: 'codex', label: CLI_LABELS.codex },
+    { value: 'custom', label: t('agent.presetCustom') }
+  ]
+
   return (
     <div className="flex max-w-xl flex-col gap-5">
       <div className="flex flex-col gap-3">
         <div>
-          <h2 className="text-[13px] font-semibold text-text">Auto-start command</h2>
+          <h2 className="text-[13px] font-semibold text-text">{t('agent.autoStartTitle')}</h2>
           <p className="mt-0.5 text-[12px] text-text-muted">
-            Automatically type a command into every new terminal session Applyer opens — handy for dropping straight
-            into an agent CLI so it's ready to use the <code className="text-text">applyer</code> MCP tools without
-            typing the launch command yourself. Pick a preset, or enter any other command (a different agent CLI, a
-            launcher script, etc). This only affects new sessions.
+            <Trans
+              t={t}
+              i18nKey="agent.autoStartIntro"
+              values={{ tool: 'applyer' }}
+              components={{ 1: <code className="text-text" /> }}
+            />
           </p>
         </div>
 
         <Select
-          label="Auto-start command"
-          options={PRESET_OPTIONS}
+          label={t('agent.autoStartTitle')}
+          options={presetOptions}
           value={preset}
           onChange={handlePresetChange}
           disabled={savedCommand === null || saving}
@@ -99,8 +108,8 @@ export default function AgentSection(): ReactElement {
           <div className="flex items-end gap-2">
             <div className="flex-1">
               <TextField
-                label="Command"
-                placeholder="e.g. aider --model gpt-5, opencode, ./start-agent.sh"
+                label={t('agent.commandLabel')}
+                placeholder={t('agent.commandPlaceholder')}
                 value={customCommand}
                 onChange={(e) => setCustomCommand(e.target.value)}
                 onKeyDown={(e) => {
@@ -110,7 +119,7 @@ export default function AgentSection(): ReactElement {
               />
             </div>
             <Button onClick={handleCustomSubmit} loading={saving} disabled={!customDirty}>
-              Save
+              {t('actions.save', { ns: 'common' })}
             </Button>
           </div>
         )}
@@ -118,14 +127,11 @@ export default function AgentSection(): ReactElement {
 
       <div className="flex flex-col gap-2 border-t border-border-soft pt-5">
         <div>
-          <h2 className="text-[13px] font-semibold text-text">Connections</h2>
-          <p className="mt-0.5 text-[12px] text-text-muted">
-            Applyer exposes tools (search, queue, fill applications, etc.) over MCP — connect one or more agent CLIs
-            here.
-          </p>
+          <h2 className="text-[13px] font-semibold text-text">{t('agent.connectionsTitle')}</h2>
+          <p className="mt-0.5 text-[12px] text-text-muted">{t('agent.connectionsIntro')}</p>
         </div>
         <div className="flex flex-col gap-2">
-          {detections === null && <p className="text-[12px] text-text-faint">Detecting installed CLIs…</p>}
+          {detections === null && <p className="text-[12px] text-text-faint">{t('agent.detecting')}</p>}
           {detections?.map((d) => (
             <McpCliCard key={d.cli} detection={d} />
           ))}

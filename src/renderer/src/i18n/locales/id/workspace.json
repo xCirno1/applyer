@@ -82,5 +82,7 @@
     "dock.showTerminal": "Tampilkan tab terminal",
     "dock.showLogs": "Tampilkan tab log aktivitas",
     "app.toggleSettings": "Buka/tutup pengaturan"
-  }
+  },
+  "resizeOverview": "Ubah ukuran panel ikhtisar",
+  "resizeDock": "Ubah ukuran dok konsol"
 }

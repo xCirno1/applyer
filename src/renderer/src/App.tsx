@@ -16,6 +16,7 @@ import ImportModal from './pages/Settings/ImportModal'
 import BrowserSetupModal from './components/browser/BrowserSetupModal'
 import { useBrowserSetupState } from './components/browser/useBrowserSetupState'
 import AppMenuBar from './components/workspace/AppMenuBar'
+import DevBuildTag from './components/navigation/DevBuildTag'
 import { useWorkspaceLayout } from './components/workspace/useWorkspaceLayout'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
 import ThemeProvider from './providers/ThemeProvider'
@@ -96,6 +97,7 @@ function MainShell(): ReactElement {
                 onShowTerminalTab={showTerminalTab}
               />
               <div className="ml-auto flex items-center gap-1.5">
+                <DevBuildTag />
                 <button
                   onClick={() => openSettings()}
                   title={t('topBar.settings')}
@@ -142,6 +144,9 @@ function MainShell(): ReactElement {
                 >
                   {t('topBar.backToWorkspace')}
                 </button>
+                <div className="ml-auto flex items-center">
+                  <DevBuildTag />
+                </div>
               </div>
               <div className="min-h-0 flex-1">
                 <SettingsPage

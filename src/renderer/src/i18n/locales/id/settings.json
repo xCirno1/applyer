@@ -138,7 +138,7 @@
     "moveMessage": "Pindahkan database, dokumen, screenshot, dan log kamu ke \"{{path}}\"? Mungkin butuh waktu sebentar, dan Applyer tetap jalan selama prosesnya.",
     "moveConfirm": "Pindahkan",
     "connectTitle": "Sambungkan ke penyimpanan yang sudah ada?",
-    "connectMessage": "Pindah ke database Applyer yang sudah tersimpan di \"{{path}}\"? Data yang aktif sekarang akan diganti dengan yang itu. Tidak ada yang disalin, dihapus, atau digabung, jadi kamu bisa balik ke lokasi yang sekarang kapan saja.",
+    "connectMessage": "Pindah ke database Applyer yang sudah tersimpan di \"{{path}}\"? Data yang aktif sekarang akan diganti dengan yang itu. Tidak ada yang disalin, dihapus, atau digabung, jadi kamu bisa balik ke lokasi yang sekarang kapan saja. Applyer akan dimulai ulang secara otomatis.",
     "connectConfirm": "Sambungkan",
     "pickFolderTitle": "Pilih lokasi penyimpanan",
     "pickFailed": "Tidak bisa memilih lokasi penyimpanan.",

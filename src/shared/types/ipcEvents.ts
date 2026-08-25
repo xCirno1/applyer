@@ -92,9 +92,28 @@ export const IPC = {
     import: 'data:import'
   },
   app: {
-    getVersion: 'app:getVersion'
+    getInfo: 'app:getInfo'
   }
 } as const
+
+export interface AppInfo {
+  version: string
+  /**
+   * True for an unpackaged (`npm run dev`) run, which uses its own
+   * `…-dev` userData directory (see main/config/userDataDir.ts) — so the UI
+   * can mark the window as looking at a different dataset than the
+   * installed build.
+   */
+  isDevBuild: boolean
+  /**
+   * The per-install directory (`…/applyer` vs `…/applyer-dev`) — what
+   * actually separates a dev run from the installed build. Deliberately not
+   * the active storage root, which a migration can move at runtime: every
+   * field here is fixed for the process lifetime, so the renderer can fetch
+   * this once and cache it. Settings > Storage owns the live location.
+   */
+  userDataDir: string
+}
 
 export interface TerminalCreateOptions {
   cols: number

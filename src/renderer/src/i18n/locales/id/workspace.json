@@ -24,7 +24,8 @@
   "about": {
     "title": "Tentang Applyer",
     "name": "Applyer",
-    "version": "Versi {{version}}"
+    "version": "Versi {{version}}",
+    "developmentBuildDataDirectory": "Build pengembangan — direktori data"
   },
   "retryAll": {
     "title": "Coba lagi semua lowongan yang gagal?",

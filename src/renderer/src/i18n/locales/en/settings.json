@@ -129,7 +129,7 @@
     "moveMessage": "Move your database, documents, screenshots, and logs to \"{{path}}\"? This may take a moment and Applyer will keep running throughout.",
     "moveConfirm": "Move",
     "connectTitle": "Connect to existing storage?",
-    "connectMessage": "Switch to the Applyer database already stored in \"{{path}}\"? This replaces the currently active dataset with the selected one. Nothing is copied, deleted, or merged, so you can reconnect to the current location later.",
+    "connectMessage": "Switch to the Applyer database already stored in \"{{path}}\"? This replaces the currently active dataset with the selected one. Nothing is copied, deleted, or merged, so you can reconnect to the current location later. Applyer will restart automatically.",
     "connectConfirm": "Connect",
     "pickFolderTitle": "Choose a storage location",
     "pickFailed": "Could not choose a storage location.",

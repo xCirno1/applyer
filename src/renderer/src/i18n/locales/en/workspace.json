@@ -24,7 +24,8 @@
   "about": {
     "title": "About Applyer",
     "name": "Applyer",
-    "version": "Version {{version}}"
+    "version": "Version {{version}}",
+    "developmentBuildDataDirectory": "Development build — data directory"
   },
   "retryAll": {
     "title": "Retry all failed jobs?",

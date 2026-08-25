@@ -109,6 +109,12 @@ npm run dev   # launches the app in development mode
 First launch takes you through onboarding (profile → documents → storage mode → connect
 a CLI). This only happens once — subsequent launches go straight to the board.
 
+A development run keeps its data in its own directory (`applyer-dev` next to the
+installed build's `applyer` — e.g. `~/.config/applyer-dev` on Linux), so `npm run dev`
+never touches the database, settings, or documents of an installed copy. Dev windows are
+marked **Development Build** in the top bar; hover the marker (or open Help > About) for
+the exact directory.
+
 ## Using it day to day
 
 1. Open the app.

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import {
   IPC,
+  type AppInfo,
   type TerminalCreateOptions,
   type TerminalCreateResult,
   type McpCliId,
@@ -226,7 +227,7 @@ const logsApi = {
 }
 
 const appApi = {
-  getVersion: (): Promise<string> => ipcRenderer.invoke(IPC.app.getVersion)
+  getInfo: (): Promise<AppInfo> => ipcRenderer.invoke(IPC.app.getInfo)
 }
 
 const dataApi = {

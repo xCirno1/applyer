@@ -1,6 +1,13 @@
 import { app, ipcMain } from 'electron'
-import { IPC } from '@shared/types/ipcEvents'
+import { IPC, type AppInfo } from '@shared/types/ipcEvents'
 
 export function registerAppIpc(): void {
-  ipcMain.handle(IPC.app.getVersion, () => app.getVersion())
+  ipcMain.handle(
+    IPC.app.getInfo,
+    (): AppInfo => ({
+      version: app.getVersion(),
+      isDevBuild: !app.isPackaged,
+      userDataDir: app.getPath('userData')
+    })
+  )
 }

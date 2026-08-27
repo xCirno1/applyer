@@ -77,13 +77,30 @@ describe('decodeHtmlEntities', () => {
     expect(decodeHtmlEntities('&amp;&lt;&gt;&quot;&#39;')).toBe(`&<>"'`)
   })
 
-  it('cascades through double-encoded input, since each .replace runs over the previous result', () => {
-    // The literal text "&lt;" is itself double-encoded as "&amp;lt;". Because
-    // the &amp;->& replacement runs first and feeds the &lt;->< replacement
-    // that follows it in the same chain, this decodes all the way to "<"
-    // rather than stopping at "&lt;" — i.e. the function is not safe to
-    // apply to already-decoded or double-encoded input.
-    expect(decodeHtmlEntities('&amp;lt;')).toBe('<')
+  it('undoes exactly one layer of encoding on double-encoded input', () => {
+    // A description that literally contains the text "&lt;" (a company
+    // describing template syntax, say) arrives from Greenhouse encoded once,
+    // as "&amp;lt;". Decoding that one layer has to stop at "&lt;" — the
+    // sequence only exists because the &amp; in front of it was decoded, so
+    // it was never an entity in the input.
+    expect(decodeHtmlEntities('&amp;lt;')).toBe('&lt;')
+    expect(decodeHtmlEntities('&amp;amp;')).toBe('&amp;')
+    expect(decodeHtmlEntities('&amp;quot;')).toBe('&quot;')
+  })
+
+  it('decodes each entity in place, independent of the order they appear in', () => {
+    expect(decodeHtmlEntities('&lt;p&gt;a &amp; b&lt;/p&gt;')).toBe('<p>a & b</p>')
+  })
+
+  it('leaves entities it does not know how to decode alone', () => {
+    // Only the five Greenhouse encodes are in scope here; anything else is
+    // real content of the underlying HTML and belongs to the sanitizer.
+    expect(decodeHtmlEntities('&nbsp;&copy;&#8212;')).toBe('&nbsp;&copy;&#8212;')
+  })
+
+  it('leaves a bare ampersand and a truncated entity untouched', () => {
+    expect(decodeHtmlEntities('R&D')).toBe('R&D')
+    expect(decodeHtmlEntities('&amp')).toBe('&amp')
   })
 
   it('leaves plain text untouched', () => {

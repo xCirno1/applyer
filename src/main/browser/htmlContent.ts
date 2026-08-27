@@ -26,12 +26,26 @@ export function htmlToPlainText(html: string): string {
     .trim()
 }
 
-/** Decodes the double-escaped HTML entities Greenhouse's API returns (content is HTML, itself HTML-entity-encoded). */
+const HTML_ENTITY_REPLACEMENTS: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'"
+}
+
+const HTML_ENTITY_PATTERN = /&(?:amp|lt|gt|quot|#39);/g
+
+/**
+ * Decodes the double-escaped HTML entities Greenhouse's API returns (content is HTML, itself HTML-entity-encoded).
+ *
+ * One pass over the original string, not a chain of `.replace()` calls: a
+ * chain feeds each replacement's output into the next, so decoding `&amp;`
+ * first exposes `&lt;` sequences that were never entities in the input.
+ * Greenhouse applies exactly one layer of encoding, so a description that
+ * literally reads `&lt;` arrives as `&amp;lt;` and must decode back to
+ * `&lt;` — a chain would strip both layers and turn it into `<`.
+ */
 export function decodeHtmlEntities(input: string): string {
-  return input
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+  return input.replace(HTML_ENTITY_PATTERN, (entity) => HTML_ENTITY_REPLACEMENTS[entity] ?? entity)
 }

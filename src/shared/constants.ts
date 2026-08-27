@@ -24,4 +24,14 @@ export const INDEXED_JOBS_RETENTION_DEFAULT_DAYS = 30
 
 export const JOB_DETAILS_CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
+/**
+ * Stamped onto every cached job-details payload, and required to match on
+ * read. Bump it whenever the scrapers change what they put in a payload, so
+ * entries produced by the previous build are refetched instead of served
+ * from cache for up to another TTL.
+ *
+ * 1: descriptionText has HTML entities decoded (`&` rather than `&amp;`).
+ */
+export const JOB_DETAILS_CACHE_PAYLOAD_VERSION = 1
+
 export const MAX_DOCUMENT_SIZE_BYTES = 10 * 1024 * 1024

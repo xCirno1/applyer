@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
-import { eq, like, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { getDb } from '../index'
+import { likeContains } from './likeSearch'
 import { jobExclusions } from '../schema'
 import type { ExclusionRecord, ExcludedBy, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
 import { LIST_EXCLUSIONS_DEFAULT_LIMIT, LIST_EXCLUSIONS_MAX_LIMIT } from '@shared/constants'
@@ -61,7 +62,7 @@ export function listExclusions(query: ListExclusionsQuery): ListExclusionsResult
   const offset = Math.max(0, query.offset ?? 0)
 
   const whereClause = query.search?.trim()
-    ? like(jobExclusions.url, `%${query.search.trim().replace(/[%_]/g, (c) => `\\${c}`)}%`)
+    ? likeContains(jobExclusions.url, query.search.trim())
     : undefined
 
   const rows = db

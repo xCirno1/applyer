@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
-import { and, desc, eq, isNotNull, like, or, sql, type SQL } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, or, sql, type SQL } from 'drizzle-orm'
 import { getDb } from '../index'
+import { likeContains } from './likeSearch'
 import { jobs } from '../schema'
 import type { JobRecord, JobStatus, ListJobsQuery, ListJobsResult, ApplyMethod } from '@shared/types/job'
 import { LIST_JOBS_DEFAULT_LIMIT, LIST_JOBS_MAX_LIMIT } from '@shared/constants'
@@ -106,8 +107,8 @@ export function listJobs(query: ListJobsQuery): ListJobsResult {
   if (query.status) conditions.push(eq(jobs.status, query.status))
   if (query.source) conditions.push(eq(jobs.source, query.source))
   if (query.search?.trim()) {
-    const pattern = `%${query.search.trim().replace(/[%_]/g, (c) => `\\${c}`)}%`
-    const searchCondition = or(like(jobs.title, pattern), like(jobs.company, pattern))
+    const term = query.search.trim()
+    const searchCondition = or(likeContains(jobs.title, term), likeContains(jobs.company, term))
     if (searchCondition) conditions.push(searchCondition)
   }
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined

@@ -111,16 +111,26 @@ describe('listJobs', () => {
     expect(result.jobs.map((j) => j.title).sort()).toEqual(['Backend Engineer', 'Designer'])
   })
 
-  it('BUG: a literal "%" or "_" in the search term matches nothing, including its own source row', () => {
-    // listJobs backslash-escapes % and _ before building the LIKE pattern,
-    // but never adds `ESCAPE '\'` to the query — SQLite only treats \ as an
-    // escape character when that clause is present, so the backslash is
-    // matched as a literal character instead. A search for "100%" becomes
-    // the pattern `%100\%%`, which requires a literal backslash in the
-    // title — verified directly against sqlite (see PR discussion) — so it
-    // matches nothing, not even a job literally titled "100% Remote".
+  it('matches a literal "%" in the search term instead of treating it as a wildcard', () => {
     queueJob(baseInput({ title: '100% Remote', company: 'Wild', url: 'https://x.com/wild' }))
-    expect(listJobs({ search: '100%' }).jobs).toHaveLength(0)
+    queueJob(baseInput({ title: '100 Remote', company: 'Tame', url: 'https://x.com/tame' }))
+    const result = listJobs({ search: '100%' })
+    expect(result.jobs.map((j) => j.title)).toEqual(['100% Remote'])
+  })
+
+  it('matches a literal "_" in the search term instead of treating it as a single-character wildcard', () => {
+    queueJob(baseInput({ title: 'Dev_Ops Engineer', company: 'Underscore', url: 'https://x.com/us' }))
+    queueJob(baseInput({ title: 'DevXOps Engineer', company: 'Wildcard', url: 'https://x.com/wc' }))
+    const result = listJobs({ search: 'Dev_Ops' })
+    expect(result.jobs.map((j) => j.title)).toEqual(['Dev_Ops Engineer'])
+  })
+
+  it('matches a literal backslash in the search term', () => {
+    // The escape character itself has to survive the round trip, otherwise a
+    // backslash in the term would escape the character after it.
+    queueJob(baseInput({ title: 'C:\\Windows Support', company: 'Redmond', url: 'https://x.com/win' }))
+    const result = listJobs({ search: 'C:\\Windows' })
+    expect(result.jobs.map((j) => j.title)).toEqual(['C:\\Windows Support'])
   })
 
   it('sorts by matchScore descending, nulls last, when requested', () => {

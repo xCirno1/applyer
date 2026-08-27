@@ -1,9 +1,18 @@
 import { useEffect, useRef, type ReactElement } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import '@xterm/xterm/css/xterm.css'
 import { useTheme } from '../../providers/ThemeContext'
+import { isMacPlatform } from '../../shortcuts/keyCombo'
+import { useToast } from '../ui/useToast'
+import {
+  KittyKeyboardState,
+  matchTerminalKeyBinding,
+  newlineSequence,
+  readCsiParam
+} from './terminalKeys'
 
 /**
  * xterm's canvas/WebGL renderer needs a concrete color, not a CSS variable
@@ -75,6 +84,17 @@ export default function TerminalPane(): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const { state, resolvedScheme } = useTheme()
+  const { t } = useTranslation('workspace')
+  const toast = useToast()
+
+  // Mirrors the translator and toast pusher outside of render, so the
+  // mount-once session effect below can reach the current ones without
+  // tearing down its pty every time the locale changes. Same pattern as
+  // `useWorkspaceLayout`'s `layoutRef`.
+  const notifyRef = useRef({ t, toast })
+  useEffect(() => {
+    notifyRef.current = { t, toast }
+  }, [t, toast])
 
   useEffect(() => {
     const container = containerRef.current
@@ -104,6 +124,7 @@ export default function TerminalPane(): ReactElement {
 
     let sessionId: string | undefined
     let disposed = false
+    const kittyKeyboard = new KittyKeyboardState()
     let removeDataListener: (() => void) | undefined
     let removeExitListener: (() => void) | undefined
 
@@ -143,6 +164,74 @@ export default function TerminalPane(): ReactElement {
       }
     })
 
+    // Everything the terminal handles itself instead of forwarding to the
+    // pty. Without a handler here, xterm's stock keymap sees every
+    // keystroke: Ctrl+Shift+C sends the same 0x03 (SIGINT) byte as Ctrl+C
+    // rather than copying, and Shift+Enter sends the same "\r" as Enter, so
+    // the program inside cannot tell a newline from a submit.
+    const isMac = isMacPlatform()
+    term.attachCustomKeyEventHandler((event) => {
+      const binding = matchTerminalKeyBinding(event, {
+        isMac,
+        kittyKeyboardEnabled: kittyKeyboard.enabled
+      })
+      if (!binding) return true
+
+      // The matcher answers for the companion keypress/keyup too, which have
+      // to be swallowed as well: xterm only skips its keypress path when its
+      // own keydown handling ran, and Shift+Enter's keypress carries
+      // charCode 13, which would arrive as a second, plain "\r".
+      event.preventDefault()
+      if (event.type !== 'keydown') return false
+
+      if (binding === 'copy') {
+        const selection = term.getSelection()
+        if (selection) window.api.clipboard.writeText(selection)
+        return false
+      }
+
+      if (binding === 'paste') {
+        window.api.clipboard
+          .readText()
+          .then((text) => {
+            // Through xterm rather than straight down the pty, so bracketed
+            // paste is applied when the program inside has asked for it.
+            if (text) term.paste(text)
+          })
+          .catch(() => {
+            notifyRef.current.toast.error(notifyRef.current.t('terminal.pasteFailed'))
+          })
+        return false
+      }
+
+      if (sessionId) {
+        window.api.terminal.write(sessionId, newlineSequence(kittyKeyboard.enabled))
+      }
+      return false
+    })
+
+    // Kitty keyboard protocol mode changes, tracked so Shift+Enter is
+    // encoded the way the program inside expects. The protocol's `CSI ? u`
+    // query is deliberately left unanswered — see KittyKeyboardState.
+    const kittyPushDisposable = term.parser.registerCsiHandler({ prefix: '>', final: 'u' }, (params) => {
+      kittyKeyboard.push(readCsiParam(params, 0, 0))
+      return true
+    })
+    const kittyPopDisposable = term.parser.registerCsiHandler({ prefix: '<', final: 'u' }, (params) => {
+      kittyKeyboard.pop(readCsiParam(params, 0, 1))
+      return true
+    })
+    const kittySetDisposable = term.parser.registerCsiHandler({ prefix: '=', final: 'u' }, (params) => {
+      kittyKeyboard.set(readCsiParam(params, 0, 0), readCsiParam(params, 1, 1))
+      return true
+    })
+    // RIS clears the keyboard mode along with the rest of the terminal
+    // state; returning false lets xterm still perform the reset itself.
+    const resetDisposable = term.parser.registerEscHandler({ final: 'c' }, () => {
+      kittyKeyboard.reset()
+      return false
+    })
+
     // CLI programs that adapt their own light/dark styling (Codex, and
     // others built on TUI frameworks that support it) do so by asking the
     // terminal what its foreground/background color is via these OSC
@@ -173,6 +262,10 @@ export default function TerminalPane(): ReactElement {
       disposed = true
       resizeObserver.disconnect()
       onDataDisposable.dispose()
+      kittyPushDisposable.dispose()
+      kittyPopDisposable.dispose()
+      kittySetDisposable.dispose()
+      resetDisposable.dispose()
       oscForegroundDisposable.dispose()
       oscBackgroundDisposable.dispose()
       removeDataListener?.()

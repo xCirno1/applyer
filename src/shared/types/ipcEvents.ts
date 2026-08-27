@@ -93,6 +93,10 @@ export const IPC = {
   },
   app: {
     getInfo: 'app:getInfo'
+  },
+  clipboard: {
+    readText: 'clipboard:readText',
+    writeText: 'clipboard:writeText'
   }
 } as const
 

@@ -70,6 +70,33 @@ describe('htmlToPlainText', () => {
   it('trims leading/trailing whitespace', () => {
     expect(htmlToPlainText('  <p>text</p>  ')).toBe('text')
   })
+
+  it('decodes the entities sanitize-html re-escapes on its way out', () => {
+    // Tag stripping leaves sanitize-html's own escaping behind, so an "&"
+    // in the posting would otherwise reach the agent as the literal text
+    // "&amp;" — very common in job data ("Sales & Marketing", "R&D").
+    expect(htmlToPlainText('<p>Sales &amp; Marketing. R&amp;D a plus.</p>')).toBe(
+      'Sales & Marketing. R&D a plus.'
+    )
+  })
+
+  it('decodes escaped angle brackets that came from literal text, not markup', () => {
+    expect(htmlToPlainText('<p>Use the &lt;input&gt; element</p>')).toBe('Use the <input> element')
+  })
+
+  it('undoes exactly one layer of escaping, leaving double-encoded text as written', () => {
+    // The posting literally says "&lt;" (a company describing markup). The
+    // parser decodes the outer layer to "&lt;", the serializer escapes it
+    // back to "&amp;lt;", and this must land on "&lt;" — decoding twice
+    // would silently rewrite the posting's own words.
+    expect(htmlToPlainText('<p>write &amp;lt; to escape it</p>')).toBe('write &lt; to escape it')
+  })
+
+  it('leaves entities the sanitizer already turned into real characters alone', () => {
+    // &mdash;/&copy; are decoded by the parser, not re-escaped on output, so
+    // they arrive here as real characters and must pass through untouched.
+    expect(htmlToPlainText('<p>a &mdash; b &copy; c</p>')).toBe('a — b © c')
+  })
 })
 
 describe('decodeHtmlEntities', () => {

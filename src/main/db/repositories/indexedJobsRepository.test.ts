@@ -113,6 +113,13 @@ describe('listIndexedJobs', () => {
     expect(listIndexedJobs({ search: 'widgets' }).items.map((i) => i.url)).toEqual(['https://example.com/jobs/2'])
   })
 
+  it('matches literal LIKE metacharacters in the search term instead of treating them as wildcards', () => {
+    upsertIndexedJobs([item({ url: 'https://example.com/jobs/1', title: '100% Remote', company: 'Acme' })], 'q', null)
+    upsertIndexedJobs([item({ url: 'https://example.com/jobs/2', title: '100 Remote', company: 'Acme' })], 'q', null)
+
+    expect(listIndexedJobs({ search: '100%' }).items.map((i) => i.url)).toEqual(['https://example.com/jobs/1'])
+  })
+
   it('paginates with limit/offset, most recently seen first', () => {
     upsertIndexedJobs([item({ url: 'https://example.com/jobs/1' })], 'q', null)
     upsertIndexedJobs([item({ url: 'https://example.com/jobs/2' })], 'q', null)

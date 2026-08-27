@@ -65,6 +65,13 @@ describe('listExclusions', () => {
     expect(listExclusions({ search: 'acme' }).exclusions).toHaveLength(1)
   })
 
+  it('matches literal LIKE metacharacters in the search term instead of treating them as wildcards', () => {
+    excludeUrl({ url: 'https://jobs.com/100%-remote', excludedBy: 'user' })
+    excludeUrl({ url: 'https://jobs.com/100-remote', excludedBy: 'user' })
+    const result = listExclusions({ search: '100%-' })
+    expect(result.exclusions.map((e) => e.url)).toEqual(['https://jobs.com/100%-remote'])
+  })
+
   it('paginates and reports total', () => {
     const page = listExclusions({ limit: 1, offset: 0 })
     expect(page.exclusions).toHaveLength(1)

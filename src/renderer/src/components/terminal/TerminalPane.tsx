@@ -8,6 +8,7 @@ import { useTheme } from '../../providers/ThemeContext'
 import { isMacPlatform } from '../../shortcuts/keyCombo'
 import { useToast } from '../ui/useToast'
 import {
+  DELETE_WORD_SEQUENCE,
   KittyKeyboardState,
   matchTerminalKeyBinding,
   newlineSequence,
@@ -167,8 +168,9 @@ export default function TerminalPane(): ReactElement {
     // Everything the terminal handles itself instead of forwarding to the
     // pty. Without a handler here, xterm's stock keymap sees every
     // keystroke: Ctrl+Shift+C sends the same 0x03 (SIGINT) byte as Ctrl+C
-    // rather than copying, and Shift+Enter sends the same "\r" as Enter, so
-    // the program inside cannot tell a newline from a submit.
+    // rather than copying, Shift+Enter sends the same "\r" as Enter, so the
+    // program inside cannot tell a newline from a submit, and Ctrl+Backspace
+    // sends a bare BS, which deletes one character rather than a word.
     const isMac = isMacPlatform()
     term.attachCustomKeyEventHandler((event) => {
       const binding = matchTerminalKeyBinding(event, {
@@ -204,8 +206,10 @@ export default function TerminalPane(): ReactElement {
         return false
       }
 
+      const sequence =
+        binding === 'newline' ? newlineSequence(kittyKeyboard.enabled) : DELETE_WORD_SEQUENCE
       if (sessionId) {
-        window.api.terminal.write(sessionId, newlineSequence(kittyKeyboard.enabled))
+        window.api.terminal.write(sessionId, sequence)
       }
       return false
     })

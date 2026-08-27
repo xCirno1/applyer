@@ -4,6 +4,7 @@ import {
   newlineSequence,
   readCsiParam,
   KittyKeyboardState,
+  DELETE_WORD_SEQUENCE,
   NEWLINE_LEGACY_SEQUENCE,
   NEWLINE_KITTY_SEQUENCE
 } from './terminalKeys'
@@ -79,6 +80,25 @@ describe('matchTerminalKeyBinding', () => {
     expect(matchTerminalKeyBinding(keyEvent({ key: 'Enter', shiftKey: true, type: 'keyup' }), PC)).toBe('newline')
   })
 
+  it('binds Ctrl+Backspace to a word delete and leaves plain Backspace to xterm', () => {
+    expect(matchTerminalKeyBinding(keyEvent({ key: 'Backspace', ctrlKey: true }), PC)).toBe('deleteWord')
+    expect(matchTerminalKeyBinding(keyEvent({ key: 'Backspace' }), PC)).toBeNull()
+  })
+
+  it('leaves Alt+Backspace to xterm, which already sends the word-delete sequence itself', () => {
+    expect(matchTerminalKeyBinding(keyEvent({ key: 'Backspace', altKey: true }), PC)).toBeNull()
+    expect(matchTerminalKeyBinding(keyEvent({ key: 'Backspace', ctrlKey: true, altKey: true }), PC)).toBeNull()
+  })
+
+  it('leaves Ctrl+Shift+Backspace to xterm', () => {
+    const event = keyEvent({ key: 'Backspace', ctrlKey: true, shiftKey: true })
+    expect(matchTerminalKeyBinding(event, PC)).toBeNull()
+  })
+
+  it('binds Ctrl+Backspace on macOS too, where Cmd owns the clipboard chord', () => {
+    expect(matchTerminalKeyBinding(keyEvent({ key: 'Backspace', ctrlKey: true }), MAC)).toBe('deleteWord')
+  })
+
   it('does not throw on an event with no usable key', () => {
     expect(matchTerminalKeyBinding({ ctrlKey: true, shiftKey: true } as KeyboardEvent, PC)).toBeNull()
   })
@@ -93,6 +113,15 @@ describe('newlineSequence', () => {
   it('sends the CSI u encoding when the program asked for the Kitty protocol', () => {
     expect(newlineSequence(true)).toBe(NEWLINE_KITTY_SEQUENCE)
     expect(newlineSequence(true)).toBe('\x1b[13;2u')
+  })
+})
+
+describe('DELETE_WORD_SEQUENCE', () => {
+  it('is ESC DEL, readline\'s backward-kill-word binding', () => {
+    // Verified against `bind -p`: "\e\C-?" maps to backward-kill-word,
+    // while the "\b" xterm sends for Ctrl+Backspace maps to
+    // backward-delete-char, i.e. a single character.
+    expect(DELETE_WORD_SEQUENCE).toBe('\x1b\x7f')
   })
 })
 

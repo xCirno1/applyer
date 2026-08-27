@@ -21,8 +21,22 @@ export const NEWLINE_LEGACY_SEQUENCE = '\x1b\r'
  */
 export const NEWLINE_KITTY_SEQUENCE = '\x1b[13;2u'
 
+/**
+ * `ESC DEL`, which readline binds to `backward-kill-word` (its `\e\C-?`
+ * entry) — the same bytes Alt+Backspace already produces.
+ *
+ * Unlike the newline sequences above, this is a deliberate remap rather than
+ * a report of which key was pressed: xterm sends `BS` (0x08) for
+ * Ctrl+Backspace, which readline binds to `backward-delete-char`, so it
+ * deletes a single character exactly like plain Backspace. Terminals have no
+ * word-delete-on-Ctrl+Backspace convention to honour — it comes from GUI
+ * editors — so the choice is between duplicating plain Backspace and
+ * spending the chord on the thing people press it for.
+ */
+export const DELETE_WORD_SEQUENCE = '\x1b\x7f'
+
 /** An action the terminal performs itself rather than sending to the pty. */
-export type TerminalKeyBinding = 'copy' | 'paste' | 'newline'
+export type TerminalKeyBinding = 'copy' | 'paste' | 'newline' | 'deleteWord'
 
 export interface TerminalKeyContext {
   /** Copy/paste is Cmd-based on macOS and Ctrl+Shift-based everywhere else. */
@@ -66,6 +80,12 @@ export function matchTerminalKeyBinding(
 
   if (key === 'enter' && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey) {
     return 'newline'
+  }
+
+  // Alt+Backspace already reaches readline as a word delete on its own, so
+  // only the Ctrl chord is claimed here.
+  if (key === 'backspace' && event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey) {
+    return 'deleteWord'
   }
 
   return null

@@ -10,7 +10,8 @@ import {
   readStoredLocale,
   writeStoredLocale,
   matchSystemLocale,
-  resolveLocale
+  resolveLocale,
+  localeNativeName
 } from './locale'
 
 beforeEach(() => {
@@ -111,5 +112,18 @@ describe('resolveLocale', () => {
   it('ignores the language list for an explicit choice', () => {
     expect(resolveLocale('en', ['id-ID'])).toBe('en')
     expect(resolveLocale('id', ['en-US'])).toBe('id')
+  })
+})
+
+describe('localeNativeName', () => {
+  it('names each supported locale in its own script', () => {
+    for (const { code, nativeName } of SUPPORTED_LOCALES) {
+      expect(localeNativeName(code)).toBe(nativeName)
+    }
+  })
+
+  it('falls back to the raw code for an unknown one', () => {
+    expect(localeNativeName('fr')).toBe('fr')
+    expect(localeNativeName('')).toBe('')
   })
 })

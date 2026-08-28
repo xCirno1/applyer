@@ -8,6 +8,7 @@
     "step2Body": "Agen mencari di web dan menaruh yang cocok ke papan tugas di aplikasi ini. Tidak ada yang dikirim otomatis.",
     "step3Title": "3. Kamu yang pegang kendali.",
     "step3Body": "Agen bisa menyiapkan lamaran yang sudah terisi buat kamu cek, tapi cuma kamu yang menekan tombol kirim.",
+    "languagePrompt": "Silakan pilih bahasamu",
     "getStarted": "Mulai"
   },
   "storage": {

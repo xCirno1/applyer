@@ -86,3 +86,12 @@ export function systemLanguages(): readonly string[] {
   if (typeof navigator === 'undefined') return []
   return navigator.languages ?? (navigator.language ? [navigator.language] : [])
 }
+
+/**
+ * A locale's name in its own script ("Bahasa Indonesia", not "Indonesian"),
+ * falling back to the raw code so an unrecognised one still renders as
+ * something rather than an empty option.
+ */
+export function localeNativeName(code: string): string {
+  return SUPPORTED_LOCALES.find((l) => l.code === code)?.nativeName ?? code
+}

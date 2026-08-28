@@ -1,6 +1,7 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '../../components/ui/Button'
+import LanguagePicker from '../../components/settings/LanguagePicker'
 
 export default function Welcome({ onNext }: { onNext: () => void }): ReactElement {
   const { t } = useTranslation('onboarding')
@@ -22,6 +23,12 @@ export default function Welcome({ onNext }: { onNext: () => void }): ReactElemen
           <span className="font-medium text-text">{t('welcome.step3Title')}</span> {t('welcome.step3Body')}
         </li>
       </ol>
+      {/* Offered on the very first screen, not only in Settings: if the
+          system-language guess was wrong, the user has to be able to fix it
+          before working through the rest of onboarding. */}
+      <div className="max-w-[220px]">
+        <LanguagePicker id="onboarding-language" label={t('welcome.languagePrompt')} />
+      </div>
       <div className="flex justify-end">
         <Button variant="primary" onClick={onNext}>
           {t('welcome.getStarted')}

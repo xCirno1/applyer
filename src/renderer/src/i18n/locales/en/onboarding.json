@@ -8,6 +8,7 @@
     "step2Body": "It searches the web and adds matches to a task board here in the app. Nothing gets submitted automatically.",
     "step3Title": "3. You stay in control.",
     "step3Body": "The agent can draft a filled-out application for your review, but only you ever click submit.",
+    "languagePrompt": "Please select your language",
     "getStarted": "Get started"
   },
   "storage": {

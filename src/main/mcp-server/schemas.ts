@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 const jobSourceEnum = z.enum(['greenhouse', 'lever', 'ashby', 'workday', 'linkedin', 'indeed', 'generic'])
 const jobStatusEnum = z.enum(['queued', 'filled', 'submitted', 'failed'])
+const remotePreferenceEnum = z.enum(['remote', 'hybrid', 'onsite', 'no_preference'])
 
 export const searchJobsShape = {
   query: z.string().trim().min(1).max(200),
@@ -44,6 +45,33 @@ export const flagFailureShape = {
 }
 
 export const getProfileShape = {}
+
+/**
+ * Every field is optional because `update_profile` merges onto the stored
+ * profile rather than replacing it: an agent that only learned the
+ * candidate's skills from a resume must not blank out the salary
+ * expectations they typed into the app. Limits mirror the renderer-side
+ * schema in `main/ipc/profile.ts` — same row, second door in.
+ */
+export const updateProfileShape = {
+  fullName: z.string().trim().max(200).optional(),
+  email: z.union([z.literal(''), z.string().trim().email()]).optional(),
+  phone: z.string().trim().max(50).optional(),
+  location: z.string().trim().max(200).optional(),
+  linkedinUrl: z.string().trim().max(500).optional(),
+  githubUrl: z.string().trim().max(500).optional(),
+  portfolioUrl: z.string().trim().max(500).optional(),
+  workAuthorization: z.string().trim().max(200).optional(),
+  desiredRoles: z.array(z.string().trim().max(100)).max(20).optional(),
+  desiredLocations: z.array(z.string().trim().max(200)).max(20).optional(),
+  remotePreference: remotePreferenceEnum.optional(),
+  salaryMin: z.number().int().min(0).max(10_000_000).nullable().optional(),
+  salaryMax: z.number().int().min(0).max(10_000_000).nullable().optional(),
+  salaryCurrency: z.string().trim().max(10).optional(),
+  yearsExperience: z.number().int().min(0).max(80).nullable().optional(),
+  summary: z.string().trim().max(5000).optional(),
+  skills: z.array(z.string().trim().max(100)).max(100).optional()
+}
 
 export const fillApplicationShape = {
   jobId: z.string().trim().min(1)

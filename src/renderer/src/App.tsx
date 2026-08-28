@@ -24,6 +24,7 @@ import LocaleProvider from './providers/LocaleProvider'
 import ShortcutsProvider from './providers/ShortcutsProvider'
 import { useShortcutHandler } from './providers/ShortcutsContext'
 import { useJobsStore } from './state/jobsStore'
+import { useProfileStore } from './state/profileStore'
 import { useErrorMessage } from './i18n/formatError'
 import type { StorageLocationStatus } from '@shared/types/storageLocation'
 import type { AppError } from '@shared/types/errorCodes'
@@ -44,7 +45,12 @@ function MainShell(): ReactElement {
   const activeJob = useJobsStore((s) => s.activeJob)
   const closeJob = useJobsStore((s) => s.closeJob)
   const browserSetup = useBrowserSetupState()
+  const subscribeToProfileUpdates = useProfileStore((s) => s.subscribeToUpdates)
   useShortcutHandler('app.toggleSettings', () => setScreen((s) => (s === 'settings' ? 'workspace' : 'settings')))
+
+  // Here rather than in the Settings profile form, which only exists while
+  // that section is open — see profileStore's subscribeToUpdates.
+  useEffect(() => subscribeToProfileUpdates(), [subscribeToProfileUpdates])
 
   // Owned here (not inside WorkspacePage) so the top bar it drives — logo,
   // menu, settings — can span the full window width, above the icon rail,

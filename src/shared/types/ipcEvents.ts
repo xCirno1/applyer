@@ -39,7 +39,8 @@ export const IPC = {
     get: 'profile:get',
     save: 'profile:save',
     uploadDocument: 'profile:uploadDocument',
-    deleteDocument: 'profile:deleteDocument'
+    deleteDocument: 'profile:deleteDocument',
+    onChanged: 'profile:changed'
   },
   onboarding: {
     getStatus: 'onboarding:getStatus',

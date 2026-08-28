@@ -6,6 +6,7 @@ const getMock = vi.fn()
 const saveMock = vi.fn()
 const uploadDocumentMock = vi.fn()
 const deleteDocumentMock = vi.fn()
+let onChangedHandlers: (() => void)[] = []
 
 beforeEach(() => {
   vi.resetModules()
@@ -13,6 +14,7 @@ beforeEach(() => {
   saveMock.mockReset()
   uploadDocumentMock.mockReset()
   deleteDocumentMock.mockReset()
+  onChangedHandlers = []
   Object.defineProperty(window, 'api', {
     configurable: true,
     value: {
@@ -20,7 +22,13 @@ beforeEach(() => {
         get: getMock,
         save: saveMock,
         uploadDocument: uploadDocumentMock,
-        deleteDocument: deleteDocumentMock
+        deleteDocument: deleteDocumentMock,
+        onChanged: (callback: () => void) => {
+          onChangedHandlers.push(callback)
+          return () => {
+            onChangedHandlers = onChangedHandlers.filter((h) => h !== callback)
+          }
+        }
       }
     }
   })
@@ -82,6 +90,20 @@ describe('profileStore', () => {
     await useProfileStore.getState().fetch()
 
     expect(useProfileStore.getState().profile).toEqual(EMPTY_PROFILE)
+  })
+
+  it('subscribeToUpdates refetches on a profile:changed push, and the returned cleanup unsubscribes', async () => {
+    const { useProfileStore } = await import('./profileStore')
+    getMock.mockResolvedValue({ profile: profile({ fullName: 'Written By Agent' }), documents: [] })
+
+    const unsubscribe = useProfileStore.getState().subscribeToUpdates()
+    expect(getMock).not.toHaveBeenCalled()
+
+    onChangedHandlers[0]!()
+    await vi.waitFor(() => expect(useProfileStore.getState().profile.fullName).toBe('Written By Agent'))
+
+    unsubscribe()
+    expect(onChangedHandlers).toEqual([])
   })
 
   it('save updates local state on success', async () => {

@@ -7,6 +7,7 @@ import {
   listJobsShape,
   flagFailureShape,
   getProfileShape,
+  updateProfileShape,
   fillApplicationShape,
   excludeJobShape
 } from './schemas'
@@ -17,6 +18,7 @@ const queueJobSchema = z.object(queueJobShape)
 const listJobsSchema = z.object(listJobsShape)
 const flagFailureSchema = z.object(flagFailureShape)
 const getProfileSchema = z.object(getProfileShape)
+const updateProfileSchema = z.object(updateProfileShape)
 const fillApplicationSchema = z.object(fillApplicationShape)
 const excludeJobSchema = z.object(excludeJobShape)
 
@@ -161,5 +163,51 @@ describe('excludeJobShape', () => {
 
   it('rejects an over-long title/company/reason', () => {
     expect(excludeJobSchema.safeParse({ url: 'https://example.com/1', title: 'a'.repeat(301) }).success).toBe(false)
+  })
+})
+
+describe('updateProfileShape', () => {
+  it('accepts an empty object (the tool itself rejects a no-op call, not the schema)', () => {
+    expect(updateProfileSchema.safeParse({}).success).toBe(true)
+  })
+
+  it('accepts a partial update of a single field', () => {
+    expect(updateProfileSchema.safeParse({ summary: 'Backend engineer.' }).success).toBe(true)
+  })
+
+  it('accepts an empty-string email (clearing it) but rejects a malformed one', () => {
+    expect(updateProfileSchema.safeParse({ email: '' }).success).toBe(true)
+    expect(updateProfileSchema.safeParse({ email: 'jane@example.com' }).success).toBe(true)
+    expect(updateProfileSchema.safeParse({ email: 'not-an-email' }).success).toBe(false)
+  })
+
+  it('accepts null for the nullable numerics, rejects a non-integer or out-of-range one', () => {
+    expect(updateProfileSchema.safeParse({ salaryMin: null, yearsExperience: null }).success).toBe(true)
+    expect(updateProfileSchema.safeParse({ yearsExperience: 81 }).success).toBe(false)
+    expect(updateProfileSchema.safeParse({ yearsExperience: -1 }).success).toBe(false)
+    expect(updateProfileSchema.safeParse({ salaryMin: 1.5 }).success).toBe(false)
+    expect(updateProfileSchema.safeParse({ salaryMax: 10_000_001 }).success).toBe(false)
+  })
+
+  it('rejects an unknown remotePreference', () => {
+    expect(updateProfileSchema.safeParse({ remotePreference: 'remote' }).success).toBe(true)
+    expect(updateProfileSchema.safeParse({ remotePreference: 'sometimes' }).success).toBe(false)
+  })
+
+  it('caps list length and entry length', () => {
+    expect(updateProfileSchema.safeParse({ skills: Array(100).fill('x') }).success).toBe(true)
+    expect(updateProfileSchema.safeParse({ skills: Array(101).fill('x') }).success).toBe(false)
+    expect(updateProfileSchema.safeParse({ skills: ['x'.repeat(101)] }).success).toBe(false)
+    expect(updateProfileSchema.safeParse({ desiredRoles: Array(21).fill('x') }).success).toBe(false)
+  })
+
+  it('rejects a summary over 5000 chars', () => {
+    expect(updateProfileSchema.safeParse({ summary: 'a'.repeat(5001) }).success).toBe(false)
+  })
+
+  it('trims string fields and list entries', () => {
+    const parsed = updateProfileSchema.parse({ fullName: '  Jane Doe  ', skills: ['  Go  '] })
+    expect(parsed.fullName).toBe('Jane Doe')
+    expect(parsed.skills).toEqual(['Go'])
   })
 })

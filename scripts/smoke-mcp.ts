@@ -63,13 +63,35 @@ async function main(): Promise<void> {
   const { tools } = await client.listTools()
   const toolNames = tools.map((t) => t.name).sort()
   console.log(`  found: ${toolNames.join(', ')}`)
-  const expected = ['flag_failure', 'get_job_details', 'get_profile', 'list_jobs', 'queue_job', 'search_jobs']
+  const expected = [
+    'flag_failure',
+    'get_job_details',
+    'get_profile',
+    'list_jobs',
+    'queue_job',
+    'search_jobs',
+    'update_profile'
+  ]
   check('all expected tools are registered', expected.every((name) => toolNames.includes(name)))
 
   console.log('\n== get_profile ==')
   {
     const result = await client.callTool({ name: 'get_profile', arguments: {} })
     check('valid call does not error', !result.isError, JSON.stringify(result.content))
+  }
+
+  // Only the rejection paths are exercised here: a valid call would rewrite
+  // the real profile of whoever is running the smoke test.
+  console.log('\n== update_profile (rejection paths only) ==')
+  {
+    const empty = await client.callTool({ name: 'update_profile', arguments: {} })
+    check('call with no fields is rejected cleanly', empty.isError === true)
+
+    const badEmail = await client.callTool({ name: 'update_profile', arguments: { email: 'not-an-email' } })
+    check('invalid email rejected cleanly', badEmail.isError === true)
+
+    const badYears = await client.callTool({ name: 'update_profile', arguments: { yearsExperience: 900 } })
+    check('out-of-range yearsExperience rejected cleanly', badYears.isError === true)
   }
 
   console.log('\n== list_jobs ==')

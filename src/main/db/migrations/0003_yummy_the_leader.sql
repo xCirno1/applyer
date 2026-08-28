@@ -1,0 +1,1 @@
+ALTER TABLE `job_details_cache` ADD `payload_version` integer DEFAULT 0 NOT NULL;

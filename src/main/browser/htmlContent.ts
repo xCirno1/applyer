@@ -16,14 +16,43 @@ export function sanitizeDescriptionHtml(dirty: string): string {
   })
 }
 
+const ESCAPED_TEXT_REPLACEMENTS: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#39;': "'"
+}
+
+const ESCAPED_TEXT_PATTERN = /&(?:amp|lt|gt|quot|#39);/g
+
+/**
+ * Undoes the escaping sanitize-html applies to its own text output.
+ *
+ * Its parser already decodes every entity in the source (`&mdash;` becomes a
+ * real em dash, and so on), then re-escapes the few characters that would be
+ * markup on the way out — so what is left in a tags-stripped result is
+ * sanitize-html's own escaping, not the posting's.
+ *
+ * One pass over the string, never a chain of replaces: a chain feeds each
+ * replacement into the next, so decoding `&amp;` first would expose `&lt;`
+ * sequences that stand for literal text and decode those too. A description
+ * that literally reads `&lt;` comes out of the sanitizer as `&amp;lt;` and
+ * has to land on `&lt;`, not `<`.
+ */
+function decodeEscapedText(text: string): string {
+  return text.replace(ESCAPED_TEXT_PATTERN, (entity) => ESCAPED_TEXT_REPLACEMENTS[entity] ?? entity)
+}
+
 /** Plain-text extraction for feeding to an LLM agent — no markup, no token waste. */
 export function htmlToPlainText(html: string): string {
   const text = sanitizeHtmlLib(html, { allowedTags: [], allowedAttributes: {} })
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim()
+  return decodeEscapedText(
+    text
+      .replace(/&nbsp;/g, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+  ).trim()
 }
 
 const HTML_ENTITY_REPLACEMENTS: Record<string, string> = {

@@ -118,6 +118,10 @@ export const jobDetailsCache = sqliteTable('job_details_cache', {
   urlHash: text('url_hash').primaryKey(),
   url: text('url').notNull(),
   payload: text('payload', { mode: 'json' }).notNull(),
+  // Which build of the scrapers produced `payload`. Rows written before this
+  // column existed default to 0 and so never match the current version,
+  // which is what retires them. See JOB_DETAILS_CACHE_PAYLOAD_VERSION.
+  payloadVersion: integer('payload_version').notNull().default(0),
   detectedAts: text('detected_ats'),
   requiresLogin: integer('requires_login', { mode: 'boolean' }).notNull().default(false),
   applyMethod: text('apply_method'),

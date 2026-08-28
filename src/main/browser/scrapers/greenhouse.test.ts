@@ -42,13 +42,11 @@ describe('fetchGreenhouseJobDetails', () => {
     expect(result.details.detectedAts).toBe('greenhouse')
     expect(result.details.applyMethod).toBe('external_form')
     expect(result.details.requiresLogin).toBe(false)
-    // sanitize-html's tag-stripping pass (allowedTags: []) does not decode
-    // remaining entities back to their literal characters, so an "&" that
-    // survived as "&amp;" in the sanitized HTML stays "&amp;" in the
-    // plain-text extraction too — verified directly against sanitize-html,
-    // not assumed.
+    // The sanitized HTML keeps the "&" escaped, since that field is rendered
+    // as markup. The plain-text field is read by the agent, not a browser,
+    // so it gets the real character.
     expect(result.details.description).toContain('Build things &amp; ship them.')
-    expect(result.details.descriptionText).toContain('Build things &amp; ship them.')
+    expect(result.details.descriptionText).toContain('Build things & ship them.')
   })
 
   it('falls back to the URL token as company name when company_name is absent', async () => {

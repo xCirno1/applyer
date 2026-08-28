@@ -38,15 +38,25 @@
   --spacing-nav: 2.75rem;
 }
 
-/* Light theme override — same ramp relationship, inverted lightness direction. */
+/*
+ * Light theme override. The ramp keeps the same shape as the dark one —
+ * inset is the recessed page background, raised is the top surface (cards,
+ * popovers, modals), with ~3-4 points of lightness between each step — so
+ * `bg-canvas-raised` still reads as a distinct surface sitting on top of a
+ * `bg-canvas-inset` page. Seams then have to be *darker* than the darkest
+ * surface: both border tokens sit below `--color-canvas-inset`, mirroring
+ * the way both sit above `--color-canvas-raised` in the dark theme. Keeping
+ * a border within a point or two of a surface (a 90% border on a 91% page)
+ * erases the 1px seams the whole design leans on for depth.
+ */
 :root[data-theme='light'] {
-  --color-canvas-inset: hsl(220 20% 91%);
-  --color-canvas: hsl(0 0% 100%);
+  --color-canvas-inset: hsl(220 20% 90%);
+  --color-canvas: hsl(220 22% 94%);
   --color-canvas-soft: hsl(220 25% 97%);
   --color-canvas-raised: hsl(0 0% 100%);
 
-  --color-border: hsl(220 15% 84%);
-  --color-border-soft: hsl(220 15% 90%);
+  --color-border: hsl(220 14% 75%);
+  --color-border-soft: hsl(220 14% 82%);
 
   --color-text: hsl(220 25% 12%);
   --color-text-muted: hsl(220 10% 40%);

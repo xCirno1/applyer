@@ -36,6 +36,14 @@ body {
   --color-text-muted: hsl(220 15% 85%);
   --color-text-faint: hsl(220 15% 70%);
 }
+/* The light theme needs the same push in the opposite direction —
+   without this block, "high contrast" would lighten light-mode text. */
+:root[data-theme='light'] {
+  --color-border: hsl(220 14% 55%);
+  --color-border-soft: hsl(220 14% 65%);
+  --color-text-muted: hsl(220 15% 25%);
+  --color-text-faint: hsl(220 15% 40%);
+}
 `
   },
   {

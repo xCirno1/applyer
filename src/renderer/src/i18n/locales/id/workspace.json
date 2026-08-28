@@ -54,7 +54,8 @@
     "rename": "Ganti nama",
     "renameLabel": "Ganti nama {{title}}",
     "closeLabel": "Tutup {{title}}",
-    "atMax": "Maksimal cuma bisa buka {{count}} terminal"
+    "atMax": "Maksimal cuma bisa buka {{count}} terminal",
+    "pasteFailed": "Gagal membaca papan klip."
   },
   "logs": {
     "title": "Log Aktivitas",

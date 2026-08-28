@@ -242,8 +242,14 @@ const dataApi = {
     ipcRenderer.invoke(IPC.data.import, { bundle, selection })
 }
 
+const clipboardApi = {
+  readText: (): Promise<string> => ipcRenderer.invoke(IPC.clipboard.readText),
+  writeText: (text: string): void => ipcRenderer.send(IPC.clipboard.writeText, text)
+}
+
 const api = {
   terminal: terminalApi,
+  clipboard: clipboardApi,
   jobs: jobsApi,
   indexedJobs: indexedJobsApi,
   exclusions: exclusionsApi,

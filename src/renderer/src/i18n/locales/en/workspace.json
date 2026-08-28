@@ -56,7 +56,8 @@
     "rename": "Rename",
     "renameLabel": "Rename {{title}}",
     "closeLabel": "Close {{title}}",
-    "atMax": "You can have at most {{count}} terminals open"
+    "atMax": "You can have at most {{count}} terminals open",
+    "pasteFailed": "Could not read the clipboard."
   },
   "logs": {
     "title": "Activity Log",

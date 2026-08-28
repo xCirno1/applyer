@@ -16,6 +16,7 @@ import { registerBrowserSetupIpc } from './ipc/browserSetup'
 import { registerSettingsIpc } from './ipc/settings'
 import { registerLogsIpc } from './ipc/logs'
 import { registerAppIpc } from './ipc/app'
+import { registerClipboardIpc } from './ipc/clipboard'
 import { registerDataTransferIpc } from './ipc/dataTransfer'
 import { registerStorageLocationIpc } from './ipc/storageLocation'
 import { registerJobsBroadcastTarget } from './ipc/jobsBroadcast'
@@ -77,6 +78,7 @@ function initializeApp(): void {
   registerSettingsIpc()
   registerLogsIpc()
   registerAppIpc()
+  registerClipboardIpc()
   registerDataTransferIpc()
   registerStorageLocationIpc()
 

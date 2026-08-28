@@ -60,6 +60,7 @@
     "summary": "Summary",
     "nameEmailRequired": "Full name and email are required.",
     "saved": "Profile saved.",
-    "saveFailed": "Failed to save profile."
+    "saveFailed": "Failed to save profile.",
+    "changedElsewhere": "Profile was updated elsewhere. Your unsaved edits here were kept, so saving now will overwrite that update."
   }
 }

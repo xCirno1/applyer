@@ -37,3 +37,29 @@ export interface ProfileWithDocuments {
   profile: ProfileFields | null
   documents: DocumentSummary[]
 }
+
+/**
+ * The all-empty profile. Canonical here rather than in the renderer store
+ * because both sides need it: the store falls back to it before the first
+ * fetch, and `update_profile` merges the agent's partial update onto it
+ * when no profile row exists yet.
+ */
+export const EMPTY_PROFILE: ProfileFields = {
+  fullName: '',
+  email: '',
+  phone: '',
+  location: '',
+  linkedinUrl: '',
+  githubUrl: '',
+  portfolioUrl: '',
+  workAuthorization: '',
+  desiredRoles: [],
+  desiredLocations: [],
+  remotePreference: 'no_preference',
+  salaryMin: null,
+  salaryMax: null,
+  salaryCurrency: 'USD',
+  yearsExperience: null,
+  summary: '',
+  skills: []
+}

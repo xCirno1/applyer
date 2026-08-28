@@ -60,6 +60,7 @@
     "summary": "Ringkasan",
     "nameEmailRequired": "Nama lengkap dan email harus diisi.",
     "saved": "Profil tersimpan.",
-    "saveFailed": "Gagal menyimpan profil."
+    "saveFailed": "Gagal menyimpan profil.",
+    "changedElsewhere": "Profil diperbarui dari tempat lain. Perubahan yang belum disimpan di sini tetap dipertahankan, jadi menyimpan sekarang akan menimpa pembaruan itu."
   }
 }

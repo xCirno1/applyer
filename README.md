@@ -113,6 +113,7 @@ Other things worth knowing:
 | Tool | Purpose |
 |---|---|
 | `get_profile` | Reads your profile and document list, to judge fit and fill forms. |
+| `update_profile` | Writes fields back to your profile. Only the fields it passes are written, so an agent updating your skills from a resume cannot blank out the salary expectations you typed in. It refuses to clear your name or email, and every write is recorded in the Activity Log. |
 | `search_jobs` | Keyword search across LinkedIn and Indeed, the two sources with cross-company search. Everything it surfaces is recorded on the Indexed Jobs page, matched or not. |
 | `get_job_details` | Full posting details for a specific URL. Greenhouse, Lever, and Ashby go through their public APIs; LinkedIn, Indeed, Workday, and generic sites are read with a headless browser. |
 | `queue_job` | Adds a posting to your board, deduplicated by URL. |
@@ -233,7 +234,8 @@ Yes, for personal, single-user use on Linux. Concretely, what has been verified:
   later from Settings), and MCP connection, working end to end.
 - The read, search, queue, and failure tools pass a scripted protocol smoke test
   (`npm run smoke:mcp`), including validation and error paths, against both dev mode and a
-  packaged build. `fill_application` and `exclude_job` are covered by unit tests and manual
+  packaged build. `update_profile` is only exercised there through its rejection paths, on
+  purpose: a valid call would rewrite the real profile of whoever runs the script. `fill_application` and `exclude_job` are covered by unit tests and manual
   runs rather than by that script, since one drives a real browser and the other is
   permanent by design.
 - A [Vitest](https://vitest.dev) suite of roughly 570 unit tests (`npm run test`) covers

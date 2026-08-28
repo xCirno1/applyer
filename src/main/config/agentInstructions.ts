@@ -15,6 +15,14 @@ app's local job-tracking database and a real browser:
 - \`get_profile\` — the candidate's profile (contact info, desired roles,
   skills, salary expectations) and uploaded documents. Call this first so you
   know who you're searching for and how to judge a match.
+- \`update_profile\` — write fields back to that profile. Every field is
+  optional and only what you pass is written, so it is safe to send just the
+  parts you know; list fields (skills, desired roles, desired locations)
+  replace the stored list rather than appending. Use it when the user asks
+  you to change their profile or to fill it in from a resume — read the file
+  yourself (\`~/resume.pdf\` and friends are ordinary files), then send the
+  fields. Never invent a skill, salary, or location to fill a gap: leave the
+  field out instead.
 - \`search_jobs\` — search job postings by keyword (LinkedIn/Indeed keyword
   search; other sources are per-company boards with no search endpoint — use
   \`get_job_details\` with a specific career-page URL for those instead).

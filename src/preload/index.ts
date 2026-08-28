@@ -134,7 +134,12 @@ const profileApi = {
   ): Promise<{ ok: boolean; document?: DocumentSummary; error?: string }> =>
     ipcRenderer.invoke(IPC.profile.uploadDocument, request),
   deleteDocument: (documentId: string): Promise<{ ok: boolean }> =>
-    ipcRenderer.invoke(IPC.profile.deleteDocument, { documentId })
+    ipcRenderer.invoke(IPC.profile.deleteDocument, { documentId }),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.profile.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.profile.onChanged, listener)
+  }
 }
 
 const onboardingApi = {

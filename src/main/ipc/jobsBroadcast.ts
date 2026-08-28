@@ -48,6 +48,21 @@ export function broadcastExclusionsChanged(): void {
   }
 }
 
+/**
+ * Payload-less, same reasoning as `broadcastExclusionsChanged`. Needed
+ * because the profile can now be written from two places at once: the
+ * Settings form and the agent's `update_profile` tool. Settings is a
+ * mounted-but-hidden screen holding an editable draft of the profile it
+ * fetched on mount, so without this signal an agent-side update would stay
+ * invisible there — and the next Save would silently write the stale draft
+ * back over it.
+ */
+export function broadcastProfileChanged(): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.profile.onChanged)
+  }
+}
+
 export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaDetected, payload)

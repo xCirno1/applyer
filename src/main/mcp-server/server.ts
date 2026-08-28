@@ -6,10 +6,12 @@ import {
   listJobsShape,
   flagFailureShape,
   getProfileShape,
+  updateProfileShape,
   fillApplicationShape,
   excludeJobShape
 } from './schemas'
 import { getProfileTool } from './tools/getProfile'
+import { updateProfileTool } from './tools/updateProfile'
 import { searchJobsTool } from './tools/searchJobs'
 import { getJobDetailsTool } from './tools/getJobDetails'
 import { queueJobTool } from './tools/queueJob'
@@ -30,6 +32,20 @@ export function createApplyerMcpServer(): McpServer {
       inputSchema: getProfileShape
     },
     getProfileTool
+  )
+
+  server.registerTool(
+    'update_profile',
+    {
+      title: 'Update the candidate profile',
+      description:
+        "Updates the user's stored profile. Every field is optional and only the fields you pass are written — omitted fields keep their current value, so this is safe to call with just the parts you actually know. " +
+        'Use it when the user asks you to change their profile, or to fill it in from a resume they point you at (read the file yourself, then send the fields here). ' +
+        'Lists (skills, desiredRoles, desiredLocations) REPLACE the stored list rather than appending, so pass the full intended list — call get_profile first if you mean to add to what is already there. ' +
+        "Only write what the user's own materials or instructions support: never invent a skill, salary, or location to fill a gap, and leave a field out if you are unsure.",
+      inputSchema: updateProfileShape
+    },
+    updateProfileTool
   )
 
   server.registerTool(

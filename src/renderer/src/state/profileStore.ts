@@ -1,26 +1,8 @@
 import { create } from 'zustand'
-import type { DocumentSummary, ProfileFields } from '@shared/types/profile'
+import { EMPTY_PROFILE, type DocumentSummary, type ProfileFields } from '@shared/types/profile'
 import type { UploadDocumentRequest } from '@shared/types/ipcEvents'
 
-export const EMPTY_PROFILE: ProfileFields = {
-  fullName: '',
-  email: '',
-  phone: '',
-  location: '',
-  linkedinUrl: '',
-  githubUrl: '',
-  portfolioUrl: '',
-  workAuthorization: '',
-  desiredRoles: [],
-  desiredLocations: [],
-  remotePreference: 'no_preference',
-  salaryMin: null,
-  salaryMax: null,
-  salaryCurrency: 'USD',
-  yearsExperience: null,
-  summary: '',
-  skills: []
-}
+export { EMPTY_PROFILE }
 
 interface ProfileState {
   profile: ProfileFields
@@ -31,6 +13,7 @@ interface ProfileState {
   save: (fields: ProfileFields) => Promise<{ ok: boolean; error?: string }>
   uploadDocument: (request: UploadDocumentRequest) => Promise<{ ok: boolean; error?: string }>
   deleteDocument: (documentId: string) => Promise<void>
+  subscribeToUpdates: () => () => void
 }
 
 export const useProfileStore = create<ProfileState>((set, get) => ({
@@ -65,6 +48,16 @@ export const useProfileStore = create<ProfileState>((set, get) => ({
     }
     return result
   },
+
+  /**
+   * The profile row has two writers — the Settings form and the agent's
+   * update_profile tool — so the store has to hear about the other one. Wired
+   * up from App's MainShell rather than from the Settings form: that form is
+   * only mounted while its own section is showing, and a change landing while
+   * it is closed would leave `loaded` true, so the next mount would seed the
+   * draft from a stale profile and write it straight back on Save.
+   */
+  subscribeToUpdates: () => window.api.profile.onChanged(() => void get().fetch()),
 
   deleteDocument: async (documentId) => {
     await window.api.profile.deleteDocument(documentId)

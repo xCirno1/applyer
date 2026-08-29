@@ -166,6 +166,18 @@ export function resolveRequestedPlatforms(
   return TARGET_PLATFORMS.filter((p) => requested.includes(p))
 }
 
+/**
+ * Uploading is this pipeline's job (and the workflow's), never electron-builder's.
+ *
+ * Left implicit, electron-builder guesses a publish policy: on CI without a tag
+ * it picks "onTagOrDraft", and for the GitHub provider specifically that policy
+ * does *not* short-circuit on a non-tag build — it goes looking for a draft
+ * release to attach to, which needs a token, and fails the whole run with
+ * `GH_TOKEN is not set` after every artifact has already been built. Passing the
+ * policy explicitly is what electron-builder itself now recommends.
+ */
+export const PUBLISH_ARGS = ['--publish', 'never']
+
 const MAC_ON_WINDOWS =
   'electron-builder refuses macOS builds on a Windows host. Build it on a Mac (or a macOS CI runner).'
 const MAC_ELSEWHERE =
@@ -250,11 +262,16 @@ export function planPackaging(
   }
 
   return {
-    // --dir stops before any target is produced, so it applies uniformly to
-    // every step rather than changing which ones exist.
-    steps: config.unpackedOnly
-      ? steps.map((step) => ({ ...step, builderArgs: [...step.builderArgs, '--dir'] }))
-      : steps,
+    steps: steps.map((step) => ({
+      ...step,
+      builderArgs: [
+        ...step.builderArgs,
+        // --dir stops before any target is produced, so it applies uniformly to
+        // every step rather than changing which ones exist.
+        ...(config.unpackedOnly ? ['--dir'] : []),
+        ...PUBLISH_ARGS
+      ]
+    })),
     skipped
   }
 }

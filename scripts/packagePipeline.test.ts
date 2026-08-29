@@ -5,6 +5,7 @@ import {
   isDistributable,
   parseArgs,
   planPackaging,
+  PUBLISH_ARGS,
   resolveRequestedPlatforms,
   UsageError,
   type HostCapabilities,
@@ -82,37 +83,44 @@ describe('resolveRequestedPlatforms', () => {
 describe('planPackaging', () => {
   it('builds the host platform natively', () => {
     expect(plan(['linux']).steps).toEqual([
-      { kind: 'native', platforms: ['linux'], builderArgs: ['--linux'], notes: [] }
+      { kind: 'native', platforms: ['linux'], builderArgs: ['--linux', ...PUBLISH_ARGS], notes: [] }
     ])
   })
 
   it('drops rpm, not the whole Linux build, when rpmbuild is missing', () => {
     const [step] = plan(['linux'], { rpmbuild: false }).steps
-    expect(step?.builderArgs).toEqual(['--linux', 'AppImage', 'deb'])
+    expect(step?.builderArgs).toEqual(['--linux', 'AppImage', 'deb', ...PUBLISH_ARGS])
     expect(step?.notes[0]).toContain('rpmbuild')
   })
 
   it('leaves the Linux targets to electron-builder when rpm is not configured at all', () => {
     const [step] = plan(['linux'], { rpmbuild: false }, { linuxTargets: ['AppImage', 'deb'] }).steps
-    expect(step?.builderArgs).toEqual(['--linux'])
+    expect(step?.builderArgs).toEqual(['--linux', ...PUBLISH_ARGS])
     expect(step?.notes).toEqual([])
   })
 
   it('refuses macOS off a Mac, and says why per host', () => {
     expect(plan(['mac'], { platform: 'linux' }).skipped[0]?.reason).toContain('hdiutil')
     expect(plan(['mac'], { platform: 'win32' }).skipped[0]?.reason).toContain('refuses')
-    expect(plan(['mac'], { platform: 'darwin' }).steps[0]?.builderArgs).toEqual(['--mac'])
+    expect(plan(['mac'], { platform: 'darwin' }).steps[0]?.builderArgs).toEqual([
+      '--mac',
+      ...PUBLISH_ARGS
+    ])
   })
 
   it('builds Windows natively off Windows when Wine is present, and notes it', () => {
     const [step] = plan(['win'], { wine: true }).steps
-    expect(step).toMatchObject({ kind: 'native', builderArgs: ['--win'] })
+    expect(step).toMatchObject({ kind: 'native', builderArgs: ['--win', ...PUBLISH_ARGS] })
     expect(step?.notes[0]).toContain('Wine')
   })
 
   it('falls back to Docker for Windows when there is no Wine', () => {
     const [step] = plan(['win'], { docker: true }).steps
-    expect(step).toMatchObject({ kind: 'docker', platforms: ['win'], builderArgs: ['--win'] })
+    expect(step).toMatchObject({
+      kind: 'docker',
+      platforms: ['win'],
+      builderArgs: ['--win', ...PUBLISH_ARGS]
+    })
   })
 
   it('skips Windows with an actionable reason when neither Wine nor Docker is available', () => {
@@ -126,13 +134,13 @@ describe('planPackaging', () => {
     expect(steps[0]).toMatchObject({
       kind: 'docker',
       platforms: ['linux', 'win'],
-      builderArgs: ['--linux', '--win']
+      builderArgs: ['--linux', '--win', ...PUBLISH_ARGS]
     })
   })
 
   it('ignores host rpmbuild for a container build — the image brings its own toolchain', () => {
     const [step] = plan(['linux'], { platform: 'darwin', docker: true, rpmbuild: false }).steps
-    expect(step?.builderArgs).toEqual(['--linux'])
+    expect(step?.builderArgs).toEqual(['--linux', ...PUBLISH_ARGS])
   })
 
   it('honours --docker even where a native build would work', () => {
@@ -159,15 +167,30 @@ describe('planPackaging', () => {
   it('appends --dir to every step under --dir, without changing which steps exist', () => {
     const { steps } = plan(['linux', 'win'], { wine: true }, { unpackedOnly: true })
     expect(steps.map((s) => s.builderArgs)).toEqual([
-      ['--linux', '--dir'],
-      ['--win', '--dir']
+      ['--linux', '--dir', ...PUBLISH_ARGS],
+      ['--win', '--dir', ...PUBLISH_ARGS]
     ])
   })
 
   it('does not subset the Linux targets under --dir, since --dir never reaches rpm', () => {
     const [step] = plan(['linux'], { rpmbuild: false }, { unpackedOnly: true }).steps
-    expect(step?.builderArgs).toEqual(['--linux', '--dir'])
+    expect(step?.builderArgs).toEqual(['--linux', '--dir', ...PUBLISH_ARGS])
     expect(step?.notes).toEqual([])
+  })
+
+  it('tells electron-builder never to publish: left implicit, a CI build without a tag still tries to find a GitHub draft release and dies on the missing token', () => {
+    for (const host of [
+      { platform: 'linux' as NodeJS.Platform },
+      { platform: 'darwin' as NodeJS.Platform },
+      { platform: 'win32' as NodeJS.Platform, docker: true }
+    ]) {
+      for (const step of plan(['linux', 'mac', 'win'], host).steps) {
+        expect(step.builderArgs.slice(-2), JSON.stringify(step.builderArgs)).toEqual([
+          '--publish',
+          'never'
+        ])
+      }
+    }
   })
 
   it('orders native steps before the container step, so the fast path runs first', () => {

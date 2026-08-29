@@ -26,7 +26,11 @@
     "smoke:mcp": "tsx scripts/smoke-mcp.ts",
     "test": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest run",
     "test:watch": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest",
-    "package": "npm run build && electron-builder"
+    "package": "tsx scripts/package.ts",
+    "package:linux": "tsx scripts/package.ts --linux",
+    "package:win": "tsx scripts/package.ts --win",
+    "package:mac": "tsx scripts/package.ts --mac",
+    "package:all": "tsx scripts/package.ts --all"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
@@ -114,23 +118,48 @@
         "to": "icon.png"
       }
     ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "linux": {
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb",
+        "rpm"
       ],
       "category": "Office",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "executableName": "applyer",
+      "maintainer": "xCirno1 <support@mail.xcirno.dev>",
+      "synopsis": "Autonomous job hunting with your CLI coding agent"
+    },
+    "deb": {
+      "artifactName": "${name}_${version}_${arch}.${ext}"
+    },
+    "rpm": {
+      "artifactName": "${name}-${version}.${arch}.${ext}"
     },
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "category": "public.app-category.productivity"
     },
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "portable"
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Applyer",
+      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-win-${arch}-portable.${ext}"
     }
   }
 }

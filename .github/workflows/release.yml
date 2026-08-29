@@ -1,0 +1,110 @@
+name: Release
+
+# Builds the per-OS distributables. Each one has to be produced on its own
+# operating system: electron-builder's macOS targets need macOS tooling
+# (hdiutil, ditto) and the Windows installer needs NSIS running on Windows,
+# so a Linux dev box can only ever build the Linux artifacts locally.
+on:
+  push:
+    tags: ['v*']
+    # A test lane: pushing this branch runs the full matrix without cutting a
+    # tag. A push trigger reads the workflow from the pushed branch, so this
+    # works before the file has ever landed on the default branch — unlike
+    # workflow_dispatch, which only appears once it is on main.
+    branches: ['release-test']
+  workflow_dispatch:
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Package (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # One platform failing should not hide whether the other two build.
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux
+            os: ubuntu-latest
+            script: package:linux
+          - name: macOS
+            os: macos-latest
+            script: package:mac
+          - name: Windows
+            os: windows-latest
+            script: package:win
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # The deb target is handled by electron-builder's bundled fpm, but the
+      # rpm one shells out to a real rpmbuild, which Ubuntu runners lack.
+      - name: Install rpm tooling
+        if: matrix.os == 'ubuntu-latest'
+        run: sudo apt-get update && sudo apt-get install -y rpm
+
+      # --ignore-scripts skips postinstall, then the native rebuild is run on
+      # its own: packaging needs better-sqlite3/node-pty compiled against
+      # Electron, but not postinstall's Chromium download — packaged builds
+      # resolve a browser at runtime and the build config excludes
+      # .local-browsers from the bundle anyway.
+      - run: npm ci --ignore-scripts
+      - run: npx electron-rebuild -f -w better-sqlite3,node-pty
+
+      - name: Package
+        run: npm run ${{ matrix.script }}
+        env:
+          # Nothing here is signed or notarized yet; without this, macOS builds
+          # fail the moment a runner happens to have any signing identity.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: applyer-${{ matrix.name }}
+          if-no-files-found: error
+          # Real releases stay the full 90 days; test-lane runs expire in a week.
+          retention-days: ${{ github.ref_type == 'tag' && 90 || 7 }}
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.rpm
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+
+  collect:
+    name: Collect downloads
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      # merge-multiple flattens the three per-OS uploads into one directory,
+      # which is exactly the set of files a self-hosted download page serves.
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: applyer-*
+          merge-multiple: true
+          path: downloads
+
+      # Checksums let anyone verify a download that did not come from a store
+      # or a signed installer — the only integrity signal an unsigned build has.
+      - name: Write checksums
+        run: |
+          cd downloads
+          # Written outside the directory first, so the sums file can never end
+          # up checksumming itself.
+          sha256sum * > "$RUNNER_TEMP/SHA256SUMS.txt"
+          mv "$RUNNER_TEMP/SHA256SUMS.txt" .
+          cat SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: applyer-all-platforms
+          if-no-files-found: error
+          retention-days: ${{ github.ref_type == 'tag' && 90 || 7 }}
+          path: downloads

@@ -38,6 +38,7 @@ click submit. Every application gets a human review before it goes out.
 - [Setup](#setup)
 - [Using it day to day](#using-it-day-to-day)
 - [Scripts](#scripts)
+- [Packaging](#packaging)
 - [Project layout](#project-layout)
 - [Project status](#is-it-ready-to-use)
 - [Contributing](#contributing)
@@ -191,18 +192,101 @@ the exact directory.
 ## Scripts
 
 ```bash
-npm run dev          # development mode
-npm run build        # production build (out/)
-npm run start        # preview a production build
-npm run package      # build and package a distributable (release/) via electron-builder
-npm run typecheck    # tsc, no emit (main and renderer projects)
-npm run lint         # eslint
-npm run test         # unit test suite (Vitest)
-npm run test:watch   # unit test suite in watch mode
-npm run smoke:mcp    # exercises the MCP server end to end against a running dev instance
-npm run db:generate  # generate a Drizzle migration from schema changes
-npm run db:migrate   # apply migrations to the local database
+npm run dev            # development mode
+npm run build          # production build (out/)
+npm run start          # preview a production build
+npm run package        # package for the current OS (release/)
+npm run package:linux  # AppImage + deb + rpm
+npm run package:mac    # dmg + zip (macOS host only)
+npm run package:win    # NSIS installer + portable exe
+npm run package:all    # everything this host can build
+npm run typecheck      # tsc, no emit (main and renderer projects)
+npm run lint           # eslint
+npm run test           # unit test suite (Vitest)
+npm run test:watch     # unit test suite in watch mode
+npm run smoke:mcp      # exercises the MCP server end to end against a running dev instance
+npm run db:generate    # generate a Drizzle migration from schema changes
+npm run db:migrate     # apply migrations to the local database
 ```
+
+## Packaging
+
+`npm run package` builds for whichever OS you are on. Every packaging script runs
+`scripts/package.ts`, which works out what this machine can actually produce, runs
+electron-builder for each platform, and writes a `SHA256SUMS.txt` alongside the artifacts
+(`sha256sum -c SHA256SUMS.txt` verifies a download directory as-is). Artifacts land in
+`release/`, named `Applyer-<version>-<os>-<arch>.<ext>` so builds from three machines can
+share one release page (deb and rpm keep their distro-conventional names instead).
+
+| OS | Artifacts |
+|---|---|
+| Linux | `.AppImage` (portable, no install), `.deb`, `.rpm` |
+| macOS | `.dmg` (installer image), `.zip` (the bare `.app`) |
+| Windows | `-setup.exe` (NSIS installer, per-user, installs to a directory you choose), `-portable.exe` (single file, no install) |
+
+Missing tooling degrades the build instead of failing it: without `rpmbuild` on `PATH`
+(`apt install rpm` on Debian/Ubuntu) you get the AppImage and deb plus a note about the
+dropped rpm, and a platform this host cannot build at all is reported with the reason
+rather than a stack trace from deep inside electron-builder. Nothing is code-signed or
+notarized yet, so macOS and Windows will warn on first launch.
+
+### Trying it without a real build
+
+The packaging pipeline has three ways to exercise it that produce nothing you would have
+to clean up:
+
+```bash
+npm run package:all -- --dry-run   # print the plan and the exact commands, run none
+npm run package -- --dir           # unpacked app only: no installers, ~1/4 the time
+npm test                           # the planning rules, as unit tests
+```
+
+`--dry-run` is the quick check that the plan is what you expect on this machine (which
+platforms it can build, which targets get dropped, what it would hand electron-builder and
+Docker). `--dir` stops at `release/<platform>-unpacked`, which is enough to launch the
+packaged app and confirm it actually runs.
+
+To exercise the `Release` workflow itself, push a branch named `release-test`. That runs
+the full three-OS matrix without cutting a tag, and works straight from the branch (a
+`workflow_dispatch` run only becomes available once the workflow file is on `main`). Those
+runs keep their artifacts for a week rather than the 90 days a tag build gets.
+
+None of this writes to the repository: `release/` and `out/` are gitignored, and the
+workflow uploads to Actions artifact storage, never to a release, a branch, or a commit.
+
+### Building all three at once
+
+No single machine builds every target on its own:
+
+| From | Linux artifacts | Windows artifacts | macOS artifacts |
+|---|---|---|---|
+| Linux | native | needs [Wine](https://www.winehq.org) (electron-builder runs the NSIS installer under it) | not possible |
+| macOS | needs Docker | needs Wine | native |
+| Windows | needs Docker or WSL | native | refused by electron-builder |
+
+macOS is the hard wall: the `.dmg` is assembled with `hdiutil` and the `.app` has to be
+signed with `codesign`, neither of which exists off a Mac. So building everything means
+either three machines or CI.
+
+**Via CI (what this repo does).** Push a `v*` tag, or run the `Release` workflow manually.
+It builds each OS on its own runner and then a final job merges all three into one
+`applyer-all-platforms` artifact with a `SHA256SUMS.txt` — download that, unzip it, and its
+contents are exactly what a download page serves. Checksums matter more than usual here,
+since an unsigned installer has no other integrity signal.
+
+**Linux + Windows on one machine.** Wine covers the Windows half, so with it installed
+`npm run package:all` builds both natively. Without it, `--docker` runs them in
+electron-builder's container image (which ships Wine), one container for both platforms:
+
+```bash
+npm run package:all -- --docker      # or: npm run package:win -- --docker
+```
+
+The container does its own `npm ci` into an anonymous volume rather than the host's
+`node_modules`: `better-sqlite3` and `node-pty` are compiled for one specific
+platform/Electron pair, and overwriting the host copy with the container's would leave you
+unable to run the app locally. Artifacts still land in the host's `release/`, chowned back
+to you on the way out.
 
 ## Project layout
 
@@ -219,7 +303,7 @@ src/main/          Electron main process
 src/preload/       Context-isolated bridge exposed to the renderer as window.api
 src/renderer/      React 19 and Tailwind UI: components, pages, state, i18n, theme, shortcuts
 src/shared/        Types and constants shared across processes
-scripts/           Migration runner and the MCP smoke test
+scripts/           Migration runner, the MCP smoke test, and the packaging pipeline
 test/              Shared test mocks
 ```
 
@@ -254,8 +338,8 @@ Yes, for personal, single-user use on Linux. Concretely, what has been verified:
 - Lint, typecheck, and the test suite run on every push and pull request in CI.
 
 For getting a coding agent to help you look for jobs on your own machine, it is in good
-enough shape to start using today. Treat a packaged build on macOS or Windows as unverified
-until someone actually builds and runs one there.
+enough shape to start using today. macOS and Windows artifacts are configured and built in
+CI, but treat them as unverified until someone actually runs one there.
 
 ## Contributing
 

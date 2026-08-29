@@ -68,8 +68,9 @@ jobs:
         with:
           name: applyer-${{ matrix.name }}
           if-no-files-found: error
-          # Real releases stay the full 90 days; test-lane runs expire in a week.
-          retention-days: ${{ github.ref_type == 'tag' && 90 || 7 }}
+          # Transport between jobs, not the deliverable: the collect job merges
+          # these into applyer-all-platforms, so they need not outlive the run.
+          retention-days: 1
           path: |
             release/*.AppImage
             release/*.deb
@@ -106,5 +107,7 @@ jobs:
         with:
           name: applyer-all-platforms
           if-no-files-found: error
+          # The actual deliverable: every OS plus SHA256SUMS.txt in one download.
+          # Real releases keep the full 90 days; test-lane runs expire in a week.
           retention-days: ${{ github.ref_type == 'tag' && 90 || 7 }}
           path: downloads

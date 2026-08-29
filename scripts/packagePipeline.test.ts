@@ -3,6 +3,7 @@ import {
   formatChecksumFile,
   hostTargetPlatform,
   isDistributable,
+  needsShell,
   parseArgs,
   planPackaging,
   PUBLISH_ARGS,
@@ -196,6 +197,25 @@ describe('planPackaging', () => {
   it('orders native steps before the container step, so the fast path runs first', () => {
     const { steps } = plan(['linux', 'win'], { docker: true })
     expect(steps.map((s) => s.kind)).toEqual(['native', 'docker'])
+  })
+})
+
+describe('needsShell', () => {
+  it('shells out npm/npx on Windows, where they are .cmd shims Node refuses to spawn directly', () => {
+    expect(needsShell('npm', 'win32')).toBe(true)
+    expect(needsShell('npx', 'win32')).toBe(true)
+  })
+
+  it('never shells docker, whose -c payload would be re-parsed and split at the first space', () => {
+    expect(needsShell('docker', 'win32')).toBe(false)
+  })
+
+  it('never shells anything off Windows, where the shims do not exist', () => {
+    for (const platform of ['linux', 'darwin'] as NodeJS.Platform[]) {
+      for (const command of ['npm', 'npx', 'docker']) {
+        expect(needsShell(command, platform), `${command} on ${platform}`).toBe(false)
+      }
+    }
   })
 })
 

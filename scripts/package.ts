@@ -19,6 +19,7 @@ import {
   describePlan,
   formatChecksumFile,
   isDistributable,
+  needsShell,
   parseArgs,
   planPackaging,
   resolveRequestedPlatforms,
@@ -38,11 +39,6 @@ const dim = (text: string): string => `\x1b[2m${text}\x1b[0m`
 const red = (text: string): string => `\x1b[31m${text}\x1b[0m`
 const yellow = (text: string): string => `\x1b[33m${text}\x1b[0m`
 const green = (text: string): string => `\x1b[32m${text}\x1b[0m`
-
-/** npm/npx/docker are shell wrappers on Windows; spawnSync needs the real name. */
-function binary(name: string): string {
-  return process.platform === 'win32' && name !== 'docker' ? `${name}.cmd` : name
-}
 
 function hasCommand(name: string): boolean {
   const probe = process.platform === 'win32' ? 'where' : 'which'
@@ -66,7 +62,11 @@ function formatCommand(command: string, args: string[]): string {
 
 function run(command: string, args: string[]): void {
   console.log(dim(`\n$ ${formatCommand(command, args)}\n`))
-  const result = spawnSync(binary(command), args, { cwd: projectRoot, stdio: 'inherit' })
+  const result = spawnSync(command, args, {
+    cwd: projectRoot,
+    stdio: 'inherit',
+    shell: needsShell(command, process.platform)
+  })
   if (result.error) {
     throw new Error(`Failed to start \`${command}\`: ${result.error.message}`)
   }

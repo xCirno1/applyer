@@ -167,6 +167,24 @@ export function resolveRequestedPlatforms(
 }
 
 /**
+ * Whether a command has to be spawned through a shell on this platform.
+ *
+ * On Windows `npm` and `npx` are `.cmd` shims, and since the CVE-2024-27980 fix
+ * Node refuses to spawn a `.cmd`/`.bat` file directly — `spawnSync('npm.cmd')`
+ * throws EINVAL. Running them through the shell lets cmd.exe resolve the shim
+ * itself. Real executables (docker) must NOT go through a shell: their
+ * arguments would be re-parsed, and the container's `-c '<whole script>'`
+ * payload would come apart at the first space.
+ *
+ * Every argument this pipeline passes to a shelled command is a bare token
+ * (`run`, `build`, `--linux`, `AppImage`), so no quoting is needed; keep it
+ * that way, or quote at the call site.
+ */
+export function needsShell(command: string, platform: NodeJS.Platform): boolean {
+  return platform === 'win32' && (command === 'npm' || command === 'npx')
+}
+
+/**
  * Uploading is this pipeline's job (and the workflow's), never electron-builder's.
  *
  * Left implicit, electron-builder guesses a publish policy: on CI without a tag

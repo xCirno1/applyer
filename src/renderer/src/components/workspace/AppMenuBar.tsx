@@ -107,6 +107,14 @@ export default function AppMenuBar({
       shortcut: shortcutLabel('terminal.rename'),
       onSelect: () => runTerminalCommand('terminal.rename')
     },
+    { type: 'separator', key: 'sep-rename' },
+    {
+      type: 'action',
+      key: 'search',
+      label: t('menu.findInTerminal'),
+      shortcut: shortcutLabel('terminal.search'),
+      onSelect: () => runTerminalCommand('terminal.search')
+    },
     { type: 'separator', key: 'sep' },
     {
       type: 'action',

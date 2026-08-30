@@ -1,8 +1,9 @@
-import { useEffect, useRef, type ReactElement } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
+import { SearchAddon, type ISearchOptions } from '@xterm/addon-search'
 import '@xterm/xterm/css/xterm.css'
 import { useTheme } from '../../providers/ThemeContext'
 import { isMacPlatform } from '../../shortcuts/keyCombo'
@@ -14,6 +15,11 @@ import {
   newlineSequence,
   readCsiParam
 } from './terminalKeys'
+import TerminalSearchBar, {
+  SEARCH_WIDTH_DEFAULT_PX,
+  SEARCH_WIDTH_MAX_PX,
+  SEARCH_WIDTH_MIN_PX
+} from './TerminalSearchBar'
 
 /**
  * xterm's canvas/WebGL renderer needs a concrete color, not a CSS variable
@@ -38,6 +44,39 @@ function resolveCssColor(cssVarExpression: string): string {
 function withAlpha(rgbColor: string, alpha: number): string {
   const channels = rgbColor.match(/\d+(?:\.\d+)?/g) ?? []
   return `rgba(${channels[0] ?? 0}, ${channels[1] ?? 0}, ${channels[2] ?? 0}, ${alpha})`
+}
+
+/**
+ * `SearchAddon`'s decoration colors are `#RRGGBB` only (no `rgba()`,
+ * unlike the rest of this file's theme resolution), so resolved channels are
+ * hex-packed here instead of going through `withAlpha`.
+ */
+function resolveCssColorHex(cssVarExpression: string): string {
+  const channels = resolveCssColor(cssVarExpression).match(/\d+(?:\.\d+)?/g) ?? []
+  const hex = (n: string | undefined): string =>
+    Math.max(0, Math.min(255, Math.round(Number(n ?? 0))))
+      .toString(16)
+      .padStart(2, '0')
+  return `#${hex(channels[0])}${hex(channels[1])}${hex(channels[2])}`
+}
+
+/**
+ * Highlight colors for `SearchAddon`: every match in the theme's warning
+ * color, the current match in the accent color so it stands out from the
+ * rest — resolved fresh per search call rather than cached, same reasoning
+ * as `resolveTerminalTheme`.
+ */
+function resolveSearchDecorationColors(): NonNullable<ISearchOptions['decorations']> {
+  const match = resolveCssColorHex('var(--color-warning)')
+  const active = resolveCssColorHex('var(--color-accent)')
+  return {
+    matchBackground: match,
+    matchBorder: match,
+    matchOverviewRuler: match,
+    activeMatchBackground: active,
+    activeMatchBorder: active,
+    activeMatchColorOverviewRuler: active
+  }
 }
 
 function resolveTerminalTheme(): {
@@ -81,12 +120,114 @@ function toOscColorReply(cssVarExpression: string): string {
   return `rgb:${hex(channels[0])}/${hex(channels[1])}/${hex(channels[2])}`
 }
 
-export default function TerminalPane(): ReactElement {
+/** Imperative handle so `TerminalGroup` can open the active pane's find bar from the global `terminal.search` shortcut. */
+export interface TerminalPaneHandle {
+  openSearch: () => void
+}
+
+const DEFAULT_SEARCH_OPTIONS: Record<'caseSensitive' | 'wholeWord' | 'regex', boolean> = {
+  caseSensitive: false,
+  wholeWord: false,
+  regex: false
+}
+
+const TerminalPane = forwardRef<TerminalPaneHandle>(function TerminalPane(_props, ref): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
+  const searchAddonRef = useRef<SearchAddon | null>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
   const { state, resolvedScheme } = useTheme()
   const { t } = useTranslation('workspace')
   const toast = useToast()
+
+  const [searchOpen, setSearchOpen] = useState(false)
+  const [searchFocusToken, setSearchFocusToken] = useState(0)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchOptions, setSearchOptions] = useState(DEFAULT_SEARCH_OPTIONS)
+  const [searchResult, setSearchResult] = useState({ index: -1, count: 0 })
+  const [searchWidth, setSearchWidth] = useState(SEARCH_WIDTH_DEFAULT_PX)
+
+  const handleSearchWidthChange = (next: number): void => {
+    setSearchWidth(Math.round(Math.min(SEARCH_WIDTH_MAX_PX, Math.max(SEARCH_WIDTH_MIN_PX, next))))
+  }
+
+  /**
+   * `direction` here means "next/previous result in the panel's own newest
+   * → oldest listing", not the addon's row-order search direction — they're
+   * opposites. Terminal scrollback is chronological (row 0 is the oldest
+   * line, the bottom is newest), but the addon's own match numbering
+   * (`resultIndex`/`resultCount`, and which end `findNext`/`findPrevious`
+   * start from with no existing selection) runs oldest-first, bottom-to-top
+   * for `findPrevious`. Since the most recent output is what you're usually
+   * after in a terminal, our "next" walks from the newest match toward
+   * older ones — i.e. `findPrevious` — and "previous" walks back toward the
+   * newest — `findNext`. `TerminalSearchBar` un-flips the displayed "N of M"
+   * to match (see its `resultCount - resultIndex`).
+   */
+  const runSearch = (
+    direction: 'next' | 'previous',
+    query: string,
+    options: typeof searchOptions,
+    incremental = false
+  ): void => {
+    const addon = searchAddonRef.current
+    if (!addon) return
+    if (!query) {
+      addon.clearDecorations()
+      setSearchResult({ index: -1, count: 0 })
+      return
+    }
+    const findOptions: ISearchOptions = { ...options, incremental, decorations: resolveSearchDecorationColors() }
+    if (direction === 'next') addon.findPrevious(query, findOptions)
+    else addon.findNext(query, findOptions)
+  }
+
+  /**
+   * `findNext`/`findPrevious` pick up right where the *previous* call left
+   * off: if the search term is unchanged since then, they anchor at the
+   * current match's edge and jump to the one after it, even though nothing
+   * asked to move — that's what made reopening the bar or flipping a filter
+   * feel like it was silently skipping ahead. Clearing the terminal's
+   * selection first removes that anchor, so these "just refresh" call sites
+   * land back on the newest match deterministically instead (with no
+   * selection, `findPrevious` — what `runSearch('next', ...)` now maps to —
+   * starts at the bottom of the buffer, i.e. the most recent output).
+   */
+  const restartSearch = (query: string, options: typeof searchOptions): void => {
+    termRef.current?.clearSelection()
+    runSearch('next', query, options)
+  }
+
+  const openSearch = (): void => {
+    setSearchOpen(true)
+    setSearchFocusToken((n) => n + 1)
+    if (searchQuery) restartSearch(searchQuery, searchOptions)
+  }
+
+  const closeSearch = (): void => {
+    searchAddonRef.current?.clearDecorations()
+    setSearchOpen(false)
+    setSearchResult({ index: -1, count: 0 })
+    termRef.current?.focus()
+  }
+
+  // Deliberately keyed on the state `openSearch` closes over rather than the
+  // function itself, which is a fresh identity every render regardless.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useImperativeHandle(ref, () => ({ openSearch }), [searchQuery, searchOptions])
+
+  const updateQuery = (query: string): void => {
+    setSearchQuery(query)
+    runSearch('next', query, searchOptions, true)
+  }
+
+  const toggleSearchOption = (key: keyof typeof searchOptions): void => {
+    setSearchOptions((prev) => {
+      const next = { ...prev, [key]: !prev[key] }
+      restartSearch(searchQuery, next)
+      return next
+    })
+  }
 
   // Mirrors the translator and toast pusher outside of render, so the
   // mount-once session effect below can reach the current ones without
@@ -119,6 +260,13 @@ export default function TerminalPane(): ReactElement {
       // WebGL renderer unavailable in this environment — falls back to the
       // default DOM renderer automatically, no action needed.
     }
+
+    const searchAddon = new SearchAddon()
+    term.loadAddon(searchAddon)
+    searchAddonRef.current = searchAddon
+    const searchResultsDisposable = searchAddon.onDidChangeResults(({ resultIndex, resultCount }) => {
+      setSearchResult({ index: resultIndex, count: resultCount })
+    })
 
     term.open(container)
     fitAddon.fit()
@@ -266,6 +414,7 @@ export default function TerminalPane(): ReactElement {
       disposed = true
       resizeObserver.disconnect()
       onDataDisposable.dispose()
+      searchResultsDisposable.dispose()
       kittyPushDisposable.dispose()
       kittyPopDisposable.dispose()
       kittySetDisposable.dispose()
@@ -278,9 +427,17 @@ export default function TerminalPane(): ReactElement {
         window.api.terminal.dispose(sessionId)
       }
       termRef.current = null
+      searchAddonRef.current = null
       term.dispose()
     }
   }, [])
+
+  // Refocuses the find input every time `openSearch` fires, even when the
+  // bar was already open (e.g. pressing the shortcut again to re-find) —
+  // `searchOpen` alone wouldn't retrigger a mount-time `autoFocus`.
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus()
+  }, [searchOpen, searchFocusToken])
 
   // Re-applies whenever the resolved scheme changes, or any other part of
   // the theme state does — accent/customCss don't touch these two tokens by
@@ -289,7 +446,40 @@ export default function TerminalPane(): ReactElement {
   useEffect(() => {
     if (!termRef.current) return
     termRef.current.options.theme = resolveTerminalTheme()
+    // Re-paints existing match highlights in the new theme's colors too —
+    // otherwise they'd keep the old scheme's palette until the next search.
+    if (searchOpen && searchQuery) restartSearch(searchQuery, searchOptions)
+    // Deliberately theme-triggered only — re-running on every keystroke
+    // instead would fight the input's own findNext calls.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedScheme, state])
 
-  return <div ref={containerRef} className="h-full w-full px-3 py-1.5" />
-}
+  return (
+    <div className="relative h-full w-full">
+      {searchOpen && (
+        <TerminalSearchBar
+          ref={searchInputRef}
+          width={searchWidth}
+          onWidthChange={handleSearchWidthChange}
+          query={searchQuery}
+          onQueryChange={updateQuery}
+          caseSensitive={searchOptions.caseSensitive}
+          wholeWord={searchOptions.wholeWord}
+          regex={searchOptions.regex}
+          onToggleCaseSensitive={() => toggleSearchOption('caseSensitive')}
+          onToggleWholeWord={() => toggleSearchOption('wholeWord')}
+          onToggleRegex={() => toggleSearchOption('regex')}
+          resultIndex={searchResult.index}
+          resultCount={searchResult.count}
+          onNext={() => runSearch('next', searchQuery, searchOptions)}
+          onPrevious={() => runSearch('previous', searchQuery, searchOptions)}
+          onClose={closeSearch}
+          onInputBlur={() => searchAddonRef.current?.clearActiveDecoration()}
+        />
+      )}
+      <div ref={containerRef} className="h-full w-full px-3 py-1.5" />
+    </div>
+  )
+})
+
+export default TerminalPane

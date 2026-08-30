@@ -12,6 +12,7 @@
     "newTerminal": "Terminal Baru",
     "closeTerminal": "Tutup Terminal",
     "renameTerminal": "Ganti Nama Terminal",
+    "findInTerminal": "Cari di Terminal",
     "nextTerminalTab": "Tab Terminal Berikutnya",
     "prevTerminalTab": "Tab Terminal Sebelumnya",
     "refreshBoard": "Muat Ulang Papan",
@@ -55,7 +56,20 @@
     "renameLabel": "Ganti nama {{title}}",
     "closeLabel": "Tutup {{title}}",
     "atMax": "Maksimal cuma bisa buka {{count}} terminal",
-    "pasteFailed": "Gagal membaca papan klip."
+    "pasteFailed": "Gagal membaca papan klip.",
+    "search": {
+      "placeholder": "Cari",
+      "noResults": "Tidak ada hasil",
+      "resultCount": "{{index}} dari {{count}}",
+      "manyMatches_other": "{{count}}+ hasil",
+      "caseSensitive": "Cocokkan huruf besar/kecil",
+      "wholeWord": "Cocokkan seluruh kata",
+      "regex": "Gunakan ekspresi reguler",
+      "previous": "Hasil sebelumnya",
+      "next": "Hasil berikutnya",
+      "close": "Tutup pencarian",
+      "resize": "Ubah ukuran panel pencarian"
+    }
   },
   "logs": {
     "title": "Log Aktivitas",
@@ -79,6 +93,7 @@
     "terminal.nextTab": "Tab terminal berikutnya",
     "terminal.prevTab": "Tab terminal sebelumnya",
     "terminal.rename": "Ganti nama terminal",
+    "terminal.search": "Cari di terminal",
     "view.toggleOverview": "Tampilkan/sembunyikan panel ringkasan",
     "view.toggleConsole": "Tampilkan/sembunyikan dock konsol",
     "dock.showTerminal": "Buka tab terminal",

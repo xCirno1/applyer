@@ -1,6 +1,6 @@
-import { useState, type ReactElement } from 'react'
+import { useRef, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import TerminalPane from './TerminalPane'
+import TerminalPane, { type TerminalPaneHandle } from './TerminalPane'
 import TerminalTabBar from './TerminalTabBar'
 import { useTerminalTabs } from './useTerminalTabs'
 import Button from '../ui/Button'
@@ -34,6 +34,11 @@ export default function TerminalGroup(): ReactElement {
   } = useTerminalTabs()
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [draftTitle, setDraftTitle] = useState('')
+  // Keyed by pane id rather than a single "active pane" ref, since every
+  // open tab's `TerminalPane` stays mounted (see the doc comment above) —
+  // the `terminal.search` shortcut still only needs to reach whichever one
+  // is currently active.
+  const paneHandles = useRef(new Map<string, TerminalPaneHandle>())
 
   const cycleTab = (direction: 1 | -1): void => {
     if (tabs.length === 0) return
@@ -62,6 +67,9 @@ export default function TerminalGroup(): ReactElement {
   useShortcutHandler('terminal.rename', () => {
     const activeTab = tabs.find((t) => t.id === activeId)
     if (activeTab) startRename(activeTab.id, activeTab.title)
+  })
+  useShortcutHandler('terminal.search', () => {
+    if (activeId) paneHandles.current.get(activeId)?.openSearch()
   })
 
   return (
@@ -93,7 +101,12 @@ export default function TerminalGroup(): ReactElement {
         ) : (
           paneOrder.map((id) => (
             <div key={id} className={id === activeId ? 'h-full' : 'hidden'}>
-              <TerminalPane />
+              <TerminalPane
+                ref={(handle) => {
+                  if (handle) paneHandles.current.set(id, handle)
+                  else paneHandles.current.delete(id)
+                }}
+              />
             </div>
           ))
         )}

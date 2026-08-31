@@ -1,0 +1,219 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { createTestDb } from '../testDb'
+import type * as schema from '../schema'
+
+let testDb: ReturnType<typeof drizzle<typeof schema>>
+vi.mock('../index', () => ({ getDb: () => testDb }))
+
+beforeEach(() => {
+  testDb = createTestDb().db
+})
+
+import {
+  addCompanyBoard,
+  countCompanyBoards,
+  getCompanyBoardByKey,
+  listAllCompanyBoards,
+  listCompanyBoards,
+  listSearchableCompanyBoards,
+  recordCompanyBoardFetch,
+  removeCompanyBoard,
+  setCompanyBoardEnabled,
+  type AddCompanyBoardInput
+} from './companyBoardsRepository'
+import { MAX_COMPANY_BOARDS } from '@shared/constants'
+
+function input(overrides: Partial<AddCompanyBoardInput> = {}): AddCompanyBoardInput {
+  const token = overrides.token ?? 'acme'
+  const provider = overrides.provider ?? 'greenhouse'
+  return {
+    provider,
+    token,
+    host: null,
+    site: null,
+    boardKey: overrides.boardKey ?? `${provider}:${token}`,
+    companyName: overrides.companyName ?? 'Acme',
+    addedBy: overrides.addedBy ?? 'user',
+    ...overrides
+  }
+}
+
+describe('addCompanyBoard', () => {
+  it('stores a board and reads it back by key', () => {
+    const result = addCompanyBoard(input())
+    expect(result.status).toBe('added')
+    if (result.status === 'limit_reached') throw new Error('unreachable')
+
+    expect(result.board).toMatchObject({
+      provider: 'greenhouse',
+      token: 'acme',
+      companyName: 'Acme',
+      addedBy: 'user',
+      enabled: true,
+      lastCheckedAt: null,
+      lastJobCount: null
+    })
+    expect(getCompanyBoardByKey('greenhouse:acme')?.id).toBe(result.board.id)
+  })
+
+  it('reports a re-add as already tracked rather than failing or duplicating', () => {
+    const first = addCompanyBoard(input())
+    const second = addCompanyBoard(input({ companyName: 'Acme Renamed' }))
+
+    expect(second.status).toBe('already_tracked')
+    if (second.status === 'limit_reached') throw new Error('unreachable')
+    if (first.status === 'limit_reached') throw new Error('unreachable')
+    expect(second.board.id).toBe(first.board.id)
+    expect(countCompanyBoards()).toBe(1)
+  })
+
+  it('keeps the same slug on two different providers apart', () => {
+    addCompanyBoard(input({ provider: 'lever', boardKey: 'lever:acme' }))
+    addCompanyBoard(input({ provider: 'ashby', boardKey: 'ashby:acme' }))
+    expect(countCompanyBoards()).toBe(2)
+  })
+
+  it('refuses to grow past the ceiling, since every board is a request per search', () => {
+    for (let i = 0; i < MAX_COMPANY_BOARDS; i++) {
+      addCompanyBoard(input({ token: `c${i}`, boardKey: `greenhouse:c${i}` }))
+    }
+    const result = addCompanyBoard(input({ token: 'one-too-many', boardKey: 'greenhouse:one-too-many' }))
+    expect(result).toEqual({ status: 'limit_reached', limit: MAX_COMPANY_BOARDS })
+    expect(countCompanyBoards()).toBe(MAX_COMPANY_BOARDS)
+  })
+
+  it('still reports an existing board as tracked once the ceiling is reached', () => {
+    for (let i = 0; i < MAX_COMPANY_BOARDS; i++) {
+      addCompanyBoard(input({ token: `c${i}`, boardKey: `greenhouse:c${i}` }))
+    }
+    expect(addCompanyBoard(input({ token: 'c0', boardKey: 'greenhouse:c0' })).status).toBe('already_tracked')
+  })
+
+  it('stores a Workday board with its host and career site', () => {
+    const result = addCompanyBoard(
+      input({
+        provider: 'workday',
+        token: 'acme',
+        host: 'acme.wd5.myworkdayjobs.com',
+        site: 'AcmeCareers',
+        boardKey: 'workday:acme:acme.wd5.myworkdayjobs.com:acmecareers'
+      })
+    )
+    if (result.status === 'limit_reached') throw new Error('unreachable')
+    expect(result.board).toMatchObject({ host: 'acme.wd5.myworkdayjobs.com', site: 'AcmeCareers' })
+  })
+})
+
+describe('listCompanyBoards', () => {
+  beforeEach(() => {
+    addCompanyBoard(input({ token: 'zeta', boardKey: 'greenhouse:zeta', companyName: 'Zeta Corp' }))
+    addCompanyBoard(input({ token: 'alpha', boardKey: 'greenhouse:alpha', companyName: 'alpha labs' }))
+  })
+
+  it('orders alphabetically, case-insensitively — this is a watchlist, not a feed', () => {
+    expect(listCompanyBoards({}).boards.map((b) => b.companyName)).toEqual(['alpha labs', 'Zeta Corp'])
+  })
+
+  it('paginates with a total that ignores the page window', () => {
+    const page = listCompanyBoards({ limit: 1, offset: 1 })
+    expect(page.boards.map((b) => b.companyName)).toEqual(['Zeta Corp'])
+    expect(page.total).toBe(2)
+  })
+
+  it('searches company name and slug alike', () => {
+    expect(listCompanyBoards({ search: 'zeta' }).total).toBe(1)
+    expect(listCompanyBoards({ search: 'ALPHA' }).total).toBe(1)
+    expect(listCompanyBoards({ search: 'nothing' }).total).toBe(0)
+  })
+
+  it('clamps a nonsense limit rather than trusting it', () => {
+    expect(listCompanyBoards({ limit: -5 }).boards.length).toBe(1)
+    expect(listCompanyBoards({ limit: 10_000 }).boards.length).toBe(2)
+    expect(listCompanyBoards({ offset: -1 }).boards.length).toBe(2)
+  })
+})
+
+describe('listSearchableCompanyBoards', () => {
+  beforeEach(() => {
+    addCompanyBoard(input({ token: 'gh', boardKey: 'greenhouse:gh' }))
+    addCompanyBoard(input({ provider: 'lever', token: 'lv', boardKey: 'lever:lv' }))
+  })
+
+  it('returns every enabled board when no provider filter is given', () => {
+    expect(listSearchableCompanyBoards().map((b) => b.token).sort()).toEqual(['gh', 'lv'])
+  })
+
+  it('narrows to the requested providers', () => {
+    expect(listSearchableCompanyBoards(['lever']).map((b) => b.token)).toEqual(['lv'])
+  })
+
+  it('returns nothing for an empty provider list, rather than everything', () => {
+    expect(listSearchableCompanyBoards([])).toEqual([])
+  })
+
+  it('skips a paused board', () => {
+    const board = getCompanyBoardByKey('greenhouse:gh')!
+    setCompanyBoardEnabled(board.id, false)
+    expect(listSearchableCompanyBoards().map((b) => b.token)).toEqual(['lv'])
+  })
+})
+
+describe('recordCompanyBoardFetch', () => {
+  beforeEach(() => {
+    addCompanyBoard(input())
+  })
+
+  it('stores an empty board as zero roles with no error, since that is a real answer', () => {
+    recordCompanyBoardFetch('greenhouse:acme', { jobCount: 0 }, '2026-08-30T10:00:00.000Z')
+    const board = getCompanyBoardByKey('greenhouse:acme')!
+    expect(board.lastJobCount).toBe(0)
+    expect(board.lastError).toBeNull()
+    expect(board.lastCheckedAt).toBe('2026-08-30T10:00:00.000Z')
+  })
+
+  it('stores an error and then clears it on the next successful fetch', () => {
+    recordCompanyBoardFetch('greenhouse:acme', { jobCount: 0, error: 'Board not found (404)' })
+    expect(getCompanyBoardByKey('greenhouse:acme')!.lastError).toContain('404')
+
+    recordCompanyBoardFetch('greenhouse:acme', { jobCount: 7 })
+    const board = getCompanyBoardByKey('greenhouse:acme')!
+    expect(board.lastError).toBeNull()
+    expect(board.lastJobCount).toBe(7)
+  })
+
+  it('is a no-op for a board that has since been removed', () => {
+    expect(() => recordCompanyBoardFetch('greenhouse:gone', { jobCount: 1 })).not.toThrow()
+  })
+})
+
+describe('setCompanyBoardEnabled / removeCompanyBoard', () => {
+  it('toggles a board and returns the updated row', () => {
+    const added = addCompanyBoard(input())
+    if (added.status === 'limit_reached') throw new Error('unreachable')
+
+    expect(setCompanyBoardEnabled(added.board.id, false)?.enabled).toBe(false)
+    expect(setCompanyBoardEnabled(added.board.id, true)?.enabled).toBe(true)
+  })
+
+  it('returns null for an unknown id instead of inventing a row', () => {
+    expect(setCompanyBoardEnabled('nope', false)).toBeNull()
+  })
+
+  it('removes a board and reports whether anything was removed', () => {
+    const added = addCompanyBoard(input())
+    if (added.status === 'limit_reached') throw new Error('unreachable')
+
+    expect(removeCompanyBoard(added.board.id)).toBe(true)
+    expect(removeCompanyBoard(added.board.id)).toBe(false)
+    expect(countCompanyBoards()).toBe(0)
+  })
+})
+
+describe('listAllCompanyBoards', () => {
+  it('returns every board unpaginated, for a one-shot read', () => {
+    addCompanyBoard(input({ token: 'a', boardKey: 'greenhouse:a' }))
+    addCompanyBoard(input({ token: 'b', boardKey: 'greenhouse:b' }))
+    expect(listAllCompanyBoards()).toHaveLength(2)
+  })
+})

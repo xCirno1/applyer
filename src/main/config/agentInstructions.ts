@@ -23,9 +23,19 @@ app's local job-tracking database and a real browser:
   yourself (\`~/resume.pdf\` and friends are ordinary files), then send the
   fields. Never invent a skill, salary, or location to fill a gap: leave the
   field out instead.
-- \`search_jobs\` — search job postings by keyword (LinkedIn/Indeed keyword
-  search; other sources are per-company boards with no search endpoint — use
-  \`get_job_details\` with a specific career-page URL for those instead).
+- \`search_jobs\` — search job postings by keyword. LinkedIn and Indeed search
+  across every company; \`greenhouse\`/\`lever\`/\`ashby\`/\`workday\` instead
+  search the company boards the user tracks, since those providers have no
+  cross-company search endpoint of their own.
+- \`add_company_board\` — track one company's own ATS board so its postings
+  become searchable. Worth doing for companies that run a Greenhouse/Lever/
+  Ashby/Workday board and never post to LinkedIn or Indeed, which is common
+  below a certain size and is exactly where the competition is thinnest. Give
+  it a company name, a domain, or a board URL. Add companies the user has
+  actually asked to watch — every tracked board is a request on every search.
+- \`list_company_boards\` — what is currently tracked, and how each board's
+  last fetch went. Check before adding, and use it to explain an empty
+  greenhouse/lever/ashby/workday result.
 - \`get_job_details\` — fetch the full description, location, and application
   info for a single job posting URL.
 - \`list_jobs\` — check what's already tracked (optionally by status) before

@@ -29,6 +29,13 @@ export const IPC = {
     setRetention: 'indexedJobs:setRetention',
     onChanged: 'indexedJobs:changed'
   },
+  companyBoards: {
+    list: 'companyBoards:list',
+    add: 'companyBoards:add',
+    remove: 'companyBoards:remove',
+    setEnabled: 'companyBoards:setEnabled',
+    onChanged: 'companyBoards:changed'
+  },
   exclusions: {
     list: 'exclusions:list',
     add: 'exclusions:add',

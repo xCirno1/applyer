@@ -1,7 +1,8 @@
 {
   "tabs": {
     "indexed": "Terindeks",
-    "excluded": "Dikecualikan"
+    "excluded": "Dikecualikan",
+    "boards": "Papan Perusahaan"
   },
   "filters": {
     "searchPlaceholder": "Cari posisi atau perusahaan…",
@@ -43,6 +44,36 @@
     "updated": "Lama penyimpanan diperbarui.",
     "updatedDeleted_other": "Lama penyimpanan diperbarui. {{count}} lowongan terindeks yang sudah lewat batas waktu ikut dihapus.",
     "failed": "Gagal memperbarui lama penyimpanan."
+  },
+  "boards": {
+    "ats": "Papan ATS",
+    "atsTooltip": "Applicant Tracking System — software rekrutmen tempat perusahaan menjalankan papan lowongannya sendiri (Greenhouse, Lever, Ashby, Workday).",
+    "intro": "dicari per perusahaan: tidak ada satu pun penyedia ini yang punya pencarian lintas perusahaan, jadi pencarian lowongan hanya menjangkau perusahaan yang terdaftar di sini. Tambahkan yang ingin kamu pantau — termasuk perusahaan kecil yang punya papan sendiri dan tidak pernah memasang lowongan di LinkedIn atau Indeed.",
+    "queryLabel": "Nama perusahaan, situs web, atau link papan",
+    "queryPlaceholder": "Acme Labs, acme.com, atau https://jobs.lever.co/acme",
+    "queryHint": "Applyer memeriksa Greenhouse, Lever, dan Ashby lalu memilih papan dengan lowongan terbanyak. Papan Workday harus ditambahkan lewat link.",
+    "nameLabel": "Nama tampilan (opsional)",
+    "namePlaceholder": "Acme Labs",
+    "add": "Pantau papan",
+    "empty": "Belum ada papan perusahaan yang dipantau. Pencarian di Greenhouse, Lever, Ashby, dan Workday tidak akan menghasilkan apa pun sampai kamu menambahkannya.",
+    "added_other": "Memantau {{company}} — {{count}} lowongan terbuka saat ini.",
+    "addedEmpty": "Memantau {{company}}. Papannya aktif tetapi belum ada lowongan terbuka.",
+    "addedUnverified": "Memantau {{company}}, tetapi papannya belum bisa dihubungi untuk dipastikan. Pencarian berikutnya akan mencoba lagi.",
+    "alreadyTracked": "{{company}} sudah dipantau.",
+    "ambiguous": "Perusahaan ini juga punya papan aktif di {{others}}. Yang dipakai papan {{provider}} karena lowongannya paling banyak — yang lain biasanya sisa setelah pindah penyedia.",
+    "openRoles_other": "{{count}} lowongan terbuka",
+    "notCheckedYet": "belum pernah dicari",
+    "paused": "dijeda",
+    "pause": "Jeda",
+    "resume": "Lanjutkan",
+    "pauseTooltip": "Tetap simpan papannya di daftar, tetapi berhenti mengambilnya saat pencarian.",
+    "resumeTooltip": "Ambil lagi papan ini saat pencarian.",
+    "toggleFailed": "Gagal memperbarui papan itu.",
+    "remove": "Hapus",
+    "removeTitle": "Berhenti memantau papan ini",
+    "removeMessage": "Lowongan dari {{company}} tidak akan muncul lagi di pencarian. Lowongan yang sudah diantre tidak terpengaruh.",
+    "removed": "{{company}} tidak dipantau lagi.",
+    "removeFailed": "Gagal menghapus papan itu."
   },
   "exclusions": {
     "intro": "Link di daftar ini tidak akan pernah muncul di pencarian lowongan dan tidak bisa diantre, baik olehmu maupun oleh agen. Kecualikan lowongan lewat halaman detailnya di papan, atau tambahkan langsung di sini.",

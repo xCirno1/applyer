@@ -24,6 +24,31 @@ import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
 import type { ListActivityQuery, ListActivityResult } from '@shared/types/activity'
 import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
+import type {
+  BoardProbeCandidate,
+  CompanyBoardRecord,
+  ListCompanyBoardsQuery,
+  ListCompanyBoardsResult
+} from '@shared/types/companyBoard'
+import type { AppError } from '@shared/types/errorCodes'
+
+/**
+ * A successful add reports more than "it worked": whether the board was
+ * already tracked, how many postings it holds right now (0 is a real answer),
+ * whether it could be reached at all, and whether the company answered on
+ * more than one ATS — which is what an in-progress migration looks like.
+ */
+type AddCompanyBoardResponse =
+  | {
+      ok: true
+      status: 'added' | 'already_tracked'
+      board: CompanyBoardRecord
+      jobCount: number
+      verified: boolean
+      ambiguous: boolean
+      candidates: BoardProbeCandidate[]
+    }
+  | { ok: false; error: AppError }
 import type { IndexedJobsRetention, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
 import type { StorageStats } from '@shared/types/storage'
 import type {
@@ -110,6 +135,21 @@ const indexedJobsApi = {
     const listener = (): void => callback()
     ipcRenderer.on(IPC.indexedJobs.onChanged, listener)
     return () => ipcRenderer.removeListener(IPC.indexedJobs.onChanged, listener)
+  }
+}
+
+const companyBoardsApi = {
+  list: (query: ListCompanyBoardsQuery): Promise<ListCompanyBoardsResult> =>
+    ipcRenderer.invoke(IPC.companyBoards.list, query),
+  add: (query: string, companyName?: string): Promise<AddCompanyBoardResponse> =>
+    ipcRenderer.invoke(IPC.companyBoards.add, { query, companyName }),
+  remove: (id: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.companyBoards.remove, { id }),
+  setEnabled: (id: string, enabled: boolean): Promise<{ ok: boolean; board?: CompanyBoardRecord; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.companyBoards.setEnabled, { id, enabled }),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.companyBoards.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.companyBoards.onChanged, listener)
   }
 }
 
@@ -257,6 +297,7 @@ const api = {
   clipboard: clipboardApi,
   jobs: jobsApi,
   indexedJobs: indexedJobsApi,
+  companyBoards: companyBoardsApi,
   exclusions: exclusionsApi,
   profile: profileApi,
   onboarding: onboardingApi,

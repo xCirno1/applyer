@@ -31,6 +31,11 @@ export type ErrorCode =
   | 'commandTooLong'
   | 'unsupportedFileType'
   | 'fileTooLarge'
+  // Company ATS boards (adding, resolving and tracking a company's own board).
+  | 'boardInputRequired'
+  | 'boardNotFound'
+  | 'boardUnreachable'
+  | 'boardLimitReached'
   // Storage location (picking, validating, and migrating the data folder).
   | 'invalidFolderPath'
   | 'chooseFolder'

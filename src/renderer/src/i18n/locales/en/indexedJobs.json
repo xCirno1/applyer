@@ -1,7 +1,8 @@
 {
   "tabs": {
     "indexed": "Indexed",
-    "excluded": "Excluded"
+    "excluded": "Excluded",
+    "boards": "Company Boards"
   },
   "filters": {
     "searchPlaceholder": "Search title or company…",
@@ -44,6 +45,38 @@
     "updatedDeleted_one": "Retention updated. {{count}} indexed job older than the window was deleted.",
     "updatedDeleted_other": "Retention updated. {{count}} indexed jobs older than the window were deleted.",
     "failed": "Failed to update retention."
+  },
+  "boards": {
+    "ats": "ATS boards",
+    "atsTooltip": "Applicant Tracking System — the hiring software a company runs its own job board on (Greenhouse, Lever, Ashby, Workday).",
+    "intro": "are searched company by company: none of these providers has a search across all companies, so a job search only reaches the companies listed here. Add the ones you want watched — including the smaller companies that run a board and never post to LinkedIn or Indeed.",
+    "queryLabel": "Company name, website, or board URL",
+    "queryPlaceholder": "Acme Labs, acme.com, or https://jobs.lever.co/acme",
+    "queryHint": "Applyer checks Greenhouse, Lever and Ashby and keeps the board with the most open roles. Workday boards must be added by URL.",
+    "nameLabel": "Display name (optional)",
+    "namePlaceholder": "Acme Labs",
+    "add": "Track board",
+    "empty": "No company boards tracked yet. Searches on Greenhouse, Lever, Ashby and Workday will return nothing until you add one.",
+    "added_one": "Tracking {{company}} — {{count}} open role right now.",
+    "added_other": "Tracking {{company}} — {{count}} open roles right now.",
+    "addedEmpty": "Tracking {{company}}. Its board is live but has no open roles right now.",
+    "addedUnverified": "Tracking {{company}}, but its board couldn't be reached to confirm just now. The next search will retry it.",
+    "alreadyTracked": "{{company}} is already being tracked.",
+    "ambiguous": "This company also has a live board on {{others}}. Kept the {{provider}} one, which lists the most open roles — the other is usually left behind after moving providers.",
+    "openRoles_one": "{{count}} open role",
+    "openRoles_other": "{{count}} open roles",
+    "notCheckedYet": "not searched yet",
+    "paused": "paused",
+    "pause": "Pause",
+    "resume": "Resume",
+    "pauseTooltip": "Keep the board on the list but stop fetching it during searches.",
+    "resumeTooltip": "Start fetching this board during searches again.",
+    "toggleFailed": "Could not update that board.",
+    "remove": "Remove",
+    "removeTitle": "Stop tracking this board",
+    "removeMessage": "{{company}}'s postings will no longer appear in job searches. Jobs already queued from it are unaffected.",
+    "removed": "{{company}} is no longer tracked.",
+    "removeFailed": "Could not remove that board."
   },
   "exclusions": {
     "intro": "URLs on this list are never returned by a job search and can't be queued, whether you or the agent tries to. Exclude a job from its detail view on the board, or add one directly here.",

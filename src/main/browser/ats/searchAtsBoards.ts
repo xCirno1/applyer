@@ -1,0 +1,211 @@
+import { ATS_FETCH_CONCURRENCY, MAX_ATS_BOARDS_PER_SEARCH } from '@shared/constants'
+import { appLogger } from '../../logger'
+import { listSearchableCompanyBoards, recordCompanyBoardFetch } from '../../db/repositories/companyBoardsRepository'
+import { boardCacheKey, readBoardCache, writeBoardCache } from './boardCache'
+import { mapWithConcurrency } from './http'
+import { adapterFor } from './providers'
+import { crossSourceKey, interleaveByBoard, queryTerms, rankPostings } from './matching'
+import type { AtsProvider, CompanyBoardRecord } from '@shared/types/companyBoard'
+import type { JobSearchResultItem } from '../types'
+import type { AtsBoardFetchOutcome, AtsPosting } from './types'
+
+/**
+ * The third search source, alongside Indeed and LinkedIn.
+ *
+ * The aggregators run one keyword query against every company at once; this
+ * one can't, because no ATS provider offers a cross-company search endpoint.
+ * Instead it fetches the boards of the companies being tracked (see
+ * `companyBoardsRepository`) and filters them locally. That makes its
+ * coverage exactly the watchlist — a monitoring tool, not a discovery one —
+ * but it reaches the companies that run a board and never syndicate to an
+ * aggregator, which are invisible to the other two sources.
+ *
+ * These are plain public JSON APIs: no browser, no login, no captcha surface,
+ * so a search here is cheap and can't be blocked the way a scraped
+ * aggregator can.
+ */
+
+export interface SearchAtsBoardsParams {
+  query: string
+  location?: string
+  limit: number
+  /** Restricts the search to boards on these providers; omitted means all of them. */
+  providers?: AtsProvider[]
+}
+
+export interface SearchAtsBoardsResult {
+  results: JobSearchResultItem[]
+  warnings: string[]
+  /** Boards actually fetched (or served from cache) — 0 means nothing is being tracked. */
+  searchedBoards: number
+  /**
+   * Providers at least one tracked board was actually fetched for — reported
+   * as `searchedSources`, so a provider with nothing tracked is honestly
+   * absent from it rather than listed as searched.
+   */
+  searchedProviders: AtsProvider[]
+}
+
+/** A posting kept with the board it came from, so the merge below doesn't have to look it up again. */
+interface BoardPosting {
+  board: CompanyBoardRecord
+  posting: AtsPosting
+}
+
+function toSearchResult(board: CompanyBoardRecord, posting: AtsPosting): JobSearchResultItem {
+  return {
+    title: posting.title,
+    company: posting.company || board.companyName,
+    location: posting.location,
+    url: posting.url,
+    source: board.provider,
+    postedAt: posting.postedAt,
+    snippet: posting.snippet,
+    salaryRange: posting.salaryRange
+  }
+}
+
+async function fetchBoard(board: CompanyBoardRecord, query: string, limit: number): Promise<AtsBoardFetchOutcome> {
+  const adapter = adapterFor(board.provider)
+  if (!adapter) return { status: 'error', message: `Unknown ATS provider: ${board.provider}` }
+
+  const cacheKey = boardCacheKey(board, query)
+  const cached = readBoardCache(cacheKey)
+  if (cached) return cached
+
+  let outcome: AtsBoardFetchOutcome
+  try {
+    outcome = await adapter.fetchBoard(board, { query, limit, companyName: board.companyName })
+  } catch (err) {
+    // Adapters return outcomes rather than throwing, but one unexpected throw
+    // must not take down a search across every other board.
+    outcome = { status: 'error', message: String(err) }
+  }
+
+  writeBoardCache(cacheKey, outcome)
+  return outcome
+}
+
+/**
+ * Persisting the outcome is bookkeeping on top of the search the caller
+ * actually asked for, so a database hiccup here is logged and swallowed
+ * rather than failing a search that already has its results.
+ */
+function record(board: CompanyBoardRecord, outcome: AtsBoardFetchOutcome): void {
+  try {
+    recordCompanyBoardFetch(board.boardKey, {
+      jobCount: outcome.status === 'ok' ? outcome.postings.length : 0,
+      error:
+        outcome.status === 'not_found'
+          ? 'Board not found (404) — the slug may have changed or the board may have been retired.'
+          : outcome.status === 'error'
+            ? outcome.message
+            : null
+    })
+  } catch (err) {
+    appLogger.warn(`Failed to record board fetch for ${board.boardKey}: ${String(err)}`)
+  }
+}
+
+export async function searchAtsBoards(params: SearchAtsBoardsParams): Promise<SearchAtsBoardsResult> {
+  const warnings: string[] = []
+
+  let tracked: CompanyBoardRecord[]
+  try {
+    tracked = listSearchableCompanyBoards(params.providers)
+  } catch (err) {
+    appLogger.error(`Failed to read tracked company boards: ${String(err)}`)
+    return {
+      results: [],
+      warnings: [`company boards: could not read the tracked-board list (${String(err)}).`],
+      searchedBoards: 0,
+      searchedProviders: []
+    }
+  }
+
+  if (tracked.length === 0) {
+    warnings.push(
+      'company boards: no boards are being tracked yet, so there was nothing to search. Add one with add_company_board (a company name, domain, or board URL), or from Indexed Jobs > Company Boards in the app.'
+    )
+    return { results: [], warnings, searchedBoards: 0, searchedProviders: [] }
+  }
+
+  const boards = tracked.slice(0, MAX_ATS_BOARDS_PER_SEARCH)
+  if (tracked.length > boards.length) {
+    warnings.push(
+      `company boards: ${tracked.length} boards are tracked but only the first ${boards.length} were searched (one request each). Disable the boards you aren't watching to bring the rest into range.`
+    )
+  }
+
+  const terms = queryTerms(params.query)
+  const now = Date.now()
+
+  const perBoard = await mapWithConcurrency(boards, ATS_FETCH_CONCURRENCY, async (board) => {
+    const outcome = await fetchBoard(board, params.query, params.limit)
+    record(board, outcome)
+    return { board, outcome }
+  })
+
+  const rankedPerBoard: BoardPosting[][] = []
+  const searchedProviders = new Set<AtsProvider>()
+
+  for (const { board, outcome } of perBoard) {
+    searchedProviders.add(board.provider)
+
+    if (outcome.status === 'not_found') {
+      warnings.push(
+        `${board.companyName} (${board.provider}): board not found (404) — the slug may have changed, or the company may have moved to another ATS.`
+      )
+      continue
+    }
+    if (outcome.status === 'error') {
+      warnings.push(`${board.companyName} (${board.provider}): could not be fetched (${outcome.message}).`)
+      continue
+    }
+    if (outcome.skipped > 0) {
+      // Not a user-facing warning: a few unreadable rows on an otherwise fine
+      // board is a payload change to investigate, not something a job seeker
+      // can act on.
+      appLogger.warn(`${board.boardKey}: skipped ${outcome.skipped} unreadable posting(s)`)
+    }
+
+    const ranked = rankPostings(outcome.postings, terms, params.location, now)
+    if (ranked.length === 0) continue
+    rankedPerBoard.push(ranked.map((posting) => ({ board, posting })))
+  }
+
+  // One job can arrive twice: a company tracked under two slugs, or — the
+  // case that actually happens — a company mid-ATS-migration whose old board
+  // is still live, where the same role has an entirely different URL on each
+  // board. URLs can't see that, so company + title + location is checked too.
+  //
+  // Only *across* boards, though. Two postings on one board with the same
+  // title and location are two requisitions the company chose to publish
+  // separately, and the board's own ids already keep them apart.
+  const seenUrls = new Set<string>()
+  const seenPostings = new Map<string, string>()
+  const results: JobSearchResultItem[] = []
+
+  // Interleaved with headroom, because dedupe drops entries after the merge
+  // and a limit-sized merge would come up short.
+  for (const { board, posting } of interleaveByBoard(rankedPerBoard, params.limit * 3)) {
+    if (seenUrls.has(posting.url)) continue
+
+    const identity = crossSourceKey(posting.company || board.companyName, posting.title, posting.location)
+    const seenOnBoard = seenPostings.get(identity)
+    if (seenOnBoard !== undefined && seenOnBoard !== board.boardKey) continue
+
+    seenUrls.add(posting.url)
+    seenPostings.set(identity, board.boardKey)
+
+    results.push(toSearchResult(board, posting))
+    if (results.length >= params.limit) break
+  }
+
+  return {
+    results,
+    warnings,
+    searchedBoards: boards.length,
+    searchedProviders: [...searchedProviders]
+  }
+}

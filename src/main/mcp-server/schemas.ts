@@ -83,3 +83,26 @@ export const excludeJobShape = {
   company: z.string().trim().max(300).optional(),
   reason: z.string().trim().max(300).optional()
 }
+
+const atsProviderEnum = z.enum(['greenhouse', 'lever', 'ashby', 'workday'])
+
+/**
+ * `company` carries whatever the agent has — a name, a domain, or a board
+ * URL — and the app resolves it. `provider` + `token` skip that resolution
+ * for an agent that already knows the exact slug. They only mean anything
+ * together — a provider with no token is a hint with no board, a token with
+ * no provider doesn't say which API to ask — so the tool rejects one without
+ * the other (this shape is a field map, which can't express that itself).
+ */
+export const addCompanyBoardShape = {
+  company: z.string().trim().min(1).max(200),
+  provider: atsProviderEnum.optional(),
+  token: z.string().trim().min(1).max(100).optional(),
+  displayName: z.string().trim().max(200).optional()
+}
+
+export const listCompanyBoardsShape = {
+  search: z.string().trim().max(200).optional(),
+  limit: z.number().int().min(1).max(50).optional(),
+  offset: z.number().int().min(0).optional()
+}

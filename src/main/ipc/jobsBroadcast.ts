@@ -49,6 +49,18 @@ export function broadcastExclusionsChanged(): void {
 }
 
 /**
+ * Payload-less, same reasoning as `broadcastExclusionsChanged` — the tracked
+ * boards are written from the Company Boards panel *and* by the agent's
+ * `add_company_board` tool, and the panel stays mounted-but-hidden while
+ * another screen is showing.
+ */
+export function broadcastCompanyBoardsChanged(): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.companyBoards.onChanged)
+  }
+}
+
+/**
  * Payload-less, same reasoning as `broadcastExclusionsChanged`. Needed
  * because the profile can now be written from two places at once: the
  * Settings form and the agent's `update_profile` tool. Settings is a

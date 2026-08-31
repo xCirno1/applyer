@@ -9,6 +9,7 @@ import { registerTerminalIpc } from './ipc/terminal'
 import { registerJobsIpc } from './ipc/jobs'
 import { registerIndexedJobsIpc } from './ipc/indexedJobs'
 import { registerExclusionsIpc } from './ipc/exclusions'
+import { registerCompanyBoardsIpc } from './ipc/companyBoards'
 import { registerProfileIpc } from './ipc/profile'
 import { registerOnboardingIpc } from './ipc/onboarding'
 import { registerBrowserControlIpc } from './ipc/browserControl'
@@ -71,6 +72,7 @@ function initializeApp(): void {
   registerJobsIpc()
   registerIndexedJobsIpc()
   registerExclusionsIpc()
+  registerCompanyBoardsIpc()
   registerProfileIpc()
   registerOnboardingIpc()
   registerBrowserControlIpc()

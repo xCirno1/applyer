@@ -96,6 +96,11 @@ export const workdayAdapter: AtsProviderAdapter = {
       return { status: 'error', message: 'Workday board is missing its host or career-site id' }
     }
 
+    // `options.limit` is how many postings to *gather*, not how many the
+    // caller will show — the location filter runs downstream, so the caller
+    // asks for headroom (see `searchAtsBoards`). Stopping at exactly the
+    // number of rows a search wants to display would let a location filter
+    // empty the result while matching postings sat on the next page.
     const wanted = Math.max(1, Math.min(options.limit, PAGE_SIZE * MAX_PAGES))
     const postings: AtsPosting[] = []
     let skipped = 0

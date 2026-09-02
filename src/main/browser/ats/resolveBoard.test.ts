@@ -89,6 +89,17 @@ describe('resolveCompanyBoard — probing a bare company name', () => {
     expect(outcome.descriptor.provider).toBe('ashby')
   })
 
+  it('does not call one provider answering on two slug guesses a migration', async () => {
+    // "Acme Labs" generates several slugs; two of them landing on the same
+    // Lever board is one system answering twice, not a company mid-move.
+    routeFetch((provider) => (provider === 'lever' ? leverJobs(4) : notFound()))
+
+    const outcome = await resolveCompanyBoard({ query: 'Acme Labs' })
+    if (outcome.status !== 'resolved') throw new Error('unreachable')
+    expect(outcome.candidates.length).toBeGreaterThan(1)
+    expect(outcome.ambiguous).toBe(false)
+  })
+
   it('keeps a board that answers with no roles, since only a 404 proves a wrong slug', async () => {
     routeFetch((provider) => (provider === 'ashby' ? ashbyJobs(0) : notFound()))
 
@@ -142,6 +153,22 @@ describe('resolveCompanyBoard — probing a bare company name', () => {
     expect(outcome.status).toBe('not_found')
     if (outcome.status !== 'not_found') throw new Error('unreachable')
     expect(outcome.triedTokens).toContain('nonsense-xyz-9')
+  })
+
+  it('does not report not_found when one provider 404d but another never answered', async () => {
+    // Only a 404 from *every* provider rules a company out. A provider that
+    // failed for a network reason may well be the one holding the board, so
+    // the mixture is reported as an unfinished check rather than "no such
+    // company" — which would send the user hunting for a slug that is fine.
+    global.fetch = vi.fn(async (input: string) => {
+      if (new URL(input).hostname === 'api.ashbyhq.com') throw new Error('ECONNRESET')
+      return new Response('', { status: 404 })
+    }) as unknown as typeof fetch
+
+    const outcome = await resolveCompanyBoard({ query: 'acme' })
+    expect(outcome.status).toBe('error')
+    if (outcome.status !== 'error') throw new Error('unreachable')
+    expect(outcome.message).toContain('ECONNRESET')
   })
 
   it('reports an error, not "no such company", when nothing could be reached', async () => {

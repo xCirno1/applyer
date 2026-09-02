@@ -133,6 +133,29 @@ describe('fetchAtsJson', () => {
     expect(outcome).toEqual({ status: 'error', message: 'Timed out after 5ms' })
   })
 
+  it('times out a response whose headers arrived but whose body never finishes', async () => {
+    // fetch() resolves on headers, so a board that stalls mid-body used to
+    // sit in response.text() forever — holding a concurrency slot despite the
+    // timeout. The stream below is wired to the signal the way undici wires
+    // a real one.
+    global.fetch = vi.fn(async (_url: string, init?: RequestInit) => {
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode('{"jobs":['))
+          init?.signal?.addEventListener('abort', () => {
+            const err = new Error('This operation was aborted')
+            err.name = 'AbortError'
+            controller.error(err)
+          })
+        }
+      })
+      return new Response(stream, { status: 200 })
+    }) as typeof fetch
+
+    const outcome = await fetchAtsJson('https://example.com/board', { timeoutMs: 10 })
+    expect(outcome).toEqual({ status: 'error', message: 'Timed out after 10ms' })
+  })
+
   it('sends a JSON body and content-type for a POST', async () => {
     const fetchSpy = vi.fn<FetchLike>(async () => jsonResponse({ jobPostings: [] }))
     global.fetch = fetchSpy as unknown as typeof fetch

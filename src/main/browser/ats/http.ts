@@ -65,11 +65,44 @@ export function retryDelayMs(header: string | null): number {
   return DEFAULT_RETRY_DELAY_MS
 }
 
-async function once(url: string, options: JsonFetchOptions): Promise<Response> {
+/**
+ * One attempt, reduced to the few things the caller needs. The body is read
+ * here rather than by the caller so that it happens inside the timeout — see
+ * `attempt`.
+ */
+interface Attempt {
+  status: number
+  retryAfter: string | null
+  /** The body text, or null when it was deliberately not read. */
+  body: string | null
+  /** Set only when the body was refused unread because the response declared an implausible size. */
+  declaredLength: number | null
+}
+
+/** Releases a body we are not going to parse instead of leaving the socket to the garbage collector. */
+async function discard(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel()
+  } catch {
+    // Already consumed, already errored, or aborted mid-cancel — there is
+    // nothing left to release either way.
+  }
+}
+
+/**
+ * The timeout has to span the body read, not just the request.
+ * `fetch` resolves as soon as the response *headers* arrive, so a board that
+ * sends headers and then stalls mid-body would sit in `response.text()`
+ * forever if the timer were cleared when `fetch` resolved — holding one of
+ * the few concurrency slots and, with enough of them, stalling a whole search
+ * despite an explicit timeout. Reading the body inside the same window keeps
+ * one timer covering the entire exchange.
+ */
+async function attempt(url: string, options: JsonFetchOptions): Promise<Attempt> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? ATS_FETCH_TIMEOUT_MS)
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
       method: options.method ?? 'GET',
       headers: {
         Accept: 'application/json',
@@ -79,6 +112,26 @@ async function once(url: string, options: JsonFetchOptions): Promise<Response> {
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
       signal: controller.signal
     })
+
+    // Nothing downstream parses the body of a failed response, and a
+    // retryable status is about to be requested again, so neither is read.
+    if (!response.ok) {
+      await discard(response)
+      return {
+        status: response.status,
+        retryAfter: response.headers.get('retry-after'),
+        body: null,
+        declaredLength: null
+      }
+    }
+
+    const declaredLength = Number.parseInt(response.headers.get('content-length') ?? '', 10)
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
+      await discard(response)
+      return { status: response.status, retryAfter: null, body: null, declaredLength }
+    }
+
+    return { status: response.status, retryAfter: null, body: await response.text(), declaredLength: null }
   } finally {
     clearTimeout(timer)
   }
@@ -87,12 +140,12 @@ async function once(url: string, options: JsonFetchOptions): Promise<Response> {
 export async function fetchAtsJson(url: string, options: JsonFetchOptions = {}): Promise<JsonFetchOutcome> {
   const notFound = new Set([404, 410, ...(options.notFoundStatuses ?? [])])
 
-  let response: Response
+  let result: Attempt
   try {
-    response = await once(url, options)
-    if (RETRYABLE_STATUSES.includes(response.status)) {
-      await delay(retryDelayMs(response.headers.get('retry-after')))
-      response = await once(url, options)
+    result = await attempt(url, options)
+    if (RETRYABLE_STATUSES.includes(result.status)) {
+      await delay(retryDelayMs(result.retryAfter))
+      result = await attempt(url, options)
     }
   } catch (err) {
     // An abort is by far the most common failure here and reads as a bare
@@ -104,26 +157,17 @@ export async function fetchAtsJson(url: string, options: JsonFetchOptions = {}):
     }
   }
 
-  if (notFound.has(response.status)) return { status: 'not_found' }
-  if (!response.ok) return { status: 'error', message: `HTTP ${response.status}` }
-
-  const declaredLength = Number.parseInt(response.headers.get('content-length') ?? '', 10)
-  if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
-    return { status: 'error', message: `Response too large (${declaredLength} bytes)` }
+  if (notFound.has(result.status)) return { status: 'not_found' }
+  if (result.declaredLength !== null) {
+    return { status: 'error', message: `Response too large (${result.declaredLength} bytes)` }
   }
-
-  let text: string
-  try {
-    text = await response.text()
-  } catch (err) {
-    return { status: 'error', message: `Failed to read response: ${String(err)}` }
-  }
-  if (text.length > MAX_RESPONSE_BYTES) {
-    return { status: 'error', message: `Response too large (${text.length} bytes)` }
+  if (result.body === null) return { status: 'error', message: `HTTP ${result.status}` }
+  if (result.body.length > MAX_RESPONSE_BYTES) {
+    return { status: 'error', message: `Response too large (${result.body.length} bytes)` }
   }
 
   try {
-    return { status: 'ok', data: JSON.parse(text) }
+    return { status: 'ok', data: JSON.parse(result.body) }
   } catch {
     // A board behind a CDN error page or a login wall answers 200 with HTML.
     return { status: 'error', message: 'Response was not valid JSON' }

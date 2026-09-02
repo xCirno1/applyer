@@ -30,6 +30,15 @@ describe('normalizeText', () => {
   it('collapses to an empty string for punctuation-only input', () => {
     expect(normalizeText('!!! ???')).toBe('')
   })
+
+  it('keeps letters from every script, not just ASCII', () => {
+    // An ASCII-only class erased these entirely, which `matchesQuery` reads
+    // as "no filter" — a search for a Japanese title returned the company's
+    // whole board.
+    expect(normalizeText('ソフトウェア エンジニア')).toBe('ソフトウェア エンジニア')
+    expect(normalizeText('Разработчик (Backend)')).toBe('разработчик backend')
+    expect(normalizeText('München')).toBe('munchen')
+  })
 })
 
 describe('queryTerms', () => {
@@ -92,6 +101,24 @@ describe('matchesLocation', () => {
 
   it('rejects a posting with no location text at all, rather than widening the filter', () => {
     expect(matchesLocation(posting({ location: undefined }), 'Berlin')).toBe(false)
+  })
+
+  it('still requires a place named alongside "remote"', () => {
+    // The remote flag answers the word "remote" and nothing else — otherwise
+    // "Remote Australia" returns remote roles on every other continent.
+    const auRemote = posting({ location: 'Remote - Australia', isRemote: true })
+    const usRemote = posting({ location: 'Remote - United States', isRemote: true })
+    expect(matchesLocation(auRemote, 'Remote Australia')).toBe(true)
+    expect(matchesLocation(usRemote, 'Remote Australia')).toBe(false)
+  })
+
+  it('rejects a remote posting that names no place when the filter does', () => {
+    expect(matchesLocation(posting({ location: undefined, isRemote: true }), 'Remote Australia')).toBe(false)
+  })
+
+  it('matches a location written in a non-Latin script', () => {
+    expect(matchesLocation(posting({ location: '東京' }), '東京')).toBe(true)
+    expect(matchesLocation(posting({ location: '大阪' }), '東京')).toBe(false)
   })
 })
 

@@ -411,4 +411,16 @@ describe('boardKeyOf', () => {
     const base = { provider: 'workday' as const, token: 'acme', host: 'acme.wd5.myworkdayjobs.com' }
     expect(boardKeyOf({ ...base, site: 'External' })).not.toBe(boardKeyOf({ ...base, site: 'Internal' }))
   })
+
+  it('keeps a Workday career-site id case-sensitive, because Workday does', () => {
+    // Two genuinely different sites on one tenant. Folding their case
+    // together would report the second as already tracked and leave every
+    // search pointed at the first.
+    const base = { provider: 'workday' as const, token: 'acme', host: 'acme.wd5.myworkdayjobs.com' }
+    expect(boardKeyOf({ ...base, site: 'Careers' })).not.toBe(boardKeyOf({ ...base, site: 'careers' }))
+    // The host is still folded — DNS is case-insensitive.
+    expect(boardKeyOf({ ...base, host: 'ACME.wd5.myworkdayjobs.com', site: 'Careers' })).toBe(
+      boardKeyOf({ ...base, site: 'Careers' })
+    )
+  })
 })

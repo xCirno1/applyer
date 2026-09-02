@@ -6,10 +6,15 @@ import type { AtsBoardFetchOutcome, AtsPosting } from './types'
 const listSearchableCompanyBoards = vi.fn()
 const recordCompanyBoardFetch = vi.fn()
 const fetchBoardMock = vi.fn()
+const broadcastCompanyBoardsChanged = vi.fn()
 
 vi.mock('../../db/repositories/companyBoardsRepository', () => ({
   listSearchableCompanyBoards: (...args: unknown[]) => listSearchableCompanyBoards(...args),
   recordCompanyBoardFetch: (...args: unknown[]) => recordCompanyBoardFetch(...args)
+}))
+
+vi.mock('../../ipc/jobsBroadcast', () => ({
+  broadcastCompanyBoardsChanged: () => broadcastCompanyBoardsChanged()
 }))
 
 vi.mock('./providers', async (importOriginal) => {
@@ -67,6 +72,7 @@ beforeEach(() => {
   clearBoardCache()
   listSearchableCompanyBoards.mockReset().mockReturnValue([])
   recordCompanyBoardFetch.mockReset()
+  broadcastCompanyBoardsChanged.mockReset()
   fetchBoardMock.mockReset().mockResolvedValue(okWith())
 })
 
@@ -112,6 +118,33 @@ describe('searchAtsBoards', () => {
 
     const result = await searchAtsBoards({ query: 'engineer', limit: 20 })
     expect(result.results.map((r) => r.title)).toEqual(['Backend Engineer'])
+  })
+
+  it('asks a paged provider for more postings than the page will show', async () => {
+    // The location filter and the cross-board dedupe run after the fetch, so
+    // fetching exactly `limit` rows from a server-side-paged board (Workday)
+    // can filter down to nothing while matching postings sit on the next page.
+    listSearchableCompanyBoards.mockReturnValue([board()])
+
+    await searchAtsBoards({ query: 'engineer', location: 'Berlin', limit: 20 })
+
+    const options = fetchBoardMock.mock.calls[0]![1] as { limit: number }
+    expect(options.limit).toBeGreaterThan(20)
+  })
+
+  it('signals the boards panel after a search, which rewrites every board status', async () => {
+    // The panel reads the list on mount and then stays mounted while another
+    // screen is showing, so without this its "last checked" column would keep
+    // showing whatever it read at startup.
+    listSearchableCompanyBoards.mockReturnValue([board()])
+
+    await searchAtsBoards({ query: 'engineer', limit: 20 })
+    expect(broadcastCompanyBoardsChanged).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not signal the panel when there was nothing to fetch', async () => {
+    await searchAtsBoards({ query: 'engineer', limit: 20 })
+    expect(broadcastCompanyBoardsChanged).not.toHaveBeenCalled()
   })
 
   it('reuses a fetched board across searches rather than re-downloading it', async () => {

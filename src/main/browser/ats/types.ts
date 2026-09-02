@@ -42,7 +42,13 @@ export interface FetchBoardOptions {
    * filtered locally instead.
    */
   query: string
-  /** Upper bound on postings worth fetching — only meaningful for a paged provider. */
+  /**
+   * How many postings to *fetch* — only meaningful for a paged provider
+   * (Workday); the other three serve a whole board in one response and
+   * ignore it. It is not the number of results the caller will show: the
+   * location filter and the cross-board dedupe both run after this, so a
+   * caller that ends up displaying N rows asks for more than N here.
+   */
   limit: number
   /**
    * What to file these postings under. Lever, Ashby and Workday never name

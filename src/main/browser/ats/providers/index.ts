@@ -32,14 +32,19 @@ export function probeableAdapters(): AtsProviderAdapter[] {
 
 /**
  * Stable identity for a board, used as the database's uniqueness key and as
- * the cache key. Lowercased so the same board added as `Acme` and `acme` is
- * one row; Workday folds in host and site too, since a tenant alone doesn't
- * address a board.
+ * the cache key. Slugs and hostnames are lowercased, so the same board added
+ * as `Acme` and `acme` is one row; Workday folds in host and site too, since
+ * a tenant alone doesn't address a board.
+ *
+ * The career-site id is the one part kept verbatim: Workday treats it as
+ * case-sensitive, so `Careers` and `careers` can be two different sites on
+ * one tenant. Folding their case together would make adding the second look
+ * like a duplicate of the first and leave searches pointed at the wrong one.
  */
 export function boardKeyOf(descriptor: AtsBoardDescriptor): string {
   const base = `${descriptor.provider}:${descriptor.token.toLowerCase()}`
   if (descriptor.provider !== 'workday') return base
-  return `${base}:${(descriptor.host ?? '').toLowerCase()}:${(descriptor.site ?? '').toLowerCase()}`
+  return `${base}:${(descriptor.host ?? '').toLowerCase()}:${descriptor.site ?? ''}`
 }
 
 /**

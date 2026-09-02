@@ -15,21 +15,29 @@ beforeEach(() => {
 })
 
 describe('boardCacheKey', () => {
-  it('ignores the query for a provider that always returns the whole board', () => {
+  const workdayBoard = {
+    provider: 'workday' as const,
+    token: 'acme',
+    host: 'acme.wd5.myworkdayjobs.com',
+    site: 'Careers'
+  }
+
+  it('ignores the query and the limit for a provider that always returns the whole board', () => {
     const board = { provider: 'greenhouse' as const, token: 'acme', host: null, site: null }
-    expect(boardCacheKey(board, 'engineer')).toBe(boardCacheKey(board, 'designer'))
+    expect(boardCacheKey(board, 'engineer', 20)).toBe(boardCacheKey(board, 'designer', 60))
   })
 
   it('includes the query for Workday, whose response depends on it', () => {
-    const board = {
-      provider: 'workday' as const,
-      token: 'acme',
-      host: 'acme.wd5.myworkdayjobs.com',
-      site: 'Careers'
-    }
-    expect(boardCacheKey(board, 'engineer')).not.toBe(boardCacheKey(board, 'designer'))
+    expect(boardCacheKey(workdayBoard, 'engineer', 20)).not.toBe(boardCacheKey(workdayBoard, 'designer', 20))
     // Case and padding shouldn't split one query into two entries.
-    expect(boardCacheKey(board, ' Engineer ')).toBe(boardCacheKey(board, 'engineer'))
+    expect(boardCacheKey(workdayBoard, ' Engineer ', 20)).toBe(boardCacheKey(workdayBoard, 'engineer', 20))
+  })
+
+  it('includes the limit for Workday, since a small fetch cannot serve a larger one', () => {
+    // Workday pages server-side and truncates to what was asked for, so the
+    // entry written for a 20-row request holds fewer postings than a later
+    // 60-row request needs — serving it would silently cap the bigger search.
+    expect(boardCacheKey(workdayBoard, 'engineer', 20)).not.toBe(boardCacheKey(workdayBoard, 'engineer', 60))
   })
 })
 

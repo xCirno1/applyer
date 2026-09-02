@@ -1,6 +1,7 @@
 import { ATS_FETCH_CONCURRENCY, MAX_ATS_BOARDS_PER_SEARCH } from '@shared/constants'
 import { appLogger } from '../../logger'
 import { listSearchableCompanyBoards, recordCompanyBoardFetch } from '../../db/repositories/companyBoardsRepository'
+import { broadcastCompanyBoardsChanged } from '../../ipc/jobsBroadcast'
 import { boardCacheKey, readBoardCache, writeBoardCache } from './boardCache'
 import { mapWithConcurrency } from './http'
 import { adapterFor } from './providers'
@@ -65,11 +66,23 @@ function toSearchResult(board: CompanyBoardRecord, posting: AtsPosting): JobSear
   }
 }
 
+/**
+ * Multiplier applied to the caller's limit when fetching.
+ *
+ * Only a provider that pages server-side (Workday) stops at what was asked
+ * for, and everything that narrows the result — the location filter, the
+ * cross-board dedupe — runs *after* the fetch. Asking for exactly `limit`
+ * rows there can therefore filter down to nothing while matching postings sit
+ * on the next page. Same reasoning, and the same factor, as the headroom the
+ * interleave below uses.
+ */
+const FETCH_HEADROOM = 3
+
 async function fetchBoard(board: CompanyBoardRecord, query: string, limit: number): Promise<AtsBoardFetchOutcome> {
   const adapter = adapterFor(board.provider)
   if (!adapter) return { status: 'error', message: `Unknown ATS provider: ${board.provider}` }
 
-  const cacheKey = boardCacheKey(board, query)
+  const cacheKey = boardCacheKey(board, query, limit)
   const cached = readBoardCache(cacheKey)
   if (cached) return cached
 
@@ -141,10 +154,21 @@ export async function searchAtsBoards(params: SearchAtsBoardsParams): Promise<Se
   const now = Date.now()
 
   const perBoard = await mapWithConcurrency(boards, ATS_FETCH_CONCURRENCY, async (board) => {
-    const outcome = await fetchBoard(board, params.query, params.limit)
+    const outcome = await fetchBoard(board, params.query, params.limit * FETCH_HEADROOM)
     record(board, outcome)
     return { board, outcome }
   })
+
+  // Every board above just had its last-checked time, role count or error
+  // rewritten, and a search is where most of those updates happen. The panel
+  // showing them reads the list on mount and then stays mounted while another
+  // screen is up, so without this signal it would keep displaying whatever it
+  // read when the app started.
+  try {
+    broadcastCompanyBoardsChanged()
+  } catch (err) {
+    appLogger.warn(`Failed to broadcast company board changes: ${String(err)}`)
+  }
 
   const rankedPerBoard: BoardPosting[][] = []
   const searchedProviders = new Set<AtsProvider>()

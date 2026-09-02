@@ -41,14 +41,17 @@ function ttlFor(outcome: AtsBoardFetchOutcome): number {
 }
 
 /**
- * Workday filters server-side, so its response depends on the query and each
- * (board, query) pair is a separate entry. The other three always return the
- * whole board, so the query is irrelevant to what came back and folding it
- * into the key would mean re-downloading the same board per query.
+ * Workday filters and pages server-side, so its response depends on the query
+ * *and* on how many postings were asked for — an entry fetched for a small
+ * request holds fewer rows than a later, larger one needs, so both are part
+ * of the key. The other three always return the whole board, so neither is
+ * relevant to what came back and folding them in would mean re-downloading
+ * the same board per query.
  */
-export function boardCacheKey(descriptor: AtsBoardDescriptor, query: string): string {
+export function boardCacheKey(descriptor: AtsBoardDescriptor, query: string, limit: number): string {
   const key = boardKeyOf(descriptor)
-  return adapterFor(descriptor.provider)?.serverSideQuery ? `${key}|${query.trim().toLowerCase()}` : key
+  if (!adapterFor(descriptor.provider)?.serverSideQuery) return key
+  return `${key}|${query.trim().toLowerCase()}|${limit}`
 }
 
 export function readBoardCache(key: string, now = Date.now()): AtsBoardFetchOutcome | null {

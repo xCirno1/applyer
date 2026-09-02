@@ -193,14 +193,20 @@ export async function resolveCompanyBoard(input: ResolveBoardInput): Promise<Res
 
   const answered = results.filter((result) => result.outcome.status === 'ok')
   if (answered.length === 0) {
-    // Every probe failing for a network reason is not the same answer as
-    // every probe 404ing, and reporting "no such company" when the machine is
-    // offline would send the user hunting for a slug that is fine.
-    const allErrored = results.every((result) => result.outcome.status === 'error')
-    if (allErrored) {
-      const first = results.find((result) => result.outcome.status === 'error')
+    // A probe failing for a network reason is not the same answer as a probe
+    // 404ing, and reporting "no such company" when the machine is offline
+    // would send the user hunting for a slug that is fine.
+    //
+    // A *mixture* is no more conclusive than a total failure: the board could
+    // well be on the provider that didn't answer, and only a 404 from every
+    // provider rules that out. So not_found needs a clean sweep of 404s;
+    // anything else is reported as an unfinished check.
+    const failed = results.filter((result) => result.outcome.status === 'error')
+    if (failed.length > 0) {
+      const first = failed[0]
       const message = first?.outcome.status === 'error' ? first.outcome.message : 'unknown error'
-      return { status: 'error', message: `Could not reach any board API (${message}).` }
+      const scope = failed.length === results.length ? 'any board API' : 'every board API'
+      return { status: 'error', message: `Could not reach ${scope} (${message}).` }
     }
     return { status: 'not_found', triedTokens: tokens }
   }
@@ -209,15 +215,25 @@ export async function resolveCompanyBoard(input: ResolveBoardInput): Promise<Res
   const best = ranked[0]!
   const bestCount = best.outcome.status === 'ok' ? best.outcome.postings.length : 0
 
+  // Counted per *provider*, not per candidate: two slug guesses that both land
+  // on the same provider ("acmelabs" and "acme-labs" pointing at one Lever
+  // board) are one system answering twice, and calling that a migration would
+  // warn about a company that never moved.
+  const liveProviders = new Set(
+    ranked
+      .filter((result) => (result.outcome.status === 'ok' ? result.outcome.postings.length : 0) > 0)
+      .map((result) => result.provider)
+  )
+
   return {
     status: 'resolved',
     descriptor: { provider: best.provider, token: best.token, host: null, site: null },
     companyName: input.companyName?.trim() || best.token,
     jobCount: bestCount,
     verified: true,
-    // Two providers holding live postings for one slug is the migration case,
-    // and the caller is told rather than having one of them silently dropped.
-    ambiguous: ranked.filter((r) => (r.outcome.status === 'ok' ? r.outcome.postings.length : 0) > 0).length > 1,
+    // Two providers holding live postings for one company is the migration
+    // case, and the caller is told rather than having one silently dropped.
+    ambiguous: liveProviders.size > 1,
     candidates: ranked.map(toCandidate)
   }
 }

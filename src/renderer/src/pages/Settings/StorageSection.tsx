@@ -190,6 +190,7 @@ export default function StorageSection(): ReactElement {
               <span>{t('storage.countJobs', { count: stats.counts.jobs })}</span>
               <span>{t('storage.countIndexedJobs', { count: stats.counts.indexedJobs })}</span>
               <span>{t('storage.countExclusions', { count: stats.counts.exclusions })}</span>
+              <span>{t('storage.countCompanyBoards', { count: stats.counts.companyBoards })}</span>
               <span>{t('storage.countDocuments', { count: stats.counts.documents })}</span>
               <span>{t('storage.countActivityLog', { count: stats.counts.activityLogEntries })}</span>
             </div>

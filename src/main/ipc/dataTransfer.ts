@@ -14,8 +14,10 @@ import type {
 } from '@shared/types/dataTransfer'
 import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
+import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
-import { jobsToCsv, exclusionsToCsv } from '../dataTransfer/csv'
+import { broadcastCompanyBoardsChanged } from './jobsBroadcast'
+import { jobsToCsv, exclusionsToCsv, companyBoardsToCsv } from '../dataTransfer/csv'
 import { validateExportBundle } from '../dataTransfer/importSchema'
 import { buildExportBundle, computeExportSizes, filenameTimestamp } from '../dataTransfer/exportBundle'
 import { applyImport } from '../dataTransfer/applyImport'
@@ -39,10 +41,16 @@ export function registerDataTransferIpc(): void {
   })
 
   ipcMain.handle(IPC.data.exportCsv, async (_event, { table, labels }: { table: CsvTable; labels: DialogLabels }): Promise<ExportFileResult> => {
-    if (table !== 'jobs' && table !== 'exclusions') {
+    const csvForTable: Record<CsvTable, () => string> = {
+      jobs: () => jobsToCsv(listAllJobs()),
+      exclusions: () => exclusionsToCsv(listAllExclusions()),
+      companyBoards: () => companyBoardsToCsv(listAllCompanyBoards())
+    }
+    const build = Object.prototype.hasOwnProperty.call(csvForTable, table) ? csvForTable[table] : undefined
+    if (!build) {
       return { ok: false, error: appError('invalidTable') }
     }
-    const csv = table === 'jobs' ? jobsToCsv(listAllJobs()) : exclusionsToCsv(listAllExclusions())
+    const csv = build()
     const { canceled, filePath } = await dialog.showSaveDialog({
       title: labels.title,
       defaultPath: join(app.getPath('documents'), `applyer-${table}-${filenameTimestamp()}.csv`),
@@ -87,6 +95,7 @@ export function registerDataTransferIpc(): void {
       counts: {
         jobs: bundle.data.jobs?.length,
         exclusions: bundle.data.exclusions?.length,
+        companyBoards: bundle.data.companyBoards?.length,
         profile: bundle.data.profile ? 1 : undefined,
         settings: bundle.data.settings ? 1 : undefined
       }
@@ -105,6 +114,10 @@ export function registerDataTransferIpc(): void {
       try {
         const summary = applyImport(validation.bundle, selection)
         logActivity('info', 'Imported data from file', { summary })
+        // The Company Boards panel reads its list on mount and then stays
+        // mounted while another screen is showing, so imported boards would
+        // otherwise not appear until the next restart.
+        if (summary.companyBoards && summary.companyBoards.imported > 0) broadcastCompanyBoardsChanged()
         return { ok: true, summary }
       } catch (err) {
         return { ok: false, error: unexpectedError(err) }

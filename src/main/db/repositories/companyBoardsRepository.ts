@@ -171,3 +171,54 @@ export function recordCompanyBoardFetch(
 export function listAllCompanyBoards(): CompanyBoardRecord[] {
   return getDb().select().from(companyBoards).orderBy(asc(companyBoards.createdAt)).all().map(toRecord)
 }
+
+/**
+ * Adds imported boards alongside whatever is already tracked, mirroring
+ * `importExclusions` — an import merges a watchlist, it never replaces one.
+ *
+ * Two things differ from a plain insert loop. The ceiling is re-checked per
+ * row rather than once up front, because it counts what is in the table now
+ * and each accepted row moves it; and every board arrives unchecked, since
+ * `lastCheckedAt`/`lastJobCount`/`lastError` describe what the *exporting*
+ * machine saw and would otherwise be shown here as a current reading.
+ *
+ * `boardKey` is recomputed by the caller from the descriptor rather than read
+ * from the file, so a hand-edited bundle cannot file a board under a key that
+ * contradicts its own provider and token.
+ */
+export function importCompanyBoards(
+  records: readonly (AddCompanyBoardInput & { createdAt: string; enabled: boolean })[]
+): { imported: number; skipped: number } {
+  const db = getDb()
+  let imported = 0
+  let skipped = 0
+
+  for (const record of records) {
+    if (countCompanyBoards() >= MAX_COMPANY_BOARDS) {
+      skipped++
+      continue
+    }
+
+    const result = db
+      .insert(companyBoards)
+      .values({
+        id: randomUUID(),
+        boardKey: record.boardKey,
+        provider: record.provider,
+        token: record.token,
+        host: record.host,
+        site: record.site,
+        companyName: record.companyName,
+        addedBy: record.addedBy,
+        enabled: record.enabled,
+        createdAt: record.createdAt
+      })
+      .onConflictDoNothing({ target: companyBoards.boardKey })
+      .run()
+
+    if (result.changes > 0) imported++
+    else skipped++
+  }
+
+  return { imported, skipped }
+}

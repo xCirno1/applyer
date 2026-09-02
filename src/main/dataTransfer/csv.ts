@@ -1,5 +1,6 @@
 import type { JobRecord } from '@shared/types/job'
 import type { ExclusionRecord } from '@shared/types/exclusion'
+import type { ExportCompanyBoard } from '@shared/types/dataTransfer'
 
 type CsvValue = string | number | null | undefined
 
@@ -53,6 +54,22 @@ export function jobsToCsv(records: JobRecord[]): string {
         r.filledAt,
         r.submittedAt
       ])
+    )
+  }
+  return lines.join('\r\n')
+}
+
+/**
+ * Host and Site are empty for every provider but Workday, which is the only
+ * one whose board needs more than a slug to address — they are still columns
+ * rather than one merged "Board" field so the table stays machine-readable.
+ */
+export function companyBoardsToCsv(records: readonly ExportCompanyBoard[]): string {
+  const header = ['Company', 'Provider', 'Token', 'Host', 'Site', 'Enabled', 'Added By', 'Created At']
+  const lines = [rowToCsv(header)]
+  for (const r of records) {
+    lines.push(
+      rowToCsv([r.companyName, r.provider, r.token, r.host, r.site, r.enabled ? 'yes' : 'no', r.addedBy, r.createdAt])
     )
   }
   return lines.join('\r\n')

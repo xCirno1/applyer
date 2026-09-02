@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTransfer'
+import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
 import { appError, type AppError } from '@shared/types/errorCodes'
 
 const jobStatusSchema = z.enum(['queued', 'filled', 'submitted', 'failed'])
@@ -42,6 +43,26 @@ const exclusionRecordSchema = z.object({
   createdAt: z.string()
 })
 
+/**
+ * `boardKey` is absent by design — it is derived from the four fields above
+ * it and is recomputed on import, so a file cannot assert an identity that
+ * contradicts its own descriptor. The last-fetch columns are absent for the
+ * same reason they aren't exported: they describe another machine's reading.
+ */
+const companyBoardSchema = z.object({
+  // Delegated to the shared guard rather than restating the four names, so a
+  // provider added later can't be accepted by the schema while the rest of
+  // the app has no adapter for it (or the reverse).
+  provider: z.custom<AtsProvider>(isAtsProvider),
+  token: z.string().min(1),
+  host: z.string().nullable(),
+  site: z.string().nullable(),
+  companyName: z.string().min(1),
+  addedBy: z.enum(['user', 'agent']),
+  enabled: z.boolean(),
+  createdAt: z.string()
+})
+
 const profileFieldsSchema = z.object({
   fullName: z.string(),
   email: z.string(),
@@ -74,6 +95,7 @@ const exportBundleSchema = z.object({
   data: z.object({
     jobs: z.array(jobRecordSchema).optional(),
     exclusions: z.array(exclusionRecordSchema).optional(),
+    companyBoards: z.array(companyBoardSchema).optional(),
     profile: profileFieldsSchema.nullable().optional(),
     settings: settingsDataSchema.optional()
   })

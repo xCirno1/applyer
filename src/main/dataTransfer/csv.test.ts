@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { jobsToCsv, exclusionsToCsv } from './csv'
+import { jobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
 import type { JobRecord } from '@shared/types/job'
 import type { ExclusionRecord } from '@shared/types/exclusion'
+import type { ExportCompanyBoard } from '@shared/types/dataTransfer'
 
 function job(overrides: Partial<JobRecord> = {}): JobRecord {
   return {
@@ -72,5 +73,42 @@ describe('exclusionsToCsv', () => {
     expect(lines).toHaveLength(2)
     expect(lines[0]).toBe('URL,Title,Company,Reason,Excluded By,Created At')
     expect(lines[1]).toContain('https://example.com/1')
+  })
+})
+
+describe('companyBoardsToCsv', () => {
+  function boardRow(overrides: Partial<ExportCompanyBoard> = {}): ExportCompanyBoard {
+    return {
+      provider: 'greenhouse',
+      token: 'acme',
+      host: null,
+      site: null,
+      companyName: 'Acme Labs',
+      addedBy: 'user',
+      enabled: true,
+      createdAt: '2020-01-01T00:00:00.000Z',
+      ...overrides
+    }
+  }
+
+  it('writes a header even with no rows', () => {
+    expect(companyBoardsToCsv([])).toBe('Company,Provider,Token,Host,Site,Enabled,Added By,Created At')
+  })
+
+  it('leaves host and site empty for a provider addressed by slug alone', () => {
+    const lines = companyBoardsToCsv([boardRow()]).split('\r\n')
+    expect(lines[1]).toBe('Acme Labs,greenhouse,acme,,,yes,user,2020-01-01T00:00:00.000Z')
+  })
+
+  it('carries a Workday board\'s host and site', () => {
+    const lines = companyBoardsToCsv([
+      boardRow({ provider: 'workday', host: 'acme.wd5.myworkdayjobs.com', site: 'Careers', enabled: false })
+    ]).split('\r\n')
+    expect(lines[1]).toContain('acme.wd5.myworkdayjobs.com,Careers,no')
+  })
+
+  it('quotes a company name containing a comma', () => {
+    const lines = companyBoardsToCsv([boardRow({ companyName: 'Acme, Inc.' })]).split('\r\n')
+    expect(lines[1]?.startsWith('"Acme, Inc."')).toBe(true)
   })
 })

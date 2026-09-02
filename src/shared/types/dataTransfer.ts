@@ -3,19 +3,26 @@ import type { ExclusionRecord } from './exclusion'
 import type { ProfileFields } from './profile'
 import type { AutoStartCommand } from './ipcEvents'
 import type { IndexedJobsRetention } from './indexedJob'
+import type { AtsProvider } from './companyBoard'
 import type { AppError } from './errorCodes'
 
-/** Bumped whenever the export bundle shape changes in a way older imports can't read. */
+/**
+ * Bumped whenever the export bundle shape changes in a way older imports can't
+ * read. Adding a domain isn't such a change in either direction: every key
+ * under `data` is optional, so an older bundle simply has none of the new
+ * domain, and an older build reading a newer bundle drops the key it doesn't
+ * know rather than rejecting the file.
+ */
 export const EXPORT_SCHEMA_VERSION = 1
 
-export type ExportDomain = 'jobs' | 'exclusions' | 'profile' | 'settings'
+export type ExportDomain = 'jobs' | 'exclusions' | 'companyBoards' | 'profile' | 'settings'
 
-export const ALL_EXPORT_DOMAINS: ExportDomain[] = ['jobs', 'exclusions', 'profile', 'settings']
+export const ALL_EXPORT_DOMAINS: ExportDomain[] = ['jobs', 'exclusions', 'companyBoards', 'profile', 'settings']
 
 export type ExportSelection = Record<ExportDomain, boolean>
 
 export function allDomainsSelected(value = true): ExportSelection {
-  return { jobs: value, exclusions: value, profile: value, settings: value }
+  return { jobs: value, exclusions: value, companyBoards: value, profile: value, settings: value }
 }
 
 export interface ExportSettingsData {
@@ -31,13 +38,38 @@ export interface ExportBundle {
   data: {
     jobs?: JobRecord[]
     exclusions?: ExclusionRecord[]
+    companyBoards?: ExportCompanyBoard[]
     profile?: ProfileFields | null
     settings?: ExportSettingsData
   }
 }
 
+/**
+ * A tracked board, reduced to what actually identifies it.
+ *
+ * The live columns — `lastCheckedAt`, `lastJobCount`, `lastError` — are
+ * deliberately left out: they describe what *this* machine saw the last time
+ * it fetched the board, and carrying "12 open roles" into another install
+ * would present a stale reading as a current one. The importing side starts
+ * every board unchecked and the first search fills them in.
+ *
+ * `boardKey` is left out too, since it is derived from the descriptor and is
+ * recomputed on import — a hand-edited file must not be able to file a board
+ * under a key that doesn't match its own provider and token.
+ */
+export interface ExportCompanyBoard {
+  provider: AtsProvider
+  token: string
+  host: string | null
+  site: string | null
+  companyName: string
+  addedBy: 'user' | 'agent'
+  enabled: boolean
+  createdAt: string
+}
+
 /** CSV is export-only (a single flat table), never a round-trip import source. */
-export type CsvTable = 'jobs' | 'exclusions'
+export type CsvTable = 'jobs' | 'exclusions' | 'companyBoards'
 
 /**
  * Byte sizes for the Export modal's per-section preview, computed
@@ -48,6 +80,7 @@ export type CsvTable = 'jobs' | 'exclusions'
 export interface ExportSizes {
   jobs: { json: number; csv: number }
   exclusions: { json: number; csv: number }
+  companyBoards: { json: number; csv: number }
   profile: { json: number }
   settings: { json: number }
   /** Fixed bytes of the bundle wrapper itself (schemaVersion/exportedAt/appVersion/`data: {}`) — present once whenever any domain is included in a JSON export, on top of the per-domain sizes above. */
@@ -78,6 +111,7 @@ export interface ExportFileResult {
 export interface ImportDomainCounts {
   jobs?: number
   exclusions?: number
+  companyBoards?: number
   profile?: number
   settings?: number
 }
@@ -94,6 +128,8 @@ export interface ImportPickResult {
 export interface ImportSummary {
   jobs?: { imported: number; skipped: number }
   exclusions?: { imported: number; skipped: number }
+  /** `skipped` covers both an already-tracked board and one refused by the watchlist ceiling. */
+  companyBoards?: { imported: number; skipped: number }
   profile?: boolean
   settings?: boolean
 }

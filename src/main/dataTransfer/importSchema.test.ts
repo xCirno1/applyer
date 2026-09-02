@@ -79,3 +79,51 @@ describe('validateExportBundle', () => {
     expect(validateExportBundle({}).ok).toBe(false)
   })
 })
+
+describe('validateExportBundle — company boards', () => {
+  const board = {
+    provider: 'greenhouse',
+    token: 'acme',
+    host: null,
+    site: null,
+    companyName: 'Acme Labs',
+    addedBy: 'user',
+    enabled: true,
+    createdAt: '2020-01-01T00:00:00.000Z'
+  }
+
+  function withBoards(boards: unknown[]): unknown {
+    return { ...validBundle(), data: { companyBoards: boards } }
+  }
+
+  it('accepts a well-formed board', () => {
+    const result = validateExportBundle(withBoards([board]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.bundle.data.companyBoards).toHaveLength(1)
+  })
+
+  it('rejects a provider this build has no adapter for', () => {
+    expect(validateExportBundle(withBoards([{ ...board, provider: 'smartrecruiters' }])).ok).toBe(false)
+  })
+
+  it('rejects a board with no token to address it by', () => {
+    expect(validateExportBundle(withBoards([{ ...board, token: '' }])).ok).toBe(false)
+  })
+
+  it('drops a boardKey asserted by the file, since the key is derived on import', () => {
+    const result = validateExportBundle(withBoards([{ ...board, boardKey: 'lever:somewhere-else' }]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.bundle.data.companyBoards?.[0]).not.toHaveProperty('boardKey')
+  })
+
+  it('drops the exporting machine\'s last-fetch columns rather than trusting them', () => {
+    const result = validateExportBundle(
+      withBoards([{ ...board, lastCheckedAt: '2020-06-01T00:00:00.000Z', lastJobCount: 99, lastError: 'boom' }])
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.bundle.data.companyBoards?.[0]).not.toHaveProperty('lastJobCount')
+  })
+})

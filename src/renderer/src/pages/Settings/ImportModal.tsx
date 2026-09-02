@@ -7,18 +7,23 @@ import { useToast } from '../../components/ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { useJobsStore } from '../../state/jobsStore'
 import { useFormatters } from '../../i18n/format'
+import { allDomainsSelected } from '@shared/types/dataTransfer'
 import type { ExportBundle, ExportDomain, ExportSelection, ImportDomainCounts } from '@shared/types/dataTransfer'
 
 const DOMAIN_KEYS = {
   jobs: 'data.domainJobs',
   exclusions: 'data.domainExclusions',
+  companyBoards: 'data.domainCompanyBoards',
   profile: 'data.domainProfile',
   settings: 'data.domainSettings'
 } as const satisfies Record<ExportDomain, string>
 
-const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'profile', 'settings']
+const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'companyBoards', 'profile', 'settings']
 
 const OVERWRITE_DOMAINS: ExportDomain[] = ['profile', 'settings']
+
+/** The rest are merged into what's already there, so their hint counts rows rather than warning about a replacement. */
+const MERGE_DOMAINS: ExportDomain[] = ['jobs', 'exclusions', 'companyBoards']
 
 function domainCount(domain: ExportDomain, counts: ImportDomainCounts): number | undefined {
   return counts[domain]
@@ -39,7 +44,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const [picking, setPicking] = useState(false)
   const [pickError, setPickError] = useState<string | null>(null)
   const [file, setFile] = useState<LoadedFile | null>(null)
-  const [selection, setSelection] = useState<ExportSelection>({ jobs: false, exclusions: false, profile: false, settings: false })
+  const [selection, setSelection] = useState<ExportSelection>(allDomainsSelected(false))
   const [importing, setImporting] = useState(false)
 
   if (!open) return null
@@ -47,7 +52,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const reset = (): void => {
     setFile(null)
     setPickError(null)
-    setSelection({ jobs: false, exclusions: false, profile: false, settings: false })
+    setSelection(allDomainsSelected(false))
   }
 
   const handleClose = (): void => {
@@ -71,12 +76,15 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
     const counts = result.counts ?? {}
     const presentDomains = DOMAIN_ORDER.filter((d) => domainCount(d, counts) !== undefined)
     setFile({ bundle: result.bundle, counts, filePath: result.filePath ?? '' })
-    setSelection({
-      jobs: presentDomains.includes('jobs'),
-      exclusions: presentDomains.includes('exclusions'),
-      profile: presentDomains.includes('profile'),
-      settings: presentDomains.includes('settings')
-    })
+    // Everything the file actually carries starts ticked, derived from the
+    // domain list rather than restated per domain so a new one can't be
+    // silently left unselectable here.
+    setSelection(
+      DOMAIN_ORDER.reduce<ExportSelection>(
+        (acc, domain) => ({ ...acc, [domain]: presentDomains.includes(domain) }),
+        allDomainsSelected(false)
+      )
+    )
   }
 
   const toggle = (domain: ExportDomain, checked: boolean): void => setSelection((prev) => ({ ...prev, [domain]: checked }))
@@ -98,6 +106,8 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
     if (result.summary.jobs) parts.push(t('data.jobsAdded', { count: result.summary.jobs.imported }))
     if (result.summary.exclusions)
       parts.push(t('data.exclusionsAdded', { count: result.summary.exclusions.imported }))
+    if (result.summary.companyBoards)
+      parts.push(t('data.companyBoardsAdded', { count: result.summary.companyBoards.imported }))
     if (result.summary.profile) parts.push(t('data.profileUpdated'))
     if (result.summary.settings) parts.push(t('data.settingsUpdated'))
     toast.success(
@@ -144,7 +154,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
               {presentDomains.map((domain) => {
                 const count = domainCount(domain, file.counts)
                 const hint =
-                  domain === 'jobs' || domain === 'exclusions'
+                  MERGE_DOMAINS.includes(domain)
                     ? t('data.recordsHint', { count: count ?? 0 })
                     : t('data.overwritesHint')
                 return (

@@ -12,6 +12,7 @@
     "newTerminal": "New Terminal",
     "closeTerminal": "Close Terminal",
     "renameTerminal": "Rename Terminal",
+    "findInTerminal": "Find in Terminal",
     "nextTerminalTab": "Next Terminal Tab",
     "prevTerminalTab": "Previous Terminal Tab",
     "refreshBoard": "Refresh Board",
@@ -57,7 +58,21 @@
     "renameLabel": "Rename {{title}}",
     "closeLabel": "Close {{title}}",
     "atMax": "You can have at most {{count}} terminals open",
-    "pasteFailed": "Could not read the clipboard."
+    "pasteFailed": "Could not read the clipboard.",
+    "search": {
+      "placeholder": "Find",
+      "noResults": "No results",
+      "resultCount": "{{index}} of {{count}}",
+      "manyMatches_one": "{{count}}+ match",
+      "manyMatches_other": "{{count}}+ matches",
+      "caseSensitive": "Match case",
+      "wholeWord": "Match whole word",
+      "regex": "Use regular expression",
+      "previous": "Previous match",
+      "next": "Next match",
+      "close": "Close find",
+      "resize": "Resize find panel"
+    }
   },
   "logs": {
     "title": "Activity Log",
@@ -82,6 +97,7 @@
     "terminal.nextTab": "Next terminal tab",
     "terminal.prevTab": "Previous terminal tab",
     "terminal.rename": "Rename terminal",
+    "terminal.search": "Find in terminal",
     "view.toggleOverview": "Toggle overview panel",
     "view.toggleConsole": "Toggle console dock",
     "dock.showTerminal": "Show terminal tab",

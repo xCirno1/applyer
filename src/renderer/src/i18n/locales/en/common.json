@@ -24,6 +24,10 @@
     "previous": "Previous page",
     "next": "Next page"
   },
+  "table": {
+    "filter": "Filter this table",
+    "sortBy": "Sort by this column"
+  },
   "fileDrop": {
     "hint": "Click or drag a file here"
   },

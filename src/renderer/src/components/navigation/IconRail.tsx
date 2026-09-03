@@ -4,9 +4,9 @@ import Tooltip from '../ui/Tooltip'
 
 export type RailPage = 'workspace' | 'indexedJobs'
 
-const ITEMS: { page: RailPage; labelKey: 'rail.jobBoard' | 'rail.indexedJobs'; icon: (props: { className?: string }) => ReactElement }[] = [
+const ITEMS: { page: RailPage; labelKey: 'rail.jobBoard' | 'rail.discovery'; icon: (props: { className?: string }) => ReactElement }[] = [
   { page: 'workspace', labelKey: 'rail.jobBoard', icon: BoardIcon },
-  { page: 'indexedJobs', labelKey: 'rail.indexedJobs', icon: SearchIcon }
+  { page: 'indexedJobs', labelKey: 'rail.discovery', icon: SearchIcon }
 ]
 
 /**

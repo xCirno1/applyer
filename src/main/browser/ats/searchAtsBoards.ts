@@ -110,7 +110,7 @@ function record(board: CompanyBoardRecord, outcome: AtsBoardFetchOutcome): void 
       jobCount: outcome.status === 'ok' ? outcome.postings.length : 0,
       error:
         outcome.status === 'not_found'
-          ? 'Board not found (404) — the slug may have changed or the board may have been retired.'
+          ? 'Board not found (404). The slug may have changed or the board may have been retired.'
           : outcome.status === 'error'
             ? outcome.message
             : null
@@ -178,7 +178,7 @@ export async function searchAtsBoards(params: SearchAtsBoardsParams): Promise<Se
 
     if (outcome.status === 'not_found') {
       warnings.push(
-        `${board.companyName} (${board.provider}): board not found (404) — the slug may have changed, or the company may have moved to another ATS.`
+        `${board.companyName} (${board.provider}): board not found (404). The slug may have changed, or the company may have moved to another ATS.`
       )
       continue
     }

@@ -44,7 +44,7 @@
     "retryTitleMenu": "Coba lagi lowongan ini?",
     "retryMessage_other": "{{count}} lowongan yang gagal akan dikembalikan ke Antre supaya dicoba lagi.",
     "excludeTitle_other": "Kecualikan lowongan ini?",
-    "excludeMessage_other": "{{count}} lowongan akan dihapus dari papan dan link-nya masuk daftar blokir permanen. Lowongan itu tidak akan muncul lagi di pencarian dan tidak bisa diantre lagi, baik olehmu maupun oleh agen. Kalau berubah pikiran, batalkan lewat Lowongan Terindeks > Dikecualikan.",
+    "excludeMessage_other": "{{count}} lowongan akan dihapus dari papan dan link-nya masuk daftar blokir permanen. Lowongan itu tidak akan muncul lagi di pencarian dan tidak bisa diantre lagi, baik olehmu maupun oleh agen. Kalau berubah pikiran, batalkan lewat Penemuan Lowongan > Dikecualikan.",
     "unqueueTitle_other": "Keluarkan lowongan dari antrean?",
     "unqueueMessage_other": "{{count}} lowongan akan dihapus dari papan, tapi link-nya tidak diblokir. Agen masih bisa menemukan dan mengantrekannya lagi nanti.",
     "markSubmittedTitle": "Tandai sebagai terkirim",

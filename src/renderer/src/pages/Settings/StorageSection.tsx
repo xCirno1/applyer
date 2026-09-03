@@ -115,7 +115,7 @@ export default function StorageSection(): ReactElement {
             }
           />
           <span className="min-w-0 flex-1 truncate text-[12px] text-text" title={location.status?.activeRoot}>
-            {location.status?.activeRoot ?? '—'}
+            {location.status?.activeRoot ?? t('states.loading', { ns: 'common' })}
           </span>
           <Button
             size="sm"
@@ -187,12 +187,21 @@ export default function StorageSection(): ReactElement {
             </div>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 text-[12px] text-text-muted sm:grid-cols-3">
-              <span>{t('storage.countJobs', { count: stats.counts.jobs })}</span>
-              <span>{t('storage.countIndexedJobs', { count: stats.counts.indexedJobs })}</span>
-              <span>{t('storage.countExclusions', { count: stats.counts.exclusions })}</span>
-              <span>{t('storage.countCompanyBoards', { count: stats.counts.companyBoards })}</span>
-              <span>{t('storage.countDocuments', { count: stats.counts.documents })}</span>
-              <span>{t('storage.countActivityLog', { count: stats.counts.activityLogEntries })}</span>
+              {(
+                [
+                  ['countJobs', stats.counts.jobs],
+                  ['countIndexedJobs', stats.counts.indexedJobs],
+                  ['countExclusions', stats.counts.exclusions],
+                  ['countCompanyBoards', stats.counts.companyBoards],
+                  ['countDocuments', stats.counts.documents],
+                  ['countActivityLog', stats.counts.activityLogEntries]
+                ] as const
+              ).map(([key, count]) => (
+                <div key={key} className="flex min-w-0 items-center justify-between gap-2">
+                  <span className="truncate">{t(`storage.${key}`)}</span>
+                  <span className="shrink-0 tabular-nums text-text">{count}</span>
+                </div>
+              ))}
             </div>
           </>
         )}

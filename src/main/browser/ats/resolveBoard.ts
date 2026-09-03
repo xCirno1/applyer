@@ -156,7 +156,7 @@ export async function resolveCompanyBoard(input: ResolveBoardInput): Promise<Res
       return {
         status: 'error',
         message:
-          'A Workday board needs a host, tenant and career-site id, which cannot be derived from a token — paste the board URL instead.'
+          'A Workday board needs a host, tenant and career-site id, which cannot be derived from a token. Paste the board URL instead.'
       }
     }
     // With the board given explicitly, the query is free to be what it
@@ -178,7 +178,7 @@ export async function resolveCompanyBoard(input: ResolveBoardInput): Promise<Res
   if (tokens.length === 0) {
     return {
       status: 'error',
-      message: 'Could not derive a board slug from that — give a company name, a domain, or a board URL.'
+      message: 'Could not derive a board slug from that. Give a company name, a domain, or a board URL.'
     }
   }
 

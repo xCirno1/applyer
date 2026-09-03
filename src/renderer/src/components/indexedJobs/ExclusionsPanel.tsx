@@ -5,6 +5,7 @@ import TextField from '../ui/TextField'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Tag from '../ui/Tag'
 import Skeleton from '../ui/Skeleton'
+import MetaList from '../ui/MetaList'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { useFormatters } from '../../i18n/format'
@@ -143,13 +144,14 @@ export default function ExclusionsPanel(): ReactElement {
                 </span>
                 <Tag label={e.excludedBy === 'agent' ? t('exclusions.byAgent') : t('exclusions.byYou')} tone="neutral" />
               </div>
-              <div className="flex items-center gap-1.5 text-[11px] text-text-faint">
-                <span className="truncate" title={e.url}>
-                  {e.url}
-                </span>
-                {e.reason && <span>· {e.reason}</span>}
-                <span className="shrink-0">· {format.date(e.createdAt)}</span>
-              </div>
+              <MetaList
+                className="text-[11px] text-text-faint"
+                items={[
+                  { key: 'url', value: e.url, grow: true, title: e.url },
+                  e.reason && { key: 'reason', value: e.reason },
+                  { key: 'date', value: format.date(e.createdAt) }
+                ]}
+              />
             </div>
             <Button size="sm" variant="ghost" onClick={() => setPendingRemoveId(e.id)}>
               {t('exclusions.remove')}

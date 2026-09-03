@@ -120,7 +120,7 @@ async function launchWithResolution(headless: boolean): Promise<Browser> {
     }
     if (preference !== 'auto') {
       throw new Error(
-        `The selected browser (${PREFERENCE_LABELS[preference]}) could not be launched — it may not be ` +
+        `The selected browser (${PREFERENCE_LABELS[preference]}) could not be launched. It may not be ` +
           `installed on this system. Pick a different option in Settings > Browser, or switch to "Auto".`
       )
     }
@@ -179,7 +179,7 @@ export async function ensureManagedChromiumDownloaded(
         const confirmed = await confirmManagedDownload()
         if (!confirmed) {
           throw new Error(
-            'Browser download was declined — job automation needs a browser to continue. Answer the setup ' +
+            'Browser download was declined. Job automation needs a browser to continue. Answer the setup ' +
               'prompt to try again, or pick "System Chrome"/"System Edge" in Settings > Browser if one is installed.'
           )
         }

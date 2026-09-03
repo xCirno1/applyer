@@ -59,7 +59,7 @@ body {
   {
     id: 'soft-rounded',
     label: 'Soft rounded corners',
-    description: 'Personal touch — this app ships square-cornered by default.',
+    description: 'Personal touch: this app ships square-cornered by default.',
     css: `/* Soft rounded corners */
 button,
 input,

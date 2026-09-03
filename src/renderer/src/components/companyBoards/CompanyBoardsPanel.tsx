@@ -1,26 +1,39 @@
-import { useCallback, useEffect, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
 import TextField from '../ui/TextField'
 import ConfirmDialog from '../ui/ConfirmDialog'
+import DataTable from '../ui/DataTable'
+import Dropdown from '../ui/Dropdown'
 import Skeleton from '../ui/Skeleton'
 import Tooltip from '../ui/Tooltip'
-import CompanyBoardRow from './CompanyBoardRow'
+import { useSortableTable } from '../ui/useSortableTable'
+import { BOARD_SEARCH_KEYS, BOARD_TABLE_VALUES, PROVIDER_LABELS, useBoardColumns } from './boardColumns'
+import { boardFilterStatus, type BoardFilterStatus } from './boardStatus'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
-import type { CompanyBoardRecord } from '@shared/types/companyBoard'
+import { ATS_PROVIDERS, type CompanyBoardRecord } from '@shared/types/companyBoard'
 
 const PAGE_SIZE = 20
+
+/** The "not filtering" option value for both dropdowns. */
+const ALL = 'all'
 
 /**
  * The companies whose own ATS board is searched.
  *
  * Greenhouse/Lever/Ashby/Workday have no cross-company search endpoint, so
  * this list *is* the coverage of those sources — which is why it lives on the
- * Indexed Jobs page next to the search history it feeds, rather than in
+ * Job Discovery page next to the search history it feeds, rather than in
  * Settings. Adding one is a network round trip (the app probes the providers
  * to work out which board a company is on), so the add button spins and
  * disables rather than resolving silently.
+ *
+ * The list is a `DataTable`. Sorting and the filter box come from
+ * `useSortableTable`; the provider and status dropdowns are applied here,
+ * before the rows reach the hook, since `DataTable` itself owns no state. All
+ * of it runs over the pages fetched so far, which is why the footer says how
+ * many of how many are on screen next to "Load more".
  */
 export default function CompanyBoardsPanel(): ReactElement {
   const [boards, setBoards] = useState<CompanyBoardRecord[]>([])
@@ -33,6 +46,8 @@ export default function CompanyBoardsPanel(): ReactElement {
   const [pendingRemove, setPendingRemove] = useState<CompanyBoardRecord | null>(null)
   const [removing, setRemoving] = useState(false)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [provider, setProvider] = useState<string>(ALL)
+  const [status, setStatus] = useState<string>(ALL)
   const { t } = useTranslation('indexedJobs')
   const toast = useToast()
   const errorMessage = useErrorMessage()
@@ -116,20 +131,25 @@ export default function CompanyBoardsPanel(): ReactElement {
     }
   }
 
-  const handleToggle = async (board: CompanyBoardRecord): Promise<void> => {
-    setTogglingId(board.id)
-    try {
-      const result = await window.api.companyBoards.setEnabled(board.id, !board.enabled)
-      if (result.ok && result.board) {
-        const updated = result.board
-        setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
-      } else {
-        toast.error(result.error ? errorMessage(result.error) : t('boards.toggleFailed'))
+  // Stable identities: the column definitions are memoised on these, so a
+  // handler rebuilt every render would rebuild every cell renderer with it.
+  const handleToggle = useCallback(
+    async (board: CompanyBoardRecord): Promise<void> => {
+      setTogglingId(board.id)
+      try {
+        const result = await window.api.companyBoards.setEnabled(board.id, !board.enabled)
+        if (result.ok && result.board) {
+          const updated = result.board
+          setBoards((prev) => prev.map((b) => (b.id === updated.id ? updated : b)))
+        } else {
+          toast.error(result.error ? errorMessage(result.error) : t('boards.toggleFailed'))
+        }
+      } finally {
+        setTogglingId(null)
       }
-    } finally {
-      setTogglingId(null)
-    }
-  }
+    },
+    [toast, errorMessage, t]
+  )
 
   const handleRemove = async (): Promise<void> => {
     if (!pendingRemove) return
@@ -148,6 +168,33 @@ export default function CompanyBoardsPanel(): ReactElement {
       setPendingRemove(null)
     }
   }
+
+  const columns = useBoardColumns({ togglingId, onToggle: handleToggle, onRemove: setPendingRemove })
+
+  // The two dropdowns narrow the rows before the table's own filter box and
+  // sort see them, which is the split `DataTable` asks for: it renders
+  // controls, the caller decides what a row has to satisfy.
+  const selected = useMemo(
+    () =>
+      boards.filter(
+        (board) =>
+          (provider === ALL || board.provider === provider) &&
+          (status === ALL || boardFilterStatus(board) === status)
+      ),
+    [boards, provider, status]
+  )
+
+  const table = useSortableTable(selected, { values: BOARD_TABLE_VALUES, searchKeys: BOARD_SEARCH_KEYS })
+  const narrowed = table.filtered || provider !== ALL || status !== ALL
+
+  const statusOptions: { value: BoardFilterStatus | typeof ALL; label: string }[] = [
+    { value: ALL, label: t('boards.filterAllStatuses') },
+    { value: 'open', label: t('boards.statusOpen') },
+    { value: 'empty', label: t('boards.statusEmpty') },
+    { value: 'error', label: t('boards.statusError') },
+    { value: 'unchecked', label: t('boards.notCheckedYet') },
+    { value: 'paused', label: t('boards.statusPaused') }
+  ]
 
   return (
     <div className="flex flex-col gap-4 p-3">
@@ -189,29 +236,69 @@ export default function CompanyBoardsPanel(): ReactElement {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-1.5">
-        {!loadedOnce && (
-          <>
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-full" />
-            <Skeleton className="h-9 w-full" />
-          </>
-        )}
-        {loadedOnce && boards.length === 0 && <p className="p-2 text-[12px] text-text-faint">{t('boards.empty')}</p>}
-        {boards.map((board) => (
-          <CompanyBoardRow
-            key={board.id}
-            board={board}
-            toggling={togglingId === board.id}
-            onToggle={() => handleToggle(board)}
-            onRemove={() => setPendingRemove(board)}
+      <div className="border border-border">
+        {!loadedOnce ? (
+          <div className="flex flex-col gap-1.5 p-3">
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-6 w-full" />
+            <Skeleton className="h-6 w-full" />
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            rows={table.rows}
+            getRowKey={(board) => board.id}
+            emptyMessage={t('boards.empty')}
+            noMatchMessage={t('boards.noMatches')}
+            minWidthPx={736}
+            sortKey={table.sortKey}
+            sortDir={table.sortDir}
+            onSort={table.onSort}
+            filterValue={table.filterValue}
+            onFilterChange={table.onFilterChange}
+            filterPlaceholder={t('boards.filterPlaceholder')}
+            rowClassName={(board) => (board.enabled ? '' : 'opacity-60')}
+            toolbar={
+              <>
+                <Dropdown
+                  size="sm"
+                  className="w-32"
+                  ariaLabel={t('boards.filterProvider')}
+                  options={[
+                    { value: ALL, label: t('boards.filterAllProviders') },
+                    ...ATS_PROVIDERS.map((p) => ({ value: p, label: PROVIDER_LABELS[p] }))
+                  ]}
+                  value={provider}
+                  onChange={setProvider}
+                />
+                <Dropdown
+                  size="sm"
+                  className="w-44"
+                  ariaLabel={t('boards.filterStatus')}
+                  options={statusOptions}
+                  value={status}
+                  onChange={setStatus}
+                />
+              </>
+            }
           />
-        ))}
-        {loadedOnce && boards.length < total && (
-          <div className="mt-1 flex justify-center">
-            <Button size="sm" variant="ghost" loading={loading} onClick={() => load(boards.length)}>
-              {t('actions.loadMore', { ns: 'common' })}
-            </Button>
+        )}
+
+        {loadedOnce && boards.length > 0 && (
+          // Search, filters and sort only ever see the pages fetched so far,
+          // so the count is the honest scope of what was searched and sits
+          // next to the button that widens it.
+          <div className="flex items-center justify-between gap-2 border-t border-border-soft px-3 py-1.5">
+            <span className="text-[11px] tabular-nums text-text-faint">
+              {narrowed
+                ? t('boards.showingFiltered', { visible: table.rows.length, loaded: boards.length, total })
+                : t('boards.showingAll', { loaded: boards.length, total })}
+            </span>
+            {boards.length < total && (
+              <Button size="sm" variant="ghost" loading={loading} onClick={() => load(boards.length)}>
+                {t('actions.loadMore', { ns: 'common' })}
+              </Button>
+            )}
           </div>
         )}
       </div>

@@ -47,5 +47,6 @@
   "recoveryOpenFailed": "Your custom storage location (\"{{root}}\") could not be opened: {{message}}",
   "pointerInvalid": "The saved storage location file was invalid. Using the default storage location instead.",
   "pointerUnreadable": "The saved storage location file could not be read. Using the default storage location instead.",
-  "unexpected": "Something went wrong: {{message}}"
+  "unexpected": "Something went wrong: {{message}}",
+  "unexpectedNoDetail": "Something went wrong."
 }

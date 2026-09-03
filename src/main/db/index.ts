@@ -43,7 +43,7 @@ const BUILTIN_FAILURE_TAGS: { id: string; label: string; description: string }[]
 
 export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   if (!db) {
-    throw new Error('Database not initialized — call initDatabase() before getDb()')
+    throw new Error('Database not initialized: call initDatabase() before getDb()')
   }
   return db
 }

@@ -4,6 +4,7 @@ import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Tag from '../ui/Tag'
+import MetaList from '../ui/MetaList'
 import { useToast } from '../ui/useToast'
 import { useJobsStore } from '../../state/jobsStore'
 import { useErrorMessage } from '../../i18n/formatError'
@@ -102,12 +103,15 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   return (
     <Modal open={!!job} onClose={onClose} title={job.title} width="max-w-xl">
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-[12px] text-text-muted">
-          <span className="font-medium text-text">{job.company}</span>
-          {job.location && <span>· {job.location}</span>}
-          {job.salaryRange && <span>· {job.salaryRange}</span>}
-          {job.matchScore !== null && <span>· {t('detail.match', { score: job.matchScore })}</span>}
-        </div>
+        <MetaList
+          className="text-[12px] text-text-muted"
+          items={[
+            { key: 'company', value: job.company, className: 'font-medium text-text' },
+            job.location && { key: 'location', value: job.location },
+            job.salaryRange && { key: 'salary', value: job.salaryRange },
+            job.matchScore !== null && { key: 'match', value: t('detail.match', { score: job.matchScore }) }
+          ]}
+        />
 
         {job.failureTag && (
           <div className="flex items-center gap-2">

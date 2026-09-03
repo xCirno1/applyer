@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import FileDrop from '../../components/ui/FileDrop'
+import MetaList from '../../components/ui/MetaList'
 import { useToast } from '../../components/ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { useProfileStore } from '../../state/profileStore'
@@ -63,9 +64,13 @@ export default function DocumentsSection(): ReactElement {
               key={doc.id}
               className="flex h-7 items-center justify-between border border-border-soft bg-canvas-soft px-2 text-[12px]"
             >
-              <span className="text-text">
-                <span className="text-text-faint">{doc.kind}</span> · {doc.originalFilename}
-              </span>
+              <MetaList
+                className="text-text"
+                items={[
+                  { key: 'kind', value: doc.kind, className: 'text-text-faint' },
+                  { key: 'filename', value: doc.originalFilename, grow: true, title: doc.originalFilename }
+                ]}
+              />
               <button
                 onClick={() => handleDelete(doc.id, doc.originalFilename)}
                 className="cursor-pointer text-text-faint hover:text-danger"

@@ -94,7 +94,7 @@ export async function fetchIndeedJobDetails(url: string): Promise<JobDetailsOutc
     }))
 
     if (!data.descriptionHtml) {
-      return { status: 'not_found', message: 'Could not find a job description on this Indeed page — it may have expired.' }
+      return { status: 'not_found', message: 'Could not find a job description on this Indeed page; it may have expired.' }
     }
 
     const html = sanitizeDescriptionHtml(data.descriptionHtml)

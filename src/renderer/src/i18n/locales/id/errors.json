@@ -47,5 +47,6 @@
   "recoveryOpenFailed": "Lokasi penyimpanan pilihanmu (\"{{root}}\") tidak bisa dibuka: {{message}}",
   "pointerInvalid": "File lokasi penyimpanan yang tersimpan tidak valid. Untuk sementara dipakai lokasi bawaan.",
   "pointerUnreadable": "File lokasi penyimpanan yang tersimpan tidak bisa dibaca. Untuk sementara dipakai lokasi bawaan.",
-  "unexpected": "Ada yang salah: {{message}}"
+  "unexpected": "Ada yang salah: {{message}}",
+  "unexpectedNoDetail": "Ada yang salah."
 }

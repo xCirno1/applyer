@@ -5,6 +5,7 @@ import { useJobsStore } from '../../state/jobsStore'
 import { usePendingCaptchaAlerts } from '../../providers/CaptchaAlertContext'
 import Tag from '../ui/Tag'
 import DonutChart from '../ui/DonutChart'
+import MetaList from '../ui/MetaList'
 
 const STATUS_ORDER: JobStatus[] = ['queued', 'filled', 'submitted', 'failed']
 
@@ -78,10 +79,13 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
                   <div key={status} className="flex items-center gap-1.5">
                     <span className={`h-2 w-2 shrink-0 ${STATUS_SWATCH[status]}`} aria-hidden="true" />
                     <span className="min-w-0 flex-1 truncate text-[11px] text-text-muted">{t(`status.${status}`)}</span>
-                    <span className="shrink-0 text-[11px] tabular-nums text-text">
-                      {count}
-                      {totalTracked > 0 && <span className="text-text-faint"> · {share}%</span>}
-                    </span>
+                    <MetaList
+                      className="shrink-0 text-[11px] tabular-nums text-text"
+                      items={[
+                        { key: 'count', value: count },
+                        totalTracked > 0 && { key: 'share', value: `${share}%`, className: 'text-text-faint' }
+                      ]}
+                    />
                   </div>
                 )
               })}

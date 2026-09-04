@@ -106,6 +106,46 @@ export const indexedJobs = sqliteTable('indexed_jobs', {
   seenCount: integer('seen_count').notNull().default(1)
 })
 
+/**
+ * Company ATS boards tracked as a search source.
+ *
+ * None of Greenhouse/Lever/Ashby/Workday has a cross-company search endpoint,
+ * so "search these boards" means "fetch the boards of the companies in this
+ * table and filter locally" — this list *is* that source's coverage.
+ *
+ * `boardKey` (`provider:token`, plus host and site for Workday) carries the
+ * uniqueness rather than a composite index over the columns: SQLite treats
+ * two NULLs as distinct, so an index over (provider, token, host, site) would
+ * happily accept the same Greenhouse board twice.
+ */
+export const companyBoards = sqliteTable('company_boards', {
+  id: text('id').primaryKey(),
+  boardKey: text('board_key').notNull().unique(),
+  provider: text('provider', { enum: ['greenhouse', 'lever', 'ashby', 'workday'] }).notNull(),
+  token: text('token').notNull(),
+  /** Workday only: the data-centre host its tenant is served from. */
+  host: text('host'),
+  /** Workday only: the career-site id. */
+  site: text('site'),
+  companyName: text('company_name').notNull(),
+  addedBy: text('added_by', { enum: ['user', 'agent'] }).notNull(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  lastCheckedAt: text('last_checked_at'),
+  /** Postings on the last fetch. 0 is a real answer (a live board with nothing open); null means never fetched. */
+  lastJobCount: integer('last_job_count'),
+  /**
+   * What the feed a board was imported from said it holds, or null when
+   * nothing said. Never a reading of our own — `lastJobCount` is the only
+   * column that speaks for a fetch — it exists so a watchlist that has never
+   * been fetched can still be swept biggest-first (see
+   * `browser/ats/boardSweep.ts`), and is ignored the moment a real fetch
+   * measures the board.
+   */
+  seedJobCount: integer('seed_job_count'),
+  lastError: text('last_error'),
+  createdAt: text('created_at').notNull().default(nowIso)
+})
+
 export const failureTags = sqliteTable('failure_tags', {
   id: text('id').primaryKey(),
   label: text('label').notNull(),

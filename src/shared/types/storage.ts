@@ -11,6 +11,7 @@ export interface StorageStats {
     jobs: number
     indexedJobs: number
     exclusions: number
+    companyBoards: number
     documents: number
     activityLogEntries: number
   }

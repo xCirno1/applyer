@@ -16,7 +16,7 @@ export default function DevBuildTag(): ReactElement | null {
   if (!info?.isDevBuild) return null
 
   return (
-    <Tooltip label={`Development build — data is kept in ${info.userDataDir}, separate from the installed app.`}>
+    <Tooltip label={`Development build: data is kept in ${info.userDataDir}, separate from the installed app.`}>
       <Tag label="Development Build" tone="warning" />
     </Tooltip>
   )

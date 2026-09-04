@@ -24,6 +24,10 @@
     "previous": "Halaman sebelumnya",
     "next": "Halaman berikutnya"
   },
+  "table": {
+    "filter": "Saring tabel ini",
+    "sortBy": "Urutkan menurut kolom ini"
+  },
   "fileDrop": {
     "hint": "Klik atau tarik file ke sini"
   },

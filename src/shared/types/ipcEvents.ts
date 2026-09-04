@@ -29,6 +29,25 @@ export const IPC = {
     setRetention: 'indexedJobs:setRetention',
     onChanged: 'indexedJobs:changed'
   },
+  companyBoards: {
+    list: 'companyBoards:list',
+    add: 'companyBoards:add',
+    remove: 'companyBoards:remove',
+    setEnabled: 'companyBoards:setEnabled',
+    // Bulk forms of the row actions, for a multi-row selection.
+    setEnabledMany: 'companyBoards:setEnabledMany',
+    removeMany: 'companyBoards:removeMany',
+    /** Fetch tracked boards on demand, outside a search, to fill in their last result. */
+    fetch: 'companyBoards:fetch',
+    /** One board's fetch landing, pushed as it happens rather than with the batch it belongs to. */
+    onFetched: 'companyBoards:fetched',
+    // Bulk import: pick and parse a CSV, plan what a column mapping would add, then write it.
+    pickCsv: 'companyBoards:pickCsv',
+    planCsv: 'companyBoards:planCsv',
+    importCsv: 'companyBoards:importCsv',
+    releaseCsv: 'companyBoards:releaseCsv',
+    onChanged: 'companyBoards:changed'
+  },
   exclusions: {
     list: 'exclusions:list',
     add: 'exclusions:add',

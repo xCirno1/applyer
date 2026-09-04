@@ -8,7 +8,9 @@ import {
   getProfileShape,
   updateProfileShape,
   fillApplicationShape,
-  excludeJobShape
+  excludeJobShape,
+  addCompanyBoardShape,
+  listCompanyBoardsShape
 } from './schemas'
 import { getProfileTool } from './tools/getProfile'
 import { updateProfileTool } from './tools/updateProfile'
@@ -19,6 +21,8 @@ import { listJobsTool } from './tools/listJobs'
 import { flagFailureTool } from './tools/flagFailure'
 import { fillApplicationTool } from './tools/fillApplication'
 import { excludeJobTool } from './tools/excludeJob'
+import { addCompanyBoardTool } from './tools/addCompanyBoard'
+import { listCompanyBoardsTool } from './tools/listCompanyBoards'
 
 export function createApplyerMcpServer(): McpServer {
   const server = new McpServer({ name: 'applyer', version: '0.1.0' })
@@ -53,7 +57,7 @@ export function createApplyerMcpServer(): McpServer {
     {
       title: 'Search for jobs',
       description:
-        'Searches for job postings matching a query. Currently searches LinkedIn and Indeed (the only sources with cross-company keyword search); Greenhouse/Lever/Ashby/Workday are per-company boards with no search endpoint — pass a specific company career-page URL to get_job_details instead. Returns short snippets, not full descriptions.',
+        'Searches for job postings matching a query. Two kinds of source: LinkedIn and Indeed run a keyword search across every company, while greenhouse/lever/ashby/workday search the company boards the user tracks (see add_company_board / list_company_boards) — those providers have no cross-company search endpoint, so their coverage is exactly the tracked list and asking for them with nothing tracked returns a warning saying so. Defaults to all of them. Returns short snippets, not full descriptions.',
       inputSchema: searchJobsShape
     },
     searchJobsTool
@@ -124,6 +128,31 @@ export function createApplyerMcpServer(): McpServer {
       inputSchema: excludeJobShape
     },
     excludeJobTool
+  )
+
+  server.registerTool(
+    'add_company_board',
+    {
+      title: "Track a company's own job board",
+      description:
+        "Adds a company's ATS board (Greenhouse, Lever, Ashby or Workday) to the list search_jobs fetches, so that company's postings are searchable even though it never posts to LinkedIn or Indeed — which is common for smaller and earlier-stage companies. " +
+        'Pass `company` as a name ("Acme Labs"), a domain ("acme.com"), or a board URL; Applyer probes the providers and keeps the board with the most open roles rather than the first one that answers, because a company that migrated ATS often leaves the old, empty board live. ' +
+        'Pass `provider` + `token` together only if you already know the exact slug. If your search established which ATS the company uses but not the slug, pass `provider` on its own: it is used as a preference, and a provider that actually has postings still wins over it. A Workday board can only be added by URL — it needs a host, tenant and site, not a single token. ' +
+        'Use this when the user names companies they want watched, or when you have found the board of a company they are interested in. Adding a board is a standing instruction that costs one request per search, so add companies the user actually wants, not every company you come across.',
+      inputSchema: addCompanyBoardShape
+    },
+    addCompanyBoardTool
+  )
+
+  server.registerTool(
+    'list_company_boards',
+    {
+      title: 'List tracked company boards',
+      description:
+        "Lists the company ATS boards search_jobs will fetch, with the result of each one's last fetch (open roles, or the error if it stopped answering). Check this before adding boards to avoid duplicates, and to explain why a greenhouse/lever/ashby/workday search returned nothing.",
+      inputSchema: listCompanyBoardsShape
+    },
+    listCompanyBoardsTool
   )
 
   return server

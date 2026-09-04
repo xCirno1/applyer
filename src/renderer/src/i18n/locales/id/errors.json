@@ -18,6 +18,15 @@
   "commandTooLong": "Perintahnya kepanjangan (maksimal {{max}} karakter).",
   "unsupportedFileType": "Jenis file tidak didukung: {{mimeType}}. Pakai PDF, DOCX, atau teks biasa.",
   "fileTooLarge": "File melebihi batas {{limit}}MB.",
+  "boardInputRequired": "Masukkan nama perusahaan, situs web, atau link papan lowongan.",
+  "boardNotFound": "Tidak ada papan Greenhouse, Lever, atau Ashby yang merespons untuk perusahaan itu (dicoba: {{tried}}). Kalau kamu tahu link papannya, tempel link itu saja.",
+  "boardUnreachable": "Tidak bisa memeriksa papan itu: {{message}}",
+  "boardLimitReached": "Kamu bisa melacak hingga {{limit}} papan perusahaan. Hapus salah satu sebelum menambah lagi.",
+  "boardFetchLimit": "Ambil paling banyak {{limit}} papan sekaligus. Pilih lebih sedikit lalu coba lagi.",
+  "csvTooLarge": "Berkas itu lebih besar dari {{max}} MB. Ekspor daftar papan yang lebih kecil lalu coba lagi.",
+  "csvEmpty": "Berkas itu tidak memiliki baris untuk diimpor.",
+  "csvNoBoardColumn": "Petakan kolom penyedia dan token, atau kolom URL papan atau URL API, agar setiap baris menunjuk satu papan.",
+  "csvFileMissing": "Berkas itu tidak lagi dimuat. Pilih kembali berkasnya.",
   "invalidFolderPath": "Itu bukan lokasi folder yang valid.",
   "chooseFolder": "Pilih sebuah folder.",
   "pathNotFolder": "Lokasi itu bukan folder.",
@@ -43,5 +52,6 @@
   "recoveryOpenFailed": "Lokasi penyimpanan pilihanmu (\"{{root}}\") tidak bisa dibuka: {{message}}",
   "pointerInvalid": "File lokasi penyimpanan yang tersimpan tidak valid. Untuk sementara dipakai lokasi bawaan.",
   "pointerUnreadable": "File lokasi penyimpanan yang tersimpan tidak bisa dibaca. Untuk sementara dipakai lokasi bawaan.",
-  "unexpected": "Ada yang salah: {{message}}"
+  "unexpected": "Ada yang salah: {{message}}",
+  "unexpectedNoDetail": "Ada yang salah."
 }

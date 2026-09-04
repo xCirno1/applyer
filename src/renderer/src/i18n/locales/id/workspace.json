@@ -26,7 +26,7 @@
     "title": "Tentang Applyer",
     "name": "Applyer",
     "version": "Versi {{version}}",
-    "developmentBuildDataDirectory": "Build pengembangan — direktori data"
+    "developmentBuildDataDirectory": "Direktori data build pengembangan:"
   },
   "retryAll": {
     "title": "Coba lagi semua lowongan yang gagal?",
@@ -43,7 +43,7 @@
   },
   "rail": {
     "jobBoard": "Papan Lowongan",
-    "indexedJobs": "Lowongan Terindeks"
+    "discovery": "Penemuan Lowongan"
   },
   "topBar": {
     "settings": "Pengaturan",

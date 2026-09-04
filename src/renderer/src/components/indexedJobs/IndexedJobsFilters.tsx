@@ -31,11 +31,17 @@ export default function IndexedJobsFilters(): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchDraft])
 
-  // LinkedIn/Indeed are proper nouns and stay untranslated.
+  // Every source name here is a proper noun and stays untranslated. The four
+  // ATS providers appear because a search now indexes company boards too, so
+  // filtering to one of them answers "what did my own watchlist turn up?".
   const sourceOptions = [
     { value: '', label: t('filters.allSources') },
     { value: 'linkedin', label: 'LinkedIn' },
-    { value: 'indeed', label: 'Indeed' }
+    { value: 'indeed', label: 'Indeed' },
+    { value: 'greenhouse', label: 'Greenhouse' },
+    { value: 'lever', label: 'Lever' },
+    { value: 'ashby', label: 'Ashby' },
+    { value: 'workday', label: 'Workday' }
   ]
 
   const matchOptions: { value: IndexedJobMatchFilter; label: string }[] = [

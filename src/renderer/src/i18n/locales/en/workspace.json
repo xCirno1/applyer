@@ -26,7 +26,7 @@
     "title": "About Applyer",
     "name": "Applyer",
     "version": "Version {{version}}",
-    "developmentBuildDataDirectory": "Development build — data directory"
+    "developmentBuildDataDirectory": "Development build data directory:"
   },
   "retryAll": {
     "title": "Retry all failed jobs?",
@@ -45,7 +45,7 @@
   },
   "rail": {
     "jobBoard": "Job Board",
-    "indexedJobs": "Indexed Jobs"
+    "discovery": "Job Discovery"
   },
   "topBar": {
     "settings": "Settings",

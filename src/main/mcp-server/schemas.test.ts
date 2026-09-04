@@ -9,7 +9,9 @@ import {
   getProfileShape,
   updateProfileShape,
   fillApplicationShape,
-  excludeJobShape
+  excludeJobShape,
+  addCompanyBoardShape,
+  listCompanyBoardsShape
 } from './schemas'
 
 const searchJobsSchema = z.object(searchJobsShape)
@@ -21,6 +23,8 @@ const getProfileSchema = z.object(getProfileShape)
 const updateProfileSchema = z.object(updateProfileShape)
 const fillApplicationSchema = z.object(fillApplicationShape)
 const excludeJobSchema = z.object(excludeJobShape)
+const addCompanyBoardSchema = z.object(addCompanyBoardShape)
+const listCompanyBoardsSchema = z.object(listCompanyBoardsShape)
 
 describe('searchJobsShape', () => {
   it('accepts a minimal valid call (query only)', () => {
@@ -209,5 +213,45 @@ describe('updateProfileShape', () => {
     const parsed = updateProfileSchema.parse({ fullName: '  Jane Doe  ', skills: ['  Go  '] })
     expect(parsed.fullName).toBe('Jane Doe')
     expect(parsed.skills).toEqual(['Go'])
+  })
+})
+
+describe('addCompanyBoardShape', () => {
+  it('accepts a bare company name, domain, or board URL', () => {
+    expect(addCompanyBoardSchema.safeParse({ company: 'Acme Labs' }).success).toBe(true)
+    expect(addCompanyBoardSchema.safeParse({ company: 'acme.com' }).success).toBe(true)
+    expect(addCompanyBoardSchema.safeParse({ company: 'https://jobs.lever.co/acme' }).success).toBe(true)
+  })
+
+  it('rejects a missing or blank company', () => {
+    expect(addCompanyBoardSchema.safeParse({}).success).toBe(false)
+    expect(addCompanyBoardSchema.safeParse({ company: '   ' }).success).toBe(false)
+  })
+
+  it('accepts an explicit provider + token for an agent that already knows the slug', () => {
+    expect(addCompanyBoardSchema.safeParse({ company: 'Acme', provider: 'ashby', token: 'acme' }).success).toBe(true)
+  })
+
+  it('rejects a provider that is not one of the four board APIs', () => {
+    expect(addCompanyBoardSchema.safeParse({ company: 'Acme', provider: 'smartrecruiters' }).success).toBe(false)
+    expect(addCompanyBoardSchema.safeParse({ company: 'Acme', provider: 'linkedin' }).success).toBe(false)
+  })
+
+  it('rejects an over-long company, token, or display name', () => {
+    expect(addCompanyBoardSchema.safeParse({ company: 'a'.repeat(201) }).success).toBe(false)
+    expect(addCompanyBoardSchema.safeParse({ company: 'Acme', token: 'a'.repeat(101) }).success).toBe(false)
+    expect(addCompanyBoardSchema.safeParse({ company: 'Acme', displayName: 'a'.repeat(201) }).success).toBe(false)
+  })
+})
+
+describe('listCompanyBoardsShape', () => {
+  it('accepts an empty query (every field optional)', () => {
+    expect(listCompanyBoardsSchema.safeParse({}).success).toBe(true)
+  })
+
+  it('rejects a limit outside [1, 50] and a negative offset', () => {
+    expect(listCompanyBoardsSchema.safeParse({ limit: 0 }).success).toBe(false)
+    expect(listCompanyBoardsSchema.safeParse({ limit: 51 }).success).toBe(false)
+    expect(listCompanyBoardsSchema.safeParse({ offset: -1 }).success).toBe(false)
   })
 })

@@ -193,7 +193,7 @@ export default function AppMenuBar({
         <div className="flex flex-col gap-1">
           <span className="text-[13px] font-medium text-text">{t('about.name')}</span>
           <span className="text-[12px] text-text-muted">
-            {t('about.version', { version: appInfo?.version ?? '—' })}
+            {t('about.version', { version: appInfo?.version ?? t('states.loading', { ns: 'common' }) })}
           </span>
           {appInfo?.isDevBuild === true && (
             <span className="mt-1 text-[12px] text-text-muted">

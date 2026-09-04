@@ -102,7 +102,7 @@ async function performFill(
 
     if (filledFields.length === 0) {
       await browser.close().catch(() => {})
-      return failAndReturn(jobId, 'form_not_supported', "Couldn't identify any recognizable fields on this application form — it may need to be filled manually.")
+      return failAndReturn(jobId, 'form_not_supported', "Couldn't identify any recognizable fields on this application form. It may need to be filled manually.")
     }
 
     // Screenshot capture + the DB row it's referenced from are what a
@@ -154,7 +154,7 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
 
   const profile = getProfile()
   if (!profile) {
-    return { status: 'failed', jobId, reasonTag: 'other', message: 'No profile found — complete onboarding first.' }
+    return { status: 'failed', jobId, reasonTag: 'other', message: 'No profile found; complete onboarding first.' }
   }
 
   const targetUrl = job.applicationUrl || job.url
@@ -198,7 +198,7 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
       status: 'paused_captcha',
       jobId,
       taskId,
-      message: 'A verification challenge appeared in the browser window — resolve it there, then click Resume in the app (or it will resume automatically once the challenge clears).'
+      message: 'A verification challenge appeared in the browser window; resolve it there, then click Resume in the app (or it will resume automatically once the challenge clears).'
     }
   }
 

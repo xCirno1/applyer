@@ -58,7 +58,11 @@ type AddCompanyBoardResponse =
   | { ok: false; error: AppError }
 import type { IndexedJobsRetention, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
 import type { StorageStats } from '@shared/types/storage'
-import type { NotificationPreferences, NotificationTestKind } from '@shared/types/notification'
+import type {
+  NotificationLocale,
+  NotificationPreferences,
+  NotificationTestKind
+} from '@shared/types/notification'
 import type {
   StorageLocationStatus,
   StorageLocationValidation,
@@ -281,6 +285,8 @@ const settingsApi = {
     ipcRenderer.invoke(IPC.settings.setNotificationPreferences, { preferences }),
   testNotification: (kind: NotificationTestKind): Promise<{ ok: boolean; error?: AppError }> =>
     ipcRenderer.invoke(IPC.settings.testNotification, { kind }),
+  setNotificationLocale: (locale: NotificationLocale): Promise<{ ok: boolean; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setNotificationLocale, { locale }),
   getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats)
 }
 

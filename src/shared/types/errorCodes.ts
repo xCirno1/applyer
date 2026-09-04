@@ -22,6 +22,7 @@ export type ErrorCode =
   | 'invalidJson'
   | 'invalidCommand'
   | 'invalidNotificationPreferences'
+  | 'invalidLocale'
   | 'notificationsUnsupported'
   | 'invalidExport'
   | 'jobNotFound'

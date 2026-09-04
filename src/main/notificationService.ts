@@ -1,10 +1,10 @@
 import { BrowserWindow, Notification } from 'electron'
-import { getNotificationPreferences } from './db/repositories/settingsRepository'
+import { getNotificationLocale, getNotificationPreferences } from './db/repositories/settingsRepository'
 import { appLogger } from './logger'
+import { NOTIFICATION_CATALOGS, notificationMessage } from './notificationCatalogs'
 import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
 import type { JobRecord } from '@shared/types/job'
-import type { NotificationPreferences } from '@shared/types/notification'
-import type { NotificationTestKind } from '@shared/types/notification'
+import type { NotificationLocale, NotificationPreferences, NotificationTestKind } from '@shared/types/notification'
 
 export interface DesktopNotificationContent {
   title: string
@@ -15,34 +15,26 @@ const activeNotifications = new Set<Notification>()
 
 export function contentForJobUpdate(
   job: JobRecord,
-  preferences: NotificationPreferences
+  preferences: NotificationPreferences,
+  locale: NotificationLocale = 'en'
 ): DesktopNotificationContent | null {
   if (!preferences.enabled) return null
-  const jobName = `${job.title} at ${job.company}`
   if (job.status === 'filled' && preferences.jobFilled) {
-    return {
-      title: 'Application ready for review',
-      body: `${jobName} has been filled and is ready for your review.`
-    }
+    return notificationMessage(locale, 'jobFilled', job.title, job.company)
   }
   if (job.status === 'failed' && preferences.jobFailed) {
-    return {
-      title: 'Job could not be completed',
-      body: `${jobName} failed. Open Applyer for details or to retry.`
-    }
+    return notificationMessage(locale, 'jobFailed', job.title, job.company)
   }
   return null
 }
 
 export function contentForVerification(
   payload: CaptchaDetectedPayload,
-  preferences: NotificationPreferences
+  preferences: NotificationPreferences,
+  locale: NotificationLocale = 'en'
 ): DesktopNotificationContent | null {
   if (!preferences.enabled || !preferences.verificationRequired) return null
-  return {
-    title: 'Verification required',
-    body: `${payload.jobTitle} at ${payload.company} needs your attention in the browser window.`
-  }
+  return notificationMessage(locale, 'verificationRequired', payload.jobTitle, payload.company)
 }
 
 function focusMainWindow(): void {
@@ -53,24 +45,12 @@ function focusMainWindow(): void {
   window.focus()
 }
 
-export function testNotificationContent(kind: NotificationTestKind): DesktopNotificationContent {
-  switch (kind) {
-    case 'verificationRequired':
-      return {
-        title: 'Verification required',
-        body: 'Test Job at Example Company needs your attention in the browser window.'
-      }
-    case 'jobFilled':
-      return {
-        title: 'Application ready for review',
-        body: 'Test Job at Example Company has been filled and is ready for your review.'
-      }
-    case 'jobFailed':
-      return {
-        title: 'Job could not be completed',
-        body: 'Test Job at Example Company failed. Open Applyer for details or to retry.'
-      }
-  }
+export function testNotificationContent(
+  kind: NotificationTestKind,
+  locale: NotificationLocale = 'en'
+): DesktopNotificationContent {
+  const catalog = NOTIFICATION_CATALOGS[locale]
+  return notificationMessage(locale, kind, catalog.testJobTitle, catalog.testCompany)
 }
 
 export function showDesktopNotification(content: DesktopNotificationContent): boolean {
@@ -96,12 +76,12 @@ export function showDesktopNotification(content: DesktopNotificationContent): bo
 }
 
 export function sendTestNotification(kind: NotificationTestKind): boolean {
-  return showDesktopNotification(testNotificationContent(kind))
+  return showDesktopNotification(testNotificationContent(kind, getNotificationLocale()))
 }
 
 export function notifyForJobUpdate(job: JobRecord): void {
   try {
-    const content = contentForJobUpdate(job, getNotificationPreferences())
+    const content = contentForJobUpdate(job, getNotificationPreferences(), getNotificationLocale())
     if (content) showDesktopNotification(content)
   } catch (err) {
     // Notification delivery is best-effort and must never break the job
@@ -112,7 +92,7 @@ export function notifyForJobUpdate(job: JobRecord): void {
 
 export function notifyForVerification(payload: CaptchaDetectedPayload): void {
   try {
-    const content = contentForVerification(payload, getNotificationPreferences())
+    const content = contentForVerification(payload, getNotificationPreferences(), getNotificationLocale())
     if (content) showDesktopNotification(content)
   } catch (err) {
     appLogger.warn(`Could not prepare verification notification: ${String(err)}`)

@@ -91,6 +91,7 @@ export const IPC = {
     setAutoStartCommand: 'settings:setAutoStartCommand',
     getNotificationPreferences: 'settings:getNotificationPreferences',
     setNotificationPreferences: 'settings:setNotificationPreferences',
+    setNotificationLocale: 'settings:setNotificationLocale',
     testNotification: 'settings:testNotification',
     getStorageStats: 'settings:getStorageStats'
   },

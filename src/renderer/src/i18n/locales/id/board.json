@@ -22,6 +22,31 @@
     "deselect": "Batalkan pilihan",
     "needsVerification": "perlu verifikasi"
   },
+  "failure": {
+    "tags": {
+      "captchaVerification": "Verifikasi CAPTCHA",
+      "loginRequired": "Perlu masuk",
+      "formNotSupported": "Formulir tidak didukung",
+      "expiredListing": "Lowongan kedaluwarsa",
+      "duplicate": "Duplikat",
+      "interrupted": "Terputus",
+      "browserUnavailable": "Browser tidak tersedia",
+      "other": "Lainnya"
+    },
+    "messages": {
+      "captchaVerification": "Tantangan verifikasi tidak diselesaikan tepat waktu atau dibatalkan.",
+      "loginRequired": "Lamaran ini mengharuskanmu masuk terlebih dahulu.",
+      "formNotSupported": "Applyer tidak menemukan kolom yang dikenali di formulir lamaran ini. Formulirnya mungkin perlu diisi secara manual.",
+      "expiredListing": "Lowongan ini sudah tidak tersedia.",
+      "duplicate": "Lowongan ini sudah masuk antrean dari pencarian lain.",
+      "interrupted": "Applyer ditutup atau dimulai ulang saat lowongan ini menunggu verifikasi. Coba lagi untuk mengulang prosesnya.",
+      "browserUnavailable": "Applyer tidak dapat menyiapkan browser untuk lamaran ini.",
+      "browserUnavailableDetail": "Applyer tidak dapat menyiapkan browser: {{detail}}",
+      "formOpenFailedDetail": "Applyer tidak dapat membuka halaman lamaran: {{detail}}",
+      "formFillFailedDetail": "Applyer gagal saat mengisi formulir: {{detail}}",
+      "jobNotFound": "Lowongan tidak ditemukan."
+    }
+  },
   "selection": {
     "count": "{{count}} dipilih",
     "clear": "Bersihkan"

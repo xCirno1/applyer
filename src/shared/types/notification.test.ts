@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_NOTIFICATION_PREFERENCES,
   isNotificationPreferences,
-  isNotificationTestKind
+  isNotificationTestKind,
+  isNotificationLocale
 } from './notification'
 
 describe('isNotificationPreferences', () => {
@@ -24,5 +25,14 @@ describe('isNotificationTestKind', () => {
     expect(isNotificationTestKind('jobFailed')).toBe(true)
     expect(isNotificationTestKind('submitted')).toBe(false)
     expect(isNotificationTestKind(null)).toBe(false)
+  })
+})
+
+describe('isNotificationLocale', () => {
+  it('accepts supported locales only', () => {
+    expect(isNotificationLocale('en')).toBe(true)
+    expect(isNotificationLocale('id')).toBe(true)
+    expect(isNotificationLocale('en-AU')).toBe(false)
+    expect(isNotificationLocale('system')).toBe(false)
   })
 })

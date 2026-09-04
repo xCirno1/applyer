@@ -7,7 +7,8 @@ import {
   getAutoStartCommand,
   setAutoStartCommand,
   getNotificationPreferences,
-  setNotificationPreferences
+  setNotificationPreferences,
+  setNotificationLocale
 } from '../db/repositories/settingsRepository'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
@@ -19,6 +20,7 @@ import type { AutoStartCommand } from '@shared/types/ipcEvents'
 import type { StorageStats } from '@shared/types/storage'
 import {
   isNotificationPreferences,
+  isNotificationLocale,
   isNotificationTestKind,
   type NotificationPreferences
 } from '@shared/types/notification'
@@ -113,5 +115,19 @@ export function registerSettingsIpc(): void {
     return sendTestNotification(kind)
       ? { ok: true }
       : { ok: false, error: appError('notificationsUnsupported') }
+  })
+
+  ipcMain.handle(IPC.settings.setNotificationLocale, (_event, payload: unknown) => {
+    const locale =
+      typeof payload === 'object' && payload !== null ? (payload as { locale?: unknown }).locale : undefined
+    if (!isNotificationLocale(locale)) {
+      return { ok: false, error: appError('invalidLocale') }
+    }
+    try {
+      setNotificationLocale(locale)
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
   })
 }

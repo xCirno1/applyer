@@ -23,7 +23,9 @@ import {
   getBrowserPreference,
   setBrowserPreference,
   getNotificationPreferences,
-  setNotificationPreferences
+  setNotificationPreferences,
+  getNotificationLocale,
+  setNotificationLocale
 } from './settingsRepository'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
@@ -128,6 +130,19 @@ describe('notification preferences', () => {
       .onConflictDoUpdate({ target: appSettings.key, set: { value: JSON.stringify({ enabled: false }) } })
       .run()
     expect(getNotificationPreferences()).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
+  })
+})
+
+describe('notification locale', () => {
+  it('defaults to English and round-trips a renderer-synchronized locale', () => {
+    expect(getNotificationLocale()).toBe('en')
+    setNotificationLocale('id')
+    expect(getNotificationLocale()).toBe('id')
+  })
+
+  it('falls back to English for an unrecognized cached locale', () => {
+    testDb.insert(appSettings).values({ key: 'notification_locale', value: 'xx' }).run()
+    expect(getNotificationLocale()).toBe('en')
   })
 })
 

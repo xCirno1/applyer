@@ -15,8 +15,10 @@ import { computeStorageStats } from '../storageStats'
 import type { StorageMode } from '@shared/types/profile'
 import type { AutoStartCommand } from '@shared/types/ipcEvents'
 import type { StorageStats } from '@shared/types/storage'
+import { getSettings, isSettingKey } from '@shared/settings'
+import { getAdvancedSettingsSnapshot, resetUserSetting, updateUserSetting } from '../config/settings'
 
-const AUTO_START_COMMAND_MAX_LENGTH = 500
+const AUTO_START_COMMAND_MAX_LENGTH = getSettings().dangerousAutoStartCommandMaxLength
 
 export function registerSettingsIpc(): void {
   ipcMain.handle(IPC.settings.changeStorageMode, async (_event, { mode }: { mode: StorageMode }) => {
@@ -76,4 +78,34 @@ export function registerSettingsIpc(): void {
   })
 
   ipcMain.handle(IPC.settings.getStorageStats, (): StorageStats => computeStorageStats())
+
+  ipcMain.handle(IPC.settings.getAdvanced, () => getAdvancedSettingsSnapshot())
+
+  ipcMain.handle(IPC.settings.updateAdvanced, (_event, payload: { key?: unknown; value?: unknown }) => {
+    if (!isSettingKey(payload?.key)) {
+      return { ok: false, error: appError('invalidAdvancedSetting') }
+    }
+    try {
+      const snapshot = updateUserSetting(payload.key, payload.value)
+      logActivity('info', `Advanced setting updated: ${payload.key}`)
+      return { ok: true, snapshot }
+    } catch (error) {
+      logActivity('error', `Advanced setting update failed: ${payload.key}`, { error: String(error) })
+      return { ok: false, error: appError('invalidAdvancedSetting', { message: String(error) }) }
+    }
+  })
+
+  ipcMain.handle(IPC.settings.resetAdvanced, (_event, payload: { key?: unknown }) => {
+    if (!isSettingKey(payload?.key)) {
+      return { ok: false, error: appError('invalidAdvancedSetting') }
+    }
+    try {
+      const snapshot = resetUserSetting(payload.key)
+      logActivity('info', `Advanced setting reset: ${payload.key}`)
+      return { ok: true, snapshot }
+    } catch (error) {
+      logActivity('error', `Advanced setting reset failed: ${payload.key}`, { error: String(error) })
+      return { ok: false, error: unexpectedError(error) }
+    }
+  })
 }

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
+import { encodedSettingsArgument } from './config/settings'
 
 // Not __dirname-relative — this module can end up bundled into a
 // dynamically-imported chunk under out/main/chunks/, which breaks a path
@@ -30,7 +31,8 @@ export function createMainWindow(): BrowserWindow {
       preload: join(outDir, 'preload/index.cjs'),
       contextIsolation: true,
       sandbox: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      additionalArguments: [encodedSettingsArgument()]
     }
   })
 

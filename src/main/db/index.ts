@@ -8,6 +8,7 @@ import * as schema from './schema'
 import { appLogger } from '../logger'
 import { failureTags } from './schema'
 import { activeStorageRoot, activeStorageRootRequiresExistingDatabase } from '../config/storageLocation'
+import { BUILTIN_FAILURE_TAGS } from '@shared/constants'
 
 /**
  * Deliberately NOT __dirname-relative: this module can end up bundled into
@@ -30,16 +31,6 @@ function resolveMigrationsFolder(): string {
 
 let sqlite: Database.Database | undefined
 let db: ReturnType<typeof drizzle<typeof schema>> | undefined
-
-const BUILTIN_FAILURE_TAGS: { id: string; label: string; description: string }[] = [
-  { id: 'captcha_verification', label: 'Captcha Verification', description: 'A bot-check or CAPTCHA blocked automated access.' },
-  { id: 'login_required', label: 'Login Required', description: 'The listing or application requires signing in.' },
-  { id: 'form_not_supported', label: 'Form Not Supported', description: "The application form couldn't be filled automatically." },
-  { id: 'expired_listing', label: 'Expired Listing', description: 'The job posting is no longer available.' },
-  { id: 'duplicate', label: 'Duplicate', description: 'This job was already queued from another search.' },
-  { id: 'interrupted', label: 'Interrupted', description: 'The app was closed or restarted while this job was mid-fill or waiting on a verification challenge.' },
-  { id: 'other', label: 'Other', description: 'An unclassified failure occurred.' }
-]
 
 export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   if (!db) {

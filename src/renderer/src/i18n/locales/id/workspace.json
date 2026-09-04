@@ -26,7 +26,7 @@
     "title": "Tentang Applyer",
     "name": "Applyer",
     "version": "Versi {{version}}",
-    "developmentBuildDataDirectory": "Direktori data build pengembangan:"
+    "dataDirectory": "Direktori data:"
   },
   "retryAll": {
     "title": "Coba lagi semua lowongan yang gagal?",

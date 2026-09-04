@@ -6,9 +6,9 @@ import Tooltip from '../ui/Tooltip'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import type { IndexedJobsRetention } from '@shared/types/indexedJob'
-import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
+import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS, INDEXED_JOBS_RETENTION_OPTIONS } from '@shared/constants'
 
-const DAY_OPTIONS = [7, 14, 30, 90] as const
+const DAY_OPTIONS = INDEXED_JOBS_RETENTION_OPTIONS.filter((value): value is number => typeof value === 'number')
 
 function toRetention(value: string): IndexedJobsRetention {
   return value === 'unlimited' ? 'unlimited' : Number.parseInt(value, 10)
@@ -60,7 +60,9 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
 
   const options = [
     ...DAY_OPTIONS.map((days) => ({ value: String(days), label: t('retention.days', { count: days }) })),
-    { value: 'unlimited', label: t('retention.unlimited') }
+    ...(INDEXED_JOBS_RETENTION_OPTIONS.includes('unlimited')
+      ? [{ value: 'unlimited', label: t('retention.unlimited') }]
+      : [])
   ]
 
   return (

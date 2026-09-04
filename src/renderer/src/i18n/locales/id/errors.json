@@ -8,6 +8,7 @@
   "invalidTable": "Tabel tidak valid.",
   "invalidJson": "File itu bukan JSON yang valid.",
   "invalidCommand": "Perintah tidak valid.",
+  "invalidAdvancedSetting": "Nilai pengaturan lanjutan ini tidak valid. {{message}}",
   "invalidExport": "File ini bukan hasil ekspor Applyer.",
   "jobNotFound": "Lowongan tidak ditemukan.",
   "jobNotQueued": "Lowongan tidak ditemukan atau sudah tidak ada di Antre.",

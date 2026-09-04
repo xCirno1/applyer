@@ -89,7 +89,10 @@ export const IPC = {
     changeStorageMode: 'settings:changeStorageMode',
     getAutoStartCommand: 'settings:getAutoStartCommand',
     setAutoStartCommand: 'settings:setAutoStartCommand',
-    getStorageStats: 'settings:getStorageStats'
+    getStorageStats: 'settings:getStorageStats',
+    getAdvanced: 'settings:getAdvanced',
+    updateAdvanced: 'settings:updateAdvanced',
+    resetAdvanced: 'settings:resetAdvanced'
   },
   storageLocation: {
     getStatus: 'storageLocation:getStatus',

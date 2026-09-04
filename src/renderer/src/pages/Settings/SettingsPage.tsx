@@ -9,6 +9,7 @@ import AppearanceSection from './AppearanceSection'
 import LanguageSection from './LanguageSection'
 import ShortcutsSection from './ShortcutsSection'
 import DataSection from './DataSection'
+import DeveloperSection from './DeveloperSection'
 
 // Labels come from the `settings.nav.*` catalog keyed by id, so this list
 // only declares which sections exist and in what order.
@@ -21,7 +22,8 @@ const SECTIONS = [
   'appearance',
   'language',
   'shortcuts',
-  'data'
+  'data',
+  'developer'
 ] as const
 
 export type SectionId = (typeof SECTIONS)[number]
@@ -63,6 +65,7 @@ export default function SettingsPage({
         {section === 'language' && <LanguageSection />}
         {section === 'shortcuts' && <ShortcutsSection />}
         {section === 'data' && <DataSection onOpenExport={onOpenExport} onOpenImport={onOpenImport} />}
+        {section === 'developer' && <DeveloperSection />}
       </div>
     </div>
   )

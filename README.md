@@ -145,6 +145,35 @@ Everything stays on your computer. Settings gives you control over the details:
   downloads its own Chromium if neither is there. You can pin a specific choice instead. In
   a packaged build, a first-time download is confirmed by you and shows live progress.
 
+### Advanced JSON settings
+
+Operational defaults live in one file, [`src/shared/settings.json`](src/shared/settings.json).
+On first launch Applyer also creates `settings.json` in its user-data directory. That user
+file is a partial override: add only the values you want to change, then restart Applyer.
+The development build uses its separate `applyer-dev` user-data directory. The exact active
+directory is shown in Help > About.
+
+The same overrides can be edited without opening the file manually. Open **Settings >
+Developer**, enable **Developer mode**, then expand a subsystem and its nested group. The
+editor chooses a control from each value's data type, validates before saving, shows which
+values are overridden, and lets each override be reset independently. Dangerous values ask
+for confirmation. Developer mode only reveals these controls; enabling it does not alter any
+runtime limit by itself.
+
+For example:
+
+```json
+{
+  "listJobsDefaultLimit": 30,
+  "atsFetchTimeoutMs": 20000
+}
+```
+
+Unknown or invalid entries are ignored and logged. Keys beginning with `dangerous` control
+resource ceilings, network concurrency, upload limits, or cache compatibility. They can be
+overridden, but the prefix is intentional: raising or otherwise changing them may increase
+memory/network usage, weaken safety limits, or invalidate stored data.
+
 ## Prerequisites
 
 - Node.js 20.19+ or 22.12+ (CI runs on 24) and npm

@@ -8,6 +8,7 @@
   "invalidTable": "Invalid table.",
   "invalidJson": "That file is not valid JSON.",
   "invalidCommand": "Invalid command.",
+  "invalidAdvancedSetting": "This advanced setting value is invalid. {{message}}",
   "invalidExport": "This file is not a valid Applyer export.",
   "jobNotFound": "Job not found.",
   "jobNotQueued": "Job not found or no longer Queued.",

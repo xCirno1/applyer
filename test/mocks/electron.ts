@@ -88,3 +88,32 @@ export const session = {
     }
   }
 }
+
+/** Minimal notification/window surface for main-process notification tests and modules. */
+export class Notification {
+  static isSupported(): boolean {
+    return true
+  }
+
+  readonly options: Electron.NotificationConstructorOptions
+
+  constructor(options: Electron.NotificationConstructorOptions) {
+    this.options = options
+  }
+
+  on(): this {
+    return this
+  }
+
+  once(): this {
+    return this
+  }
+
+  show(): void {
+    void this.options
+  }
+}
+
+export const BrowserWindow = {
+  getAllWindows: (): Electron.BrowserWindow[] => []
+}

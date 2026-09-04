@@ -199,6 +199,7 @@ npm run typecheck    # tsc, no emit (main and renderer projects)
 npm run lint         # eslint
 npm run test         # unit test suite (Vitest)
 npm run test:watch   # unit test suite in watch mode
+npm run test:site    # reusable local job forms for browser/notification testing
 npm run smoke:mcp    # exercises the MCP server end to end against a running dev instance
 npm run db:generate  # generate a Drizzle migration from schema changes
 npm run db:migrate   # apply migrations to the local database

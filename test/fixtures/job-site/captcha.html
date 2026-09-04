@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resolvable challenge | Applyer test site</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <h1>Resolvable verification challenge</h1>
+    <div id="challenge" class="g-recaptcha panel" data-sitekey="applyer-test-only">
+      <strong>Complete the security check</strong>
+      <p>This is a deterministic test marker, not a real CAPTCHA.</p>
+      <button type="button" id="resolve-challenge">Resolve test challenge</button>
+    </div>
+
+    <form id="application" hidden>
+      <p class="hint">Challenge resolved. Applyer can now continue filling.</p>
+      <label for="full-name">Full name</label>
+      <input id="full-name" name="fullName">
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email">
+
+      <label for="phone">Phone</label>
+      <input id="phone" name="phone" type="tel">
+    </form>
+
+    <script>
+      document.getElementById('resolve-challenge').addEventListener('click', () => {
+        document.getElementById('challenge').remove()
+        document.getElementById('application').hidden = false
+      })
+    </script>
+  </body>
+</html>

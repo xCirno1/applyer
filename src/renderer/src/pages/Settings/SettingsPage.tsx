@@ -9,6 +9,7 @@ import AppearanceSection from './AppearanceSection'
 import LanguageSection from './LanguageSection'
 import ShortcutsSection from './ShortcutsSection'
 import DataSection from './DataSection'
+import NotificationsSection from './NotificationsSection'
 
 // Labels come from the `settings.nav.*` catalog keyed by id, so this list
 // only declares which sections exist and in what order.
@@ -20,6 +21,7 @@ const SECTIONS = [
   'agent',
   'appearance',
   'language',
+  'notifications',
   'shortcuts',
   'data'
 ] as const
@@ -61,6 +63,7 @@ export default function SettingsPage({
         {section === 'agent' && <AgentSection />}
         {section === 'appearance' && <AppearanceSection />}
         {section === 'language' && <LanguageSection />}
+        {section === 'notifications' && <NotificationsSection />}
         {section === 'shortcuts' && <ShortcutsSection />}
         {section === 'data' && <DataSection onOpenExport={onOpenExport} onOpenImport={onOpenImport} />}
       </div>

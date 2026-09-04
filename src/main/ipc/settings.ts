@@ -5,7 +5,9 @@ import {
   getStorageMode,
   setStorageMode,
   getAutoStartCommand,
-  setAutoStartCommand
+  setAutoStartCommand,
+  getNotificationPreferences,
+  setNotificationPreferences
 } from '../db/repositories/settingsRepository'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
@@ -15,6 +17,12 @@ import { computeStorageStats } from '../storageStats'
 import type { StorageMode } from '@shared/types/profile'
 import type { AutoStartCommand } from '@shared/types/ipcEvents'
 import type { StorageStats } from '@shared/types/storage'
+import {
+  isNotificationPreferences,
+  isNotificationTestKind,
+  type NotificationPreferences
+} from '@shared/types/notification'
+import { sendTestNotification } from '../notificationService'
 
 const AUTO_START_COMMAND_MAX_LENGTH = 500
 
@@ -76,4 +84,34 @@ export function registerSettingsIpc(): void {
   })
 
   ipcMain.handle(IPC.settings.getStorageStats, (): StorageStats => computeStorageStats())
+
+  ipcMain.handle(IPC.settings.getNotificationPreferences, (): NotificationPreferences => getNotificationPreferences())
+
+  ipcMain.handle(IPC.settings.setNotificationPreferences, (_event, payload: unknown) => {
+    const preferences =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { preferences?: unknown }).preferences
+        : undefined
+    if (!isNotificationPreferences(preferences)) {
+      return { ok: false, error: appError('invalidNotificationPreferences') }
+    }
+    try {
+      setNotificationPreferences(preferences)
+      logActivity('info', 'Desktop notification preferences updated', { ...preferences })
+      return { ok: true, preferences }
+    } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
+  })
+
+  ipcMain.handle(IPC.settings.testNotification, (_event, payload: unknown) => {
+    const kind =
+      typeof payload === 'object' && payload !== null ? (payload as { kind?: unknown }).kind : undefined
+    if (!isNotificationTestKind(kind)) {
+      return { ok: false, error: appError('invalidNotificationPreferences') }
+    }
+    return sendTestNotification(kind)
+      ? { ok: true }
+      : { ok: false, error: appError('notificationsUnsupported') }
+  })
 }

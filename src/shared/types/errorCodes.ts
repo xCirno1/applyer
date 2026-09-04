@@ -21,6 +21,8 @@ export type ErrorCode =
   | 'invalidTable'
   | 'invalidJson'
   | 'invalidCommand'
+  | 'invalidNotificationPreferences'
+  | 'notificationsUnsupported'
   | 'invalidExport'
   | 'jobNotFound'
   | 'jobNotQueued'

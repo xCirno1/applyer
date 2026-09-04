@@ -78,6 +78,27 @@ describe('validateExportBundle', () => {
   it('rejects an object with the required top-level keys missing', () => {
     expect(validateExportBundle({}).ok).toBe(false)
   })
+
+  it('accepts notification preferences and rejects malformed values', () => {
+    const settings = { autoStartCommand: '', indexedJobsRetentionDays: 30 }
+    expect(
+      validateExportBundle({
+        ...validBundle(),
+        data: {
+          settings: {
+            ...settings,
+            notificationPreferences: { enabled: true, verificationRequired: true, jobFilled: false, jobFailed: true }
+          }
+        }
+      }).ok
+    ).toBe(true)
+    expect(
+      validateExportBundle({
+        ...validBundle(),
+        data: { settings: { ...settings, notificationPreferences: { enabled: true } } }
+      }).ok
+    ).toBe(false)
+  })
 })
 
 describe('validateExportBundle — indexed jobs', () => {

@@ -16,7 +16,11 @@ import { listAllExclusions, isUrlExcluded } from '../db/repositories/jobExclusio
 import { listAllIndexedJobs, upsertIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { getProfile } from '../db/repositories/profileRepository'
-import { getAutoStartCommand, getIndexedJobsRetentionDays } from '../db/repositories/settingsRepository'
+import {
+  getAutoStartCommand,
+  getIndexedJobsRetentionDays,
+  getNotificationPreferences
+} from '../db/repositories/settingsRepository'
 import { EXPORT_SCHEMA_VERSION, allDomainsSelected } from '@shared/types/dataTransfer'
 import type { ExportBundle, ExportSelection } from '@shared/types/dataTransfer'
 import type { JobRecord } from '@shared/types/job'
@@ -184,13 +188,34 @@ describe('applyImport', () => {
   })
 
   it('overwrites settings when selected', () => {
-    const result = applyImport(bundle({ settings: { autoStartCommand: 'claude', indexedJobsRetentionDays: 14 } }), {
-      ...NO_SELECTION,
-      settings: true
-    })
+    const result = applyImport(
+      bundle({
+        settings: {
+          autoStartCommand: 'claude',
+          indexedJobsRetentionDays: 14,
+          notificationPreferences: { enabled: false, verificationRequired: true, jobFilled: false, jobFailed: true }
+        }
+      }),
+      { ...NO_SELECTION, settings: true }
+    )
     expect(result.settings).toBe(true)
     expect(getAutoStartCommand()).toBe('claude')
     expect(getIndexedJobsRetentionDays()).toBe(14)
+    expect(getNotificationPreferences()).toEqual({
+      enabled: false,
+      verificationRequired: true,
+      jobFilled: false,
+      jobFailed: true
+    })
+  })
+
+  it('keeps current notification preferences when importing an older settings bundle', () => {
+    const before = getNotificationPreferences()
+    applyImport(bundle({ settings: { autoStartCommand: 'codex', indexedJobsRetentionDays: 60 } }), {
+      ...NO_SELECTION,
+      settings: true
+    })
+    expect(getNotificationPreferences()).toEqual(before)
   })
 
   it('imports company boards when selected and present', () => {

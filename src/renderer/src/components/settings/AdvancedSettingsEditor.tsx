@@ -303,6 +303,7 @@ export default function AdvancedSettingsEditor(): ReactElement {
     documents: t('developer.sections.documents'),
     jobs: t('developer.sections.jobs'),
     companyBoards: t('developer.sections.companyBoards'),
+    notifications: t('developer.sections.notifications'),
     terminal: t('developer.sections.terminal')
   }
   const groupLabels: Record<string, string> = {
@@ -316,6 +317,7 @@ export default function AdvancedSettingsEditor(): ReactElement {
     csvImport: t('developer.groups.csvImport'),
     fetching: t('developer.groups.fetching'),
     cache: t('developer.groups.cache'),
+    notificationDefaults: t('developer.groups.notificationDefaults'),
     commands: t('developer.groups.commands')
   }
 

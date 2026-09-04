@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Applyer test job site</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <h1>Applyer test job site</h1>
+    <p>Stable local fixtures for exercising application filling, verification challenges, redirects, and failures.</p>
+
+    <ul class="case-list">
+      <li>
+        <a href="/fillable.html">
+          <strong>Fillable application</strong>
+          <span>Recognized profile fields. Expected result: Filled.</span>
+        </a>
+      </li>
+      <li>
+        <a href="/captcha.html">
+          <strong>Resolvable verification challenge</strong>
+          <span>Pauses first, then reveals a fillable form when resolved. Expected result: verification notification, then Filled.</span>
+        </a>
+      </li>
+      <li>
+        <a href="/persistent-captcha.html">
+          <strong>Persistent verification challenge</strong>
+          <span>Cannot be resolved on-page. Use Applyer's Cancel action to exercise the Failed path.</span>
+        </a>
+      </li>
+      <li>
+        <a href="/partial.html">
+          <strong>Partially supported application</strong>
+          <span>Includes standard and custom questions. Expected result: Filled with skipped fields.</span>
+        </a>
+      </li>
+      <li>
+        <a href="/unsupported.html">
+          <strong>Unsupported application</strong>
+          <span>No recognized fields. Expected result: Failed with form_not_supported.</span>
+        </a>
+      </li>
+      <li>
+        <a href="/redirect">
+          <strong>Redirect to application</strong>
+          <span>HTTP 302 to the fillable fixture.</span>
+        </a>
+      </li>
+      <li>
+        <a href="/server-error">
+          <strong>Server error</strong>
+          <span>Returns an intentional HTTP 500 response.</span>
+        </a>
+      </li>
+    </ul>
+  </body>
+</html>

@@ -68,5 +68,10 @@
   "dangerousMaxSlugCandidates": 6,
   "dangerousAtsProbeConcurrency": 6,
   "atsProbeTimeoutMs": 8000,
+  "notificationEnabledByDefault": true,
+  "notificationVerificationRequiredByDefault": true,
+  "notificationJobFilledByDefault": true,
+  "notificationJobFailedByDefault": true,
+  "notificationDefaultLocale": "en",
   "dangerousAutoStartCommandMaxLength": 500
 }

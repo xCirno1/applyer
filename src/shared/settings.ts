@@ -34,6 +34,11 @@ export interface ApplyerSettings {
   dangerousMaxSlugCandidates: number
   dangerousAtsProbeConcurrency: number
   atsProbeTimeoutMs: number
+  notificationEnabledByDefault: boolean
+  notificationVerificationRequiredByDefault: boolean
+  notificationJobFilledByDefault: boolean
+  notificationJobFailedByDefault: boolean
+  notificationDefaultLocale: 'en' | 'id'
   dangerousAutoStartCommandMaxLength: number
 }
 
@@ -103,6 +108,7 @@ function validateSetting(key: keyof ApplyerSettings, value: unknown): boolean {
   if (key === 'atsSweepRotationShare') {
     return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
   }
+  if (key === 'notificationDefaultLocale') return value === 'en' || value === 'id'
   const defaultValue = DEFAULT_SETTINGS[key]
   if (typeof defaultValue === 'boolean') return typeof value === 'boolean'
   if (typeof defaultValue === 'string') return typeof value === 'string'

@@ -9,6 +9,7 @@ import type {
 } from '@shared/types/ipcEvents'
 import type { StorageLocationProgressPayload } from '@shared/types/storageLocation'
 import type { BoardFetchedPayload } from '@shared/types/companyBoard'
+import { notifyForJobUpdate, notifyForVerification } from '../notificationService'
 
 let webContentsRef: WebContents | null = null
 
@@ -17,6 +18,7 @@ export function registerJobsBroadcastTarget(webContents: WebContents): void {
 }
 
 export function broadcastJobUpdate(job: JobRecord): void {
+  notifyForJobUpdate(job)
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.jobs.onUpdated, job)
   }
@@ -93,6 +95,7 @@ export function broadcastProfileChanged(): void {
 }
 
 export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void {
+  notifyForVerification(payload)
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaDetected, payload)
   }

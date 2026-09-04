@@ -7,6 +7,7 @@
     "agent": "Agent",
     "appearance": "Appearance",
     "language": "Language",
+    "notifications": "Notifications",
     "shortcuts": "Shortcuts",
     "data": "Data",
     "developer": "Developer"
@@ -17,6 +18,24 @@
     "label": "Display language",
     "system": "Match system ({{locale}})",
     "contribute": "Applyer is translated by its community. A language missing or wrong? Corrections are welcome on the project's issue tracker."
+  },
+  "notifications": {
+    "title": "Notifications",
+    "intro": "Choose which job events should send a desktop notification when Applyer is in the background or hidden.",
+    "enabled": "Desktop notifications",
+    "enabledHint": "Allow Applyer to send notifications through your operating system.",
+    "verificationRequired": "Verification required",
+    "verificationRequiredHint": "A CAPTCHA or another verification challenge needs your attention.",
+    "jobFilled": "Application filled",
+    "jobFilledHint": "An application has been filled and is ready for you to review and submit.",
+    "jobFailed": "Job failed",
+    "jobFailedHint": "A queued or in-progress job could not be completed.",
+    "sendTest": "Send test",
+    "testSent": "Test notification sent.",
+    "testFailed": "Could not send the test notification.",
+    "saved": "Notification settings saved.",
+    "loadFailed": "Could not load notification settings.",
+    "saveFailed": "Could not save notification settings."
   },
   "appearance": {
     "title": "Appearance",
@@ -181,7 +200,7 @@
     "domainExclusionsHint": "The blacklist of job URLs to never surface again.",
     "domainCompanyBoardsHint": "The company job boards searches fetch. Each board arrives unchecked; the next search fills in its role count.",
     "domainProfileHint": "Your candidate profile fields (uploaded documents are not included).",
-    "domainSettingsHint": "Auto-start command and the indexed-jobs retention period.",
+    "domainSettingsHint": "Auto-start command, notification preferences, and the indexed-jobs retention period.",
     "exportModalTitle": "Export data",
     "format": "Format",
     "formatJsonHint": "One file bundling everything selected below. This is also the only format Import accepts.",
@@ -285,6 +304,7 @@
       "documents": "Documents",
       "jobs": "Jobs",
       "companyBoards": "Company boards",
+      "notifications": "Notifications",
       "terminal": "Terminal"
     },
     "groups": {
@@ -298,6 +318,7 @@
       "csvImport": "CSV import",
       "fetching": "Fetching and probing",
       "cache": "Board cache",
+      "notificationDefaults": "Default preferences and locale",
       "commands": "Commands"
     }
   },

@@ -92,6 +92,21 @@ export const ADVANCED_SETTINGS_SECTIONS: AdvancedSettingsSection[] = [
     ]
   },
   {
+    id: 'notifications',
+    groups: [
+      {
+        id: 'notificationDefaults',
+        keys: [
+          'notificationEnabledByDefault',
+          'notificationVerificationRequiredByDefault',
+          'notificationJobFilledByDefault',
+          'notificationJobFailedByDefault',
+          'notificationDefaultLocale'
+        ]
+      }
+    ]
+  },
+  {
     id: 'terminal',
     groups: [{ id: 'commands', keys: ['dangerousAutoStartCommandMaxLength'] }]
   }

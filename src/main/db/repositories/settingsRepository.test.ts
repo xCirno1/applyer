@@ -21,9 +21,14 @@ import {
   getIndexedJobsRetentionDays,
   setIndexedJobsRetentionDays,
   getBrowserPreference,
-  setBrowserPreference
+  setBrowserPreference,
+  getNotificationPreferences,
+  setNotificationPreferences,
+  getNotificationLocale,
+  setNotificationLocale
 } from './settingsRepository'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
+import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 
 describe('storage mode', () => {
   it('defaults to null (unset)', () => {
@@ -96,6 +101,48 @@ describe('browser preference', () => {
     // Simulates a value from a future/older app version rather than one this app wrote itself.
     testDb.insert(appSettings).values({ key: 'browser_preference', value: 'firefox' }).run()
     expect(getBrowserPreference()).toBe('auto')
+  })
+})
+
+describe('notification preferences', () => {
+  it('defaults every notification category to enabled', () => {
+    expect(getNotificationPreferences()).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
+  })
+
+  it('round-trips independent notification categories', () => {
+    const preferences = {
+      enabled: true,
+      verificationRequired: false,
+      jobFilled: true,
+      jobFailed: false
+    }
+    setNotificationPreferences(preferences)
+    expect(getNotificationPreferences()).toEqual(preferences)
+  })
+
+  it('falls back safely when the stored JSON is malformed or incomplete', () => {
+    testDb.insert(appSettings).values({ key: 'notification_preferences', value: '{broken' }).run()
+    expect(getNotificationPreferences()).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
+
+    testDb
+      .insert(appSettings)
+      .values({ key: 'notification_preferences', value: JSON.stringify({ enabled: false }) })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value: JSON.stringify({ enabled: false }) } })
+      .run()
+    expect(getNotificationPreferences()).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
+  })
+})
+
+describe('notification locale', () => {
+  it('defaults to English and round-trips a renderer-synchronized locale', () => {
+    expect(getNotificationLocale()).toBe('en')
+    setNotificationLocale('id')
+    expect(getNotificationLocale()).toBe('id')
+  })
+
+  it('falls back to English for an unrecognized cached locale', () => {
+    testDb.insert(appSettings).values({ key: 'notification_locale', value: 'xx' }).run()
+    expect(getNotificationLocale()).toBe('en')
   })
 })
 

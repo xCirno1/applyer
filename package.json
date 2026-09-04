@@ -26,6 +26,7 @@
     "smoke:mcp": "tsx scripts/smoke-mcp.ts",
     "test": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest run",
     "test:watch": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest",
+    "test:site": "tsx scripts/test-site.ts",
     "package": "npm run build && electron-builder"
   },
   "dependencies": {

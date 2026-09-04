@@ -5,6 +5,7 @@ import type { AutoStartCommand } from './ipcEvents'
 import type { IndexedJobsRetention } from './indexedJob'
 import type { AtsProvider } from './companyBoard'
 import type { AppError } from './errorCodes'
+import type { NotificationPreferences } from './notification'
 
 /**
  * Bumped whenever the export bundle shape changes in a way older imports can't
@@ -42,6 +43,8 @@ export function allDomainsSelected(value = true): ExportSelection {
 export interface ExportSettingsData {
   autoStartCommand: AutoStartCommand
   indexedJobsRetentionDays: IndexedJobsRetention
+  /** Optional so bundles written before notification settings existed remain valid. */
+  notificationPreferences?: NotificationPreferences
 }
 
 /** The single JSON round-trip format — the only format `data:import` accepts. */

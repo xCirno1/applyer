@@ -111,6 +111,42 @@ describe('validateExportBundle — company boards', () => {
     expect(validateExportBundle(withBoards([{ ...board, token: '' }])).ok).toBe(false)
   })
 
+  it('rejects a Workday host that is not a Workday host', () => {
+    // A bundle is a file, and this host becomes the authority of an outbound
+    // POST on the next search — the one imported value that must not be
+    // taken on trust.
+    expect(
+      validateExportBundle(
+        withBoards([{ ...board, provider: 'workday', host: 'evil.example.com', site: 'Careers' }])
+      ).ok
+    ).toBe(false)
+    expect(
+      validateExportBundle(
+        withBoards([{ ...board, provider: 'workday', host: 'myworkdayjobs.com.evil.example', site: 'Careers' }])
+      ).ok
+    ).toBe(false)
+  })
+
+  it('accepts a real Workday board, which needs its host and career site', () => {
+    expect(
+      validateExportBundle(
+        withBoards([{ ...board, provider: 'workday', host: 'acme.wd5.myworkdayjobs.com', site: 'AcmeCareers' }])
+      ).ok
+    ).toBe(true)
+  })
+
+  it('rejects a host on a provider that has none, and a Lever host that is not a region', () => {
+    expect(validateExportBundle(withBoards([{ ...board, host: 'evil.example.com' }])).ok).toBe(false)
+    expect(
+      validateExportBundle(withBoards([{ ...board, provider: 'lever', host: 'evil.example.com' }])).ok
+    ).toBe(false)
+    expect(validateExportBundle(withBoards([{ ...board, provider: 'lever', host: 'api.eu.lever.co' }])).ok).toBe(true)
+  })
+
+  it('rejects a token carrying path traversal, which would be interpolated into a URL', () => {
+    expect(validateExportBundle(withBoards([{ ...board, token: '../../etc/passwd' }])).ok).toBe(false)
+  })
+
   it('drops a boardKey asserted by the file, since the key is derived on import', () => {
     const result = validateExportBundle(withBoards([{ ...board, boardKey: 'lever:somewhere-else' }]))
     expect(result.ok).toBe(true)

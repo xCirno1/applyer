@@ -2,18 +2,20 @@ import type { ExportBundle, ExportCompanyBoard, ExportSelection, ImportSummary }
 import { importJobs } from '../db/repositories/jobsRepository'
 import { importExclusions } from '../db/repositories/jobExclusionsRepository'
 import { importCompanyBoards } from '../db/repositories/companyBoardsRepository'
-import { boardKeyOf } from '../browser/ats/providers'
+import { boardKeyOf, isValidBoardDescriptor } from '../browser/ats/providers'
 import { saveProfile } from '../db/repositories/profileRepository'
 import { setAutoStartCommand, setIndexedJobsRetentionDays } from '../db/repositories/settingsRepository'
 
 /**
- * A Workday board needs a host and a career-site id as well as a tenant, and
- * nothing else can address one. A row missing either is unusable rather than
- * merely incomplete — it would sit in the watchlist erroring on every search
- * — so it is dropped here and counted as skipped.
+ * A row that cannot address a real board is dropped here and counted as
+ * skipped rather than stored: a Workday board without its host and career
+ * site, or a host that is not the provider's, would sit in the watchlist
+ * failing every search — and in the host's case would aim those failures at
+ * whatever the file named. The schema rejects a bundle containing one, so
+ * this is the second of the two checks, not the only one.
  */
 function isAddressable(board: ExportCompanyBoard): boolean {
-  return board.provider !== 'workday' || (board.host !== null && board.site !== null)
+  return isValidBoardDescriptor(board)
 }
 
 function importBoards(boards: ExportCompanyBoard[]): { imported: number; skipped: number } {

@@ -3,7 +3,7 @@ import { greenhouseAdapter } from './greenhouse'
 import { leverAdapter } from './lever'
 import { ashbyAdapter } from './ashby'
 import { workdayAdapter } from './workday'
-import { boardKeyOf, parseAnyBoardUrl } from './index'
+import { boardKeyOf, isValidBoardDescriptor, parseAnyBoardUrl } from './index'
 import type { AtsBoardDescriptor } from '@shared/types/companyBoard'
 
 /** Signature the spies are typed against, so `mock.calls[n][1]` is the request init rather than `never`. */
@@ -355,6 +355,107 @@ describe('workdayAdapter.fetchBoard', () => {
   })
 })
 
+describe('Lever regions', () => {
+  it('fetches an EU board from the EU API, not the US one', async () => {
+    const fetchSpy = vi.fn<FetchLike>(async () => respond([]))
+    global.fetch = fetchSpy as unknown as typeof fetch
+
+    await leverAdapter.fetchBoard({ provider: 'lever', token: 'acme', host: 'api.eu.lever.co', site: null }, options)
+
+    // An EU customer's board answers 404 on the US host, so the region is
+    // part of addressing it rather than a preference.
+    expect(fetchSpy.mock.calls[0]![0]).toBe('https://api.eu.lever.co/v0/postings/acme?mode=json')
+  })
+
+  it('still fetches a board with no region from the US API', async () => {
+    const fetchSpy = vi.fn<FetchLike>(async () => respond([]))
+    global.fetch = fetchSpy as unknown as typeof fetch
+
+    await leverAdapter.fetchBoard(slugBoard('lever', 'acme'), options)
+
+    expect(fetchSpy.mock.calls[0]![0]).toBe('https://api.lever.co/v0/postings/acme?mode=json')
+  })
+
+  it('reads the region and the real token out of an EU board URL', () => {
+    expect(parseAnyBoardUrl('https://jobs.eu.lever.co/acme')).toEqual({
+      provider: 'lever',
+      token: 'acme',
+      host: 'api.eu.lever.co',
+      site: null
+    })
+    expect(parseAnyBoardUrl('https://api.eu.lever.co/v0/postings/acme?mode=json')).toEqual({
+      provider: 'lever',
+      token: 'acme',
+      host: 'api.eu.lever.co',
+      site: null
+    })
+  })
+
+  it('rebuilds a posting URL on the board\'s own region when the payload omits one', async () => {
+    global.fetch = vi.fn(async () => respond([{ id: 'abc', text: 'Role' }])) as typeof fetch
+
+    const outcome = await leverAdapter.fetchBoard(
+      { provider: 'lever', token: 'acme', host: 'api.eu.lever.co', site: null },
+      options
+    )
+    if (outcome.status !== 'ok') throw new Error('unreachable')
+    expect(outcome.postings[0]!.url).toBe('https://jobs.eu.lever.co/acme/abc')
+  })
+})
+
+describe('Workday board size', () => {
+  function page(count: number, total: number): Response {
+    return respond({
+      total,
+      jobPostings: Array.from({ length: count }, (_, i) => ({
+        title: `Role ${i}`,
+        externalPath: `/job/Remote/Role-${i}_JR${i}`
+      }))
+    })
+  }
+
+  const workdayBoard: AtsBoardDescriptor = {
+    provider: 'workday',
+    token: 'acme',
+    host: 'acme.wd5.myworkdayjobs.com',
+    site: 'AcmeCareers'
+  }
+
+  it("reports the board's real size, not the page it returned", async () => {
+    // Workday pages 20 at a time, so a board of 300 roles answers a
+    // one-page fetch with 20 — which must not be filed as its open-role count.
+    global.fetch = vi.fn(async () => page(20, 300)) as typeof fetch
+
+    const outcome = await workdayAdapter.fetchBoard(workdayBoard, { ...options, limit: 20 })
+    if (outcome.status !== 'ok') throw new Error('unreachable')
+
+    expect(outcome.postings).toHaveLength(20)
+    expect(outcome.total).toBe(300)
+  })
+
+  it('ignores a total that is not a sane count, leaving the rows as the answer', async () => {
+    global.fetch = vi.fn(async () =>
+      respond({ total: 'lots', jobPostings: [{ title: 'Role', externalPath: '/job/Remote/Role_JR1' }] })
+    ) as typeof fetch
+
+    const outcome = await workdayAdapter.fetchBoard(workdayBoard, { ...options, limit: 20 })
+    if (outcome.status !== 'ok') throw new Error('unreachable')
+    expect(outcome.total).toBeUndefined()
+  })
+
+  it('refuses to fetch a board whose stored host is not a Workday one', async () => {
+    const fetchSpy = vi.fn<FetchLike>(async () => respond({ total: 0, jobPostings: [] }))
+    global.fetch = fetchSpy as unknown as typeof fetch
+
+    // Defence in depth: the import schema rejects such a row, and this makes
+    // one that got stored anyway inert rather than an outbound request.
+    const outcome = await workdayAdapter.fetchBoard({ ...workdayBoard, host: 'evil.example.com' }, options)
+
+    expect(outcome.status).toBe('error')
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+})
+
 describe('parseAnyBoardUrl', () => {
   it.each([
     ['https://boards.greenhouse.io/acme/jobs/123', { provider: 'greenhouse', token: 'acme' }],
@@ -422,5 +523,67 @@ describe('boardKeyOf', () => {
     expect(boardKeyOf({ ...base, host: 'ACME.wd5.myworkdayjobs.com', site: 'Careers' })).toBe(
       boardKeyOf({ ...base, site: 'Careers' })
     )
+  })
+
+  it('separates Lever regions, which are different boards that can share a slug', () => {
+    const us = { provider: 'lever' as const, token: 'acme', host: null, site: null }
+    const eu = { ...us, host: 'api.eu.lever.co' }
+    expect(boardKeyOf(eu)).not.toBe(boardKeyOf(us))
+  })
+
+  it('leaves a US Lever board keyed as it always was, so tracked boards keep their identity', () => {
+    expect(boardKeyOf({ provider: 'lever', token: 'acme', host: null, site: null })).toBe('lever:acme')
+  })
+})
+
+describe('isValidBoardDescriptor', () => {
+  it('accepts the descriptors this app builds itself', () => {
+    expect(isValidBoardDescriptor(slugBoard('greenhouse', 'acme'))).toBe(true)
+    expect(isValidBoardDescriptor(slugBoard('lever', 'acme'))).toBe(true)
+    expect(isValidBoardDescriptor({ provider: 'lever', token: 'acme', host: 'api.eu.lever.co', site: null })).toBe(true)
+    expect(
+      isValidBoardDescriptor({
+        provider: 'workday',
+        token: 'acme',
+        host: 'acme.wd5.myworkdayjobs.com',
+        site: 'AcmeCareers'
+      })
+    ).toBe(true)
+  })
+
+  it('refuses a Workday host that is not one, which is what an import must never store', () => {
+    // The host becomes the authority of an outbound POST, so a bundle naming
+    // any other host is the one field worth being strict about.
+    const base = { provider: 'workday' as const, token: 'acme', site: 'Careers' }
+    expect(isValidBoardDescriptor({ ...base, host: 'evil.example.com' })).toBe(false)
+    expect(isValidBoardDescriptor({ ...base, host: 'myworkdayjobs.com.evil.example' })).toBe(false)
+    expect(isValidBoardDescriptor({ ...base, host: 'acme.wd5.myworkdayjobs.com:8443' })).toBe(false)
+    expect(isValidBoardDescriptor({ ...base, host: 'user@acme.wd5.myworkdayjobs.com' })).toBe(false)
+    expect(isValidBoardDescriptor({ ...base, host: null })).toBe(false)
+  })
+
+  it('refuses a Workday board with no career site, which cannot be addressed', () => {
+    expect(
+      isValidBoardDescriptor({ provider: 'workday', token: 'acme', host: 'acme.wd5.myworkdayjobs.com', site: null })
+    ).toBe(false)
+  })
+
+  it('refuses a Lever host that is not one of the two real regions', () => {
+    expect(isValidBoardDescriptor({ provider: 'lever', token: 'acme', host: 'evil.example.com', site: null })).toBe(
+      false
+    )
+  })
+
+  it('refuses host or site on a provider that has neither', () => {
+    expect(
+      isValidBoardDescriptor({ provider: 'greenhouse', token: 'acme', host: 'evil.example.com', site: null })
+    ).toBe(false)
+    expect(isValidBoardDescriptor({ provider: 'ashby', token: 'acme', host: null, site: 'Careers' })).toBe(false)
+  })
+
+  it('refuses a token that is not a slug', () => {
+    expect(isValidBoardDescriptor(slugBoard('greenhouse', 'acme/../other'))).toBe(false)
+    expect(isValidBoardDescriptor(slugBoard('greenhouse', 'Acme Labs'))).toBe(false)
+    expect(isValidBoardDescriptor(slugBoard('greenhouse', ''))).toBe(false)
   })
 })

@@ -4,7 +4,7 @@ import Button from '../ui/Button'
 import Tag from '../ui/Tag'
 import Tooltip from '../ui/Tooltip'
 import { useFormatters } from '../../i18n/format'
-import { boardAddress, boardStatus, boardStatusRank } from './boardStatus'
+import { boardAddress, boardStatus, boardStatusRank, type BoardStatus } from './boardStatus'
 import type { DataTableColumn } from '../ui/DataTable'
 import type { CellAccessors } from '../ui/dataTable'
 import type { CompanyBoardRecord } from '@shared/types/companyBoard'
@@ -31,7 +31,8 @@ function providerLabel(board: CompanyBoardRecord): string {
  * The status column is the one that cannot sort on what it renders. Its cell
  * is a sentence ("3 open roles", or a provider's error text), so sorting it as
  * text would order boards by the first letter of an error message;
- * `boardStatusRank` puts the boards that need attention first instead.
+ * `boardStatusRank` puts the boards that need attention first instead, on the
+ * descending click a column gets first.
  */
 export const BOARD_TABLE_VALUES: CellAccessors<CompanyBoardRecord> = {
   company: (board) => board.companyName,
@@ -52,7 +53,10 @@ export const BOARD_SEARCH_KEYS = ['company', 'provider', 'board']
 interface RowHandlers {
   /** Id of the board whose Pause/Resume request is in flight, if any. */
   togglingId: string | null
+  /** Boards with a fetch in flight — a bulk fetch has many at once, so this is a set rather than one id. */
+  fetchingIds: ReadonlySet<string>
   onToggle: (board: CompanyBoardRecord) => void
+  onFetch: (board: CompanyBoardRecord) => void
   onRemove: (board: CompanyBoardRecord) => void
 }
 
@@ -65,12 +69,29 @@ interface RowHandlers {
  * to read as a real answer rather than an error, because on these APIs it is
  * one.
  */
-export function useBoardColumns({ togglingId, onToggle, onRemove }: RowHandlers): DataTableColumn<CompanyBoardRecord>[] {
+export function useBoardColumns({
+  togglingId,
+  fetchingIds,
+  onToggle,
+  onFetch,
+  onRemove
+}: RowHandlers): DataTableColumn<CompanyBoardRecord>[] {
   const { t } = useTranslation('indexedJobs')
   const format = useFormatters()
 
-  return useMemo(
-    () => [
+  return useMemo(() => {
+    // "Reached, but nobody has counted it" is a different answer from "0 open
+    // roles": a Workday board is filtered by Workday, so a keyword search
+    // visits it without ever counting it, and the Fetch button in this same
+    // row is what answers the question.
+    const statusText = (status: BoardStatus): string => {
+      if (status.kind === 'error') return status.message
+      if (status.kind === 'unchecked') return t('boards.notCheckedYet')
+      if (status.kind === 'uncounted') return t('boards.rolesNotCounted')
+      return t('boards.openRoles', { count: status.count })
+    }
+
+    return [
       {
         key: 'company',
         header: t('boards.colCompany'),
@@ -115,12 +136,7 @@ export function useBoardColumns({ togglingId, onToggle, onRemove }: RowHandlers)
         headerTip: t('boards.colStatusTip'),
         render: (board) => {
           const status = boardStatus(board)
-          const text =
-            status.kind === 'error'
-              ? status.message
-              : status.kind === 'unchecked'
-                ? t('boards.notCheckedYet')
-                : t('boards.openRoles', { count: status.count })
+          const text = statusText(status)
           return (
             <span
               className={`block truncate ${status.kind === 'error' ? 'text-danger' : 'text-text-muted'}`}
@@ -144,6 +160,14 @@ export function useBoardColumns({ togglingId, onToggle, onRemove }: RowHandlers)
         align: 'right',
         render: (board) => (
           <div className="flex items-center justify-end gap-1">
+            {/* First of the three: on a board that has never been searched
+                it is the only way to fill this row's last result in without
+                running a job search. */}
+            <Tooltip label={t('boards.fetchTooltip')}>
+              <Button size="sm" variant="ghost" loading={fetchingIds.has(board.id)} onClick={() => onFetch(board)}>
+                {t('boards.fetch')}
+              </Button>
+            </Tooltip>
             <Tooltip label={board.enabled ? t('boards.pauseTooltip') : t('boards.resumeTooltip')}>
               <Button size="sm" variant="ghost" loading={togglingId === board.id} onClick={() => onToggle(board)}>
                 {board.enabled ? t('boards.pause') : t('boards.resume')}
@@ -155,7 +179,6 @@ export function useBoardColumns({ togglingId, onToggle, onRemove }: RowHandlers)
           </div>
         )
       }
-    ],
-    [t, format, togglingId, onToggle, onRemove]
-  )
+    ]
+  }, [t, format, togglingId, fetchingIds, onToggle, onFetch, onRemove])
 }

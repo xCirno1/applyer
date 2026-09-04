@@ -14,12 +14,17 @@ import {
   addCompanyBoard,
   countCompanyBoards,
   getCompanyBoardByKey,
+  getCompanyBoardsByIds,
+  importCompanyBoards,
   listAllCompanyBoards,
+  listCompanyBoardKeys,
   listCompanyBoards,
   listSearchableCompanyBoards,
   recordCompanyBoardFetch,
   removeCompanyBoard,
+  removeCompanyBoards,
   setCompanyBoardEnabled,
+  setCompanyBoardsEnabled,
   type AddCompanyBoardInput
 } from './companyBoardsRepository'
 import { MAX_COMPANY_BOARDS } from '@shared/constants'
@@ -182,6 +187,27 @@ describe('recordCompanyBoardFetch', () => {
     expect(board.lastJobCount).toBe(7)
   })
 
+  it('keeps the last real count when a fetch could not count the board', () => {
+    // A Workday keyword search reaches the board without measuring it, so it
+    // records that the board was checked without overwriting the size
+    // something else actually counted (see `boardFetchRecord.countsWholeBoard`).
+    recordCompanyBoardFetch('greenhouse:acme', { jobCount: 41 }, '2026-08-30T10:00:00.000Z')
+    recordCompanyBoardFetch('greenhouse:acme', { jobCount: null }, '2026-08-31T10:00:00.000Z')
+
+    const board = getCompanyBoardByKey('greenhouse:acme')!
+    expect(board.lastJobCount).toBe(41)
+    expect(board.lastCheckedAt).toBe('2026-08-31T10:00:00.000Z')
+  })
+
+  it('still records an error from a fetch that could not count the board', () => {
+    recordCompanyBoardFetch('greenhouse:acme', { jobCount: 41 }, '2026-08-30T10:00:00.000Z')
+    recordCompanyBoardFetch('greenhouse:acme', { jobCount: null, error: 'timed out' })
+
+    const board = getCompanyBoardByKey('greenhouse:acme')!
+    expect(board.lastError).toBe('timed out')
+    expect(board.lastJobCount).toBe(41)
+  })
+
   it('is a no-op for a board that has since been removed', () => {
     expect(() => recordCompanyBoardFetch('greenhouse:gone', { jobCount: 1 })).not.toThrow()
   })
@@ -215,5 +241,113 @@ describe('listAllCompanyBoards', () => {
     addCompanyBoard(input({ token: 'a', boardKey: 'greenhouse:a' }))
     addCompanyBoard(input({ token: 'b', boardKey: 'greenhouse:b' }))
     expect(listAllCompanyBoards()).toHaveLength(2)
+  })
+})
+
+describe('listCompanyBoardKeys', () => {
+  it('answers the same question as getCompanyBoardByKey, for every key at once', () => {
+    addCompanyBoard(input({ token: 'a', boardKey: 'greenhouse:a' }))
+    addCompanyBoard(input({ provider: 'lever', token: 'b', boardKey: 'lever:b' }))
+
+    const keys = listCompanyBoardKeys()
+
+    expect(keys.has('greenhouse:a')).toBe(true)
+    expect(keys.has('lever:b')).toBe(true)
+    expect(keys.has('ashby:c')).toBe(false)
+    expect(keys.size).toBe(2)
+  })
+
+  it('is an empty set on an empty watchlist rather than throwing', () => {
+    expect(listCompanyBoardKeys().size).toBe(0)
+  })
+
+  it('drops a key as soon as its board is removed', () => {
+    const added = addCompanyBoard(input({ token: 'a', boardKey: 'greenhouse:a' }))
+    expect(added.status).toBe('added')
+    if (added.status !== 'added') return
+
+    removeCompanyBoard(added.board.id)
+    expect(listCompanyBoardKeys().has('greenhouse:a')).toBe(false)
+  })
+})
+
+describe('bulk selection actions', () => {
+  function three(): string[] {
+    return ['a', 'b', 'c'].map((token) => {
+      const added = addCompanyBoard(input({ token, boardKey: `greenhouse:${token}` }))
+      if (added.status === 'limit_reached') throw new Error('unreachable')
+      return added.board.id
+    })
+  }
+
+  it('reads back only the boards named, and skips ids that no longer exist', () => {
+    const [first, , third] = three()
+
+    const found = getCompanyBoardsByIds([first!, 'gone', third!])
+
+    expect(found.map((board) => board.token).sort()).toEqual(['a', 'c'])
+  })
+
+  it('reads nothing for an empty id list rather than every board', () => {
+    three()
+    expect(getCompanyBoardsByIds([])).toEqual([])
+  })
+
+  it('pauses a selection in one write and reports how many rows changed', () => {
+    const [first, second] = three()
+
+    expect(setCompanyBoardsEnabled([first!, second!, 'gone'], false)).toBe(2)
+    expect(getCompanyBoardByKey('greenhouse:a')?.enabled).toBe(false)
+    expect(getCompanyBoardByKey('greenhouse:b')?.enabled).toBe(false)
+    // Untouched, since it wasn't selected.
+    expect(getCompanyBoardByKey('greenhouse:c')?.enabled).toBe(true)
+  })
+
+  it('removes a selection in one write and reports how many rows went', () => {
+    const [first, second] = three()
+
+    expect(removeCompanyBoards([first!, second!, 'gone'])).toBe(2)
+    expect(countCompanyBoards()).toBe(1)
+    expect(getCompanyBoardByKey('greenhouse:c')).not.toBeNull()
+  })
+
+  it('treats an empty selection as a no-op rather than touching every row', () => {
+    three()
+
+    expect(setCompanyBoardsEnabled([], false)).toBe(0)
+    expect(removeCompanyBoards([])).toBe(0)
+    expect(countCompanyBoards()).toBe(3)
+    expect(getCompanyBoardByKey('greenhouse:a')?.enabled).toBe(true)
+  })
+})
+
+describe('importCompanyBoards', () => {
+  function record(overrides: Partial<AddCompanyBoardInput> = {}): AddCompanyBoardInput & {
+    createdAt: string
+    enabled: boolean
+  } {
+    return { ...input(overrides), createdAt: '2020-01-01T00:00:00.000Z', enabled: true }
+  }
+
+  it('separates the two reasons a row is skipped', () => {
+    addCompanyBoard(input({ token: 'acme', boardKey: 'greenhouse:acme' }))
+
+    const result = importCompanyBoards([
+      record({ token: 'acme', boardKey: 'greenhouse:acme' }),
+      record({ token: 'globex', boardKey: 'greenhouse:globex' })
+    ])
+
+    expect(result).toEqual({ imported: 1, skipped: 1, alreadyTracked: 1, overLimit: 0 })
+  })
+
+  it('counts rows that no longer fit under the ceiling as over the limit', () => {
+    for (let i = 0; i < MAX_COMPANY_BOARDS; i++) {
+      addCompanyBoard(input({ token: `existing-${i}`, boardKey: `greenhouse:existing-${i}` }))
+    }
+
+    const result = importCompanyBoards([record({ token: 'late', boardKey: 'greenhouse:late' })])
+
+    expect(result).toEqual({ imported: 0, skipped: 1, alreadyTracked: 0, overLimit: 1 })
+    expect(countCompanyBoards()).toBe(MAX_COMPANY_BOARDS)
   })
 })

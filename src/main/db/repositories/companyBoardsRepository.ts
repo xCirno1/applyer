@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { and, asc, eq, or, sql, type SQL } from 'drizzle-orm'
+import { and, asc, eq, inArray, or, sql, type SQL } from 'drizzle-orm'
 import { getDb } from '../index'
 import { likeContains } from './likeSearch'
 import { companyBoards } from '../schema'
@@ -49,8 +49,39 @@ export function getCompanyBoardByKey(boardKey: string): CompanyBoardRecord | nul
   return row ? toRecord(row) : null
 }
 
+/**
+ * The boards behind a set of row ids, for an action scoped to a selection.
+ * Ids that no longer exist are simply absent rather than an error: the list
+ * is live, and a board can be removed between selecting it and acting on it.
+ */
+export function getCompanyBoardsByIds(ids: readonly string[]): CompanyBoardRecord[] {
+  if (ids.length === 0) return []
+  return getDb()
+    .select()
+    .from(companyBoards)
+    .where(inArray(companyBoards.id, [...ids]))
+    .all()
+    .map(toRecord)
+}
+
 export function countCompanyBoards(): number {
   return getDb().select({ count: sql<number>`count(*)` }).from(companyBoards).get()?.count ?? 0
+}
+
+/**
+ * Every tracked board's key, as a set to test membership against.
+ *
+ * For one board, `getCompanyBoardByKey` is the right question; for a whole
+ * file it is not. A CSV import asks "is this tracked?" once per candidate row
+ * and re-asks on every mapping change, so at the allowed file size that is
+ * tens of thousands of synchronous SELECTs on the main process — enough to
+ * stall every other IPC call behind it. The watchlist is bounded by
+ * `MAX_COMPANY_BOARDS`, so the whole key column is a few hundred short
+ * strings and one read answers all of them.
+ */
+export function listCompanyBoardKeys(): Set<string> {
+  const rows = getDb().select({ boardKey: companyBoards.boardKey }).from(companyBoards).all()
+  return new Set(rows.map((row) => row.boardKey))
 }
 
 export function addCompanyBoard(input: AddCompanyBoardInput): AddCompanyBoardResult {
@@ -144,23 +175,54 @@ export function removeCompanyBoard(id: string): boolean {
 }
 
 /**
+ * The bulk forms of the two row actions, for a selection.
+ *
+ * One statement rather than a loop of single-row calls, so a selection of
+ * fifty boards is one write and one "the list changed" broadcast instead of
+ * fifty of each — the same reasoning as `jobsRepository`'s `retryMany`.
+ * Both return how many rows actually changed, since ids can go stale.
+ */
+export function setCompanyBoardsEnabled(ids: readonly string[], enabled: boolean): number {
+  if (ids.length === 0) return 0
+  return getDb()
+    .update(companyBoards)
+    .set({ enabled })
+    .where(inArray(companyBoards.id, [...ids]))
+    .run().changes
+}
+
+export function removeCompanyBoards(ids: readonly string[]): number {
+  if (ids.length === 0) return 0
+  return getDb()
+    .delete(companyBoards)
+    .where(inArray(companyBoards.id, [...ids]))
+    .run().changes
+}
+
+/**
  * Records what the last fetch of a board actually did, so the UI can show a
  * board that has quietly stopped answering (a retired slug, a migration)
  * instead of it just contributing nothing to every search.
  *
  * `jobCount: 0` with no error is a real state and is stored as such — a live
- * board with nothing open right now.
+ * board with nothing open right now. `jobCount: null` is a different one:
+ * the board was reached, but by a request that cannot count it.
  */
 export function recordCompanyBoardFetch(
   boardKey: string,
-  outcome: { jobCount: number; error?: string | null },
+  outcome: { jobCount: number | null; error?: string | null },
   now: string = new Date().toISOString()
 ): void {
   getDb()
     .update(companyBoards)
     .set({
       lastCheckedAt: now,
-      lastJobCount: outcome.jobCount,
+      // A null count means "this fetch cannot speak for the whole board" — a
+      // Workday search is filtered by the provider, so its numbers answer the
+      // query rather than describing the board (see `countsWholeBoard`). The
+      // column then keeps the last count something actually counted, instead
+      // of being overwritten with an unrelated one.
+      ...(outcome.jobCount === null ? {} : { lastJobCount: outcome.jobCount }),
       lastError: outcome.error ?? null
     })
     .where(eq(companyBoards.boardKey, boardKey))
@@ -170,6 +232,18 @@ export function recordCompanyBoardFetch(
 /** Unpaginated read for a one-shot export, mirroring `listAllExclusions`. */
 export function listAllCompanyBoards(): CompanyBoardRecord[] {
   return getDb().select().from(companyBoards).orderBy(asc(companyBoards.createdAt)).all().map(toRecord)
+}
+
+/**
+ * `skipped` is the sum of the two reasons a row can be dropped, kept as its
+ * own field because the JSON bundle import reports one number while the CSV
+ * import distinguishes "you already track this" from "the watchlist is full".
+ */
+export interface ImportCompanyBoardsResult {
+  imported: number
+  skipped: number
+  alreadyTracked: number
+  overLimit: number
 }
 
 /**
@@ -188,14 +262,15 @@ export function listAllCompanyBoards(): CompanyBoardRecord[] {
  */
 export function importCompanyBoards(
   records: readonly (AddCompanyBoardInput & { createdAt: string; enabled: boolean })[]
-): { imported: number; skipped: number } {
+): ImportCompanyBoardsResult {
   const db = getDb()
   let imported = 0
-  let skipped = 0
+  let alreadyTracked = 0
+  let overLimit = 0
 
   for (const record of records) {
     if (countCompanyBoards() >= MAX_COMPANY_BOARDS) {
-      skipped++
+      overLimit++
       continue
     }
 
@@ -217,8 +292,8 @@ export function importCompanyBoards(
       .run()
 
     if (result.changes > 0) imported++
-    else skipped++
+    else alreadyTracked++
   }
 
-  return { imported, skipped }
+  return { imported, skipped: alreadyTracked + overLimit, alreadyTracked, overLimit }
 }

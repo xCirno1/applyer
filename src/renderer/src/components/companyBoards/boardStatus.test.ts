@@ -24,10 +24,9 @@ describe('boardStatus', () => {
     })
   })
 
-  it('falls back to zero when a fetch recorded no count at all', () => {
+  it('keeps "reached but never counted" apart from "empty", which is a claim about the company', () => {
     expect(boardStatus(fields({ lastCheckedAt: '2024-01-01T00:00:00.000Z', lastJobCount: null }))).toEqual({
-      kind: 'roles',
-      count: 0
+      kind: 'uncounted'
     })
   })
 
@@ -90,18 +89,26 @@ describe('boardAddress', () => {
 })
 
 describe('boardStatusRank', () => {
-  it('sorts the boards that need attention ahead of the ones that answered', () => {
+  it('puts the boards that need attention first on the descending click a column gets first', () => {
     const ranks = [
       boardStatusRank({ kind: 'error', message: 'HTTP 404' }),
       boardStatusRank({ kind: 'unchecked' }),
-      boardStatusRank({ kind: 'roles', count: 0 }),
-      boardStatusRank({ kind: 'roles', count: 12 })
+      boardStatusRank({ kind: 'uncounted' }),
+      boardStatusRank({ kind: 'roles', count: 12 }),
+      boardStatusRank({ kind: 'roles', count: 0 })
     ]
-    expect([...ranks].sort((a, b) => a - b)).toEqual(ranks)
+    expect([...ranks].sort((a, b) => b - a)).toEqual(ranks)
   })
 
   it('separates an empty board from one nothing has fetched yet', () => {
     expect(boardStatusRank({ kind: 'roles', count: 0 })).not.toBe(boardStatusRank({ kind: 'unchecked' }))
+    expect(boardStatusRank({ kind: 'uncounted' })).not.toBe(boardStatusRank({ kind: 'unchecked' }))
+  })
+
+  it('will not let an absurd count from a provider pass itself off as a failing board', () => {
+    expect(boardStatusRank({ kind: 'roles', count: Number.MAX_SAFE_INTEGER })).toBeLessThan(
+      boardStatusRank({ kind: 'uncounted' })
+    )
   })
 })
 
@@ -126,6 +133,12 @@ describe('boardFilterStatus', () => {
     )
     expect(boardFilterStatus({ enabled: true, lastError: null, lastCheckedAt: checked, lastJobCount: 0 })).toBe('empty')
     expect(boardFilterStatus({ enabled: true, lastError: null, lastCheckedAt: checked, lastJobCount: 7 })).toBe('open')
+  })
+
+  it('files a board that was reached but never counted with the ones there is no result for', () => {
+    expect(boardFilterStatus({ enabled: true, lastError: null, lastCheckedAt: checked, lastJobCount: null })).toBe(
+      'unchecked'
+    )
   })
 
   it('counts a board whose count came back unusable as empty, not as busy', () => {

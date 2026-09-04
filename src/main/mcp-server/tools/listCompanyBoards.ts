@@ -20,10 +20,22 @@ export function listCompanyBoardsTool(args: Args): CallToolResult {
         company: board.companyName,
         provider: board.provider,
         token: board.token,
+        // Provider plus token is not an identity: one Workday tenant serves
+        // several career sites, and the same Lever slug exists in both
+        // regions. Without these two, such boards are indistinguishable here,
+        // so the agent cannot tell the caller which one it is looking at (and
+        // `boardKey` is the single value the rest of the app files them
+        // under). Null for the providers that need neither.
+        host: board.host,
+        site: board.site,
+        boardKey: board.boardKey,
         enabled: board.enabled,
         addedBy: board.addedBy,
         lastCheckedAt: board.lastCheckedAt,
-        // 0 is a live board with nothing open; null is "never fetched yet".
+        // 0 is a live board with nothing open. null is "nothing has counted
+        // this board", which `lastCheckedAt` tells apart: never fetched, or
+        // only ever reached by a keyword search on a provider that filters
+        // server-side and so never answered how big the board is.
         lastJobCount: board.lastJobCount,
         lastError: board.lastError
       })),

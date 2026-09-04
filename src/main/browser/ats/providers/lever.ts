@@ -3,10 +3,36 @@ import { asFiniteNumber, asRecord, asString, formatSalaryRange, safeHttpUrl, toI
 import type { AtsBoardDescriptor } from '@shared/types/companyBoard'
 import type { AtsBoardFetchOutcome, AtsPosting, AtsProviderAdapter } from '../types'
 
-const HOSTS = ['jobs.lever.co', 'api.lever.co']
+/**
+ * Lever runs two independent regions, and a customer's board exists in
+ * exactly one of them: an EU customer's postings are on `api.eu.lever.co` and
+ * answer 404 on the US host. The region is therefore part of addressing the
+ * board, not a preference — so it is carried in the descriptor's `host` (null
+ * meaning the US default, which keeps every board already tracked keyed
+ * exactly as it was).
+ */
+const REGIONS = [
+  { public: 'jobs.lever.co', api: 'api.lever.co' },
+  { public: 'jobs.eu.lever.co', api: 'api.eu.lever.co' }
+] as const
 
-function boardUrl(token: string): string {
-  return `https://api.lever.co/v0/postings/${encodeURIComponent(token)}?mode=json`
+/** The API hosts a stored descriptor may name. Anything else is not a Lever board. */
+export const LEVER_API_HOSTS: string[] = REGIONS.map((region) => region.api)
+
+const DEFAULT_REGION = REGIONS[0]
+
+export function isLeverApiHost(host: string | null): boolean {
+  return host !== null && LEVER_API_HOSTS.includes(host.toLowerCase())
+}
+
+/** The region a descriptor belongs to, defaulting to the US for the boards stored before regions existed. */
+function regionOf(host: string | null): (typeof REGIONS)[number] {
+  const lower = host?.toLowerCase()
+  return REGIONS.find((region) => region.api === lower) ?? DEFAULT_REGION
+}
+
+function boardUrl(descriptor: AtsBoardDescriptor): string {
+  return `https://${regionOf(descriptor.host).api}/v0/postings/${encodeURIComponent(descriptor.token)}?mode=json`
 }
 
 /**
@@ -50,7 +76,11 @@ function toPosting(raw: unknown, descriptor: AtsBoardDescriptor, fallbackCompany
     team: asString(categories?.team),
     employmentType: asString(categories?.commitment),
     isRemote: workplaceType === undefined ? undefined : workplaceType === 'remote',
-    url: safeHttpUrl(posting.hostedUrl) ?? `https://jobs.lever.co/${encodeURIComponent(descriptor.token)}/${encodeURIComponent(id)}`,
+    // The payload's own link when it has one; otherwise rebuilt on the board's
+    // own region, since an EU board's postings are not served from the US host.
+    url:
+      safeHttpUrl(posting.hostedUrl) ??
+      `https://${regionOf(descriptor.host).public}/${encodeURIComponent(descriptor.token)}/${encodeURIComponent(id)}`,
     postedAt: toIsoTimestamp(posting.createdAt),
     salaryRange: salary(posting),
     snippet: toSnippet(asString(posting.descriptionPlain) ?? asString(posting.description), !posting.descriptionPlain)
@@ -64,7 +94,7 @@ export const leverAdapter: AtsProviderAdapter = {
   probeable: true,
 
   async fetchBoard(descriptor, options): Promise<AtsBoardFetchOutcome> {
-    const outcome = await fetchAtsJson(boardUrl(descriptor.token), { timeoutMs: options.timeoutMs })
+    const outcome = await fetchAtsJson(boardUrl(descriptor), { timeoutMs: options.timeoutMs })
     if (outcome.status !== 'ok') return outcome
 
     // Lever answers with a bare array, not an object wrapping one.
@@ -83,11 +113,18 @@ export const leverAdapter: AtsProviderAdapter = {
   },
 
   parseBoardUrl(url: URL): AtsBoardDescriptor | null {
-    if (!HOSTS.includes(url.hostname.toLowerCase())) return null
+    const hostname = url.hostname.toLowerCase()
+    const region = REGIONS.find((candidate) => candidate.public === hostname || candidate.api === hostname)
+    if (!region) return null
+
     const segments = url.pathname.split('/').filter(Boolean)
     // Public: /{token}[/{postingId}]. API: /v0/postings/{token}[/{postingId}].
     const token = segments[0] === 'v0' && segments[1] === 'postings' ? segments[2] : segments[0]
     if (!token) return null
-    return { provider: 'lever', token, host: null, site: null }
+
+    // The US region stays `host: null` so a board tracked before regions
+    // existed keeps its identity (`boardKeyOf` folds in a non-null host), and
+    // the same board pasted twice is one row either way.
+    return { provider: 'lever', token, host: region === DEFAULT_REGION ? null : region.api, site: null }
   }
 }

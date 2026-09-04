@@ -34,8 +34,26 @@ export interface JsonFetchOptions {
  */
 const USER_AGENT = 'Applyer/0.1 (+https://github.com/xCirno1/applyer)'
 
-/** Responses larger than this are refused unread — a board that big is a bug, not a board. */
-const MAX_RESPONSE_BYTES = 32 * 1024 * 1024
+/**
+ * Ceiling on one board response.
+ *
+ * Sized against what these APIs really serve, not against what looks tidy.
+ * Ashby's board endpoint returns the full HTML *and* plain-text description
+ * of every posting in one document, so a large employer's board is genuinely
+ * tens of megabytes — a real one measured at 33 MB, which the previous 32 MB
+ * ceiling refused by a hair and left permanently unfetchable. The limit still
+ * exists because the body is parsed in the main process and `JSON.parse`
+ * costs several times the text size in live objects, so it has to stop
+ * *somewhere*; this is that somewhere, a few times the largest board seen
+ * rather than just under it.
+ */
+const MAX_RESPONSE_BYTES = 96 * 1024 * 1024
+
+/** Bytes as a person reads them, for a message that ends up in the board's Last result column. */
+function formatBytes(bytes: number): string {
+  const mb = bytes / (1024 * 1024)
+  return mb >= 10 ? `${Math.round(mb)} MB` : `${mb.toFixed(1)} MB`
+}
 
 /** One retry only, and only for the two statuses that actually mean "later". */
 const RETRYABLE_STATUSES = [429, 502, 503, 504]
@@ -75,8 +93,52 @@ interface Attempt {
   retryAfter: string | null
   /** The body text, or null when it was deliberately not read. */
   body: string | null
-  /** Set only when the body was refused unread because the response declared an implausible size. */
-  declaredLength: number | null
+  /** Set only when the body was refused for exceeding `MAX_RESPONSE_BYTES` — the declared size, or how much had arrived when the read was stopped. */
+  oversizeBytes: number | null
+}
+
+/**
+ * Reads the body with a hard byte budget.
+ *
+ * `response.text()` would materialise whatever arrives before anything could
+ * check it, so a missing or lying `content-length` — neither of which we
+ * control, both of which are ordinary — turned the ceiling below into a check
+ * performed *after* the damage. Streaming means the read stops within one
+ * chunk of the limit whatever the headers claimed.
+ */
+async function readCapped(response: Response): Promise<{ text: string | null; bytes: number }> {
+  const body = response.body
+  // Undici always gives a stream for a real response; a mocked or empty one
+  // may not, and falling back keeps this working rather than erroring.
+  if (!body) {
+    const text = await response.text()
+    return text.length > MAX_RESPONSE_BYTES ? { text: null, bytes: text.length } : { text, bytes: text.length }
+  }
+
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  const chunks: string[] = []
+  let bytes = 0
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      bytes += value.byteLength
+      if (bytes > MAX_RESPONSE_BYTES) {
+        await reader.cancel()
+        return { text: null, bytes }
+      }
+      // `stream: true` so a multi-byte character split across two chunks is
+      // decoded once both halves have arrived rather than as replacement
+      // characters.
+      chunks.push(decoder.decode(value, { stream: true }))
+    }
+    chunks.push(decoder.decode())
+    return { text: chunks.join(''), bytes }
+  } finally {
+    reader.releaseLock()
+  }
 }
 
 /** Releases a body we are not going to parse instead of leaving the socket to the garbage collector. */
@@ -121,17 +183,21 @@ async function attempt(url: string, options: JsonFetchOptions): Promise<Attempt>
         status: response.status,
         retryAfter: response.headers.get('retry-after'),
         body: null,
-        declaredLength: null
+        oversizeBytes: null
       }
     }
 
+    // A declared size over the limit is refused unread — no reason to spend
+    // the transfer to reach the same conclusion — but it is only a hint, so
+    // the read below enforces the same limit for itself.
     const declaredLength = Number.parseInt(response.headers.get('content-length') ?? '', 10)
     if (Number.isFinite(declaredLength) && declaredLength > MAX_RESPONSE_BYTES) {
       await discard(response)
-      return { status: response.status, retryAfter: null, body: null, declaredLength }
+      return { status: response.status, retryAfter: null, body: null, oversizeBytes: declaredLength }
     }
 
-    return { status: response.status, retryAfter: null, body: await response.text(), declaredLength: null }
+    const { text, bytes } = await readCapped(response)
+    return { status: response.status, retryAfter: null, body: text, oversizeBytes: text === null ? bytes : null }
   } finally {
     clearTimeout(timer)
   }
@@ -158,13 +224,16 @@ export async function fetchAtsJson(url: string, options: JsonFetchOptions = {}):
   }
 
   if (notFound.has(result.status)) return { status: 'not_found' }
-  if (result.declaredLength !== null) {
-    return { status: 'error', message: `Response too large (${result.declaredLength} bytes)` }
+  if (result.oversizeBytes !== null) {
+    // This lands in a board's Last result column, where "34640105" is not an
+    // explanation — say how big it was, against what, so the number means
+    // something to whoever reads the row.
+    return {
+      status: 'error',
+      message: `Board is too large to fetch (${formatBytes(result.oversizeBytes)}; limit ${formatBytes(MAX_RESPONSE_BYTES)})`
+    }
   }
   if (result.body === null) return { status: 'error', message: `HTTP ${result.status}` }
-  if (result.body.length > MAX_RESPONSE_BYTES) {
-    return { status: 'error', message: `Response too large (${result.body.length} bytes)` }
-  }
 
   try {
     return { status: 'ok', data: JSON.parse(result.body) }

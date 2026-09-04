@@ -1,7 +1,10 @@
 import type { ReactElement, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import Tooltip from './Tooltip'
+import { isMacPlatform } from '../../shortcuts/keyCombo'
+import { isNarrowedEmpty } from './dataTable'
 import type { SortDir } from './dataTable'
+import type { SelectionModifiers } from './rowSelection'
 
 // Shared table shell for every data grid in the app (company boards, indexed
 // jobs, exclusions, the activity log, …) so they all share one
@@ -40,17 +43,41 @@ interface DataTableProps<T> {
   filterPlaceholder?: string
   /** Extra controls in the filter strip, e.g. dropdowns the caller narrows `rows` with itself. */
   toolbar?: ReactNode
-  /** Shown instead of emptyMessage when rows is empty AND filterValue is non-empty. */
+  /** Shown instead of emptyMessage when rows is empty and something is narrowing the list (see `narrowed`). */
   noMatchMessage?: ReactNode
   /**
-   * Makes the whole row clickable (drill-in, opening a detail modal, …).
-   * Clicks that land on a link, button or form control inside the row are
-   * ignored (see `isInteractiveTarget`), so a table can have both a row action
-   * and cells that do something else without one swallowing the other.
+   * Whether anything is currently narrowing `rows`, when the filter box is
+   * not the whole story.
    *
-   * Supplying this also makes rows keyboard-operable (Enter/Space).
+   * Left unset, an empty table is read as "nothing matched" only if the
+   * filter box has text in it, which is right for a table whose only filter
+   * is that box and wrong for one with `toolbar` dropdowns the caller applies
+   * itself: picking a provider with no boards on it would otherwise report
+   * that nothing is tracked at all, which is a different and false statement.
+   * Callers that narrow rows outside the box pass their own answer.
    */
-  onRowClick?: (row: T) => void
+  narrowed?: boolean
+  /**
+   * Makes the whole row clickable (drill-in, opening a detail modal, or
+   * selecting it). Clicks that land on a link, button or form control inside
+   * the row are ignored (see `isInteractiveTarget`), so a table can have both
+   * a row action and cells that do something else without one swallowing the
+   * other.
+   *
+   * Supplying this also makes rows keyboard-operable (Enter/Space). The
+   * modifiers come through resolved, so a multi-select caller can hand them
+   * straight to `rowSelection.ts` without knowing the platform.
+   */
+  onRowClick?: (row: T, modifiers: SelectionModifiers) => void
+  /**
+   * Marks the table as a multi-select list: every row reserves the gutter the
+   * selected marker paints, and Shift+click extends the row selection instead
+   * of the browser's text selection. Cell text stays selectable and copyable
+   * either way.
+   */
+  selectable?: boolean
+  /** Paints a row as selected. Only meaningful with `selectable`. */
+  isRowSelected?: (row: T) => boolean
   /** Extra classes per row, for painting a selected/paused/highlighted state. */
   rowClassName?: (row: T) => string
 }
@@ -65,6 +92,23 @@ interface DataTableProps<T> {
 function isInteractiveTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) return false
   return Boolean(target.closest('a,button,input,select,textarea,label,[role="button"]'))
+}
+
+/**
+ * Whether the click that just finished was the end of a drag across this
+ * row's text.
+ *
+ * Rows in a selectable table stay selectable *text*, because copying a slug
+ * or an error message out of a cell is a normal thing to want. The cost is
+ * that finishing a text drag also fires a click, which would otherwise change
+ * the row selection out from under the copy; a non-collapsed selection
+ * anchored inside this row is what tells the two apart.
+ */
+function endedTextSelection(row: EventTarget | null): boolean {
+  if (!(row instanceof Element)) return false
+  const selection = window.getSelection()
+  if (!selection || selection.isCollapsed || selection.toString().trim() === '') return false
+  return row.contains(selection.anchorNode)
 }
 
 const ALIGN_CLASS: Record<'left' | 'right' | 'center', string> = {
@@ -87,11 +131,20 @@ export default function DataTable<T>({
   filterPlaceholder,
   toolbar,
   noMatchMessage,
+  narrowed,
   onRowClick,
+  selectable = false,
+  isRowSelected,
   rowClassName
 }: DataTableProps<T>): ReactElement {
   const { t } = useTranslation()
   const hasFilterBar = filterValue !== undefined && onFilterChange !== undefined
+  const isNarrowed = isNarrowedEmpty(narrowed, hasFilterBar, filterValue)
+
+  const modifiersOf = (event: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }): SelectionModifiers => ({
+    shiftKey: event.shiftKey,
+    modKey: isMacPlatform() ? event.metaKey : event.ctrlKey
+  })
 
   return (
     <div>
@@ -119,11 +172,15 @@ export default function DataTable<T>({
 
       {rows.length === 0 ? (
         <p className="py-8 text-center text-[12px] text-text-faint">
-          {hasFilterBar && filterValue ? (noMatchMessage ?? emptyMessage) : emptyMessage}
+          {isNarrowed ? (noMatchMessage ?? emptyMessage) : emptyMessage}
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-[12px]" style={{ minWidth: minWidthPx }}>
+          <table
+            className="w-full text-[12px]"
+            aria-multiselectable={selectable || undefined}
+            style={{ minWidth: minWidthPx }}
+          >
             {/* Column labels as recessed 10px all-caps micro-type on the
                 sunken band, not 12px sentence case in the content plane: a
                 header row should read as a ruler over the data, not as
@@ -146,44 +203,69 @@ export default function DataTable<T>({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={getRowKey(row)}
-                  onClick={
-                    onRowClick
-                      ? (e) => {
-                          if (isInteractiveTarget(e.target)) return
-                          onRowClick(row)
-                        }
-                      : undefined
-                  }
-                  onKeyDown={
-                    onRowClick
-                      ? (e) => {
-                          if (e.key !== 'Enter' && e.key !== ' ') return
-                          if (isInteractiveTarget(e.target)) return
-                          // Space scrolls the page by default, which is the
-                          // opposite of what activating a row should do.
-                          e.preventDefault()
-                          onRowClick(row)
-                        }
-                      : undefined
-                  }
-                  tabIndex={onRowClick ? 0 : undefined}
-                  className={`border-b border-border-soft transition-colors last:border-0 hover:bg-canvas-raised ${
-                    onRowClick ? 'cursor-pointer focus:outline-none focus-visible:bg-canvas-raised' : ''
-                  } ${rowClassName?.(row) ?? ''}`}
-                >
-                  {columns.map((col) => (
-                    <td
-                      key={col.key}
-                      className={`px-3 py-1.5 ${ALIGN_CLASS[col.align ?? 'left']} ${col.className ?? ''}`}
-                    >
-                      {col.render(row)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+              {rows.map((row) => {
+                const selected = Boolean(selectable && isRowSelected?.(row))
+                return (
+                  <tr
+                    key={getRowKey(row)}
+                    aria-selected={selectable ? selected : undefined}
+                    onMouseDown={
+                      onRowClick && selectable
+                        ? (e) => {
+                            // Shift+click extends the *row* selection, so the
+                            // browser's own "extend the text selection to
+                            // here" is suppressed for that one gesture —
+                            // rather than turning off text selection for the
+                            // whole table, which would take copying with it.
+                            // Focus is restored by hand, since preventing the
+                            // default also prevents that.
+                            if (!e.shiftKey || isInteractiveTarget(e.target)) return
+                            e.preventDefault()
+                            e.currentTarget.focus()
+                          }
+                        : undefined
+                    }
+                    onClick={
+                      onRowClick
+                        ? (e) => {
+                            if (isInteractiveTarget(e.target)) return
+                            if (endedTextSelection(e.currentTarget)) return
+                            onRowClick(row, modifiersOf(e))
+                          }
+                        : undefined
+                    }
+                    onKeyDown={
+                      onRowClick
+                        ? (e) => {
+                            if (e.key !== 'Enter' && e.key !== ' ') return
+                            if (isInteractiveTarget(e.target)) return
+                            // Space scrolls the page by default, which is the
+                            // opposite of what activating a row should do.
+                            e.preventDefault()
+                            onRowClick(row, modifiersOf(e))
+                          }
+                        : undefined
+                    }
+                    tabIndex={onRowClick ? 0 : undefined}
+                    // The left border is on every row, not just the selected
+                    // ones, so marking a row doesn't shift its cells sideways.
+                    className={`border-b border-border-soft transition-colors last:border-0 hover:bg-canvas-raised ${
+                      onRowClick ? 'cursor-pointer focus:outline-none focus-visible:bg-canvas-raised' : ''
+                    } ${selectable ? 'border-l-2' : ''} ${
+                      selected ? 'border-l-accent bg-canvas-soft' : selectable ? 'border-l-transparent' : ''
+                    } ${rowClassName?.(row) ?? ''}`}
+                  >
+                    {columns.map((col) => (
+                      <td
+                        key={col.key}
+                        className={`px-3 py-1.5 ${ALIGN_CLASS[col.align ?? 'left']} ${col.className ?? ''}`}
+                      >
+                        {col.render(row)}
+                      </td>
+                    ))}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

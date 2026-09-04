@@ -36,6 +36,12 @@ export type ErrorCode =
   | 'boardNotFound'
   | 'boardUnreachable'
   | 'boardLimitReached'
+  | 'boardFetchLimit'
+  // Bulk-importing a watchlist from a CSV file.
+  | 'csvTooLarge'
+  | 'csvEmpty'
+  | 'csvNoBoardColumn'
+  | 'csvFileMissing'
   // Storage location (picking, validating, and migrating the data folder).
   | 'invalidFolderPath'
   | 'chooseFolder'

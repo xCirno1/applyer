@@ -97,14 +97,60 @@ describe('fetchAtsJson', () => {
     })
   })
 
-  it('refuses a response whose declared size is implausible', async () => {
+  it('refuses a response whose declared size is over the ceiling, without transferring it', async () => {
+    const cancel = vi.fn()
     global.fetch = vi.fn(
-      async () => new Response('{}', { status: 200, headers: { 'content-length': String(64 * 1024 * 1024) } })
+      async () =>
+        new Response(new ReadableStream({ cancel }), {
+          status: 200,
+          headers: { 'content-length': String(128 * 1024 * 1024) }
+        })
     ) as typeof fetch
 
     const outcome = await fetchAtsJson('https://example.com/board')
     expect(outcome.status).toBe('error')
     expect(outcome.status === 'error' && outcome.message).toContain('too large')
+    // Named in megabytes against the limit: this text is what the board's
+    // Last result column shows.
+    expect(outcome.status === 'error' && outcome.message).toContain('MB')
+    // Released on the declared size alone — no reason to spend the transfer
+    // to reach the same conclusion.
+    expect(cancel).toHaveBeenCalled()
+  })
+
+  it('accepts a board far larger than a typical one, since real boards are', async () => {
+    // Ashby serves every posting's full description inline, so a big
+    // employer's board really is tens of megabytes.
+    const big = { jobs: [{ description: 'x'.repeat(40 * 1024 * 1024) }] }
+    global.fetch = vi.fn(async () => jsonResponse(big)) as typeof fetch
+
+    expect((await fetchAtsJson('https://example.com/board')).status).toBe('ok')
+  })
+
+  it('stops reading a body that runs past the ceiling even when nothing declared its size', async () => {
+    // A chunked response has no content-length, so the ceiling can only be
+    // enforced while reading — the case a check on the finished string misses.
+    const chunk = new TextEncoder().encode('x'.repeat(4 * 1024 * 1024))
+    let sent = 0
+    global.fetch = vi.fn(
+      async () =>
+        new Response(
+          new ReadableStream({
+            pull(controller) {
+              sent++
+              controller.enqueue(chunk)
+            }
+          }),
+          { status: 200 }
+        )
+    ) as typeof fetch
+
+    const outcome = await fetchAtsJson('https://example.com/board')
+    expect(outcome.status).toBe('error')
+    expect(outcome.status === 'error' && outcome.message).toContain('too large')
+    // Stopped just past the limit (96 MB in 4 MB chunks, plus what the
+    // stream had already queued) rather than reading forever.
+    expect(sent).toBeLessThanOrEqual(96 / 4 + 4)
   })
 
   it('turns a network failure into an error value, never a throw', async () => {

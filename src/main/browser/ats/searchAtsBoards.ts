@@ -1,7 +1,9 @@
 import { ATS_FETCH_CONCURRENCY, MAX_ATS_BOARDS_PER_SEARCH } from '@shared/constants'
 import { appLogger } from '../../logger'
-import { listSearchableCompanyBoards, recordCompanyBoardFetch } from '../../db/repositories/companyBoardsRepository'
+import { listSearchableCompanyBoards } from '../../db/repositories/companyBoardsRepository'
 import { broadcastCompanyBoardsChanged } from '../../ipc/jobsBroadcast'
+import { recordBoardFetchOutcome } from './boardFetchRecord'
+import { selectBoardsForSweep } from './boardSweep'
 import { boardCacheKey, readBoardCache, writeBoardCache } from './boardCache'
 import { mapWithConcurrency } from './http'
 import { adapterFor } from './providers'
@@ -99,27 +101,6 @@ async function fetchBoard(board: CompanyBoardRecord, query: string, limit: numbe
   return outcome
 }
 
-/**
- * Persisting the outcome is bookkeeping on top of the search the caller
- * actually asked for, so a database hiccup here is logged and swallowed
- * rather than failing a search that already has its results.
- */
-function record(board: CompanyBoardRecord, outcome: AtsBoardFetchOutcome): void {
-  try {
-    recordCompanyBoardFetch(board.boardKey, {
-      jobCount: outcome.status === 'ok' ? outcome.postings.length : 0,
-      error:
-        outcome.status === 'not_found'
-          ? 'Board not found (404). The slug may have changed or the board may have been retired.'
-          : outcome.status === 'error'
-            ? outcome.message
-            : null
-    })
-  } catch (err) {
-    appLogger.warn(`Failed to record board fetch for ${board.boardKey}: ${String(err)}`)
-  }
-}
-
 export async function searchAtsBoards(params: SearchAtsBoardsParams): Promise<SearchAtsBoardsResult> {
   const warnings: string[] = []
 
@@ -143,10 +124,13 @@ export async function searchAtsBoards(params: SearchAtsBoardsParams): Promise<Se
     return { results: [], warnings, searchedBoards: 0, searchedProviders: [] }
   }
 
-  const boards = tracked.slice(0, MAX_ATS_BOARDS_PER_SEARCH)
-  if (tracked.length > boards.length) {
+  // Which boards the budget is spent on, rather than whichever happen to come
+  // first — see `boardSweep.ts` for why size alone is not the whole rule.
+  const sweep = selectBoardsForSweep(tracked, MAX_ATS_BOARDS_PER_SEARCH)
+  const boards = sweep.boards
+  if (sweep.skipped > 0) {
     warnings.push(
-      `company boards: ${tracked.length} boards are tracked but only the first ${boards.length} were searched (one request each). Disable the boards you aren't watching to bring the rest into range.`
+      `company boards: ${tracked.length} boards are tracked and ${boards.length} were searched (one request each) — the ${sweep.pickedBySize} carrying the most open roles, plus the ${sweep.pickedByRotation} nothing has checked in longest. Run another search to reach further down the list, or pause the boards you aren't watching.`
     )
   }
 
@@ -155,7 +139,10 @@ export async function searchAtsBoards(params: SearchAtsBoardsParams): Promise<Se
 
   const perBoard = await mapWithConcurrency(boards, ATS_FETCH_CONCURRENCY, async (board) => {
     const outcome = await fetchBoard(board, params.query, params.limit * FETCH_HEADROOM)
-    record(board, outcome)
+    // The query goes with the outcome: on a provider that filters
+    // server-side, what came back counts the query's matches, not the board
+    // (see `countsWholeBoard`).
+    recordBoardFetchOutcome(board, outcome, params.query)
     return { board, outcome }
   })
 

@@ -1,5 +1,6 @@
 import { ATS_PROBE_CONCURRENCY, ATS_PROBE_TIMEOUT_MS } from '@shared/constants'
 import { isAtsProvider } from '@shared/types/companyBoard'
+import { fetchedJobCount } from './boardFetchRecord'
 import { mapWithConcurrency } from './http'
 import { adapterFor, parseAnyBoardUrl, probeableAdapters } from './providers'
 import { slugCandidates } from './slugCandidates'
@@ -48,7 +49,17 @@ interface ProbeResult {
   outcome: AtsBoardFetchOutcome
 }
 
-/** Probing only needs to know whether a board answers and how much it holds, so it asks for very little. */
+/**
+ * Probing only needs to know whether a board answers and how much it holds,
+ * so it asks for very little.
+ *
+ * Which is why the count reported below is `fetchedJobCount` and not the rows
+ * that came back: on a paging provider this limit *is* the row count for
+ * every board bigger than it, so a Workday tenant with 400 open roles would
+ * be added with a toast reading "20 open roles right now" — a number that is
+ * the same for every large board and therefore says nothing about any of
+ * them.
+ */
 const PROBE_LIMIT = 20
 
 async function probe(descriptor: AtsBoardDescriptor, query: string): Promise<AtsBoardFetchOutcome> {
@@ -103,7 +114,7 @@ function toCandidate(result: ProbeResult): BoardProbeCandidate {
   return {
     provider: result.provider,
     token: result.token,
-    jobCount: result.outcome.status === 'ok' ? result.outcome.postings.length : 0
+    jobCount: fetchedJobCount(result.outcome)
   }
 }
 
@@ -132,14 +143,15 @@ async function resolveExplicit(
     }
   }
 
+  const jobCount = fetchedJobCount(outcome)
   return {
     status: 'resolved',
     descriptor,
     companyName: companyName?.trim() || descriptor.token,
-    jobCount: outcome.postings.length,
+    jobCount,
     verified: true,
     ambiguous: false,
-    candidates: [{ provider: descriptor.provider, token: descriptor.token, jobCount: outcome.postings.length }]
+    candidates: [{ provider: descriptor.provider, token: descriptor.token, jobCount }]
   }
 }
 

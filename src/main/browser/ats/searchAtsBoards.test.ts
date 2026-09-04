@@ -24,8 +24,10 @@ vi.mock('./providers', async (importOriginal) => {
     adapterFor: (provider: string) => ({
       provider,
       label: provider,
-      serverSideQuery: false,
-      probeable: true,
+      // As in the real registry: Workday is the one provider that sends the
+      // query upstream instead of serving a whole board.
+      serverSideQuery: provider === 'workday',
+      probeable: provider !== 'workday',
       parseBoardUrl: () => null,
       fetchBoard: (...args: unknown[]) => fetchBoardMock(...args)
     })
@@ -247,6 +249,47 @@ describe('searchAtsBoards', () => {
     })
   })
 
+  it('will not file a Workday keyword search as the board\'s open-role count', async () => {
+    // Workday filters server-side, so both the rows and the `total` beside
+    // them count what matched "engineer" — not what the tenant holds. Writing
+    // that as the board's size would tell the user a tenant of hundreds has
+    // two roles, and would demote it in every later sweep (`boardSweep.ts`
+    // ranks on the same number).
+    listSearchableCompanyBoards.mockReturnValue([
+      board({ provider: 'workday', boardKey: 'workday:acme', token: 'acme', host: 'acme.wd5.myworkdayjobs.com', site: 'Careers' })
+    ])
+    fetchBoardMock.mockResolvedValue({ status: 'ok', postings: [posting()], skipped: 0, total: 2 })
+
+    await searchAtsBoards({ query: 'engineer', limit: 20 })
+
+    expect(recordCompanyBoardFetch).toHaveBeenCalledWith('workday:acme', { jobCount: null, error: null })
+  })
+
+  it('still records a Workday failure, which is true of the board however it was asked', async () => {
+    listSearchableCompanyBoards.mockReturnValue([
+      board({ provider: 'workday', boardKey: 'workday:acme', token: 'acme', host: 'acme.wd5.myworkdayjobs.com', site: 'Careers' })
+    ])
+    fetchBoardMock.mockResolvedValue({ status: 'not_found' })
+
+    await searchAtsBoards({ query: 'engineer', limit: 20 })
+
+    expect(recordCompanyBoardFetch).toHaveBeenCalledWith('workday:acme', {
+      jobCount: null,
+      error: expect.stringContaining('404')
+    })
+  })
+
+  it('keeps the count from a provider that serves the whole board, whatever was searched for', async () => {
+    // Greenhouse, Lever and Ashby are filtered locally, so what came back is
+    // the board however the search was worded.
+    listSearchableCompanyBoards.mockReturnValue([board()])
+    fetchBoardMock.mockResolvedValue(okWith(posting(), posting({ id: '2', url: 'https://x/2' })))
+
+    await searchAtsBoards({ query: 'engineer', limit: 20 })
+
+    expect(recordCompanyBoardFetch).toHaveBeenCalledWith('greenhouse:acme', { jobCount: 2, error: null })
+  })
+
   it('does not let a bookkeeping failure lose results that were already fetched', async () => {
     listSearchableCompanyBoards.mockReturnValue([board()])
     recordCompanyBoardFetch.mockImplementation(() => {
@@ -277,6 +320,50 @@ describe('searchAtsBoards', () => {
     expect(fetchBoardMock).toHaveBeenCalledTimes(MAX_ATS_BOARDS_PER_SEARCH)
     expect(result.searchedBoards).toBe(MAX_ATS_BOARDS_PER_SEARCH)
     expect(result.warnings.join(' ')).toContain(String(many.length))
+  })
+
+  it('spends the budget on the boards known to hold the most roles, wherever they sit in the list', async () => {
+    // The big board is last in the tracked list, which is exactly the case
+    // insertion order got wrong: it was never reached, so a watchlist larger
+    // than one sweep could never surface its busiest company's postings.
+    const filler = Array.from({ length: MAX_ATS_BOARDS_PER_SEARCH + 5 }, (_, i) =>
+      board({
+        token: `small${i}`,
+        boardKey: `greenhouse:small${i}`,
+        lastCheckedAt: '2026-08-30T00:00:00.000Z',
+        lastJobCount: 1
+      })
+    )
+    const big = board({
+      token: 'big',
+      boardKey: 'greenhouse:big',
+      lastCheckedAt: '2026-08-30T00:00:00.000Z',
+      lastJobCount: 500
+    })
+    listSearchableCompanyBoards.mockReturnValue([...filler, big])
+
+    await searchAtsBoards({ query: 'engineer', limit: 20 })
+
+    const fetched = fetchBoardMock.mock.calls.map((call) => (call[0] as CompanyBoardRecord).token)
+    expect(fetched).toContain('big')
+    expect(fetched).toHaveLength(MAX_ATS_BOARDS_PER_SEARCH)
+  })
+
+  it('reaches a newly added board rather than starving it behind the ones already measured', async () => {
+    const measured = Array.from({ length: MAX_ATS_BOARDS_PER_SEARCH + 5 }, (_, i) =>
+      board({
+        token: `known${i}`,
+        boardKey: `greenhouse:known${i}`,
+        lastCheckedAt: '2026-08-30T00:00:00.000Z',
+        lastJobCount: 50
+      })
+    )
+    listSearchableCompanyBoards.mockReturnValue([...measured, board({ token: 'fresh', boardKey: 'greenhouse:fresh' })])
+
+    await searchAtsBoards({ query: 'engineer', limit: 20 })
+
+    const fetched = fetchBoardMock.mock.calls.map((call) => (call[0] as CompanyBoardRecord).token)
+    expect(fetched).toContain('fresh')
   })
 
   it('passes the requested providers through, so a narrowed search stays narrow', async () => {

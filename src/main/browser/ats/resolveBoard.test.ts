@@ -252,4 +252,39 @@ describe('resolveCompanyBoard — an explicit board', () => {
     if (outcome.status !== 'resolved') throw new Error('unreachable')
     expect(outcome.companyName).toBe('acme')
   })
+
+  it("reports a paging board's own total, not the handful of roles a probe asked for", async () => {
+    // A probe deliberately asks for very little, so on Workday — the one
+    // provider that pages — the rows that come back are the probe's limit for
+    // every board bigger than it. Reporting those would greet a tenant of 412
+    // open roles with "20 open roles right now", and would greet the next
+    // large board with the same 20.
+    global.fetch = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            total: 412,
+            jobPostings: Array.from({ length: 20 }, (_, i) => ({
+              title: 'Engineer',
+              externalPath: `/job/Remote/Engineer_JR${i}`
+            }))
+          }),
+          { status: 200 }
+        )
+    ) as unknown as typeof fetch
+
+    const outcome = await resolveCompanyBoard({
+      query: 'https://acme.wd5.myworkdayjobs.com/en-US/Careers/job/Remote/Engineer_JR1'
+    })
+
+    if (outcome.status !== 'resolved') throw new Error('unreachable')
+    expect(outcome.descriptor).toEqual({
+      provider: 'workday',
+      token: 'acme',
+      host: 'acme.wd5.myworkdayjobs.com',
+      site: 'Careers'
+    })
+    expect(outcome.jobCount).toBe(412)
+    expect(outcome.candidates[0]?.jobCount).toBe(412)
+  })
 })

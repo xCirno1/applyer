@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import {
   compareCells,
   filterAndSort,
+  isNarrowedEmpty,
   matchesQuery,
   nextSortDir,
   readValue,
@@ -168,5 +169,29 @@ describe('filterAndSort', () => {
 
   it('sorts an empty list as happily as a full one', () => {
     expect(filterAndSort([], VALUES, SEARCH_KEYS, '', 'company', 'asc')).toEqual([])
+  })
+})
+
+describe('isNarrowedEmpty', () => {
+  it('reads a table with no filter bar as genuinely empty', () => {
+    expect(isNarrowedEmpty(undefined, false, undefined)).toBe(false)
+  })
+
+  it('reads a blank filter box as genuinely empty', () => {
+    expect(isNarrowedEmpty(undefined, true, '')).toBe(false)
+  })
+
+  it('reads text in the filter box as "nothing matched"', () => {
+    expect(isNarrowedEmpty(undefined, true, 'acme')).toBe(true)
+  })
+
+  it('believes a caller that narrows rows outside the filter box', () => {
+    // A provider dropdown with no boards on it: the box is blank, but the
+    // table is empty because of a choice, not because nothing is tracked.
+    expect(isNarrowedEmpty(true, true, '')).toBe(true)
+  })
+
+  it('believes a caller that says nothing is narrowing, whatever the box holds', () => {
+    expect(isNarrowedEmpty(false, true, 'acme')).toBe(false)
   })
 })

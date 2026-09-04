@@ -8,6 +8,7 @@ import type {
   BrowserSetupStatusPayload
 } from '@shared/types/ipcEvents'
 import type { StorageLocationProgressPayload } from '@shared/types/storageLocation'
+import type { BoardFetchedPayload } from '@shared/types/companyBoard'
 
 let webContentsRef: WebContents | null = null
 
@@ -57,6 +58,22 @@ export function broadcastExclusionsChanged(): void {
 export function broadcastCompanyBoardsChanged(): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.companyBoards.onChanged)
+  }
+}
+
+/**
+ * One board's fetch result, unlike the payload-less signal above.
+ *
+ * A manual fetch of a selection runs several boards at a time and can take a
+ * while for the slow ones, so each result is pushed as it lands: the row
+ * stops spinning and shows its new count the moment *that* board answers,
+ * instead of the whole selection waiting on the slowest member. It carries
+ * the row so the panel can replace one entry rather than re-reading the
+ * watchlist once per board.
+ */
+export function broadcastCompanyBoardFetched(payload: BoardFetchedPayload): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.companyBoards.onFetched, payload)
   }
 }
 

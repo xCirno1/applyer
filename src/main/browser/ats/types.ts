@@ -31,7 +31,20 @@ export interface AtsPosting {
  * a 200 with no rows is a real board with nothing open right now.
  */
 export type AtsBoardFetchOutcome =
-  | { status: 'ok'; postings: AtsPosting[]; skipped: number }
+  | {
+      status: 'ok'
+      postings: AtsPosting[]
+      skipped: number
+      /**
+       * How many postings the board holds, when the provider says so and that
+       * is more than were fetched. Only Workday pages server-side, so only it
+       * can return fewer rows than the board has; without this the board's
+       * open-role count would report the page cap (20/40/60) as the size of a
+       * board with hundreds of roles. Absent means `postings.length` is the
+       * whole answer.
+       */
+      total?: number
+    }
   | { status: 'not_found' }
   | { status: 'error'; message: string }
 

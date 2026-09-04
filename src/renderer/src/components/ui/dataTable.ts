@@ -140,3 +140,23 @@ export function filterAndSort<T>(
     query.trim().length > 0 ? rows.filter((row) => matchesQuery(row, accessors, searchKeys, query)) : rows
   return sortRows(narrowed, accessors, sortKey, sortDir)
 }
+
+/**
+ * Which of the two empty states an empty table is in: "nothing is here" or
+ * "nothing matched".
+ *
+ * They are different statements and only one can be true, so guessing costs
+ * something: telling a person that no boards are tracked, when in fact they
+ * have two hundred and none of them is on the provider they just picked, is
+ * simply false. The filter box answers this on its own only for a table whose
+ * every filter is that box; a table that also narrows rows behind a toolbar
+ * control (`DataTable`'s `narrowed` prop) has to say so itself.
+ */
+export function isNarrowedEmpty(
+  narrowed: boolean | undefined,
+  hasFilterBar: boolean,
+  filterValue: string | undefined
+): boolean {
+  if (narrowed !== undefined) return narrowed
+  return hasFilterBar && (filterValue ?? '').length > 0
+}

@@ -1,5 +1,5 @@
 import { fetchAtsJson } from '../http'
-import { asArray, asRecord, asString, toSnippet } from './shared'
+import { asArray, asFiniteNumber, asRecord, asString, toSnippet } from './shared'
 import type { AtsBoardDescriptor } from '@shared/types/companyBoard'
 import type { AtsBoardFetchOutcome, AtsPosting, AtsProviderAdapter, FetchBoardOptions } from '../types'
 
@@ -30,11 +30,33 @@ const MAX_PAGES = 3
 /** An unknown career site answers 404; an unknown tenant answers 422. Both mean "no such board". */
 const NOT_FOUND_STATUSES = [422]
 
+/** Every Workday career site lives under this domain; nothing else is one. */
+export const WORKDAY_HOST_SUFFIX = '.myworkdayjobs.com'
+
+/**
+ * Whether a stored host is really a Workday one.
+ *
+ * A board's host is the only field in this app that becomes the *authority*
+ * of an outbound request, and rows do not only arrive from `parseBoardUrl`:
+ * an imported bundle is a file, and a file is whatever someone made it. This
+ * is checked again at the point of use, so a row that got past validation
+ * — an older row, a hand-edited database — still cannot aim a request
+ * somewhere of its choosing.
+ */
+export function isWorkdayHost(host: string | null): host is string {
+  if (!host) return false
+  const lower = host.toLowerCase()
+  if (!lower.endsWith(WORKDAY_HOST_SUFFIX)) return false
+  // A hostname and nothing else: no port, no credentials, no path, no
+  // `evil.com#.myworkdayjobs.com` games.
+  return /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/.test(lower)
+}
+
 function listUrl(descriptor: AtsBoardDescriptor): string | null {
-  if (!descriptor.host || !descriptor.site) return null
+  if (!isWorkdayHost(descriptor.host) || !descriptor.site) return null
   // The site id is case-sensitive and the tenant is part of the path, so both
   // are encoded rather than interpolated raw.
-  return `https://${descriptor.host}/wday/cxs/${encodeURIComponent(descriptor.token)}/${encodeURIComponent(descriptor.site)}/jobs`
+  return `https://${descriptor.host.toLowerCase()}/wday/cxs/${encodeURIComponent(descriptor.token)}/${encodeURIComponent(descriptor.site)}/jobs`
 }
 
 /**
@@ -44,7 +66,7 @@ function listUrl(descriptor: AtsBoardDescriptor): string | null {
  * to the Workday scraper.
  */
 function postingUrl(descriptor: AtsBoardDescriptor, externalPath: string): string | null {
-  if (!descriptor.host || !descriptor.site) return null
+  if (!isWorkdayHost(descriptor.host) || !descriptor.site) return null
   const path = externalPath.startsWith('/') ? externalPath : `/${externalPath}`
   try {
     return new URL(`/${descriptor.site}${path}`, `https://${descriptor.host}`).toString()
@@ -104,6 +126,10 @@ export const workdayAdapter: AtsProviderAdapter = {
     const wanted = Math.max(1, Math.min(options.limit, PAGE_SIZE * MAX_PAGES))
     const postings: AtsPosting[] = []
     let skipped = 0
+    // Workday is the one provider that answers with a page plus a count of
+    // what it paged through, so it is the one provider whose board size is
+    // not "how many rows came back".
+    let total: number | undefined
 
     for (let page = 0; page < MAX_PAGES && postings.length < wanted; page++) {
       const outcome = await fetchAtsJson(url, {
@@ -115,7 +141,7 @@ export const workdayAdapter: AtsProviderAdapter = {
       // A failure on a later page still leaves the earlier pages usable, and
       // reporting an error would throw away rows we already have.
       if (outcome.status !== 'ok') {
-        return page === 0 ? outcome : { status: 'ok', postings, skipped }
+        return page === 0 ? outcome : { status: 'ok', postings, skipped, total }
       }
 
       const body = asRecord(outcome.data)
@@ -123,7 +149,16 @@ export const workdayAdapter: AtsProviderAdapter = {
       if (!body || !Array.isArray(body.jobPostings)) {
         return page === 0
           ? { status: 'error', message: 'Workday response had no jobPostings array' }
-          : { status: 'ok', postings, skipped }
+          : { status: 'ok', postings, skipped, total }
+      }
+
+      // Read from the first page only: it is the count for this query, and a
+      // later page repeating it adds nothing. Not trusted blindly — it comes
+      // from someone else's API, so anything that isn't a sane count is left
+      // undefined and the rows we hold stand as the answer.
+      if (page === 0) {
+        const reported = asFiniteNumber(body.total)
+        if (reported !== undefined && reported >= 0) total = Math.floor(reported)
       }
 
       for (const raw of rows) {
@@ -136,7 +171,7 @@ export const workdayAdapter: AtsProviderAdapter = {
       if (rows.length < PAGE_SIZE) break
     }
 
-    return { status: 'ok', postings: postings.slice(0, wanted), skipped }
+    return { status: 'ok', postings: postings.slice(0, wanted), skipped, total }
   },
 
   parseBoardUrl(url: URL): AtsBoardDescriptor | null {

@@ -15,7 +15,7 @@ import { upsertIndexedJobs, listAllIndexedJobs } from '../db/repositories/indexe
 import { excludeUrl } from '../db/repositories/jobExclusionsRepository'
 import { addCompanyBoard, recordCompanyBoardFetch } from '../db/repositories/companyBoardsRepository'
 import { saveProfile } from '../db/repositories/profileRepository'
-import { setAutoStartCommand } from '../db/repositories/settingsRepository'
+import { setAutoStartCommand, setNotificationPreferences } from '../db/repositories/settingsRepository'
 import { jobsToCsv, companyBoardsToCsv, indexedJobsToCsv } from './csv'
 import { buildExportBundle, bundleJsonBytes, computeExportSizes, filenameTimestamp } from './exportBundle'
 import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
@@ -126,8 +126,13 @@ describe('buildExportBundle', () => {
 
   it('includes settings when selected', () => {
     setAutoStartCommand('claude')
+    setNotificationPreferences({ enabled: true, verificationRequired: false, jobFilled: true, jobFailed: false })
     const bundle = buildExportBundle({ ...allDomainsSelected(false), settings: true })
-    expect(bundle.data.settings).toEqual({ autoStartCommand: 'claude', indexedJobsRetentionDays: 30 })
+    expect(bundle.data.settings).toEqual({
+      autoStartCommand: 'claude',
+      indexedJobsRetentionDays: 30,
+      notificationPreferences: { enabled: true, verificationRequired: false, jobFilled: true, jobFailed: false }
+    })
   })
 })
 

@@ -5,7 +5,11 @@ import { importIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { importCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { boardKeyOf, isValidBoardDescriptor } from '../browser/ats/providers'
 import { saveProfile } from '../db/repositories/profileRepository'
-import { setAutoStartCommand, setIndexedJobsRetentionDays } from '../db/repositories/settingsRepository'
+import {
+  setAutoStartCommand,
+  setIndexedJobsRetentionDays,
+  setNotificationPreferences
+} from '../db/repositories/settingsRepository'
 
 /**
  * A row that cannot address a real board is dropped here and counted as
@@ -45,6 +49,9 @@ export function applyImport(bundle: ExportBundle, selection: ExportSelection): I
   if (selection.settings && bundle.data.settings) {
     setAutoStartCommand(bundle.data.settings.autoStartCommand)
     setIndexedJobsRetentionDays(bundle.data.settings.indexedJobsRetentionDays)
+    if (bundle.data.settings.notificationPreferences) {
+      setNotificationPreferences(bundle.data.settings.notificationPreferences)
+    }
     summary.settings = true
   }
   return summary

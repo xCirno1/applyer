@@ -6,7 +6,11 @@ import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
 import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { getProfile } from '../db/repositories/profileRepository'
-import { getAutoStartCommand, getIndexedJobsRetentionDays } from '../db/repositories/settingsRepository'
+import {
+  getAutoStartCommand,
+  getIndexedJobsRetentionDays,
+  getNotificationPreferences
+} from '../db/repositories/settingsRepository'
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
 import type { ExportCompanyBoard } from '@shared/types/dataTransfer'
 import type { CompanyBoardRecord } from '@shared/types/companyBoard'
@@ -43,7 +47,8 @@ export function buildExportBundle(selection: ExportSelection): ExportBundle {
   if (selection.settings) {
     data.settings = {
       autoStartCommand: getAutoStartCommand(),
-      indexedJobsRetentionDays: getIndexedJobsRetentionDays()
+      indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
+      notificationPreferences: getNotificationPreferences()
     }
   }
   return { schemaVersion: EXPORT_SCHEMA_VERSION, exportedAt: new Date().toISOString(), appVersion: app.getVersion(), data }
@@ -85,7 +90,8 @@ export function computeExportSizes(): ExportSizes {
   const profile = getProfile()
   const settings = {
     autoStartCommand: getAutoStartCommand(),
-    indexedJobsRetentionDays: getIndexedJobsRetentionDays()
+    indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
+    notificationPreferences: getNotificationPreferences()
   }
 
   const empty = bundleJsonBytes({})

@@ -1,0 +1,64 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  box-sizing: border-box;
+  margin: 0 auto;
+  max-width: 760px;
+  padding: 32px 20px;
+}
+
+h1 {
+  margin-top: 0;
+}
+
+.case-list {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+}
+
+.case-list a,
+.panel {
+  border: 1px solid currentColor;
+  display: block;
+  padding: 16px;
+}
+
+.case-list strong,
+.case-list span,
+label {
+  display: block;
+}
+
+.case-list span,
+.hint {
+  margin-top: 4px;
+  opacity: 0.75;
+}
+
+form {
+  display: grid;
+  gap: 12px;
+}
+
+input,
+textarea,
+button,
+select {
+  box-sizing: border-box;
+  font: inherit;
+  padding: 8px;
+  width: 100%;
+}
+
+button {
+  cursor: pointer;
+}
+
+[hidden] {
+  display: none !important;
+}

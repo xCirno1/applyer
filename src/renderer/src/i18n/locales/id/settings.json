@@ -7,6 +7,7 @@
     "agent": "Agen",
     "appearance": "Tampilan",
     "language": "Bahasa",
+    "notifications": "Notifikasi",
     "shortcuts": "Pintasan",
     "data": "Data"
   },
@@ -16,6 +17,24 @@
     "label": "Bahasa tampilan",
     "system": "Ikut sistem ({{locale}})",
     "contribute": "Applyer diterjemahkan oleh komunitasnya. Ada bahasa yang belum ada atau terjemahan yang aneh? Kirim koreksinya lewat issue tracker proyek ini."
+  },
+  "notifications": {
+    "title": "Notifikasi",
+    "intro": "Pilih kejadian lowongan yang perlu mengirim notifikasi desktop saat Applyer ada di latar belakang atau tersembunyi.",
+    "enabled": "Notifikasi desktop",
+    "enabledHint": "Izinkan Applyer mengirim notifikasi lewat sistem operasimu.",
+    "verificationRequired": "Perlu verifikasi",
+    "verificationRequiredHint": "CAPTCHA atau tantangan verifikasi lain perlu diperhatikan.",
+    "jobFilled": "Lamaran terisi",
+    "jobFilledHint": "Lamaran sudah diisi dan siap kamu periksa lalu kirim.",
+    "jobFailed": "Lowongan gagal",
+    "jobFailedHint": "Lowongan dalam antrean atau proses tidak berhasil diselesaikan.",
+    "sendTest": "Kirim tes",
+    "testSent": "Notifikasi tes dikirim.",
+    "testFailed": "Tidak bisa mengirim notifikasi tes.",
+    "saved": "Pengaturan notifikasi disimpan.",
+    "loadFailed": "Tidak bisa memuat pengaturan notifikasi.",
+    "saveFailed": "Tidak bisa menyimpan pengaturan notifikasi."
   },
   "appearance": {
     "title": "Tampilan",
@@ -223,7 +242,7 @@
     "domainExclusionsHint": "Daftar blokir link lowongan yang tidak akan dimunculkan lagi.",
     "domainCompanyBoardsHint": "Papan lowongan perusahaan yang diambil saat pencarian. Setiap papan masuk tanpa status; pencarian berikutnya yang mengisi jumlah lowongannya.",
     "domainProfileHint": "Isi profil kandidatmu (dokumen yang diunggah tidak ikut).",
-    "domainSettingsHint": "Perintah otomatis dan lama penyimpanan lowongan terindeks.",
+    "domainSettingsHint": "Perintah otomatis, preferensi notifikasi, dan lama penyimpanan lowongan terindeks.",
     "exportModalTitle": "Ekspor data",
     "format": "Format",
     "formatJsonHint": "Satu file berisi semua yang dipilih di bawah. Ini juga satu-satunya format yang bisa diimpor lagi.",

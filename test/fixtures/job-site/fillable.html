@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fillable application | Applyer test site</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <h1>Fillable application</h1>
+    <p class="hint">This form is never submitted. It exists only to verify Applyer's standard-field filling.</p>
+    <form>
+      <label for="full-name">Full name</label>
+      <input id="full-name" name="fullName" autocomplete="name">
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email">
+
+      <label for="phone">Phone</label>
+      <input id="phone" name="phone" type="tel" autocomplete="tel">
+
+      <label for="location">Current location</label>
+      <input id="location" name="location" autocomplete="address-level2">
+
+      <label for="linkedin">LinkedIn</label>
+      <input id="linkedin" name="linkedin" type="url">
+
+      <label for="github">GitHub</label>
+      <input id="github" name="github" type="url">
+
+      <label for="portfolio">Portfolio</label>
+      <input id="portfolio" name="portfolio" type="url">
+
+      <label for="resume">Resume</label>
+      <input id="resume" name="resume" type="file">
+    </form>
+  </body>
+</html>

@@ -119,7 +119,15 @@ const profileFieldsSchema = z.object({
 
 const settingsDataSchema = z.object({
   autoStartCommand: z.string(),
-  indexedJobsRetentionDays: z.union([z.number().int().positive(), z.literal('unlimited')])
+  indexedJobsRetentionDays: z.union([z.number().int().positive(), z.literal('unlimited')]),
+  notificationPreferences: z
+    .object({
+      enabled: z.boolean(),
+      verificationRequired: z.boolean(),
+      jobFilled: z.boolean(),
+      jobFailed: z.boolean()
+    })
+    .optional()
 })
 
 const exportBundleSchema = z.object({

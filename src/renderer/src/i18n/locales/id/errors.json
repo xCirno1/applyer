@@ -8,6 +8,8 @@
   "invalidTable": "Tabel tidak valid.",
   "invalidJson": "File itu bukan JSON yang valid.",
   "invalidCommand": "Perintah tidak valid.",
+  "invalidNotificationPreferences": "Pengaturan notifikasi tidak valid.",
+  "notificationsUnsupported": "Notifikasi desktop tidak didukung atau tidak bisa dikirim di sistem ini.",
   "invalidExport": "File ini bukan hasil ekspor Applyer.",
   "jobNotFound": "Lowongan tidak ditemukan.",
   "jobNotQueued": "Lowongan tidak ditemukan atau sudah tidak ada di Antre.",

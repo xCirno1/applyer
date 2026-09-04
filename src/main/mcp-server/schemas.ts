@@ -89,10 +89,15 @@ const atsProviderEnum = z.enum(['greenhouse', 'lever', 'ashby', 'workday'])
 /**
  * `company` carries whatever the agent has — a name, a domain, or a board
  * URL — and the app resolves it. `provider` + `token` skip that resolution
- * for an agent that already knows the exact slug. They only mean anything
- * together — a provider with no token is a hint with no board, a token with
- * no provider doesn't say which API to ask — so the tool rejects one without
- * the other (this shape is a field map, which can't express that itself).
+ * for an agent that already knows the exact slug.
+ *
+ * `provider` alone is the third, and commonest, thing a web search actually
+ * establishes: which ATS a company's careers page points at, without the
+ * slug. That is kept as a *preference* — every provider is still probed, and
+ * one holding postings still outranks the preferred one — which is the rule
+ * an ATS migration needs, since the abandoned board answers too. A `token`
+ * with no `provider` remains an error: it doesn't say which API to ask (this
+ * shape is a field map, so the tool checks that itself).
  */
 export const addCompanyBoardShape = {
   company: z.string().trim().min(1).max(200),

@@ -11,7 +11,13 @@ beforeEach(() => {
   testDb = createTestDb().db
 })
 
-import { upsertIndexedJobs, listIndexedJobs, pruneIndexedJobs } from './indexedJobsRepository'
+import {
+  upsertIndexedJobs,
+  listIndexedJobs,
+  listAllIndexedJobs,
+  importIndexedJobs,
+  pruneIndexedJobs
+} from './indexedJobsRepository'
 import { queueJob } from './jobsRepository'
 import { setIndexedJobsRetentionDays } from './settingsRepository'
 import type { JobSearchResultItem } from '../../browser/types'
@@ -131,6 +137,73 @@ describe('listIndexedJobs', () => {
 
     const page2 = listIndexedJobs({ limit: 2, offset: 2 })
     expect(page2.items).toHaveLength(1)
+  })
+})
+
+describe('listAllIndexedJobs', () => {
+  it('reads the stored columns only, leaving the derived match fields out', () => {
+    upsertIndexedJobs([item({ url: 'https://example.com/jobs/1' })], 'backend', 'Remote')
+    queueJob({ title: 'Backend Engineer', company: 'Acme', url: 'https://example.com/jobs/1' })
+
+    // The list view joins the jobs table to say whether a row was matched;
+    // that is this machine's board, not something the row holds, so it must
+    // not travel in a file.
+    expect(listIndexedJobs({}).items[0]!.matchedJobId).not.toBeNull()
+
+    const exported = listAllIndexedJobs()
+    expect(exported).toHaveLength(1)
+    expect(exported[0]).not.toHaveProperty('matchedJobId')
+    expect(exported[0]).not.toHaveProperty('id')
+    expect(exported[0]).toMatchObject({ url: 'https://example.com/jobs/1', searchQuery: 'backend', seenCount: 1 })
+  })
+
+  it('is empty rather than throwing when nothing has been indexed', () => {
+    expect(listAllIndexedJobs()).toEqual([])
+  })
+})
+
+describe('importIndexedJobs', () => {
+  const row = (overrides: Record<string, unknown> = {}): ReturnType<typeof listAllIndexedJobs>[number] => ({
+    url: 'https://example.com/jobs/9',
+    title: 'Platform Engineer',
+    company: 'Globex',
+    location: 'Remote',
+    source: 'greenhouse',
+    snippet: 'Role',
+    salaryRange: null,
+    postedAt: null,
+    searchQuery: 'platform',
+    searchLocation: null,
+    firstSeenAt: '2026-01-01T00:00:00.000Z',
+    lastSeenAt: '2026-01-02T00:00:00.000Z',
+    seenCount: 4,
+    ...overrides
+  })
+
+  it('merges a file alongside what is already indexed', () => {
+    upsertIndexedJobs([item({ url: 'https://example.com/jobs/1' })], 'backend', null)
+
+    expect(importIndexedJobs([row()])).toEqual({ imported: 1, skipped: 0 })
+    expect(listIndexedJobs({}).total).toBe(2)
+  })
+
+  it('keeps this machine\'s own row for a url it already has', () => {
+    upsertIndexedJobs([item({ url: 'https://example.com/jobs/9', title: 'Local Title' })], 'local query', null)
+
+    // The local row's seenCount and lastSeenAt describe searches this install
+    // actually ran; the file's describe someone else's, so the local one wins.
+    expect(importIndexedJobs([row({ title: 'File Title' })])).toEqual({ imported: 0, skipped: 1 })
+    const stored = listIndexedJobs({}).items[0]!
+    expect(stored.title).toBe('Local Title')
+    expect(stored.seenCount).toBe(1)
+  })
+
+  it('refuses a seen count no row could have, rather than rendering it', () => {
+    importIndexedJobs([row({ seenCount: -3 }), row({ url: 'https://example.com/jobs/10', seenCount: 2.7 })])
+
+    const counts = listAllIndexedJobs().map((r) => r.seenCount)
+    expect(counts).toContain(1)
+    expect(counts).toContain(2)
   })
 })
 

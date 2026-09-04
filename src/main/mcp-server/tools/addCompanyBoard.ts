@@ -8,9 +8,9 @@ import type { addCompanyBoardShape } from '../schemas'
 type Args = { [K in keyof typeof addCompanyBoardShape]: z.infer<(typeof addCompanyBoardShape)[K]> }
 
 export async function addCompanyBoardTool(args: Args): Promise<CallToolResult> {
-  if ((args.provider && !args.token) || (args.token && !args.provider)) {
+  if (args.token && !args.provider) {
     return textError(
-      'provider and token must be given together (or neither). Pass just `company` — a name, domain, or board URL — to let Applyer work the board out.'
+      'token needs the provider it belongs to — a slug on its own does not say which API to ask. Pass both, or pass just `company` (a name, domain, or board URL) and let Applyer work the board out.'
     )
   }
 

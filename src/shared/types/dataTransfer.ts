@@ -15,14 +15,28 @@ import type { AppError } from './errorCodes'
  */
 export const EXPORT_SCHEMA_VERSION = 1
 
-export type ExportDomain = 'jobs' | 'exclusions' | 'companyBoards' | 'profile' | 'settings'
+export type ExportDomain = 'jobs' | 'indexedJobs' | 'exclusions' | 'companyBoards' | 'profile' | 'settings'
 
-export const ALL_EXPORT_DOMAINS: ExportDomain[] = ['jobs', 'exclusions', 'companyBoards', 'profile', 'settings']
+export const ALL_EXPORT_DOMAINS: ExportDomain[] = [
+  'jobs',
+  'indexedJobs',
+  'exclusions',
+  'companyBoards',
+  'profile',
+  'settings'
+]
 
 export type ExportSelection = Record<ExportDomain, boolean>
 
 export function allDomainsSelected(value = true): ExportSelection {
-  return { jobs: value, exclusions: value, companyBoards: value, profile: value, settings: value }
+  return {
+    jobs: value,
+    indexedJobs: value,
+    exclusions: value,
+    companyBoards: value,
+    profile: value,
+    settings: value
+  }
 }
 
 export interface ExportSettingsData {
@@ -37,6 +51,7 @@ export interface ExportBundle {
   appVersion: string
   data: {
     jobs?: JobRecord[]
+    indexedJobs?: ExportIndexedJob[]
     exclusions?: ExclusionRecord[]
     companyBoards?: ExportCompanyBoard[]
     profile?: ProfileFields | null
@@ -65,11 +80,48 @@ export interface ExportCompanyBoard {
   companyName: string
   addedBy: 'user' | 'agent'
   enabled: boolean
+  /**
+   * The one count that does travel, because it isn't a reading: it is what
+   * the feed the board was imported from claimed, and it orders the
+   * importing machine's first sweeps exactly as it ordered this one's.
+   * Optional so a bundle written before this field parses unchanged.
+   */
+  seedJobCount?: number | null
   createdAt: string
 }
 
+/**
+ * Every job a search has ever surfaced, matched or not — the record of what
+ * job discovery actually saw, which `jobs` (only what the agent chose to
+ * queue) does not contain. Without this domain, moving an install or
+ * restoring a backup silently drops the entire search history, and re-running
+ * the same searches would re-index every row as newly seen.
+ *
+ * `id` is left out and regenerated on import, for the same reason it is for
+ * exclusions: the row's identity is its URL, which is what the merge is keyed
+ * on. The match columns (`matchedJobId`/`matchedStatus`/`matchedScore`) are
+ * left out because they are not stored at all — they are derived at read time
+ * by joining the jobs table, so exporting them would ship a snapshot of a
+ * join that the importing machine recomputes for itself.
+ */
+export interface ExportIndexedJob {
+  url: string
+  title: string
+  company: string
+  location: string | null
+  source: string | null
+  snippet: string | null
+  salaryRange: string | null
+  postedAt: string | null
+  searchQuery: string
+  searchLocation: string | null
+  firstSeenAt: string
+  lastSeenAt: string
+  seenCount: number
+}
+
 /** CSV is export-only (a single flat table), never a round-trip import source. */
-export type CsvTable = 'jobs' | 'exclusions' | 'companyBoards'
+export type CsvTable = 'jobs' | 'indexedJobs' | 'exclusions' | 'companyBoards'
 
 /**
  * Byte sizes for the Export modal's per-section preview, computed
@@ -79,6 +131,7 @@ export type CsvTable = 'jobs' | 'exclusions' | 'companyBoards'
  */
 export interface ExportSizes {
   jobs: { json: number; csv: number }
+  indexedJobs: { json: number; csv: number }
   exclusions: { json: number; csv: number }
   companyBoards: { json: number; csv: number }
   profile: { json: number }
@@ -110,6 +163,7 @@ export interface ExportFileResult {
 
 export interface ImportDomainCounts {
   jobs?: number
+  indexedJobs?: number
   exclusions?: number
   companyBoards?: number
   profile?: number
@@ -127,6 +181,8 @@ export interface ImportPickResult {
 
 export interface ImportSummary {
   jobs?: { imported: number; skipped: number }
+  /** `skipped` is a URL already indexed here: the merge keeps this machine's own seen-counts rather than overwriting them. */
+  indexedJobs?: { imported: number; skipped: number }
   exclusions?: { imported: number; skipped: number }
   /** `skipped` covers both an already-tracked board and one refused by the watchlist ceiling. */
   companyBoards?: { imported: number; skipped: number }

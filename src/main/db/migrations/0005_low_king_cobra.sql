@@ -1,0 +1,1 @@
+ALTER TABLE `company_boards` ADD `seed_job_count` integer;

@@ -80,6 +80,61 @@ describe('validateExportBundle', () => {
   })
 })
 
+describe('validateExportBundle — indexed jobs', () => {
+  const indexed = {
+    url: 'https://example.com/jobs/1',
+    title: 'Backend Engineer',
+    company: 'Acme',
+    location: null,
+    source: 'greenhouse',
+    snippet: null,
+    salaryRange: null,
+    postedAt: null,
+    searchQuery: 'backend',
+    searchLocation: null,
+    firstSeenAt: '2020-01-01T00:00:00.000Z',
+    lastSeenAt: '2020-01-02T00:00:00.000Z',
+    seenCount: 3
+  }
+
+  function withIndexed(rows: unknown[]): unknown {
+    return { ...validBundle(), data: { indexedJobs: rows } }
+  }
+
+  it('accepts a well-formed row', () => {
+    const result = validateExportBundle(withIndexed([indexed]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.bundle.data.indexedJobs).toHaveLength(1)
+  })
+
+  it('rejects a row with no url, which is the identity the merge is keyed on', () => {
+    expect(validateExportBundle(withIndexed([{ ...indexed, url: '' }])).ok).toBe(false)
+  })
+
+  it('rejects a seen count no row could have', () => {
+    expect(validateExportBundle(withIndexed([{ ...indexed, seenCount: 0 }])).ok).toBe(false)
+    expect(validateExportBundle(withIndexed([{ ...indexed, seenCount: -2 }])).ok).toBe(false)
+    expect(validateExportBundle(withIndexed([{ ...indexed, seenCount: 1.5 }])).ok).toBe(false)
+  })
+
+  it("drops an id the file asserts, since it is minted on import", () => {
+    const result = validateExportBundle(withIndexed([{ ...indexed, id: 'from-the-file' }]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.bundle.data.indexedJobs?.[0]).not.toHaveProperty('id')
+  })
+
+  it('drops the match columns, which are derived from the importing board', () => {
+    const result = validateExportBundle(
+      withIndexed([{ ...indexed, matchedJobId: 'job-1', matchedStatus: 'queued', matchedScore: 90 }])
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.bundle.data.indexedJobs?.[0]).not.toHaveProperty('matchedJobId')
+  })
+})
+
 describe('validateExportBundle — company boards', () => {
   const board = {
     provider: 'greenhouse',
@@ -152,6 +207,22 @@ describe('validateExportBundle — company boards', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('unreachable')
     expect(result.bundle.data.companyBoards?.[0]).not.toHaveProperty('boardKey')
+  })
+
+  it("keeps a feed's claimed size, which is a property of the row rather than a reading", () => {
+    const result = validateExportBundle(withBoards([{ ...board, seedJobCount: 480 }]))
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.bundle.data.companyBoards?.[0]?.seedJobCount).toBe(480)
+  })
+
+  it('rejects a claimed size no board could have', () => {
+    expect(validateExportBundle(withBoards([{ ...board, seedJobCount: -1 }])).ok).toBe(false)
+    expect(validateExportBundle(withBoards([{ ...board, seedJobCount: 2.5 }])).ok).toBe(false)
+  })
+
+  it('accepts a board from a bundle written before that field existed', () => {
+    expect(validateExportBundle(withBoards([board])).ok).toBe(true)
   })
 
   it('drops the exporting machine\'s last-fetch columns rather than trusting them', () => {

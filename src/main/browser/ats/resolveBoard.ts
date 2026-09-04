@@ -1,4 +1,5 @@
 import { ATS_PROBE_CONCURRENCY, ATS_PROBE_TIMEOUT_MS } from '@shared/constants'
+import { appLogger } from '../../logger'
 import { isAtsProvider } from '@shared/types/companyBoard'
 import { fetchedJobCount } from './boardFetchRecord'
 import { mapWithConcurrency } from './http'
@@ -155,6 +156,31 @@ async function resolveExplicit(
   }
 }
 
+/**
+ * What this resolution actually drew from, not just what it ended with.
+ *
+ * An under-collecting run and a thorough one look identical from the outside:
+ * both end with a board, and "boards tracked" goes up either way. The number
+ * that separates them is how big the pool was — slug candidates derived, and
+ * how many of the probes over them answered at all — so it is recorded on
+ * every resolution rather than only on the ones that failed. A run where the
+ * candidates suddenly collapse to one, or where nothing answers across every
+ * provider, is then visible in the log instead of showing up months later as
+ * "we never seem to find boards".
+ */
+function logProbePool(query: string, tokens: string[], results: ProbeResult[], answered: ProbeResult[]): void {
+  const notFound = results.filter((result) => result.outcome.status === 'not_found').length
+  const failed = results.length - answered.length - notFound
+  const withRoles = answered.filter(
+    (result) => result.outcome.status === 'ok' && result.outcome.postings.length > 0
+  ).length
+
+  appLogger.info(
+    `Board probe for "${query}": ${tokens.length} slug candidate(s) [${tokens.join(', ')}] over ${results.length} probe(s) — ` +
+      `${answered.length} answered (${withRoles} with roles), ${notFound} not found, ${failed} failed`
+  )
+}
+
 export async function resolveCompanyBoard(input: ResolveBoardInput): Promise<ResolveBoardOutcome> {
   const query = input.query.trim()
 
@@ -204,6 +230,7 @@ export async function resolveCompanyBoard(input: ResolveBoardInput): Promise<Res
   }))
 
   const answered = results.filter((result) => result.outcome.status === 'ok')
+  logProbePool(query, tokens, results, answered)
   if (answered.length === 0) {
     // A probe failing for a network reason is not the same answer as a probe
     // 404ing, and reporting "no such company" when the machine is offline

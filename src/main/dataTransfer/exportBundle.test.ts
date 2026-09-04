@@ -11,11 +11,12 @@ beforeEach(() => {
 })
 
 import { queueJob, listAllJobs } from '../db/repositories/jobsRepository'
+import { upsertIndexedJobs, listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { excludeUrl } from '../db/repositories/jobExclusionsRepository'
 import { addCompanyBoard, recordCompanyBoardFetch } from '../db/repositories/companyBoardsRepository'
 import { saveProfile } from '../db/repositories/profileRepository'
 import { setAutoStartCommand } from '../db/repositories/settingsRepository'
-import { jobsToCsv, companyBoardsToCsv } from './csv'
+import { jobsToCsv, companyBoardsToCsv, indexedJobsToCsv } from './csv'
 import { buildExportBundle, bundleJsonBytes, computeExportSizes, filenameTimestamp } from './exportBundle'
 import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
 import type { ExportSelection } from '@shared/types/dataTransfer'
@@ -53,9 +54,45 @@ describe('buildExportBundle', () => {
         companyName: 'Acme Labs',
         addedBy: 'user',
         enabled: true,
+        seedJobCount: null,
         createdAt: expect.any(String)
       }
     ])
+  })
+
+  it("carries a feed's claimed size, which is the one count that isn't this machine's reading", () => {
+    addCompanyBoard({
+      boardKey: 'greenhouse:globex',
+      provider: 'greenhouse',
+      token: 'globex',
+      host: null,
+      site: null,
+      companyName: 'Globex',
+      addedBy: 'user',
+      seedJobCount: 480
+    })
+
+    const board = buildExportBundle({ ...allDomainsSelected(false), companyBoards: true }).data.companyBoards?.[0]
+    // It orders the importing machine's first sweeps exactly as it orders
+    // this one's, and unlike lastJobCount it was never a measurement here.
+    expect(board?.seedJobCount).toBe(480)
+  })
+
+  it('includes the search history when selected, without the match columns it derives', () => {
+    upsertIndexedJobs(
+      [{ title: 'Engineer', company: 'Acme', url: 'https://x.com/1', source: 'greenhouse', snippet: 'Role' }],
+      'engineer',
+      'Remote'
+    )
+    queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' })
+
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), indexedJobs: true })
+
+    expect(bundle.data.indexedJobs).toHaveLength(1)
+    expect(bundle.data.jobs).toBeUndefined()
+    // "matched" is a join against this install's board, recomputed on import.
+    expect(bundle.data.indexedJobs?.[0]).not.toHaveProperty('matchedJobId')
+    expect(bundle.data.indexedJobs?.[0]).toMatchObject({ url: 'https://x.com/1', searchQuery: 'engineer' })
   })
 
   it('leaves this machine\'s last fetch out of an exported board', () => {
@@ -105,6 +142,11 @@ describe('computeExportSizes', () => {
     queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' })
     queueJob({ title: 'Designer', company: 'Beta', url: 'https://x.com/2' })
     excludeUrl({ url: 'https://y.com/1', title: 'Bad', company: 'C', reason: 'spam', excludedBy: 'user' })
+    upsertIndexedJobs(
+      [{ title: 'Engineer', company: 'Acme', url: 'https://x.com/1', source: 'indeed', snippet: 'Role' }],
+      'engineer',
+      'Remote'
+    )
     saveProfile({
       fullName: 'Jane Doe',
       email: 'jane@example.com',
@@ -166,6 +208,18 @@ describe('computeExportSizes', () => {
     queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' })
     const sizes = computeExportSizes()
     expect(sizes.jobs.csv).toBe(Buffer.byteLength(jobsToCsv(listAllJobs()), 'utf-8'))
+  })
+
+  it('sizes indexed jobs from the same rows the export writes', () => {
+    upsertIndexedJobs(
+      [{ title: 'Engineer', company: 'Acme', url: 'https://x.com/1', source: 'lever', snippet: 'Role' }],
+      'engineer',
+      null
+    )
+
+    const sizes = computeExportSizes()
+    expect(sizes.indexedJobs.csv).toBe(Buffer.byteLength(indexedJobsToCsv(listAllIndexedJobs()), 'utf-8'))
+    expect(sizes.indexedJobs.json).toBeGreaterThan(0)
   })
 
   it('sizes company boards from the same rows the export writes', () => {

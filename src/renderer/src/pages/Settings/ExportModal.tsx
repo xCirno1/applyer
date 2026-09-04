@@ -13,13 +13,14 @@ import type { ExportSelection, ExportDomain, ExportSizes, CsvTable } from '@shar
 
 const DOMAIN_KEYS = {
   jobs: { label: 'data.domainJobs', hint: 'data.domainJobsHint' },
+  indexedJobs: { label: 'data.domainIndexedJobs', hint: 'data.domainIndexedJobsHint' },
   exclusions: { label: 'data.domainExclusions', hint: 'data.domainExclusionsHint' },
   companyBoards: { label: 'data.domainCompanyBoards', hint: 'data.domainCompanyBoardsHint' },
   profile: { label: 'data.domainProfile', hint: 'data.domainProfileHint' },
   settings: { label: 'data.domainSettings', hint: 'data.domainSettingsHint' }
 } as const satisfies Record<ExportDomain, { label: string; hint: string }>
 
-const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'companyBoards', 'profile', 'settings']
+const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'indexedJobs', 'exclusions', 'companyBoards', 'profile', 'settings']
 
 export default function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }): ReactElement | null {
   const { t } = useTranslation('settings')
@@ -119,6 +120,7 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
               label={t('data.tableToExport')}
               options={[
                 { value: 'jobs', label: t('data.domainJobs') },
+                { value: 'indexedJobs', label: t('data.domainIndexedJobs') },
                 { value: 'exclusions', label: t('data.domainExclusions') },
                 { value: 'companyBoards', label: t('data.domainCompanyBoards') }
               ]}

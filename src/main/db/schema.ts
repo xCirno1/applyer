@@ -133,6 +133,15 @@ export const companyBoards = sqliteTable('company_boards', {
   lastCheckedAt: text('last_checked_at'),
   /** Postings on the last fetch. 0 is a real answer (a live board with nothing open); null means never fetched. */
   lastJobCount: integer('last_job_count'),
+  /**
+   * What the feed a board was imported from said it holds, or null when
+   * nothing said. Never a reading of our own — `lastJobCount` is the only
+   * column that speaks for a fetch — it exists so a watchlist that has never
+   * been fetched can still be swept biggest-first (see
+   * `browser/ats/boardSweep.ts`), and is ignored the moment a real fetch
+   * measures the board.
+   */
+  seedJobCount: integer('seed_job_count'),
   lastError: text('last_error'),
   createdAt: text('created_at').notNull().default(nowIso)
 })

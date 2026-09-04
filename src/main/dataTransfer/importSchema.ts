@@ -34,6 +34,27 @@ const jobRecordSchema = z.object({
   updatedAt: z.string()
 })
 
+/**
+ * `id` is absent by design — it is minted on import, since an indexed job's
+ * identity is its URL. `seenCount` is bounded rather than trusted: it is
+ * rendered per row, and a file is whatever someone made it.
+ */
+const indexedJobSchema = z.object({
+  url: z.string().min(1),
+  title: z.string().min(1),
+  company: z.string().min(1),
+  location: z.string().nullable(),
+  source: z.string().nullable(),
+  snippet: z.string().nullable(),
+  salaryRange: z.string().nullable(),
+  postedAt: z.string().nullable(),
+  searchQuery: z.string(),
+  searchLocation: z.string().nullable(),
+  firstSeenAt: z.string(),
+  lastSeenAt: z.string(),
+  seenCount: z.number().int().positive()
+})
+
 const exclusionRecordSchema = z.object({
   id: z.string(),
   url: z.string().min(1),
@@ -62,6 +83,10 @@ const companyBoardSchema = z
     companyName: z.string().min(1),
     addedBy: z.enum(['user', 'agent']),
     enabled: z.boolean(),
+    // A claim from a feed, so it is bounded like any other imported number
+    // rather than trusted: a negative or fractional "size" would order sweeps
+    // by a value no board can have.
+    seedJobCount: z.number().int().nonnegative().nullable().optional(),
     createdAt: z.string()
   })
   // A bundle is a file, and `host` is the only imported value that becomes
@@ -103,6 +128,7 @@ const exportBundleSchema = z.object({
   appVersion: z.string(),
   data: z.object({
     jobs: z.array(jobRecordSchema).optional(),
+    indexedJobs: z.array(indexedJobSchema).optional(),
     exclusions: z.array(exclusionRecordSchema).optional(),
     companyBoards: z.array(companyBoardSchema).optional(),
     profile: profileFieldsSchema.nullable().optional(),

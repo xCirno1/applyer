@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { jobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
+import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
 import type { JobRecord } from '@shared/types/job'
 import type { ExclusionRecord } from '@shared/types/exclusion'
-import type { ExportCompanyBoard } from '@shared/types/dataTransfer'
+import type { ExportCompanyBoard, ExportIndexedJob } from '@shared/types/dataTransfer'
 
 function job(overrides: Partial<JobRecord> = {}): JobRecord {
   return {
@@ -73,6 +73,46 @@ describe('exclusionsToCsv', () => {
     expect(lines).toHaveLength(2)
     expect(lines[0]).toBe('URL,Title,Company,Reason,Excluded By,Created At')
     expect(lines[1]).toContain('https://example.com/1')
+  })
+})
+
+describe('indexedJobsToCsv', () => {
+  function indexedRow(overrides: Partial<ExportIndexedJob> = {}): ExportIndexedJob {
+    return {
+      url: 'https://example.com/jobs/1',
+      title: 'Backend Engineer',
+      company: 'Acme',
+      location: 'Remote',
+      source: 'greenhouse',
+      snippet: 'Role',
+      salaryRange: null,
+      postedAt: null,
+      searchQuery: 'backend engineer',
+      searchLocation: 'Remote',
+      firstSeenAt: '2020-01-01T00:00:00.000Z',
+      lastSeenAt: '2020-01-02T00:00:00.000Z',
+      seenCount: 3,
+      ...overrides
+    }
+  }
+
+  it('writes a header even with no rows', () => {
+    expect(indexedJobsToCsv([])).toBe(
+      'Title,Company,Location,URL,Source,Salary Range,Posted At,Search Query,Search Location,First Seen At,Last Seen At,Seen'
+    )
+  })
+
+  it('writes the search that surfaced a row alongside the row itself', () => {
+    const lines = indexedJobsToCsv([indexedRow()]).split('\r\n')
+    expect(lines).toHaveLength(2)
+    expect(lines[1]).toBe(
+      'Backend Engineer,Acme,Remote,https://example.com/jobs/1,greenhouse,,,backend engineer,Remote,2020-01-01T00:00:00.000Z,2020-01-02T00:00:00.000Z,3'
+    )
+  })
+
+  it('quotes a query containing a comma', () => {
+    const lines = indexedJobsToCsv([indexedRow({ searchQuery: 'backend, platform' })]).split('\r\n')
+    expect(lines[1]).toContain('"backend, platform"')
   })
 })
 

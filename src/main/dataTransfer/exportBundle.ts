@@ -3,10 +3,11 @@ import { EXPORT_SCHEMA_VERSION } from '@shared/types/dataTransfer'
 import type { ExportBundle, ExportSelection, ExportSizes } from '@shared/types/dataTransfer'
 import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
+import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { getProfile } from '../db/repositories/profileRepository'
 import { getAutoStartCommand, getIndexedJobsRetentionDays } from '../db/repositories/settingsRepository'
-import { jobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
+import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
 import type { ExportCompanyBoard } from '@shared/types/dataTransfer'
 import type { CompanyBoardRecord } from '@shared/types/companyBoard'
 
@@ -23,6 +24,7 @@ function toExportBoard(board: CompanyBoardRecord): ExportCompanyBoard {
     companyName: board.companyName,
     addedBy: board.addedBy,
     enabled: board.enabled,
+    seedJobCount: board.seedJobCount,
     createdAt: board.createdAt
   }
 }
@@ -34,6 +36,7 @@ function exportableCompanyBoards(): ExportCompanyBoard[] {
 export function buildExportBundle(selection: ExportSelection): ExportBundle {
   const data: ExportBundle['data'] = {}
   if (selection.jobs) data.jobs = listAllJobs()
+  if (selection.indexedJobs) data.indexedJobs = listAllIndexedJobs()
   if (selection.exclusions) data.exclusions = listAllExclusions()
   if (selection.companyBoards) data.companyBoards = exportableCompanyBoards()
   if (selection.profile) data.profile = getProfile()
@@ -76,6 +79,7 @@ export function bundleJsonBytes(data: ExportBundle['data']): number {
  */
 export function computeExportSizes(): ExportSizes {
   const jobs = listAllJobs()
+  const indexedJobs = listAllIndexedJobs()
   const exclusions = listAllExclusions()
   const companyBoards = exportableCompanyBoards()
   const profile = getProfile()
@@ -87,6 +91,10 @@ export function computeExportSizes(): ExportSizes {
   const empty = bundleJsonBytes({})
   return {
     jobs: { json: bundleJsonBytes({ jobs }) - empty, csv: Buffer.byteLength(jobsToCsv(jobs), 'utf-8') },
+    indexedJobs: {
+      json: bundleJsonBytes({ indexedJobs }) - empty,
+      csv: Buffer.byteLength(indexedJobsToCsv(indexedJobs), 'utf-8')
+    },
     exclusions: {
       json: bundleJsonBytes({ exclusions }) - empty,
       csv: Buffer.byteLength(exclusionsToCsv(exclusions), 'utf-8')

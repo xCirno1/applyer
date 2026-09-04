@@ -36,6 +36,13 @@
       "when": 1788093298476,
       "tag": "0004_breezy_wind_dancer",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1788508764411,
+      "tag": "0005_low_king_cobra",
+      "breakpoints": true
     }
   ]
 }

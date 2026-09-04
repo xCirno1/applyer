@@ -46,6 +46,13 @@ export interface CompanyBoardRecord extends AtsBoardDescriptor {
   lastCheckedAt: string | null
   /** Postings returned by that fetch — 0 is a real answer (a live board with nothing open). */
   lastJobCount: number | null
+  /**
+   * Open roles the feed this board was imported from claimed it holds, or
+   * null when it came from anywhere else. Hearsay, not a measurement: it only
+   * orders boards nothing has fetched yet, and `lastJobCount` overrides it
+   * the moment there is one.
+   */
+  seedJobCount: number | null
   /** Untranslated diagnostic from the last failed fetch, or null if it succeeded. */
   lastError: string | null
   createdAt: string

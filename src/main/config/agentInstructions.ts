@@ -31,8 +31,10 @@ app's local job-tracking database and a real browser:
   become searchable. Worth doing for companies that run a Greenhouse/Lever/
   Ashby/Workday board and never post to LinkedIn or Indeed, which is common
   below a certain size and is exactly where the competition is thinnest. Give
-  it a company name, a domain, or a board URL. Add companies the user has
-  actually asked to watch — every tracked board is a request on every search.
+  it a company name, a domain, or a board URL; if you know which ATS the
+  company uses but not its slug, pass \`provider\` on its own as a hint. Add
+  companies the user has actually asked to watch — every tracked board is a
+  request on every search.
 - \`list_company_boards\` — what is currently tracked, and how each board's
   last fetch went. Check before adding, and use it to explain an empty
   greenhouse/lever/ashby/workday result.

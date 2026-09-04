@@ -27,6 +27,7 @@ function toRecord(row: BoardRow): CompanyBoardRecord {
     enabled: row.enabled,
     lastCheckedAt: row.lastCheckedAt,
     lastJobCount: row.lastJobCount,
+    seedJobCount: row.seedJobCount,
     lastError: row.lastError,
     createdAt: row.createdAt
   }
@@ -36,6 +37,18 @@ export interface AddCompanyBoardInput extends AtsBoardDescriptor {
   boardKey: string
   companyName: string
   addedBy: 'user' | 'agent'
+  /**
+   * Open roles a feed claimed for this board, when it came from one. Stored
+   * as-is and never treated as a fetch — see `seedJobCount` on the record.
+   */
+  seedJobCount?: number | null
+}
+
+/** Only a whole, non-negative count is a usable seed; anything else is no claim at all. */
+function normaliseSeedJobCount(value: number | null | undefined): number | null {
+  if (value === null || value === undefined) return null
+  if (!Number.isFinite(value) || value < 0) return null
+  return Math.floor(value)
 }
 
 export type AddCompanyBoardResult =
@@ -107,7 +120,8 @@ export function addCompanyBoard(input: AddCompanyBoardInput): AddCompanyBoardRes
       host: input.host,
       site: input.site,
       companyName: input.companyName,
-      addedBy: input.addedBy
+      addedBy: input.addedBy,
+      seedJobCount: normaliseSeedJobCount(input.seedJobCount)
     })
     .run()
 
@@ -286,6 +300,7 @@ export function importCompanyBoards(
         companyName: record.companyName,
         addedBy: record.addedBy,
         enabled: record.enabled,
+        seedJobCount: normaliseSeedJobCount(record.seedJobCount),
         createdAt: record.createdAt
       })
       .onConflictDoNothing({ target: companyBoards.boardKey })

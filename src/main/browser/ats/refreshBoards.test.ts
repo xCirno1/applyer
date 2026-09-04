@@ -47,6 +47,7 @@ function board(overrides: Partial<CompanyBoardRecord> = {}): CompanyBoardRecord 
     enabled: true,
     lastCheckedAt: null,
     lastJobCount: null,
+    seedJobCount: null,
     lastError: null,
     createdAt: '2026-08-01T00:00:00.000Z',
     ...overrides

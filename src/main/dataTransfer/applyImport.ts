@@ -1,6 +1,7 @@
 import type { ExportBundle, ExportCompanyBoard, ExportSelection, ImportSummary } from '@shared/types/dataTransfer'
 import { importJobs } from '../db/repositories/jobsRepository'
 import { importExclusions } from '../db/repositories/jobExclusionsRepository'
+import { importIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { importCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { boardKeyOf, isValidBoardDescriptor } from '../browser/ats/providers'
 import { saveProfile } from '../db/repositories/profileRepository'
@@ -30,6 +31,9 @@ function importBoards(boards: ExportCompanyBoard[]): { imported: number; skipped
 export function applyImport(bundle: ExportBundle, selection: ExportSelection): ImportSummary {
   const summary: ImportSummary = {}
   if (selection.jobs && bundle.data.jobs) summary.jobs = importJobs(bundle.data.jobs)
+  if (selection.indexedJobs && bundle.data.indexedJobs) {
+    summary.indexedJobs = importIndexedJobs(bundle.data.indexedJobs)
+  }
   if (selection.exclusions && bundle.data.exclusions) summary.exclusions = importExclusions(bundle.data.exclusions)
   if (selection.companyBoards && bundle.data.companyBoards) {
     summary.companyBoards = importBoards(bundle.data.companyBoards)

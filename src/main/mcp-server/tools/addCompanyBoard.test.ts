@@ -49,6 +49,17 @@ const ashbyWith = (n: number): Response =>
     }),
     { status: 200 }
   )
+const greenhouseWith = (n: number): Response =>
+  new Response(
+    JSON.stringify({
+      jobs: Array.from({ length: n }, (_, i) => ({
+        id: i + 1,
+        title: 'Role',
+        absolute_url: `https://job-boards.greenhouse.io/acme/jobs/${i + 1}`
+      }))
+    }),
+    { status: 200 }
+  )
 const leverWith = (n: number): Response =>
   new Response(
     JSON.stringify(
@@ -119,13 +130,46 @@ describe('addCompanyBoardTool', () => {
     expect(listCompanyBoards({}).total).toBe(0)
   })
 
-  it('rejects a provider without a token rather than half-using it', async () => {
+  it('rejects a token with no provider, since a slug alone names no API', async () => {
     const fetchSpy = vi.fn()
     global.fetch = fetchSpy as unknown as typeof fetch
 
-    const result = await addCompanyBoardTool({ company: 'Acme', provider: 'ashby', token: undefined, displayName: undefined })
+    const result = await addCompanyBoardTool({ company: 'Acme', provider: undefined, token: 'acme', displayName: undefined })
     expect(result.isError).toBe(true)
     expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('takes a provider with no token as a preference and still probes the rest', async () => {
+    // What a web search usually establishes: the careers page points at
+    // Lever, but the slug is not on it. Both boards answer with the same
+    // number of roles, so the hint is what settles it.
+    route((provider) => {
+      if (provider === 'lever') return leverWith(3)
+      if (provider === 'greenhouse') return greenhouseWith(3)
+      return notFound()
+    })
+
+    const payload = parse(
+      await addCompanyBoardTool({ company: 'acme', provider: 'lever', token: undefined, displayName: undefined })
+    )
+
+    expect(payload.board).toMatchObject({ provider: 'lever', token: 'acme' })
+  })
+
+  it('lets a board with more roles beat the preferred provider', async () => {
+    // The migration case the ranking exists for: the hint names the ATS the
+    // careers page still links, but the roles are on the other one.
+    route((provider) => {
+      if (provider === 'lever') return leverWith(0)
+      if (provider === 'greenhouse') return greenhouseWith(9)
+      return notFound()
+    })
+
+    const payload = parse(
+      await addCompanyBoardTool({ company: 'acme', provider: 'lever', token: undefined, displayName: undefined })
+    )
+
+    expect(payload.board).toMatchObject({ provider: 'greenhouse' })
   })
 
   it('records the board as agent-added, so the UI can show where it came from', async () => {

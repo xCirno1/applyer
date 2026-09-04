@@ -13,6 +13,7 @@ beforeEach(() => {
 import { applyImport } from './applyImport'
 import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions, isUrlExcluded } from '../db/repositories/jobExclusionsRepository'
+import { listAllIndexedJobs, upsertIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { getProfile } from '../db/repositories/profileRepository'
 import { getAutoStartCommand, getIndexedJobsRetentionDays } from '../db/repositories/settingsRepository'
@@ -100,6 +101,56 @@ const profileFixture: ProfileFields = {
   summary: '',
   skills: []
 }
+
+const indexedFixture = {
+  url: 'https://example.com/indexed/1',
+  title: 'Platform Engineer',
+  company: 'Globex',
+  location: 'Remote',
+  source: 'greenhouse',
+  snippet: 'Role',
+  salaryRange: null,
+  postedAt: null,
+  searchQuery: 'platform',
+  searchLocation: null,
+  firstSeenAt: '2020-01-01T00:00:00.000Z',
+  lastSeenAt: '2020-01-02T00:00:00.000Z',
+  seenCount: 4
+}
+
+describe('applyImport — indexed jobs', () => {
+  it('merges the search history alongside what this install has indexed', () => {
+    const result = applyImport(bundle({ indexedJobs: [indexedFixture] }), { ...NO_SELECTION, indexedJobs: true })
+
+    expect(result.indexedJobs).toEqual({ imported: 1, skipped: 0 })
+    expect(listAllIndexedJobs()).toHaveLength(1)
+  })
+
+  it('leaves a url this install already indexed alone', () => {
+    upsertIndexedJobs(
+      [{ title: 'Local Title', company: 'Globex', url: indexedFixture.url, source: 'lever', snippet: 'Role' }],
+      'local query',
+      null
+    )
+
+    const result = applyImport(bundle({ indexedJobs: [indexedFixture] }), { ...NO_SELECTION, indexedJobs: true })
+
+    expect(result.indexedJobs).toEqual({ imported: 0, skipped: 1 })
+    expect(listAllIndexedJobs()[0]!.title).toBe('Local Title')
+  })
+
+  it('is untouched when the domain is not selected', () => {
+    const result = applyImport(bundle({ indexedJobs: [indexedFixture] }), NO_SELECTION)
+
+    expect(result.indexedJobs).toBeUndefined()
+    expect(listAllIndexedJobs()).toHaveLength(0)
+  })
+
+  it('is a no-op for a bundle that predates the domain', () => {
+    const result = applyImport(bundle({}), { ...NO_SELECTION, indexedJobs: true })
+    expect(result.indexedJobs).toBeUndefined()
+  })
+})
 
 describe('applyImport', () => {
   it('imports jobs when selected and present, reporting counts', () => {

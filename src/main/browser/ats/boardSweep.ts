@@ -23,11 +23,30 @@ import type { CompanyBoardRecord } from '@shared/types/companyBoard'
  *   never get one — and a board that was empty in January would never be
  *   looked at again in June. A minority of the budget is therefore reserved
  *   for the boards nothing has looked at in longest, which is also what gets
- *   a freshly imported watchlist measured at all.
+ *   a freshly imported watchlist measured at all. Those boards are ordered by
+ *   what the feed they came from claimed they hold (`seedJobCount`), since
+ *   "never fetched" is a tie every one of them is in.
  *
  * Plain functions over records, no database and no network, so the rule that
  * decides what a search can see is testable on its own.
  */
+
+/**
+ * What a *feed* claimed a board holds, for the boards nothing has fetched yet.
+ *
+ * A bulk import arrives with a count per row and no reading of our own, and
+ * postings per board are heavily skewed, so ordering the unmeasured boards by
+ * that claim is the difference between a first sweep that reaches the largest
+ * employers in the file and one that reaches whichever boards sort first
+ * alphabetically. It is deliberately never mixed with `boardContribution`:
+ * a measured 0 outranks a claimed 500, because one of them is a fact about
+ * the board today and the other is what a third-party file said.
+ */
+export function seedContribution(board: CompanyBoardRecord): number {
+  const seed = board.seedJobCount
+  if (seed === null || !Number.isFinite(seed) || seed < 0) return -1
+  return Math.floor(seed)
+}
 
 /** What a board is known to contribute, or null when nothing has measured it yet. */
 export function boardContribution(board: CompanyBoardRecord): number | null {
@@ -44,6 +63,11 @@ export function boardContribution(board: CompanyBoardRecord): number | null {
   if (count === null) return null
   if (!Number.isFinite(count) || count < 0) return 0
   return Math.floor(count)
+}
+
+/** Biggest claimed board first among boards with no reading; no claim sorts last. */
+function bySeed(a: CompanyBoardRecord, b: CompanyBoardRecord): number {
+  return seedContribution(b) - seedContribution(a)
 }
 
 /** How long a board has gone unlooked-at; never-checked sorts first. */
@@ -101,7 +125,12 @@ export function selectBoardsForSweep(tracked: readonly CompanyBoardRecord[], lim
   const remainingSlots = budget - bySize.length
   for (const board of [...tracked]
     .filter((board) => !picked.has(board.boardKey))
-    .sort((a, b) => stalenessKey(a) - stalenessKey(b) || byKey(a, b))) {
+    // Staleness first, as before — but every never-fetched board ties there
+    // (they are all equally unlooked-at), and that tie used to be broken by
+    // board key, i.e. alphabetically. A freshly imported watchlist is nothing
+    // but such ties, so the claimed size is what orders it until the app has
+    // measurements of its own.
+    .sort((a, b) => stalenessKey(a) - stalenessKey(b) || bySeed(a, b) || byKey(a, b))) {
     if (byRotation.length >= remainingSlots) break
     byRotation.push(board)
     picked.add(board.boardKey)
@@ -116,12 +145,16 @@ export function selectBoardsForSweep(tracked: readonly CompanyBoardRecord[], lim
   }
 }
 
-/** Most known roles first; unmeasured boards after every measured one. */
+/**
+ * Most known roles first; unmeasured boards after every measured one, and
+ * among themselves by what their feed claimed.
+ */
 function compareBySize(a: CompanyBoardRecord, b: CompanyBoardRecord): number {
   const left = boardContribution(a)
   const right = boardContribution(b)
-  if (left === right) return byKey(a, b)
+  if (left === null && right === null) return bySeed(a, b) || byKey(a, b)
   if (left === null) return 1
   if (right === null) return -1
+  if (left === right) return byKey(a, b)
   return right - left
 }

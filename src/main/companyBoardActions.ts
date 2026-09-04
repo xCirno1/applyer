@@ -33,7 +33,13 @@ import type { CsvBoardCandidate } from './dataTransfer/companyBoardCsv'
 export interface AddBoardRequest {
   /** A company name, a domain, or a board/posting URL. */
   query: string
-  /** Skips resolution when paired with `token` — the caller already knows the board. */
+  /**
+   * With `token`, the board itself — resolution is skipped. Without one, a
+   * hint: the caller believes the company is on this ATS but doesn't know the
+   * slug, so every provider is still probed and this one only breaks a tie
+   * (see `resolveBoard`'s ranking, where a provider that actually has
+   * postings always wins over a preference).
+   */
   provider?: AtsProvider
   token?: string
   /** Overrides the display name, which otherwise falls back to the resolved slug. */
@@ -58,10 +64,15 @@ export type AddBoardOutcome =
   | { status: 'error'; message: string }
 
 export async function addBoard(request: AddBoardRequest): Promise<AddBoardOutcome> {
+  const hasToken = request.token !== undefined && request.token.trim() !== ''
   const resolved = await resolveCompanyBoard({
     query: request.query,
-    provider: request.provider,
-    token: request.token,
+    // A provider without a token cannot address a board, so it is passed as
+    // the preference rather than as an identity — the difference between
+    // "this is the board" and "the careers page points at this ATS".
+    provider: hasToken ? request.provider : undefined,
+    token: hasToken ? request.token : undefined,
+    preferProvider: hasToken ? undefined : request.provider,
     companyName: request.companyName
   })
 
@@ -211,6 +222,10 @@ export function importCsvBoards(
       companyName: board.companyName,
       addedBy: 'user' as const,
       enabled: true,
+      // Carried into the row rather than only used to rank the import: with
+      // nothing fetched yet, this is the only thing that can order the first
+      // sweeps of a few hundred new boards (see `ats/boardSweep.ts`).
+      seedJobCount: board.openPostings,
       createdAt
     }))
   )

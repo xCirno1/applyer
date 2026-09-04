@@ -14,10 +14,11 @@ import type {
 } from '@shared/types/dataTransfer'
 import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
+import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
-import { broadcastCompanyBoardsChanged } from './jobsBroadcast'
-import { jobsToCsv, exclusionsToCsv, companyBoardsToCsv } from '../dataTransfer/csv'
+import { broadcastCompanyBoardsChanged, broadcastIndexedJobsChanged } from './jobsBroadcast'
+import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from '../dataTransfer/csv'
 import { validateExportBundle } from '../dataTransfer/importSchema'
 import { buildExportBundle, computeExportSizes, filenameTimestamp } from '../dataTransfer/exportBundle'
 import { applyImport } from '../dataTransfer/applyImport'
@@ -44,7 +45,8 @@ export function registerDataTransferIpc(): void {
     const csvForTable: Record<CsvTable, () => string> = {
       jobs: () => jobsToCsv(listAllJobs()),
       exclusions: () => exclusionsToCsv(listAllExclusions()),
-      companyBoards: () => companyBoardsToCsv(listAllCompanyBoards())
+      companyBoards: () => companyBoardsToCsv(listAllCompanyBoards()),
+      indexedJobs: () => indexedJobsToCsv(listAllIndexedJobs())
     }
     const build = Object.prototype.hasOwnProperty.call(csvForTable, table) ? csvForTable[table] : undefined
     if (!build) {
@@ -94,6 +96,7 @@ export function registerDataTransferIpc(): void {
       bundle,
       counts: {
         jobs: bundle.data.jobs?.length,
+        indexedJobs: bundle.data.indexedJobs?.length,
         exclusions: bundle.data.exclusions?.length,
         companyBoards: bundle.data.companyBoards?.length,
         profile: bundle.data.profile ? 1 : undefined,
@@ -118,6 +121,9 @@ export function registerDataTransferIpc(): void {
         // mounted while another screen is showing, so imported boards would
         // otherwise not appear until the next restart.
         if (summary.companyBoards && summary.companyBoards.imported > 0) broadcastCompanyBoardsChanged()
+        // Same reasoning for the Indexed tab, which is push-updated for
+        // exactly this kind of write happening while it sits mounted-but-hidden.
+        if (summary.indexedJobs && summary.indexedJobs.imported > 0) broadcastIndexedJobsChanged()
         return { ok: true, summary }
       } catch (err) {
         return { ok: false, error: unexpectedError(err) }

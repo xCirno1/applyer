@@ -137,7 +137,7 @@ export function createApplyerMcpServer(): McpServer {
       description:
         "Adds a company's ATS board (Greenhouse, Lever, Ashby or Workday) to the list search_jobs fetches, so that company's postings are searchable even though it never posts to LinkedIn or Indeed — which is common for smaller and earlier-stage companies. " +
         'Pass `company` as a name ("Acme Labs"), a domain ("acme.com"), or a board URL; Applyer probes the providers and keeps the board with the most open roles rather than the first one that answers, because a company that migrated ATS often leaves the old, empty board live. ' +
-        'Pass `provider` + `token` together only if you already know the exact slug. A Workday board can only be added by URL — it needs a host, tenant and site, not a single token. ' +
+        'Pass `provider` + `token` together only if you already know the exact slug. If your search established which ATS the company uses but not the slug, pass `provider` on its own: it is used as a preference, and a provider that actually has postings still wins over it. A Workday board can only be added by URL — it needs a host, tenant and site, not a single token. ' +
         'Use this when the user names companies they want watched, or when you have found the board of a company they are interested in. Adding a board is a standing instruction that costs one request per search, so add companies the user actually wants, not every company you come across.',
       inputSchema: addCompanyBoardShape
     },

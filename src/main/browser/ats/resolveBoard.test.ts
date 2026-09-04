@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
+
+const logInfo = vi.fn()
+vi.mock('../../logger', () => ({ appLogger: { info: (...args: unknown[]) => logInfo(...args), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }))
+
 import { resolveCompanyBoard } from './resolveBoard'
 
 const originalFetch = global.fetch
 
 afterEach(() => {
   global.fetch = originalFetch
+  logInfo.mockClear()
 })
 
 /**
@@ -286,5 +291,32 @@ describe('resolveCompanyBoard — an explicit board', () => {
     })
     expect(outcome.jobCount).toBe(412)
     expect(outcome.candidates[0]?.jobCount).toBe(412)
+  })
+})
+
+describe('probe-pool logging', () => {
+  it('records how big the pool was, not just what it found', async () => {
+    // The failure this exists to make visible: a resolution that draws from
+    // one candidate instead of several still ends with a board, so the
+    // outcome alone cannot distinguish a thorough run from a starved one.
+    routeFetch((provider) => (provider === 'ashby' ? ashbyJobs(4) : notFound()))
+
+    await resolveCompanyBoard({ query: 'Acme Labs' })
+
+    const line = logInfo.mock.calls.map((call) => String(call[0])).find((text) => text.includes('Board probe'))
+    expect(line).toBeDefined()
+    expect(line).toContain('3 slug candidate(s) [acmelabs, acme-labs, acme]')
+    expect(line).toContain('over 9 probe(s)')
+    expect(line).toContain('3 answered (3 with roles)')
+  })
+
+  it('records a pool where nothing answered at all', async () => {
+    routeFetch(() => notFound())
+
+    await resolveCompanyBoard({ query: 'acme' })
+
+    const line = logInfo.mock.calls.map((call) => String(call[0])).find((text) => text.includes('Board probe'))
+    expect(line).toContain('0 answered (0 with roles)')
+    expect(line).toContain('3 not found')
   })
 })

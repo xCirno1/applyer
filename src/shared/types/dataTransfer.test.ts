@@ -5,6 +5,7 @@ import type { ExportSizes } from './dataTransfer'
 function sizesFixture(): ExportSizes {
   return {
     jobs: { json: 100, csv: 50 },
+    indexedJobs: { json: 70, csv: 35 },
     exclusions: { json: 40, csv: 20 },
     companyBoards: { json: 25, csv: 15 },
     profile: { json: 30 },
@@ -30,6 +31,6 @@ describe('totalJsonBytes', () => {
 
   it('adds (domain count - 1) commas when every domain is selected', () => {
     const total = totalJsonBytes(sizesFixture(), allDomainsSelected())
-    expect(total).toBe(60 + 100 + 40 + 25 + 30 + 10 + 4) // wrapper + all five + 4 separator commas
+    expect(total).toBe(60 + 100 + 70 + 40 + 25 + 30 + 10 + 5) // wrapper + all six + 5 separator commas
   })
 })

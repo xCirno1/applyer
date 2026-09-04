@@ -110,6 +110,29 @@ describe('addCompanyBoard', () => {
   })
 })
 
+describe('seedJobCount', () => {
+  it('is null for a board nobody claimed a size for', () => {
+    addCompanyBoard(input({ token: 'acme', boardKey: 'greenhouse:acme' }))
+    expect(getCompanyBoardByKey('greenhouse:acme')?.seedJobCount).toBeNull()
+  })
+
+  it('is stored as given for a board that came from a feed', () => {
+    addCompanyBoard(input({ token: 'globex', boardKey: 'greenhouse:globex', seedJobCount: 0 }))
+    expect(getCompanyBoardByKey('greenhouse:globex')?.seedJobCount).toBe(0)
+  })
+
+  it('drops a claim no board could have rather than storing it', () => {
+    // The value reaches here from a CSV column or an imported bundle, so
+    // "-5 open roles" is a thing a file can say. Storing it would order
+    // sweeps by a number that means nothing.
+    addCompanyBoard(input({ token: 'odd', boardKey: 'greenhouse:odd', seedJobCount: -5 }))
+    addCompanyBoard(input({ token: 'frac', boardKey: 'greenhouse:frac', seedJobCount: 7.9 }))
+
+    expect(getCompanyBoardByKey('greenhouse:odd')?.seedJobCount).toBeNull()
+    expect(getCompanyBoardByKey('greenhouse:frac')?.seedJobCount).toBe(7)
+  })
+})
+
 describe('listCompanyBoards', () => {
   beforeEach(() => {
     addCompanyBoard(input({ token: 'zeta', boardKey: 'greenhouse:zeta', companyName: 'Zeta Corp' }))
@@ -338,6 +361,12 @@ describe('importCompanyBoards', () => {
     ])
 
     expect(result).toEqual({ imported: 1, skipped: 1, alreadyTracked: 1, overLimit: 0 })
+  })
+
+  it('carries a feed\'s claimed size in, so the first sweep can order the import', () => {
+    importCompanyBoards([record({ token: 'globex', boardKey: 'greenhouse:globex', seedJobCount: 480 })])
+
+    expect(getCompanyBoardByKey('greenhouse:globex')?.seedJobCount).toBe(480)
   })
 
   it('counts rows that no longer fit under the ceiling as over the limit', () => {

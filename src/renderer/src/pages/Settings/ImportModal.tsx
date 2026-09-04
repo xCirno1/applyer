@@ -12,18 +12,19 @@ import type { ExportBundle, ExportDomain, ExportSelection, ImportDomainCounts } 
 
 const DOMAIN_KEYS = {
   jobs: 'data.domainJobs',
+  indexedJobs: 'data.domainIndexedJobs',
   exclusions: 'data.domainExclusions',
   companyBoards: 'data.domainCompanyBoards',
   profile: 'data.domainProfile',
   settings: 'data.domainSettings'
 } as const satisfies Record<ExportDomain, string>
 
-const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'companyBoards', 'profile', 'settings']
+const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'indexedJobs', 'exclusions', 'companyBoards', 'profile', 'settings']
 
 const OVERWRITE_DOMAINS: ExportDomain[] = ['profile', 'settings']
 
 /** The rest are merged into what's already there, so their hint counts rows rather than warning about a replacement. */
-const MERGE_DOMAINS: ExportDomain[] = ['jobs', 'exclusions', 'companyBoards']
+const MERGE_DOMAINS: ExportDomain[] = ['jobs', 'indexedJobs', 'exclusions', 'companyBoards']
 
 function domainCount(domain: ExportDomain, counts: ImportDomainCounts): number | undefined {
   return counts[domain]
@@ -104,6 +105,8 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
     }
     const parts: string[] = []
     if (result.summary.jobs) parts.push(t('data.jobsAdded', { count: result.summary.jobs.imported }))
+    if (result.summary.indexedJobs)
+      parts.push(t('data.indexedJobsAdded', { count: result.summary.indexedJobs.imported }))
     if (result.summary.exclusions)
       parts.push(t('data.exclusionsAdded', { count: result.summary.exclusions.imported }))
     if (result.summary.companyBoards)

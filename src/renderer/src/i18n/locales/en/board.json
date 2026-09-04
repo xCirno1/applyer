@@ -22,6 +22,31 @@
     "deselect": "Deselect job",
     "needsVerification": "needs verification"
   },
+  "failure": {
+    "tags": {
+      "captchaVerification": "CAPTCHA verification",
+      "loginRequired": "Login required",
+      "formNotSupported": "Form not supported",
+      "expiredListing": "Expired listing",
+      "duplicate": "Duplicate",
+      "interrupted": "Interrupted",
+      "browserUnavailable": "Browser unavailable",
+      "other": "Other"
+    },
+    "messages": {
+      "captchaVerification": "The verification challenge was not resolved in time or was cancelled.",
+      "loginRequired": "This application requires you to sign in.",
+      "formNotSupported": "Applyer couldn't identify recognizable fields on this application form. It may need to be filled manually.",
+      "expiredListing": "This job posting is no longer available.",
+      "duplicate": "This job was already queued from another search.",
+      "interrupted": "Applyer was closed or restarted while this job was waiting for verification. Retry it to try again.",
+      "browserUnavailable": "Applyer couldn't prepare a browser for this application.",
+      "browserUnavailableDetail": "Applyer couldn't prepare a browser: {{detail}}",
+      "formOpenFailedDetail": "Applyer couldn't open the application page: {{detail}}",
+      "formFillFailedDetail": "Applyer failed while filling the form: {{detail}}",
+      "jobNotFound": "The job could not be found."
+    }
+  },
   "selection": {
     "count": "{{count}} selected",
     "clear": "Clear"

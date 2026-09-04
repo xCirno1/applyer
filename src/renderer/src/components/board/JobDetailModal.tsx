@@ -11,6 +11,7 @@ import { useErrorMessage } from '../../i18n/formatError'
 import { useFormatters } from '../../i18n/format'
 import type { JobRecord } from '@shared/types/job'
 import type { ActivityLogEntry } from '@shared/types/activity'
+import { failureLabelKey, failureMessageDisplay, humanizeFailureTag } from './failureDisplay'
 
 export default function JobDetailModal({ job, onClose }: { job: JobRecord | null; onClose: () => void }): ReactElement | null {
   const { t } = useTranslation('board')
@@ -44,6 +45,19 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   }, [job?.id])
 
   if (!job) return null
+
+  const failureTagKey = job.failureTag ? failureLabelKey(job.failureTag) : null
+  const failureLabel = job.failureTag
+    ? failureTagKey
+      ? t(failureTagKey)
+      : humanizeFailureTag(job.failureTag)
+    : null
+  const displayedFailureMessage = job.failureTag
+    ? failureMessageDisplay(job.failureTag, job.failureMessage)
+    : null
+  const failureMessage = displayedFailureMessage?.key
+    ? t(displayedFailureMessage.key, displayedFailureMessage.params)
+    : displayedFailureMessage?.raw
 
   const handleMarkSubmitted = async (): Promise<void> => {
     setConfirmSubmitOpen(false)
@@ -114,9 +128,9 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
         />
 
         {job.failureTag && (
-          <div className="flex items-center gap-2">
-            <Tag label={job.failureTag.replace(/_/g, ' ')} tone="danger" />
-            {job.failureMessage && <span className="text-[12px] text-text-muted">{job.failureMessage}</span>}
+          <div className="flex min-w-0 items-start gap-2">
+            <Tag label={failureLabel ?? humanizeFailureTag(job.failureTag)} tone="danger" />
+            {failureMessage && <span className="min-w-0 flex-1 text-[12px] leading-5 text-text-muted">{failureMessage}</span>}
           </div>
         )}
 

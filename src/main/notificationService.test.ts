@@ -73,4 +73,21 @@ describe('notification content', () => {
     expect(testNotificationContent('jobFilled').title).toBe('Application ready for review')
     expect(testNotificationContent('jobFailed').title).toBe('Job could not be completed')
   })
+
+  it('uses the synchronized Indonesian locale for real and test notifications', () => {
+    expect(
+      contentForVerification(
+        { taskId: 'task-1', jobId: 'job-1', jobTitle: 'Platform Engineer', company: 'Acme' },
+        preferences(),
+        'id'
+      )
+    ).toEqual({
+      title: 'Verifikasi diperlukan',
+      body: 'Platform Engineer di Acme perlu perhatianmu di jendela browser.'
+    })
+    expect(testNotificationContent('jobFilled', 'id')).toEqual({
+      title: 'Lamaran siap diperiksa',
+      body: 'Lowongan Tes di Perusahaan Contoh sudah diisi dan siap kamu periksa.'
+    })
+  })
 })

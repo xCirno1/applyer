@@ -5,6 +5,7 @@ import Tag from '../ui/Tag'
 import { useBlockedJobIds } from '../../providers/CaptchaAlertContext'
 import { useJobsStore } from '../../state/jobsStore'
 import { useJobContextMenu } from './useJobContextMenu'
+import { failureLabelKey, humanizeFailureTag } from './failureDisplay'
 
 const STATUS_ACCENT: Record<JobStatus, string> = {
   queued: 'border-l-accent',
@@ -21,6 +22,7 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
   const hasSelection = useJobsStore((s) => s.selectedJobIds.size > 0)
   const toggleSelected = useJobsStore((s) => s.toggleSelected)
   const { openContextMenu, menuNode } = useJobContextMenu()
+  const failureTagKey = job.failureTag ? failureLabelKey(job.failureTag) : null
 
   // Select mode is simply "there's an active selection" — entered via
   // shift+click or right-click (see useJobContextMenu's selectOnly). While
@@ -82,7 +84,12 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
         )}
         {job.failureTag && (
           <div className="mt-0.5">
-            <Tag label={job.failureTag.replace(/_/g, ' ')} tone="danger" />
+            <Tag
+              label={
+                failureTagKey ? t(failureTagKey) : humanizeFailureTag(job.failureTag)
+              }
+              tone="danger"
+            />
           </div>
         )}
       </div>

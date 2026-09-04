@@ -9,6 +9,7 @@
   "invalidJson": "That file is not valid JSON.",
   "invalidCommand": "Invalid command.",
   "invalidNotificationPreferences": "Invalid notification settings.",
+  "invalidLocale": "Invalid language.",
   "notificationsUnsupported": "Desktop notifications are not supported or could not be delivered on this system.",
   "invalidExport": "This file is not a valid Applyer export.",
   "jobNotFound": "Job not found.",

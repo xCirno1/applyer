@@ -6,9 +6,16 @@ export interface NotificationPreferences {
 }
 
 export type NotificationTestKind = 'verificationRequired' | 'jobFilled' | 'jobFailed'
+export type NotificationLocale = 'en' | 'id'
+
+export const DEFAULT_NOTIFICATION_LOCALE: NotificationLocale = 'en'
 
 export function isNotificationTestKind(value: unknown): value is NotificationTestKind {
   return value === 'verificationRequired' || value === 'jobFilled' || value === 'jobFailed'
+}
+
+export function isNotificationLocale(value: unknown): value is NotificationLocale {
+  return value === 'en' || value === 'id'
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {

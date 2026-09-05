@@ -1,4 +1,11 @@
 import { z } from 'zod'
+import {
+  LIST_JOBS_MAX_LIMIT,
+  SEARCH_JOBS_MAX_LIMIT
+} from '@shared/constants'
+import { getSettings } from '@shared/settings'
+
+const settings = getSettings()
 
 const jobSourceEnum = z.enum(['greenhouse', 'lever', 'ashby', 'workday', 'linkedin', 'indeed', 'generic'])
 const jobStatusEnum = z.enum(['queued', 'filled', 'submitted', 'failed'])
@@ -10,7 +17,7 @@ export const searchJobsShape = {
   remote: z.boolean().optional(),
   jobType: z.enum(['full_time', 'part_time', 'contract', 'internship']).optional(),
   sources: z.array(jobSourceEnum).optional(),
-  limit: z.number().int().min(1).max(50).optional()
+  limit: z.number().int().min(1).max(SEARCH_JOBS_MAX_LIMIT).optional()
 }
 
 export const getJobDetailsShape = {
@@ -31,7 +38,7 @@ export const queueJobShape = {
 
 export const listJobsShape = {
   status: jobStatusEnum.optional(),
-  limit: z.number().int().min(1).max(50).optional(),
+  limit: z.number().int().min(1).max(LIST_JOBS_MAX_LIMIT).optional(),
   offset: z.number().int().min(0).optional()
 }
 
@@ -108,6 +115,6 @@ export const addCompanyBoardShape = {
 
 export const listCompanyBoardsShape = {
   search: z.string().trim().max(200).optional(),
-  limit: z.number().int().min(1).max(50).optional(),
+  limit: z.number().int().min(1).max(settings.dangerousMcpListCompanyBoardsMaxLimit).optional(),
   offset: z.number().int().min(0).optional()
 }

@@ -8,6 +8,7 @@
   "invalidTable": "Invalid table.",
   "invalidJson": "That file is not valid JSON.",
   "invalidCommand": "Invalid command.",
+  "invalidAdvancedSetting": "This advanced setting value is invalid. {{message}}",
   "invalidNotificationPreferences": "Invalid notification settings.",
   "invalidLocale": "Invalid language.",
   "notificationsUnsupported": "Desktop notifications are not supported or could not be delivered on this system.",

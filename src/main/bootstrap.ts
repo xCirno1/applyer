@@ -34,6 +34,17 @@ import { pruneIndexedJobs } from './db/repositories/indexedJobsRepository'
 function initializeApp(): void {
   electronApp.setAppUserModelId('com.applyer.app')
 
+  try {
+    const settingsWarnings: unknown = JSON.parse(process.env.APPLYER_SETTINGS_WARNINGS ?? '[]')
+    if (Array.isArray(settingsWarnings)) {
+      for (const warning of settingsWarnings) appLogger.warn(String(warning))
+    }
+  } catch (error) {
+    appLogger.warn(`Could not decode settings warnings: ${String(error)}`)
+  } finally {
+    delete process.env.APPLYER_SETTINGS_WARNINGS
+  }
+
   if (!is.dev) {
     applyProductionCsp()
     configureApplicationMenu()

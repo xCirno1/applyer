@@ -79,6 +79,25 @@ import type {
   ImportApplyResult,
   ExportBundle
 } from '@shared/types/dataTransfer'
+import type {
+  AdvancedSettingsSnapshot,
+  ApplyerSettingKey,
+  ApplyerSettings
+} from '@shared/settings'
+
+function settingsFromArguments(argv: readonly string[]): ApplyerSettings | undefined {
+  const prefix = '--applyer-settings='
+  const argument = argv.find((item) => item.startsWith(prefix))
+  if (!argument) return undefined
+  try {
+    return JSON.parse(decodeURIComponent(argument.slice(prefix.length))) as ApplyerSettings
+  } catch {
+    return undefined
+  }
+}
+
+const runtimeSettings = settingsFromArguments(process.argv)
+if (runtimeSettings) contextBridge.exposeInMainWorld('applyerSettings', runtimeSettings)
 
 const terminalApi = {
   create: (options: TerminalCreateOptions): Promise<TerminalCreateResult> =>
@@ -277,6 +296,17 @@ const settingsApi = {
     command: AutoStartCommand
   ): Promise<{ ok: boolean; command?: AutoStartCommand; error?: string }> =>
     ipcRenderer.invoke(IPC.settings.setAutoStartCommand, { command }),
+  getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats),
+  getAdvanced: (): Promise<AdvancedSettingsSnapshot> => ipcRenderer.invoke(IPC.settings.getAdvanced),
+  updateAdvanced: (
+    key: ApplyerSettingKey,
+    value: unknown
+  ): Promise<{ ok: true; snapshot: AdvancedSettingsSnapshot } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.updateAdvanced, { key, value }),
+  resetAdvanced: (
+    key: ApplyerSettingKey
+  ): Promise<{ ok: true; snapshot: AdvancedSettingsSnapshot } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.resetAdvanced, { key }),
   getNotificationPreferences: (): Promise<NotificationPreferences> =>
     ipcRenderer.invoke(IPC.settings.getNotificationPreferences),
   setNotificationPreferences: (
@@ -286,8 +316,7 @@ const settingsApi = {
   testNotification: (kind: NotificationTestKind): Promise<{ ok: boolean; error?: AppError }> =>
     ipcRenderer.invoke(IPC.settings.testNotification, { kind }),
   setNotificationLocale: (locale: NotificationLocale): Promise<{ ok: boolean; error?: AppError }> =>
-    ipcRenderer.invoke(IPC.settings.setNotificationLocale, { locale }),
-  getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats)
+    ipcRenderer.invoke(IPC.settings.setNotificationLocale, { locale })
 }
 
 const storageLocationApi = {

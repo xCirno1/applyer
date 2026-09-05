@@ -89,11 +89,14 @@ export const IPC = {
     changeStorageMode: 'settings:changeStorageMode',
     getAutoStartCommand: 'settings:getAutoStartCommand',
     setAutoStartCommand: 'settings:setAutoStartCommand',
+    getStorageStats: 'settings:getStorageStats',
+    getAdvanced: 'settings:getAdvanced',
+    updateAdvanced: 'settings:updateAdvanced',
+    resetAdvanced: 'settings:resetAdvanced',
     getNotificationPreferences: 'settings:getNotificationPreferences',
     setNotificationPreferences: 'settings:setNotificationPreferences',
     setNotificationLocale: 'settings:setNotificationLocale',
-    testNotification: 'settings:testNotification',
-    getStorageStats: 'settings:getStorageStats'
+    testNotification: 'settings:testNotification'
   },
   storageLocation: {
     getStatus: 'storageLocation:getStatus',

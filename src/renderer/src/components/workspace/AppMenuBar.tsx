@@ -195,9 +195,9 @@ export default function AppMenuBar({
           <span className="text-[12px] text-text-muted">
             {t('about.version', { version: appInfo?.version ?? t('states.loading', { ns: 'common' }) })}
           </span>
-          {appInfo?.isDevBuild === true && (
+          {appInfo && (
             <span className="mt-1 text-[12px] text-text-muted">
-              {t('about.developmentBuildDataDirectory')}{' '}
+              {t('about.dataDirectory')}{' '}
               <span className="break-all text-text">{appInfo.userDataDir}</span>
             </span>
           )}

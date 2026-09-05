@@ -8,6 +8,7 @@
   "invalidTable": "Tabel tidak valid.",
   "invalidJson": "File itu bukan JSON yang valid.",
   "invalidCommand": "Perintah tidak valid.",
+  "invalidAdvancedSetting": "Nilai pengaturan lanjutan ini tidak valid. {{message}}",
   "invalidNotificationPreferences": "Pengaturan notifikasi tidak valid.",
   "invalidLocale": "Bahasa tidak valid.",
   "notificationsUnsupported": "Notifikasi desktop tidak didukung atau tidak bisa dikirim di sistem ini.",

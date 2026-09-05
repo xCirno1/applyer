@@ -1,0 +1,77 @@
+{
+  "dangerousBuiltinFailureTags": [
+    {
+      "id": "captcha_verification",
+      "label": "Captcha Verification",
+      "description": "A bot-check or CAPTCHA blocked automated access."
+    },
+    {
+      "id": "login_required",
+      "label": "Login Required",
+      "description": "The listing or application requires signing in."
+    },
+    {
+      "id": "form_not_supported",
+      "label": "Form Not Supported",
+      "description": "The application form couldn't be filled automatically."
+    },
+    {
+      "id": "expired_listing",
+      "label": "Expired Listing",
+      "description": "The job posting is no longer available."
+    },
+    {
+      "id": "duplicate",
+      "label": "Duplicate",
+      "description": "This job was already queued from another search."
+    },
+    {
+      "id": "interrupted",
+      "label": "Interrupted",
+      "description": "The app was closed or restarted while this job was mid-fill or waiting on a verification challenge."
+    },
+    {
+      "id": "other",
+      "label": "Other",
+      "description": "An unclassified failure occurred."
+    }
+  ],
+  "listJobsDefaultLimit": 20,
+  "dangerousListJobsMaxLimit": 50,
+  "searchJobsDefaultLimit": 20,
+  "dangerousSearchJobsMaxLimit": 50,
+  "listExclusionsDefaultLimit": 20,
+  "dangerousListExclusionsMaxLimit": 50,
+  "listIndexedJobsDefaultLimit": 20,
+  "dangerousListIndexedJobsMaxLimit": 50,
+  "indexedJobsRetentionOptions": [7, 14, 30, 90, "unlimited"],
+  "indexedJobsRetentionDefaultDays": 30,
+  "jobDetailsCacheTtlMs": 86400000,
+  "dangerousJobDetailsCachePayloadVersion": 1,
+  "dangerousMaxDocumentSizeBytes": 10485760,
+  "dangerousMaxCompanyBoards": 200,
+  "listCompanyBoardsDefaultLimit": 20,
+  "dangerousMcpListCompanyBoardsMaxLimit": 50,
+  "dangerousMaxBoardCsvBytes": 20971520,
+  "dangerousMaxBoardCsvRows": 100000,
+  "boardCsvPreviewRows": 5,
+  "dangerousMaxManualBoardFetch": 50,
+  "dangerousManualBoardFetchLimit": 60,
+  "dangerousMaxAtsBoardsPerSearch": 25,
+  "atsSweepRotationShare": 0.2,
+  "dangerousAtsFetchConcurrency": 4,
+  "atsFetchTimeoutMs": 15000,
+  "atsBoardCacheTtlMs": 900000,
+  "atsBoardNotFoundCacheTtlMs": 1800000,
+  "atsBoardErrorCacheTtlMs": 120000,
+  "dangerousAtsBoardCacheMaxEntries": 60,
+  "dangerousMaxSlugCandidates": 6,
+  "dangerousAtsProbeConcurrency": 6,
+  "atsProbeTimeoutMs": 8000,
+  "notificationEnabledByDefault": true,
+  "notificationVerificationRequiredByDefault": true,
+  "notificationJobFilledByDefault": true,
+  "notificationJobFailedByDefault": true,
+  "notificationDefaultLocale": "en",
+  "dangerousAutoStartCommandMaxLength": 500
+}

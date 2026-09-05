@@ -1,3 +1,5 @@
+import { getSettings } from '@shared/settings'
+
 export interface NotificationPreferences {
   enabled: boolean
   verificationRequired: boolean
@@ -8,7 +10,9 @@ export interface NotificationPreferences {
 export type NotificationTestKind = 'verificationRequired' | 'jobFilled' | 'jobFailed'
 export type NotificationLocale = 'en' | 'id'
 
-export const DEFAULT_NOTIFICATION_LOCALE: NotificationLocale = 'en'
+const settings = getSettings()
+
+export const DEFAULT_NOTIFICATION_LOCALE: NotificationLocale = settings.notificationDefaultLocale
 
 export function isNotificationTestKind(value: unknown): value is NotificationTestKind {
   return value === 'verificationRequired' || value === 'jobFilled' || value === 'jobFailed'
@@ -19,10 +23,10 @@ export function isNotificationLocale(value: unknown): value is NotificationLocal
 }
 
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
-  enabled: true,
-  verificationRequired: true,
-  jobFilled: true,
-  jobFailed: true
+  enabled: settings.notificationEnabledByDefault,
+  verificationRequired: settings.notificationVerificationRequiredByDefault,
+  jobFilled: settings.notificationJobFilledByDefault,
+  jobFailed: settings.notificationJobFailedByDefault
 }
 
 /** Runtime guard for settings read from IPC, disk, or an imported bundle. */

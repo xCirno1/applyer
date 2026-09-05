@@ -6,6 +6,7 @@ import type { IndexedJobsRetention } from './indexedJob'
 import type { AtsProvider } from './companyBoard'
 import type { AppError } from './errorCodes'
 import type { NotificationPreferences } from './notification'
+import type { ThemeState } from './theme'
 
 /**
  * Bumped whenever the export bundle shape changes in a way older imports can't
@@ -16,7 +17,7 @@ import type { NotificationPreferences } from './notification'
  */
 export const EXPORT_SCHEMA_VERSION = 1
 
-export type ExportDomain = 'jobs' | 'indexedJobs' | 'exclusions' | 'companyBoards' | 'profile' | 'settings'
+export type ExportDomain = 'jobs' | 'indexedJobs' | 'exclusions' | 'companyBoards' | 'profile' | 'settings' | 'theme'
 
 export const ALL_EXPORT_DOMAINS: ExportDomain[] = [
   'jobs',
@@ -24,7 +25,8 @@ export const ALL_EXPORT_DOMAINS: ExportDomain[] = [
   'exclusions',
   'companyBoards',
   'profile',
-  'settings'
+  'settings',
+  'theme'
 ]
 
 export type ExportSelection = Record<ExportDomain, boolean>
@@ -36,7 +38,8 @@ export function allDomainsSelected(value = true): ExportSelection {
     exclusions: value,
     companyBoards: value,
     profile: value,
-    settings: value
+    settings: value,
+    theme: value
   }
 }
 
@@ -59,6 +62,14 @@ export interface ExportBundle {
     companyBoards?: ExportCompanyBoard[]
     profile?: ProfileFields | null
     settings?: ExportSettingsData
+    /**
+     * Unlike every other domain, never read or written by the main process —
+     * it lives in the renderer's localStorage (see renderer/src/theme/theme.ts),
+     * so main only carries it through unread between the renderer's export
+     * call and, on import, the renderer applying it back via
+     * `ThemeContext.importTheme`.
+     */
+    theme?: ThemeState
   }
 }
 
@@ -139,6 +150,7 @@ export interface ExportSizes {
   companyBoards: { json: number; csv: number }
   profile: { json: number }
   settings: { json: number }
+  theme: { json: number }
   /** Fixed bytes of the bundle wrapper itself (schemaVersion/exportedAt/appVersion/`data: {}`) — present once whenever any domain is included in a JSON export, on top of the per-domain sizes above. */
   wrapperBytes: number
 }
@@ -171,6 +183,7 @@ export interface ImportDomainCounts {
   companyBoards?: number
   profile?: number
   settings?: number
+  theme?: number
 }
 
 export interface ImportPickResult {
@@ -191,6 +204,10 @@ export interface ImportSummary {
   companyBoards?: { imported: number; skipped: number }
   profile?: boolean
   settings?: boolean
+  // No `theme` here: `applyImport` (main process) never touches that domain
+  // — it's the renderer that reads `bundle.data.theme` off the same
+  // `ImportApplyResult` and applies it via `ThemeContext.importTheme` once
+  // this summary comes back ok.
 }
 
 export interface ImportApplyResult {

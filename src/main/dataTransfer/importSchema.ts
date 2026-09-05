@@ -3,6 +3,13 @@ import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTran
 import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
 import { isValidBoardDescriptor } from '../browser/ats/providers'
 import { appError, type AppError } from '@shared/types/errorCodes'
+import {
+  isValidCanvasTint,
+  isValidHexColor,
+  MAX_CSS_PRESETS,
+  MAX_CUSTOM_CSS_LENGTH,
+  MAX_PRESET_NAME_LENGTH
+} from '@shared/types/theme'
 
 const jobStatusSchema = z.enum(['queued', 'filled', 'submitted', 'failed'])
 const applyMethodSchema = z.enum(['external_form', 'easy_apply', 'email', 'unknown'])
@@ -130,6 +137,32 @@ const settingsDataSchema = z.object({
     .optional()
 })
 
+/**
+ * Mirrors the bounds `renderer/src/theme/theme.ts`'s `parseThemeState`
+ * enforces on this same shape when reading localStorage, via the shared
+ * constants both sides import — this domain is exactly as untrusted as that
+ * one. Cross-field consistency (e.g. `activePresetId` actually naming one of
+ * `presets`) is deliberately not re-checked here: `parseThemeState` runs
+ * again when the renderer actually applies an imported theme (see
+ * `ThemeContext.importTheme`), so a bundle that passes this shape check but
+ * fails that cross-check just has its `activePresetId` reset to null there,
+ * the same as it would from a hand-edited localStorage value.
+ */
+const cssPresetSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1).max(MAX_PRESET_NAME_LENGTH),
+  css: z.string().max(MAX_CUSTOM_CSS_LENGTH)
+})
+
+const themeStateSchema = z.object({
+  mode: z.enum(['system', 'light', 'dark']),
+  accent: z.string().refine(isValidHexColor).nullable(),
+  canvasTint: z.number().refine(isValidCanvasTint).nullable(),
+  customCss: z.string().max(MAX_CUSTOM_CSS_LENGTH),
+  presets: z.array(cssPresetSchema).max(MAX_CSS_PRESETS),
+  activePresetId: z.string().nullable()
+})
+
 const exportBundleSchema = z.object({
   schemaVersion: z.literal(EXPORT_SCHEMA_VERSION),
   exportedAt: z.string(),
@@ -140,7 +173,8 @@ const exportBundleSchema = z.object({
     exclusions: z.array(exclusionRecordSchema).optional(),
     companyBoards: z.array(companyBoardSchema).optional(),
     profile: profileFieldsSchema.nullable().optional(),
-    settings: settingsDataSchema.optional()
+    settings: settingsDataSchema.optional(),
+    theme: themeStateSchema.optional()
   })
 })
 

@@ -79,6 +79,7 @@ import type {
   ImportApplyResult,
   ExportBundle
 } from '@shared/types/dataTransfer'
+import type { ThemeState } from '@shared/types/theme'
 import type {
   AdvancedSettingsSnapshot,
   ApplyerSettingKey,
@@ -350,11 +351,12 @@ const appApi = {
 }
 
 const dataApi = {
-  exportJson: (selection: ExportSelection, labels: DialogLabels): Promise<ExportFileResult> =>
-    ipcRenderer.invoke(IPC.data.exportJson, { selection, labels }),
+  exportJson: (selection: ExportSelection, labels: DialogLabels, theme: ThemeState): Promise<ExportFileResult> =>
+    ipcRenderer.invoke(IPC.data.exportJson, { selection, labels, theme }),
   exportCsv: (table: CsvTable, labels: DialogLabels): Promise<ExportFileResult> =>
     ipcRenderer.invoke(IPC.data.exportCsv, { table, labels }),
-  getExportSizes: (): Promise<ExportSizes> => ipcRenderer.invoke(IPC.data.getExportSizes),
+  getExportSizes: (theme: ThemeState): Promise<ExportSizes> =>
+    ipcRenderer.invoke(IPC.data.getExportSizes, { theme }),
   pickImportFile: (labels: DialogLabels): Promise<ImportPickResult> =>
     ipcRenderer.invoke(IPC.data.pickImportFile, { labels }),
   import: (bundle: ExportBundle, selection: ExportSelection): Promise<ImportApplyResult> =>

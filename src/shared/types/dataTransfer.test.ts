@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { allDomainsSelected, totalJsonBytes } from './dataTransfer'
+import { ALL_EXPORT_DOMAINS, allDomainsSelected, totalJsonBytes } from './dataTransfer'
 import type { ExportSizes } from './dataTransfer'
+
+describe('allDomainsSelected', () => {
+  it('sets every domain in ALL_EXPORT_DOMAINS, including theme', () => {
+    const selected = allDomainsSelected()
+    for (const domain of ALL_EXPORT_DOMAINS) expect(selected[domain]).toBe(true)
+    expect(allDomainsSelected(false).theme).toBe(false)
+  })
+})
 
 function sizesFixture(): ExportSizes {
   return {
@@ -10,6 +18,7 @@ function sizesFixture(): ExportSizes {
     companyBoards: { json: 25, csv: 15 },
     profile: { json: 30 },
     settings: { json: 10 },
+    theme: { json: 15 },
     wrapperBytes: 60
   }
 }
@@ -31,6 +40,6 @@ describe('totalJsonBytes', () => {
 
   it('adds (domain count - 1) commas when every domain is selected', () => {
     const total = totalJsonBytes(sizesFixture(), allDomainsSelected())
-    expect(total).toBe(60 + 100 + 70 + 40 + 25 + 30 + 10 + 5) // wrapper + all six + 5 separator commas
+    expect(total).toBe(60 + 100 + 70 + 40 + 25 + 30 + 10 + 15 + 6) // wrapper + all seven + 6 separator commas
   })
 })

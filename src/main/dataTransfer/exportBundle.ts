@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { EXPORT_SCHEMA_VERSION } from '@shared/types/dataTransfer'
 import type { ExportBundle, ExportSelection, ExportSizes } from '@shared/types/dataTransfer'
+import type { ThemeState } from '@shared/types/theme'
 import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
 import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
@@ -37,7 +38,14 @@ function exportableCompanyBoards(): ExportCompanyBoard[] {
   return listAllCompanyBoards().map(toExportBoard)
 }
 
-export function buildExportBundle(selection: ExportSelection): ExportBundle {
+/**
+ * `theme` is unlike every other ingredient here: it isn't read from this
+ * process's DB, it's whatever the renderer's current localStorage theme
+ * state was at the moment it asked for this export (see
+ * `ipc/dataTransfer.ts`'s `exportJson` handler) — main only ever carries it
+ * through, never reads or writes it itself.
+ */
+export function buildExportBundle(selection: ExportSelection, theme: ThemeState): ExportBundle {
   const data: ExportBundle['data'] = {}
   if (selection.jobs) data.jobs = listAllJobs()
   if (selection.indexedJobs) data.indexedJobs = listAllIndexedJobs()
@@ -51,6 +59,7 @@ export function buildExportBundle(selection: ExportSelection): ExportBundle {
       notificationPreferences: getNotificationPreferences()
     }
   }
+  if (selection.theme) data.theme = theme
   return { schemaVersion: EXPORT_SCHEMA_VERSION, exportedAt: new Date().toISOString(), appVersion: app.getVersion(), data }
 }
 
@@ -82,7 +91,12 @@ export function bundleJsonBytes(data: ExportBundle['data']): number {
  * `JSON.stringify(value)` of the value, so the four sizes plus `wrapperBytes`
  * sum to exactly the bytes of the real exported file.
  */
-export function computeExportSizes(): ExportSizes {
+/**
+ * `theme` is sized from whatever the renderer's current theme state is
+ * (passed in the same way `buildExportBundle` receives it) — see that
+ * function's doc comment for why this is the one domain not read from the DB.
+ */
+export function computeExportSizes(theme: ThemeState): ExportSizes {
   const jobs = listAllJobs()
   const indexedJobs = listAllIndexedJobs()
   const exclusions = listAllExclusions()
@@ -111,6 +125,7 @@ export function computeExportSizes(): ExportSizes {
     },
     profile: { json: bundleJsonBytes({ profile }) - empty },
     settings: { json: bundleJsonBytes({ settings }) - empty },
+    theme: { json: bundleJsonBytes({ theme }) - empty },
     wrapperBytes: empty
   }
 }

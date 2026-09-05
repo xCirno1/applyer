@@ -12,6 +12,7 @@ import type {
   ImportPickResult,
   ImportApplyResult
 } from '@shared/types/dataTransfer'
+import type { ThemeState } from '@shared/types/theme'
 import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
 import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
@@ -24,8 +25,8 @@ import { buildExportBundle, computeExportSizes, filenameTimestamp } from '../dat
 import { applyImport } from '../dataTransfer/applyImport'
 
 export function registerDataTransferIpc(): void {
-  ipcMain.handle(IPC.data.exportJson, async (_event, { selection, labels }: { selection: ExportSelection; labels: DialogLabels }): Promise<ExportFileResult> => {
-    const bundle = buildExportBundle(selection)
+  ipcMain.handle(IPC.data.exportJson, async (_event, { selection, labels, theme }: { selection: ExportSelection; labels: DialogLabels; theme: ThemeState }): Promise<ExportFileResult> => {
+    const bundle = buildExportBundle(selection, theme)
     const { canceled, filePath } = await dialog.showSaveDialog({
       title: labels.title,
       defaultPath: join(app.getPath('documents'), `applyer-export-${filenameTimestamp()}.json`),
@@ -68,7 +69,10 @@ export function registerDataTransferIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.data.getExportSizes, (): ExportSizes => computeExportSizes())
+  ipcMain.handle(
+    IPC.data.getExportSizes,
+    (_event, { theme }: { theme: ThemeState }): ExportSizes => computeExportSizes(theme)
+  )
 
   ipcMain.handle(IPC.data.pickImportFile, async (_event, { labels }: { labels: DialogLabels }): Promise<ImportPickResult> => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
@@ -100,7 +104,8 @@ export function registerDataTransferIpc(): void {
         exclusions: bundle.data.exclusions?.length,
         companyBoards: bundle.data.companyBoards?.length,
         profile: bundle.data.profile ? 1 : undefined,
-        settings: bundle.data.settings ? 1 : undefined
+        settings: bundle.data.settings ? 1 : undefined,
+        theme: bundle.data.theme ? 1 : undefined
       }
     }
   })

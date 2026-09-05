@@ -20,17 +20,25 @@ import { jobsToCsv, companyBoardsToCsv, indexedJobsToCsv } from './csv'
 import { buildExportBundle, bundleJsonBytes, computeExportSizes, filenameTimestamp } from './exportBundle'
 import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
 import type { ExportSelection } from '@shared/types/dataTransfer'
+import { DEFAULT_THEME_STATE } from '@shared/types/theme'
+import type { ThemeState } from '@shared/types/theme'
+
+// A stand-in for "whatever the renderer's current localStorage theme state
+// was" — buildExportBundle/computeExportSizes never read this from the DB
+// (see their doc comments), so most tests here just need *a* valid value.
+const testTheme: ThemeState = DEFAULT_THEME_STATE
 
 describe('buildExportBundle', () => {
   it('includes only the selected domains', () => {
     queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' })
     excludeUrl({ url: 'https://y.com/1', excludedBy: 'user' })
 
-    const bundle = buildExportBundle({ ...allDomainsSelected(false), jobs: true })
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), jobs: true }, testTheme)
     expect(bundle.data.jobs).toHaveLength(1)
     expect(bundle.data.exclusions).toBeUndefined()
     expect(bundle.data.profile).toBeUndefined()
     expect(bundle.data.settings).toBeUndefined()
+    expect(bundle.data.theme).toBeUndefined()
   })
 
   it('includes tracked company boards when selected', () => {
@@ -44,7 +52,7 @@ describe('buildExportBundle', () => {
       addedBy: 'user'
     })
 
-    const bundle = buildExportBundle({ ...allDomainsSelected(false), companyBoards: true })
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), companyBoards: true }, testTheme)
     expect(bundle.data.companyBoards).toEqual([
       {
         provider: 'greenhouse',
@@ -72,7 +80,8 @@ describe('buildExportBundle', () => {
       seedJobCount: 480
     })
 
-    const board = buildExportBundle({ ...allDomainsSelected(false), companyBoards: true }).data.companyBoards?.[0]
+    const board = buildExportBundle({ ...allDomainsSelected(false), companyBoards: true }, testTheme).data
+      .companyBoards?.[0]
     // It orders the importing machine's first sweeps exactly as it orders
     // this one's, and unlike lastJobCount it was never a measurement here.
     expect(board?.seedJobCount).toBe(480)
@@ -86,7 +95,7 @@ describe('buildExportBundle', () => {
     )
     queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' })
 
-    const bundle = buildExportBundle({ ...allDomainsSelected(false), indexedJobs: true })
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), indexedJobs: true }, testTheme)
 
     expect(bundle.data.indexedJobs).toHaveLength(1)
     expect(bundle.data.jobs).toBeUndefined()
@@ -107,7 +116,8 @@ describe('buildExportBundle', () => {
     })
     recordCompanyBoardFetch('lever:acme', { jobCount: 12, error: null })
 
-    const board = buildExportBundle({ ...allDomainsSelected(false), companyBoards: true }).data.companyBoards?.[0]
+    const board = buildExportBundle({ ...allDomainsSelected(false), companyBoards: true }, testTheme).data
+      .companyBoards?.[0]
     // "12 open roles, checked just now" is this install's reading, not a fact
     // about the board that another install should display.
     expect(board).not.toHaveProperty('lastJobCount')
@@ -118,7 +128,7 @@ describe('buildExportBundle', () => {
   })
 
   it('stamps schemaVersion, an ISO exportedAt, and appVersion from the mocked app', () => {
-    const bundle = buildExportBundle(allDomainsSelected(false))
+    const bundle = buildExportBundle(allDomainsSelected(false), testTheme)
     expect(bundle.schemaVersion).toBe(1)
     expect(bundle.appVersion).toBe('0.0.0-test')
     expect(() => new Date(bundle.exportedAt).toISOString()).not.toThrow()
@@ -127,12 +137,18 @@ describe('buildExportBundle', () => {
   it('includes settings when selected', () => {
     setAutoStartCommand('claude')
     setNotificationPreferences({ enabled: true, verificationRequired: false, jobFilled: true, jobFailed: false })
-    const bundle = buildExportBundle({ ...allDomainsSelected(false), settings: true })
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), settings: true }, testTheme)
     expect(bundle.data.settings).toEqual({
       autoStartCommand: 'claude',
       indexedJobsRetentionDays: 30,
       notificationPreferences: { enabled: true, verificationRequired: false, jobFilled: true, jobFailed: false }
     })
+  })
+
+  it('includes the given theme state verbatim when selected, unlike every other domain never reading it from the DB', () => {
+    const theme: ThemeState = { ...DEFAULT_THEME_STATE, mode: 'dark', accent: '#3c83f6', canvasTint: 40 }
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), theme: true }, theme)
+    expect(bundle.data.theme).toEqual(theme)
   })
 })
 
@@ -174,13 +190,13 @@ describe('computeExportSizes', () => {
     setAutoStartCommand('claude')
 
     const selection = allDomainsSelected()
-    const sizes = computeExportSizes()
-    const fullBundle = buildExportBundle(selection)
+    const sizes = computeExportSizes(testTheme)
+    const fullBundle = buildExportBundle(selection, testTheme)
     const actualBytes = Buffer.byteLength(JSON.stringify(fullBundle), 'utf-8')
 
     // This is the exact bug a user hit: the preview must match the real
     // exported file byte-for-byte, not just be in the right ballpark. Naively
-    // summing the four per-domain sizes undercounts by (domain count - 1)
+    // summing the per-domain sizes undercounts by (domain count - 1)
     // bytes — the `,` JSON.stringify inserts between each key in `data` —
     // which is exactly what totalJsonBytes accounts for.
     expect(totalJsonBytes(sizes, selection)).toBe(actualBytes)
@@ -189,7 +205,7 @@ describe('computeExportSizes', () => {
   it('accounts for the separator commas between selected domains, not just their individual sizes', () => {
     queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' })
     excludeUrl({ url: 'https://y.com/1', excludedBy: 'user' })
-    const sizes = computeExportSizes()
+    const sizes = computeExportSizes(testTheme)
 
     const twoDomains: ExportSelection = { ...allDomainsSelected(false), jobs: true, exclusions: true }
     const naiveSum = sizes.wrapperBytes + sizes.jobs.json + sizes.exclusions.json
@@ -197,21 +213,21 @@ describe('computeExportSizes', () => {
   })
 
   it('reports a small positive marginal size for an empty jobs list (just the "jobs":[] overhead)', () => {
-    const sizes = computeExportSizes()
+    const sizes = computeExportSizes(testTheme)
     expect(sizes.jobs.json).toBeGreaterThan(0)
     expect(sizes.jobs.json).toBeLessThan(20)
   })
 
   it('grows as jobs are added', () => {
-    const before = computeExportSizes().jobs.json
+    const before = computeExportSizes(testTheme).jobs.json
     queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' })
-    const after = computeExportSizes().jobs.json
+    const after = computeExportSizes(testTheme).jobs.json
     expect(after).toBeGreaterThan(before)
   })
 
   it('csv sizes match the standalone csv builder output exactly', () => {
     queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' })
-    const sizes = computeExportSizes()
+    const sizes = computeExportSizes(testTheme)
     expect(sizes.jobs.csv).toBe(Buffer.byteLength(jobsToCsv(listAllJobs()), 'utf-8'))
   })
 
@@ -222,7 +238,7 @@ describe('computeExportSizes', () => {
       null
     )
 
-    const sizes = computeExportSizes()
+    const sizes = computeExportSizes(testTheme)
     expect(sizes.indexedJobs.csv).toBe(Buffer.byteLength(indexedJobsToCsv(listAllIndexedJobs()), 'utf-8'))
     expect(sizes.indexedJobs.json).toBeGreaterThan(0)
   })
@@ -238,10 +254,17 @@ describe('computeExportSizes', () => {
       addedBy: 'user'
     })
 
-    const sizes = computeExportSizes()
-    const boards = buildExportBundle({ ...allDomainsSelected(false), companyBoards: true }).data.companyBoards ?? []
+    const sizes = computeExportSizes(testTheme)
+    const boards =
+      buildExportBundle({ ...allDomainsSelected(false), companyBoards: true }, testTheme).data.companyBoards ?? []
     expect(sizes.companyBoards.csv).toBe(Buffer.byteLength(companyBoardsToCsv(boards), 'utf-8'))
     expect(sizes.companyBoards.json).toBeGreaterThan(0)
+  })
+
+  it('sizes the given theme state, unlike every other domain never reading it from the DB', () => {
+    const empty = computeExportSizes(testTheme).theme.json
+    const withCss = computeExportSizes({ ...testTheme, customCss: 'body { color: red; }' }).theme.json
+    expect(withCss).toBeGreaterThan(empty)
   })
 })
 

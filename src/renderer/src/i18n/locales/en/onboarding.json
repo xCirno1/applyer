@@ -1,13 +1,41 @@
 {
+  "rail": {
+    "label": "Setup steps",
+    "brand": "Applyer",
+    "privacyNote": "Everything you enter here stays on this computer.",
+    "steps": {
+      "welcome": "Welcome",
+      "storage": "Storage",
+      "profile": "Your profile",
+      "documents": "Documents",
+      "agent": "Your agent"
+    }
+  },
+  "progress": {
+    "counter": "Step {{position}} of {{total}}"
+  },
   "welcome": {
     "title": "Welcome to Applyer",
-    "intro": "Applyer turns a coding assistant running in the built-in terminal (Claude Code, Codex, or any other MCP-capable agent) into a job-search assistant. Here's the shape of it:",
-    "step1Title": "1. Tell it about yourself.",
-    "step1Body": "Add your profile and resume next. This is what the agent uses to judge fit and fill out applications.",
-    "step2Title": "2. Ask the agent to find jobs.",
-    "step2Body": "It searches the web and adds matches to a task board here in the app. Nothing gets submitted automatically.",
-    "step3Title": "3. You stay in control.",
-    "step3Body": "The agent can draft a filled-out application for your review, but only you ever click submit.",
+    "intro": "Glad you're here. Four short steps and your agent can start hunting for jobs with you. Nothing you enter leaves this computer.",
+    "how": {
+      "find": {
+        "title": "Tell it about you",
+        "body": "Your profile and resume are what the agent reads to judge whether a job is worth your time."
+      },
+      "judge": {
+        "title": "Ask it to find jobs",
+        "body": "It searches, and the matches land on a board here in the app. Nothing is sent anywhere on its own."
+      },
+      "submit": {
+        "title": "You press submit",
+        "body": "The agent can fill an application out for you to review, but the last click is always yours."
+      }
+    },
+    "agentNoteTitle": "Bring the agent you already use.",
+    "agentNoteBefore": "Applyer doesn't ship its own AI. It hands your coding assistant, in the built-in terminal, a set of job-hunting tools over",
+    "mcpTerm": "MCP",
+    "mcpTooltip": "Model Context Protocol, the standard way a coding agent calls into another app.",
+    "agentNoteAfter": ". Claude Code, Codex and anything else that speaks it will do.",
     "languagePrompt": "Please select your language",
     "getStarted": "Get started"
   },
@@ -19,34 +47,85 @@
     "plaintext": "Plain text",
     "plaintextDescription": "Stored as regular, readable files on this computer. Simpler to back up or inspect yourself, but readable by anyone with access to this computer's files.",
     "unavailable": "Not available on this system (no OS keychain detected).",
+    "changeLater": "You can switch this later in Settings > Storage, and anything already saved gets rewritten to match.",
     "saveFailed": "Failed to save storage preference."
+  },
+  "profileForm": {
+    "title": "Your profile",
+    "intro": "This is what the agent uses to judge job matches and fill application forms. Only your name and email are needed to continue.",
+    "resumeTipTitle": "Don't feel like typing?",
+    "resumeTipBody": "Choose \"I'll fill this later\", add your resume on the next step, and ask your agent to fill this in from it. You can also edit any of it later in Settings.",
+    "fillLater": "I'll fill this later",
+    "skippedToast": "Skipped for now. Your agent can fill this in from your resume, or you can do it in Settings.",
+    "workAuthorizationHint": "e.g. \"US citizen\", \"requires sponsorship\"",
+    "groupContact": "Contact",
+    "groupLinks": "Links",
+    "groupLooking": "What you're looking for",
+    "groupAbout": "About you"
   },
   "documents": {
     "title": "Your documents",
-    "intro": "A resume is required. The agent reads these to judge fit and can attach them when filling out forms.",
+    "intro": "A resume is required. The agent reads it to judge fit, and attaches it when it fills out an application.",
+    "kind": {
+      "resume": "Resume",
+      "cover_letter": "Cover letter",
+      "other": "Other"
+    },
     "remove": "Remove",
     "removeLabel": "Remove {{filename}}",
     "uploadingResume": "Uploading resume…",
     "resumeRequired": "Resume (required)",
     "uploadingCoverLetter": "Uploading cover letter…",
     "coverLetterOptional": "Cover letter (optional)",
+    "formats": "PDF, DOCX and TXT files. Applyer reads the text out of them so your agent can too.",
+    "resumeGate": "Add a resume to continue",
+    "emptyProfileTipTitle": "This is all your agent will have.",
+    "emptyProfileTipBody": "You skipped the profile, so add your resume here and ask your agent to fill the profile in from it once setup is done.",
     "uploaded": "{{filename}} uploaded.",
-    "uploadFailed": "Upload failed."
+    "uploadFailed": "Upload failed.",
+    "readFailed": "Could not read {{filename}}. Try selecting it again."
   },
   "card": {
     "recommended": "Recommended"
   },
   "nav": {
     "back": "Back",
-    "next": "Next"
-  },
-  "profileForm": {
-    "title": "Your profile",
-    "intro": "The agent uses this to judge job matches and fill application forms."
+    "next": "Continue"
   },
   "mcp": {
     "title": "Connect your agent",
-    "intro": "Applyer exposes tools (search, queue, etc.) over MCP, a standard way for coding agents to call into an app. Set this up once per agent, either automatically or by copying the command below into its config.",
-    "finish": "Finish"
+    "intro": "One-time setup per agent. Applyer can write the config itself, or you can copy the command into it by hand.",
+    "explainerBefore": "Applyer exposes its tools (search, queue, fill) over",
+    "explainerAfter": ", so your agent can call into the app the same way it calls any other tool.",
+    "noneDetected": "No supported agent CLI was found on this computer. Install Claude Code or Codex, then connect it later from Settings > Agent.",
+    "detectFailed": "Could not check which agent CLIs are installed. You can connect one later from Settings > Agent.",
+    "optionalNote": "You can skip this and do it later in Settings > Agent. The rest of the app works either way."
+  },
+  "ready": {
+    "title": "You're all set.",
+    "titleNamed": "You're all set, {{name}}.",
+    "intro": "Applyer is ready. Open the Terminal panel, start your agent, and give it the line below.",
+    "summaryLabel": "What's set up",
+    "summary": {
+      "profile": "Profile",
+      "profilePending": "To fill in later",
+      "resume": "Resume",
+      "resumeMissing": "Not added",
+      "coverLetter": "Cover letter",
+      "coverLetterMissing": "Not added (optional)",
+      "storage": "Storage",
+      "agent": "Agent",
+      "agentPending": "Connect later in Settings",
+      "unknown": "Unknown"
+    },
+    "firstPromptLabel": "Try this first",
+    "firstPromptCaption": "Paste this to your agent in the Terminal panel.",
+    "prompts": {
+      "fromResume": "Read the resume I uploaded to Applyer, fill in my profile from it, then find matching jobs and queue the good ones.",
+      "roleSearch": "Find me {{role}} roles that fit my profile and queue the ones worth applying to.",
+      "genericSearch": "Look at my Applyer profile, find jobs that fit it, and queue the ones worth applying to."
+    },
+    "finish": "Start using Applyer",
+    "finishFailed": "Could not finish setup. Please try again."
   }
 }

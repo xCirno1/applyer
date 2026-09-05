@@ -51,7 +51,14 @@ export const flagFailureShape = {
   message: z.string().trim().max(500).optional()
 }
 
-export const getProfileShape = {}
+/**
+ * `includeDocumentText` is opt-in rather than always on: the extracted text
+ * of a resume is by far the largest thing this tool can return, and most
+ * calls (judging a match, filling a form) only need the structured profile.
+ */
+export const getProfileShape = {
+  includeDocumentText: z.boolean().optional()
+}
 
 /**
  * Every field is optional because `update_profile` merges onto the stored

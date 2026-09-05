@@ -14,6 +14,7 @@ beforeEach(() => {
 import {
   upsertIndexedJobs,
   listIndexedJobs,
+  listIndexedJobDates,
   listAllIndexedJobs,
   importIndexedJobs,
   pruneIndexedJobs
@@ -137,6 +138,60 @@ describe('listIndexedJobs', () => {
 
     const page2 = listIndexedJobs({ limit: 2, offset: 2 })
     expect(page2.items).toHaveLength(1)
+  })
+
+  it('filters by the calendar day of firstSeenAt', () => {
+    upsertIndexedJobs([item({ url: 'https://example.com/jobs/old' })], 'q', null)
+    testDb.run(
+      sql`update indexed_jobs set first_seen_at = '2026-01-01T10:00:00.000Z' where url = 'https://example.com/jobs/old'`
+    )
+    upsertIndexedJobs([item({ url: 'https://example.com/jobs/new' })], 'q', null)
+    testDb.run(
+      sql`update indexed_jobs set first_seen_at = '2026-01-02T10:00:00.000Z' where url = 'https://example.com/jobs/new'`
+    )
+
+    expect(listIndexedJobs({ date: '2026-01-01' }).items.map((i) => i.url)).toEqual([
+      'https://example.com/jobs/old'
+    ])
+    expect(listIndexedJobs({ date: '2026-01-02' }).total).toBe(1)
+  })
+
+  it('ignores a malformed date instead of throwing or matching everything', () => {
+    upsertIndexedJobs([item()], 'q', null)
+    expect(listIndexedJobs({ date: 'not-a-date' }).total).toBe(1)
+  })
+})
+
+describe('listIndexedJobDates', () => {
+  it('is empty when nothing has been indexed', () => {
+    expect(listIndexedJobDates()).toEqual([])
+  })
+
+  it('buckets by calendar day, most recent first, with a count per day', () => {
+    upsertIndexedJobs(
+      [item({ url: 'https://example.com/jobs/1' }), item({ url: 'https://example.com/jobs/2' })],
+      'q',
+      null
+    )
+    testDb.run(sql`update indexed_jobs set first_seen_at = '2026-01-01T09:00:00.000Z' where url = 'https://example.com/jobs/1'`)
+    testDb.run(sql`update indexed_jobs set first_seen_at = '2026-01-01T18:00:00.000Z' where url = 'https://example.com/jobs/2'`)
+    upsertIndexedJobs([item({ url: 'https://example.com/jobs/3' })], 'q', null)
+    testDb.run(sql`update indexed_jobs set first_seen_at = '2026-01-02T09:00:00.000Z' where url = 'https://example.com/jobs/3'`)
+
+    expect(listIndexedJobDates()).toEqual([
+      { date: '2026-01-02', count: 1 },
+      { date: '2026-01-01', count: 2 }
+    ])
+  })
+
+  it('caps how many days come back', () => {
+    for (let day = 1; day <= 5; day++) {
+      const url = `https://example.com/jobs/day-${day}`
+      upsertIndexedJobs([item({ url })], 'q', null)
+      testDb.run(sql`update indexed_jobs set first_seen_at = ${`2026-01-0${day}T00:00:00.000Z`} where url = ${url}`)
+    }
+
+    expect(listIndexedJobDates(2)).toHaveLength(2)
   })
 })
 

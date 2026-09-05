@@ -3,13 +3,21 @@ import { and, desc, eq, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle
 import { getDb } from '../index'
 import { likeContains } from './likeSearch'
 import { indexedJobs, jobs } from '../schema'
-import type { IndexedJobRecord, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
+import type {
+  IndexedJobDateBucket,
+  IndexedJobRecord,
+  ListIndexedJobsQuery,
+  ListIndexedJobsResult
+} from '@shared/types/indexedJob'
 import type { ExportIndexedJob } from '@shared/types/dataTransfer'
 import type { JobSearchResultItem } from '../../browser/types'
 import { LIST_INDEXED_JOBS_DEFAULT_LIMIT, LIST_INDEXED_JOBS_MAX_LIMIT } from '@shared/constants'
 import { getIndexedJobsRetentionDays } from './settingsRepository'
 
 const nowIso = (): string => new Date().toISOString()
+
+/** `firstSeenAt`/`lastSeenAt` are stored as ISO strings, so `date(column)` truncates to this shape in UTC. */
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
 
 /**
  * Persists every raw search_jobs result, upserted by url so re-searching the
@@ -78,6 +86,11 @@ export function listIndexedJobs(query: ListIndexedJobsQuery): ListIndexedJobsRes
     const searchCondition = or(likeContains(indexedJobs.title, term), likeContains(indexedJobs.company, term))
     if (searchCondition) conditions.push(searchCondition)
   }
+  // A malformed value (a bad manual query, a stale client) just matches
+  // nothing-filtered-by-date rather than throwing or matching every row.
+  if (query.date && DATE_ONLY.test(query.date)) {
+    conditions.push(sql`date(${indexedJobs.firstSeenAt}) = ${query.date}`)
+  }
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined
 
   const rows = db
@@ -123,6 +136,27 @@ export function listIndexedJobs(query: ListIndexedJobsQuery): ListIndexedJobsRes
   }))
 
   return { items, total: totalRow?.count ?? 0 }
+}
+
+/**
+ * The days worth browsing in the "Indexed" tab's date strip, most recent
+ * first, each with how many jobs were first indexed that day. Only days that
+ * actually have rows come back — there is no reason to show an empty day a
+ * user could pick and find nothing.
+ */
+export function listIndexedJobDates(limit = 30): IndexedJobDateBucket[] {
+  const db = getDb()
+  const dateColumn = sql<string>`date(${indexedJobs.firstSeenAt})`
+
+  const rows = db
+    .select({ date: dateColumn, count: sql<number>`count(*)` })
+    .from(indexedJobs)
+    .groupBy(dateColumn)
+    .orderBy(sql`${dateColumn} DESC`)
+    .limit(Math.max(1, limit))
+    .all()
+
+  return rows.map((row) => ({ date: row.date, count: row.count }))
 }
 
 /**

@@ -1,14 +1,34 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import FileDrop from '../../components/ui/FileDrop'
-import MetaList from '../../components/ui/MetaList'
 import { useToast } from '../../components/ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { useProfileStore } from '../../state/profileStore'
-import type { DocumentKind } from '@shared/types/profile'
+import type { DocumentKind, DocumentSummary } from '@shared/types/profile'
 
 const ACCEPT =
   '.pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain'
+
+const KINDS: DocumentKind[] = ['resume', 'cover_letter', 'other']
+
+function kindLabels(
+  kind: DocumentKind,
+  t: TFunction<'settings'>
+): { header: string; add: string; uploading: string } {
+  switch (kind) {
+    case 'resume':
+      return { header: t('documents.kindResume'), add: t('documents.addResume'), uploading: t('documents.uploadingResume') }
+    case 'cover_letter':
+      return {
+        header: t('documents.kindCoverLetter'),
+        add: t('documents.addCoverLetter'),
+        uploading: t('documents.uploadingCoverLetter')
+      }
+    case 'other':
+      return { header: t('documents.kindOther'), add: t('documents.addOther'), uploading: t('documents.uploadingOther') }
+  }
+}
 
 function fileToArrayBuffer(file: File): Promise<ArrayBuffer> {
   return new Promise((resolve, reject) => {
@@ -55,53 +75,45 @@ export default function DocumentsSection(): ReactElement {
     toast.info(t('documents.removed', { filename }))
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      {documents.length > 0 && (
-        <ul className="flex flex-col gap-1">
-          {documents.map((doc) => (
-            <li
-              key={doc.id}
-              className="flex h-7 items-center justify-between border border-border-soft bg-canvas-soft px-2 text-[12px]"
-            >
-              <MetaList
-                className="text-text"
-                items={[
-                  { key: 'kind', value: doc.kind, className: 'text-text-faint' },
-                  { key: 'filename', value: doc.originalFilename, grow: true, title: doc.originalFilename }
-                ]}
-              />
-              <button
-                onClick={() => handleDelete(doc.id, doc.originalFilename)}
-                className="cursor-pointer text-text-faint hover:text-danger"
-                aria-label={t('documents.removeLabel', { filename: doc.originalFilename })}
-              >
-                {t('documents.remove')}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+  const documentsByKind = (kind: DocumentKind): DocumentSummary[] => documents.filter((doc) => doc.kind === kind)
 
-      <FileDrop
-        label={uploadingKind === 'resume' ? t('documents.uploadingResume') : t('documents.addResume')}
-        accept={ACCEPT}
-        onFile={(file) => handleFile('resume', file)}
-      />
-      <FileDrop
-        label={
-          uploadingKind === 'cover_letter'
-            ? t('documents.uploadingCoverLetter')
-            : t('documents.addCoverLetter')
-        }
-        accept={ACCEPT}
-        onFile={(file) => handleFile('cover_letter', file)}
-      />
-      <FileDrop
-        label={uploadingKind === 'other' ? t('documents.uploadingOther') : t('documents.addOther')}
-        accept={ACCEPT}
-        onFile={(file) => handleFile('other', file)}
-      />
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      {KINDS.map((kind) => {
+        const labels = kindLabels(kind, t)
+        const kindDocuments = documentsByKind(kind)
+        return (
+          <div key={kind} className="flex flex-col gap-2 border border-border-soft bg-canvas-soft p-2">
+            <span className="text-[12px] font-medium text-text">{labels.header}</span>
+            {kindDocuments.length > 0 && (
+              <ul className="flex flex-col gap-1">
+                {kindDocuments.map((doc) => (
+                  <li
+                    key={doc.id}
+                    className="flex h-7 items-center justify-between gap-2 border border-border-soft bg-canvas px-2 text-[12px]"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-text" title={doc.originalFilename}>
+                      {doc.originalFilename}
+                    </span>
+                    <button
+                      onClick={() => handleDelete(doc.id, doc.originalFilename)}
+                      className="shrink-0 cursor-pointer text-text-faint hover:text-danger"
+                      aria-label={t('documents.removeLabel', { filename: doc.originalFilename })}
+                    >
+                      {t('documents.remove')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <FileDrop
+              label={uploadingKind === kind ? labels.uploading : labels.add}
+              accept={ACCEPT}
+              onFile={(file) => handleFile(kind, file)}
+            />
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -99,12 +99,15 @@
   "documents": {
     "remove": "Remove",
     "removeLabel": "Remove {{filename}}",
+    "kindResume": "Resume",
+    "kindCoverLetter": "Cover letter",
+    "kindOther": "Other documents",
     "uploadingResume": "Uploading resume…",
-    "addResume": "Add / replace resume",
+    "addResume": "Add / replace",
     "uploadingCoverLetter": "Uploading cover letter…",
-    "addCoverLetter": "Add / replace cover letter",
+    "addCoverLetter": "Add / replace",
     "uploadingOther": "Uploading…",
-    "addOther": "Add another document",
+    "addOther": "Add a document",
     "uploaded": "{{filename}} uploaded.",
     "removed": "{{filename}} removed.",
     "uploadFailed": "Upload failed."

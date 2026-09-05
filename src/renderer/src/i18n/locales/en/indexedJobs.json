@@ -17,11 +17,21 @@
     "compactTitle": "Compact rows",
     "comfortableTitle": "Comfortable rows"
   },
+  "dateStrip": {
+    "all": "All dates",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "scrollEarlier": "Scroll to earlier days",
+    "scrollLater": "Scroll to later days",
+    "showOnlyIndexed": "Show only days with indexed jobs",
+    "showAllDays": "Show every day",
+    "count_one": "{{count}} job indexed",
+    "count_other": "{{count}} jobs indexed"
+  },
   "row": {
     "matched": "Matched",
     "notSelected": "Not selected",
     "viewListing": "View listing",
-    "viewListingLong": "View listing ↗",
     "seen": "seen {{time}}",
     "justNow": "just now",
     "minutesAgo": "{{count}}m ago",
@@ -29,7 +39,10 @@
     "daysAgo": "{{count}}d ago"
   },
   "list": {
-    "empty": "Nothing indexed yet. Results appear here as soon as an agent runs a job search."
+    "empty": "Nothing indexed yet. Results appear here as soon as an agent runs a job search.",
+    "count_one": "{{count}} job indexed",
+    "count_other": "{{count}} jobs indexed",
+    "rowsPerPage": "Rows"
   },
   "retention": {
     "keepFor": "Keep for",

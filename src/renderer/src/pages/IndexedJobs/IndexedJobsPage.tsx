@@ -1,6 +1,7 @@
 import { useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import IndexedJobsFilters from '../../components/indexedJobs/IndexedJobsFilters'
+import IndexedJobsDateStrip from '../../components/indexedJobs/IndexedJobsDateStrip'
 import IndexedJobsList from '../../components/indexedJobs/IndexedJobsList'
 import IndexedJobsRetentionControl from '../../components/indexedJobs/IndexedJobsRetentionControl'
 import ExclusionsPanel from '../../components/indexedJobs/ExclusionsPanel'
@@ -47,6 +48,7 @@ export default function IndexedJobsPage(): ReactElement {
 
       <div className={tab === 'indexed' ? 'flex min-h-0 flex-1 flex-col' : 'hidden'}>
         <IndexedJobsFilters />
+        <IndexedJobsDateStrip />
         <IndexedJobsList />
       </div>
       <div className={tab === 'boards' ? 'min-h-0 flex-1 overflow-y-auto' : 'hidden'}>

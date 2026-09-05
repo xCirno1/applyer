@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
 import { appError } from '@shared/types/errorCodes'
-import { listIndexedJobs, pruneIndexedJobs } from '../db/repositories/indexedJobsRepository'
+import { listIndexedJobs, listIndexedJobDates, pruneIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { getIndexedJobsRetentionDays, setIndexedJobsRetentionDays } from '../db/repositories/settingsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
 import { INDEXED_JOBS_RETENTION_OPTIONS } from '@shared/constants'
@@ -15,6 +15,8 @@ export function registerIndexedJobsIpc(): void {
   ipcMain.handle(IPC.indexedJobs.list, (_event, query: ListIndexedJobsQuery) => {
     return listIndexedJobs(query ?? {})
   })
+
+  ipcMain.handle(IPC.indexedJobs.listDates, () => listIndexedJobDates())
 
   ipcMain.handle(IPC.indexedJobs.getRetention, (): IndexedJobsRetention => getIndexedJobsRetentionDays())
 

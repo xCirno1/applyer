@@ -146,8 +146,17 @@ function MainShell(): ReactElement {
               <div className="flex h-nav shrink-0 items-center border-b border-border bg-canvas px-3">
                 <button
                   onClick={() => setScreen('workspace')}
-                  className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text"
+                  className="flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-text-muted hover:text-text"
                 >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
+                    <path
+                      d="M19 12H5M5 12l6-6M5 12l6 6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   {t('topBar.backToWorkspace')}
                 </button>
                 <div className="ml-auto flex items-center">

@@ -25,6 +25,7 @@ export const IPC = {
   },
   indexedJobs: {
     list: 'indexedJobs:list',
+    listDates: 'indexedJobs:listDates',
     getRetention: 'indexedJobs:getRetention',
     setRetention: 'indexedJobs:setRetention',
     onChanged: 'indexedJobs:changed'

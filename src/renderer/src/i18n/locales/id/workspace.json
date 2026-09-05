@@ -47,7 +47,7 @@
   },
   "topBar": {
     "settings": "Pengaturan",
-    "backToWorkspace": "← Kembali ke workspace"
+    "backToWorkspace": "Kembali ke workspace"
   },
   "terminal": {
     "none": "Tidak ada terminal yang kebuka.",

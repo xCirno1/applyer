@@ -17,11 +17,20 @@
     "compactTitle": "Tampilan rapat",
     "comfortableTitle": "Tampilan longgar"
   },
+  "dateStrip": {
+    "all": "Semua tanggal",
+    "today": "Hari ini",
+    "yesterday": "Kemarin",
+    "scrollEarlier": "Gulir ke hari sebelumnya",
+    "scrollLater": "Gulir ke hari berikutnya",
+    "showOnlyIndexed": "Tampilkan hanya hari dengan lowongan terindeks",
+    "showAllDays": "Tampilkan semua hari",
+    "count_other": "{{count}} lowongan terindeks"
+  },
   "row": {
     "matched": "Cocok",
     "notSelected": "Tidak dipilih",
     "viewListing": "Lihat lowongan",
-    "viewListingLong": "Lihat lowongan ↗",
     "seen": "terlihat {{time}}",
     "justNow": "baru saja",
     "minutesAgo": "{{count}} mnt lalu",
@@ -29,7 +38,9 @@
     "daysAgo": "{{count}} hr lalu"
   },
   "list": {
-    "empty": "Belum ada yang terindeks. Hasilnya muncul di sini begitu agen menjalankan pencarian lowongan."
+    "empty": "Belum ada yang terindeks. Hasilnya muncul di sini begitu agen menjalankan pencarian lowongan.",
+    "count_other": "{{count}} lowongan terindeks",
+    "rowsPerPage": "Baris"
   },
   "retention": {
     "keepFor": "Simpan selama",

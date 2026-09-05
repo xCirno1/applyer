@@ -49,7 +49,7 @@
   },
   "topBar": {
     "settings": "Settings",
-    "backToWorkspace": "← Back to workspace"
+    "backToWorkspace": "Back to workspace"
   },
   "terminal": {
     "none": "No terminals open.",

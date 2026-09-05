@@ -56,7 +56,12 @@ type AddCompanyBoardResponse =
       candidates: BoardProbeCandidate[]
     }
   | { ok: false; error: AppError }
-import type { IndexedJobsRetention, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
+import type {
+  IndexedJobDateBucket,
+  IndexedJobsRetention,
+  ListIndexedJobsQuery,
+  ListIndexedJobsResult
+} from '@shared/types/indexedJob'
 import type { StorageStats } from '@shared/types/storage'
 import type {
   NotificationLocale,
@@ -160,6 +165,7 @@ const jobsApi = {
 const indexedJobsApi = {
   list: (query: ListIndexedJobsQuery): Promise<ListIndexedJobsResult> =>
     ipcRenderer.invoke(IPC.indexedJobs.list, query),
+  listDates: (): Promise<IndexedJobDateBucket[]> => ipcRenderer.invoke(IPC.indexedJobs.listDates),
   getRetention: (): Promise<IndexedJobsRetention> => ipcRenderer.invoke(IPC.indexedJobs.getRetention),
   setRetention: (value: IndexedJobsRetention): Promise<{ ok: boolean; deletedCount?: number; error?: string }> =>
     ipcRenderer.invoke(IPC.indexedJobs.setRetention, { value }),

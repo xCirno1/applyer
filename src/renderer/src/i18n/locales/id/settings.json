@@ -98,12 +98,15 @@
   "documents": {
     "remove": "Hapus",
     "removeLabel": "Hapus {{filename}}",
+    "kindResume": "Resume",
+    "kindCoverLetter": "Cover letter",
+    "kindOther": "Dokumen lain",
     "uploadingResume": "Mengunggah resume…",
-    "addResume": "Tambah / ganti resume",
+    "addResume": "Tambah / ganti",
     "uploadingCoverLetter": "Mengunggah cover letter…",
-    "addCoverLetter": "Tambah / ganti cover letter",
+    "addCoverLetter": "Tambah / ganti",
     "uploadingOther": "Mengunggah…",
-    "addOther": "Tambah dokumen lain",
+    "addOther": "Tambah dokumen",
     "uploaded": "{{filename}} berhasil diunggah.",
     "removed": "{{filename}} dihapus.",
     "uploadFailed": "Unggahan gagal."

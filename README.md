@@ -228,7 +228,10 @@ Missing tooling degrades the build instead of failing it: without `rpmbuild` on 
 (`apt install rpm` on Debian/Ubuntu) you get the AppImage and deb plus a note about the
 dropped rpm, and a platform this host cannot build at all is reported with the reason
 rather than a stack trace from deep inside electron-builder. Nothing is code-signed or
-notarized yet, so macOS and Windows will warn on first launch.
+notarized yet, so macOS and Windows will warn on first launch. On Windows this can also
+show up as the installer or app appearing to freeze for up to ~30 seconds while Windows
+scans the unsigned binary; the NSIS installer says so on completion (`build/installer.nsh`),
+and it only happens once per machine.
 
 ### Trying it without a real build
 

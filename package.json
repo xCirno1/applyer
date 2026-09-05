@@ -156,7 +156,8 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "shortcutName": "Applyer",
-      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}"
+      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}",
+      "include": "build/installer.nsh"
     },
     "portable": {
       "artifactName": "${productName}-${version}-win-${arch}-portable.${ext}"

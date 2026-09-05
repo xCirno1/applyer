@@ -7,6 +7,7 @@ import { useToast } from '../../components/ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { useJobsStore } from '../../state/jobsStore'
 import { useFormatters } from '../../i18n/format'
+import { useTheme } from '../../providers/ThemeContext'
 import { allDomainsSelected } from '@shared/types/dataTransfer'
 import type { ExportBundle, ExportDomain, ExportSelection, ImportDomainCounts } from '@shared/types/dataTransfer'
 
@@ -16,12 +17,21 @@ const DOMAIN_KEYS = {
   exclusions: 'data.domainExclusions',
   companyBoards: 'data.domainCompanyBoards',
   profile: 'data.domainProfile',
-  settings: 'data.domainSettings'
+  settings: 'data.domainSettings',
+  theme: 'data.domainTheme'
 } as const satisfies Record<ExportDomain, string>
 
-const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'indexedJobs', 'exclusions', 'companyBoards', 'profile', 'settings']
+const DOMAIN_ORDER: ExportDomain[] = [
+  'jobs',
+  'indexedJobs',
+  'exclusions',
+  'companyBoards',
+  'profile',
+  'settings',
+  'theme'
+]
 
-const OVERWRITE_DOMAINS: ExportDomain[] = ['profile', 'settings']
+const OVERWRITE_DOMAINS: ExportDomain[] = ['profile', 'settings', 'theme']
 
 /** The rest are merged into what's already there, so their hint counts rows rather than warning about a replacement. */
 const MERGE_DOMAINS: ExportDomain[] = ['jobs', 'indexedJobs', 'exclusions', 'companyBoards']
@@ -42,6 +52,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const errorMessage = useErrorMessage()
   const format = useFormatters()
   const fetchAllColumns = useJobsStore((s) => s.fetchAllColumns)
+  const { importTheme } = useTheme()
   const [picking, setPicking] = useState(false)
   const [pickError, setPickError] = useState<string | null>(null)
   const [file, setFile] = useState<LoadedFile | null>(null)
@@ -113,6 +124,14 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
       parts.push(t('data.companyBoardsAdded', { count: result.summary.companyBoards.imported }))
     if (result.summary.profile) parts.push(t('data.profileUpdated'))
     if (result.summary.settings) parts.push(t('data.settingsUpdated'))
+    // Unlike every other domain, main never applies this one (it doesn't
+    // have the renderer's localStorage) — it just carried `theme` through
+    // validation, so applying and reporting it both happen here instead of
+    // coming back in `result.summary`.
+    if (selection.theme && file.bundle.data.theme) {
+      importTheme(file.bundle.data.theme)
+      parts.push(t('data.themeUpdated'))
+    }
     toast.success(
       parts.length > 0
         ? t('data.importComplete', { parts: parts.join(', ') })

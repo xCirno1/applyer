@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { validateExportBundle } from './importSchema'
 import { EXPORT_SCHEMA_VERSION } from '@shared/types/dataTransfer'
 import type { ExportBundle } from '@shared/types/dataTransfer'
+import { DEFAULT_THEME_STATE, MAX_CSS_PRESETS, MAX_CUSTOM_CSS_LENGTH, MAX_PRESET_NAME_LENGTH } from '@shared/types/theme'
 
 function validBundle(): ExportBundle {
   return {
@@ -253,5 +254,70 @@ describe('validateExportBundle — company boards', () => {
     expect(result.ok).toBe(true)
     if (!result.ok) throw new Error('unreachable')
     expect(result.bundle.data.companyBoards?.[0]).not.toHaveProperty('lastJobCount')
+  })
+})
+
+describe('validateExportBundle — theme', () => {
+  function withTheme(theme: unknown): unknown {
+    return { ...validBundle(), data: { theme } }
+  }
+
+  it('accepts the default theme state', () => {
+    const result = validateExportBundle(withTheme(DEFAULT_THEME_STATE))
+    expect(result.ok).toBe(true)
+  })
+
+  it('accepts a customized theme state, presets included', () => {
+    const result = validateExportBundle(
+      withTheme({
+        mode: 'dark',
+        accent: '#3c83f6',
+        canvasTint: 40,
+        customCss: 'body { color: red; }',
+        presets: [{ id: 'a', name: 'Compact', css: 'body {}' }],
+        activePresetId: 'a'
+      })
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) throw new Error('unreachable')
+    expect(result.bundle.data.theme?.presets).toHaveLength(1)
+  })
+
+  it('rejects an invalid mode, a malformed accent, and an out-of-range canvas tint', () => {
+    expect(validateExportBundle(withTheme({ ...DEFAULT_THEME_STATE, mode: 'not-a-mode' })).ok).toBe(false)
+    expect(validateExportBundle(withTheme({ ...DEFAULT_THEME_STATE, accent: 'red' })).ok).toBe(false)
+    expect(validateExportBundle(withTheme({ ...DEFAULT_THEME_STATE, canvasTint: 400 })).ok).toBe(false)
+    expect(validateExportBundle(withTheme({ ...DEFAULT_THEME_STATE, canvasTint: 40.5 })).ok).toBe(false)
+  })
+
+  it('rejects custom CSS and a preset name/css over the shared bounds', () => {
+    expect(
+      validateExportBundle(withTheme({ ...DEFAULT_THEME_STATE, customCss: 'a'.repeat(MAX_CUSTOM_CSS_LENGTH + 1) })).ok
+    ).toBe(false)
+    expect(
+      validateExportBundle(
+        withTheme({
+          ...DEFAULT_THEME_STATE,
+          presets: [{ id: 'a', name: 'a'.repeat(MAX_PRESET_NAME_LENGTH + 1), css: '' }]
+        })
+      ).ok
+    ).toBe(false)
+    expect(
+      validateExportBundle(
+        withTheme({
+          ...DEFAULT_THEME_STATE,
+          presets: [{ id: 'a', name: 'Compact', css: 'a'.repeat(MAX_CUSTOM_CSS_LENGTH + 1) }]
+        })
+      ).ok
+    ).toBe(false)
+  })
+
+  it('rejects more presets than MAX_CSS_PRESETS allows', () => {
+    const presets = Array.from({ length: MAX_CSS_PRESETS + 1 }, (_, i) => ({ id: `p${i}`, name: `Preset ${i}`, css: '' }))
+    expect(validateExportBundle(withTheme({ ...DEFAULT_THEME_STATE, presets })).ok).toBe(false)
+  })
+
+  it('is optional — a bundle with no theme domain is still valid', () => {
+    expect(validateExportBundle({ ...validBundle(), data: {} }).ok).toBe(true)
   })
 })

@@ -32,7 +32,8 @@ export function createApplyerMcpServer(): McpServer {
     {
       title: 'Get candidate profile',
       description:
-        "Returns the user's profile (name, contact info, desired roles, skills, salary expectations, etc.) and a list of their uploaded documents (resume, cover letter). Use this to judge whether a job is a good match and to fill application forms.",
+        "Returns the user's profile (name, contact info, desired roles, skills, salary expectations, etc.) and a list of their uploaded documents (resume, cover letter). Use this to judge whether a job is a good match and to fill application forms. " +
+        'Pass `includeDocumentText: true` to also get the text extracted from each of those documents. That is how you read the resume the user uploaded to Applyer without needing a file path, e.g. when they ask you to fill in a profile they left blank. Leave it off otherwise: it is a lot of text, and matching and form-filling do not need it.',
       inputSchema: getProfileShape
     },
     getProfileTool

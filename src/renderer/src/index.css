@@ -17,3 +17,31 @@ body {
     -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 13px;
 }
+
+/*
+ * Step-to-step transition for the onboarding flow. Deliberately short and
+ * small: a 4px rise is enough to read as "this replaced the last screen"
+ * without it feeling like a slide deck, and there is no exit animation
+ * because the outgoing step is unmounted the moment the next one is chosen.
+ * Applied via a `key` on the element, so remounting is what replays it.
+ */
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-step-in {
+  animation: step-in 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-step-in {
+    animation: none;
+  }
+}

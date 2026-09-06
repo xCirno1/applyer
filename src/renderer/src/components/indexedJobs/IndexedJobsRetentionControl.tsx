@@ -5,6 +5,7 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import Tooltip from '../ui/Tooltip'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
+import { callIpc } from '../../lib/ipcCall'
 import type { IndexedJobsRetention } from '@shared/types/indexedJob'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS, INDEXED_JOBS_RETENTION_OPTIONS } from '@shared/constants'
 
@@ -34,7 +35,11 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
   const errorMessage = useErrorMessage()
 
   useEffect(() => {
-    window.api.indexedJobs.getRetention().then((retention) => {
+    void callIpc(
+      'indexedJobs.getRetention',
+      () => window.api.indexedJobs.getRetention(),
+      INDEXED_JOBS_RETENTION_DEFAULT_DAYS
+    ).then((retention) => {
       setCurrent(retention)
       setLoaded(true)
     })
@@ -43,7 +48,11 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
   const handleConfirm = async (): Promise<void> => {
     if (pending === null) return
     setSaving(true)
-    const result = await window.api.indexedJobs.setRetention(pending)
+    const result = await callIpc(
+      'indexedJobs.setRetention',
+      () => window.api.indexedJobs.setRetention(pending),
+      { ok: false }
+    )
     setSaving(false)
     setPending(null)
     if (result.ok) {

@@ -7,6 +7,7 @@ import Tag from '../ui/Tag'
 import Skeleton from '../ui/Skeleton'
 import MetaList from '../ui/MetaList'
 import { useToast } from '../ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { useFormatters } from '../../i18n/format'
 import type { ExclusionRecord } from '@shared/types/exclusion'
@@ -35,7 +36,11 @@ export default function ExclusionsPanel(): ReactElement {
 
   const load = async (offset: number): Promise<void> => {
     setLoading(true)
-    const result = await window.api.exclusions.list({ limit: PAGE_SIZE, offset })
+    const result = await callIpc(
+      'exclusions.list',
+      () => window.api.exclusions.list({ limit: PAGE_SIZE, offset }),
+      { exclusions: [], total: 0 }
+    )
     setLoading(false)
     setLoadedOnce(true)
     setExclusions((prev) => (offset === 0 ? result.exclusions : [...prev, ...result.exclusions]))
@@ -44,7 +49,11 @@ export default function ExclusionsPanel(): ReactElement {
 
   useEffect(() => {
     let cancelled = false
-    window.api.exclusions.list({ limit: PAGE_SIZE, offset: 0 }).then((result) => {
+    void callIpc(
+      'exclusions.list',
+      () => window.api.exclusions.list({ limit: PAGE_SIZE, offset: 0 }),
+      { exclusions: [], total: 0 }
+    ).then((result) => {
       if (cancelled) return
       setExclusions(result.exclusions)
       setTotal(result.total)
@@ -59,12 +68,16 @@ export default function ExclusionsPanel(): ReactElement {
   // without this it would keep displaying whatever it fetched on first
   // mount forever — never picking up an exclusion added elsewhere (the
   // board's Exclude action, a bulk exclude, or the agent's exclude_job tool).
-  useEffect(() => window.api.exclusions.onChanged(() => load(0)), [])
+  useEffect(() => window.api.exclusions.onChanged(() => void load(0)), [])
 
   const handleAdd = async (): Promise<void> => {
     if (!url.trim()) return
     setAdding(true)
-    const result = await window.api.exclusions.add(url.trim(), reason.trim() || undefined)
+    const result = await callIpc(
+      'exclusions.add',
+      () => window.api.exclusions.add(url.trim(), reason.trim() || undefined),
+      { ok: false }
+    )
     setAdding(false)
     if (result.ok) {
       setUrl('')
@@ -79,10 +92,18 @@ export default function ExclusionsPanel(): ReactElement {
   const handleRemove = async (): Promise<void> => {
     if (!pendingRemoveId) return
     setRemoving(true)
-    await window.api.exclusions.remove(pendingRemoveId)
+    const result = await callIpc(
+      'exclusions.remove',
+      () => window.api.exclusions.remove(pendingRemoveId),
+      { ok: false }
+    )
     setRemoving(false)
-    setExclusions((prev) => prev.filter((e) => e.id !== pendingRemoveId))
-    setTotal((prevTotal) => Math.max(0, prevTotal - 1))
+    // Only drop the row if it actually went: otherwise it would
+    // disappear here and reappear on the next load.
+    if (result.ok) {
+      setExclusions((prev) => prev.filter((e) => e.id !== pendingRemoveId))
+      setTotal((prevTotal) => Math.max(0, prevTotal - 1))
+    }
     setPendingRemoveId(null)
     toast.success(t('exclusions.removed'))
   }

@@ -14,6 +14,7 @@ import BoardCsvImportModal from './BoardCsvImportModal'
 import { BOARD_SEARCH_KEYS, BOARD_TABLE_VALUES, PROVIDER_LABELS, useBoardColumns } from './boardColumns'
 import { boardFilterStatus, type BoardFilterStatus } from './boardStatus'
 import { useToast } from '../ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { EMPTY_SELECTION, nextRowSelection, type RowSelection, type SelectionModifiers } from '../ui/rowSelection'
 import { useErrorMessage } from '../../i18n/formatError'
 import { MAX_COMPANY_BOARDS } from '@shared/constants'
@@ -312,7 +313,11 @@ export default function CompanyBoardsPanel(): ReactElement {
   const handleSetEnabledMany = useCallback(
     async (ids: string[], enabled: boolean): Promise<void> => {
       if (ids.length === 0) return
-      const result = await window.api.companyBoards.setEnabledMany(ids, enabled)
+      const result = await callIpc(
+        'companyBoards.setEnabledMany',
+        () => window.api.companyBoards.setEnabledMany(ids, enabled),
+        { ok: false }
+      )
       if (!result.ok) {
         toast.error(result.error ? errorMessage(result.error) : t('boards.toggleFailed'))
         return
@@ -329,7 +334,11 @@ export default function CompanyBoardsPanel(): ReactElement {
   const handleRemoveMany = useCallback(
     async (ids: string[]): Promise<void> => {
       if (ids.length === 0) return
-      const result = await window.api.companyBoards.removeMany(ids)
+      const result = await callIpc(
+        'companyBoards.removeMany',
+        () => window.api.companyBoards.removeMany(ids),
+        { ok: false }
+      )
       if (!result.ok) {
         toast.error(result.error ? errorMessage(result.error) : t('boards.removeFailed'))
         return

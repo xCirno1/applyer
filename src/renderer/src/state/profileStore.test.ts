@@ -156,9 +156,23 @@ describe('profileStore', () => {
     expect(useProfileStore.getState().documents).toEqual([])
   })
 
+  it('keeps the document listed when the delete did not go through', async () => {
+    const { useProfileStore } = await import('./profileStore')
+    getMock.mockResolvedValue({ profile: profile(), documents: [doc({ id: 'a' }), doc({ id: 'b' })] })
+    // What the store sees when the bridge rejects: dropping the row here would
+    // show the document gone until the next fetch brought it back.
+    deleteDocumentMock.mockRejectedValue(new Error('handler threw'))
+    await useProfileStore.getState().fetch()
+
+    await useProfileStore.getState().deleteDocument('a')
+
+    expect(useProfileStore.getState().documents.map((d) => d.id)).toEqual(['a', 'b'])
+  })
+
   it('deleteDocument removes only the targeted document', async () => {
     const { useProfileStore } = await import('./profileStore')
     getMock.mockResolvedValue({ profile: profile(), documents: [doc({ id: 'a' }), doc({ id: 'b' })] })
+    deleteDocumentMock.mockResolvedValue({ ok: true })
     await useProfileStore.getState().fetch()
 
     await useProfileStore.getState().deleteDocument('a')

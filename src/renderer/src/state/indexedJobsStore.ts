@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { callIpc } from '../lib/ipcCall'
 import type { IndexedJobDateBucket, IndexedJobMatchFilter, IndexedJobRecord } from '@shared/types/indexedJob'
 import { LIST_INDEXED_JOBS_DEFAULT_LIMIT, LIST_INDEXED_JOBS_MAX_LIMIT } from '@shared/constants'
 
@@ -77,19 +78,26 @@ export const useIndexedJobsStore = create<IndexedJobsState>((set, get) => ({
     const { search, source, matched, date } = get().filters
     const { page, pageSize } = get()
     set({ loading: true })
-    const result = await window.api.indexedJobs.list({
-      limit: pageSize,
-      offset: (page - 1) * pageSize,
-      search: search || undefined,
-      source: source || undefined,
-      matched,
-      date: date || undefined
-    })
+    // Empty page rather than a list stuck loading — `loading` draws the
+    // skeleton, and a rejected call used to skip the `set` that clears it.
+    const result = await callIpc('indexedJobs.list', () =>
+      window.api.indexedJobs.list({
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+        search: search || undefined,
+        source: source || undefined,
+        matched,
+        date: date || undefined
+      }),
+      { items: [], total: 0 }
+    )
     set({ items: result.items, total: result.total, loading: false, loadedOnce: true })
   },
 
   fetchDateBuckets: async () => {
-    const dateBuckets = await window.api.indexedJobs.listDates()
+    // Marked loaded either way: the date strip renders "no days" rather than
+    // an indefinite placeholder, and the next refresh will try again.
+    const dateBuckets = await callIpc('indexedJobs.listDates', () => window.api.indexedJobs.listDates(), [])
     set({ dateBuckets, dateBucketsLoaded: true })
   },
 
@@ -110,6 +118,8 @@ export const useIndexedJobsStore = create<IndexedJobsState>((set, get) => ({
   },
 
   subscribeToChanges: () => {
-    return window.api.indexedJobs.onChanged(() => get().refresh())
+    // `refresh` delegates to `fetch`, which handles its own failure, so this
+    // push-driven call cannot reject into the listener.
+    return window.api.indexedJobs.onChanged(() => void get().refresh())
   }
 }))

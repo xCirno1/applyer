@@ -127,7 +127,8 @@
     "devBuildNote": "Ini versi development, jadi selalu pakai Chromium bawaan Playwright apa pun pilihan di bawah. Pilihan itu baru berlaku di versi rilis.",
     "unresolvedNote": "Ditentukan waktu browser pertama kali dibutuhkan, misalnya waktu mencari atau melamar kerja.",
     "outro": "Mode otomatis mencoba Chrome dulu, lalu Edge, lalu mengunduh sendiri sekali saja. Kalau kamu memilih Chrome atau Edge secara khusus tapi browsernya tidak terpasang, Applyer akan menampilkan error, bukan diam-diam memakai yang lain. Pilihan unduh sendiri selalu memakai salinan milik Applyer.",
-    "saved": "Pilihan browser tersimpan. Berlaku waktu browser dibuka berikutnya."
+    "saved": "Pilihan browser tersimpan. Berlaku waktu browser dibuka berikutnya.",
+    "saveFailed": "Gagal menyimpan preferensi browser."
   },
   "browserSetup": {
     "title": "Menyiapkan browser",

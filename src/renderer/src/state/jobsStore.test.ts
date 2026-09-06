@@ -86,6 +86,48 @@ describe('jobsStore', () => {
     expect(column.loadedOnce).toBe(true)
   })
 
+  // `loading` is what draws the column's skeleton. A rejected call used to skip
+  // the `set` that clears it, so one failed fetch left that column spinning for
+  // the rest of the session.
+  it('fetchColumn clears loading when the call rejects, leaving an empty column', async () => {
+    const { useJobsStore } = await import('./jobsStore')
+    listMock.mockRejectedValue(new Error('Database not initialized'))
+
+    await useJobsStore.getState().fetchColumn('queued')
+
+    const column = useJobsStore.getState().columns.queued
+    expect(column.loading).toBe(false)
+    expect(column.loadedOnce).toBe(true)
+    expect(column.jobs).toEqual([])
+    expect(column.total).toBe(0)
+  })
+
+  it('fetchColumn recovers on the next attempt after a failure', async () => {
+    const { useJobsStore } = await import('./jobsStore')
+    listMock.mockRejectedValueOnce(new Error('transient'))
+    await useJobsStore.getState().fetchColumn('queued')
+
+    listMock.mockResolvedValue({ jobs: [job({ id: 'job-1' })], total: 1 })
+    await useJobsStore.getState().fetchColumn('queued')
+
+    expect(useJobsStore.getState().columns.queued.jobs.map((j) => j.id)).toEqual(['job-1'])
+  })
+
+  it('loadMore keeps the rows already loaded when the call rejects', async () => {
+    const { useJobsStore } = await import('./jobsStore')
+    listMock.mockResolvedValue({ jobs: [job({ id: 'job-1' })], total: 2 })
+    await useJobsStore.getState().fetchColumn('queued')
+
+    listMock.mockRejectedValue(new Error('gone'))
+    await useJobsStore.getState().loadMore('queued')
+
+    const column = useJobsStore.getState().columns.queued
+    expect(column.jobs.map((j) => j.id)).toEqual(['job-1'])
+    // Total unchanged, so the "load more" affordance is still offered.
+    expect(column.total).toBe(2)
+    expect(column.loading).toBe(false)
+  })
+
   it('fetchColumn passes the current filters through to window.api.jobs.list', async () => {
     const { useJobsStore } = await import('./jobsStore')
     listMock.mockResolvedValue({ jobs: [], total: 0 })

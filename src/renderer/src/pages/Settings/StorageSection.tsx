@@ -7,6 +7,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import ProgressBar from '../../components/ui/ProgressBar'
 import Tag from '../../components/ui/Tag'
 import { useToast } from '../../components/ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { formatBytes } from '../../lib/formatBytes'
 import { useStorageLocation } from './useStorageLocation'
@@ -39,17 +40,25 @@ export default function StorageSection(): ReactElement {
   const locationBusy = locationMigrating || locationConnecting
 
   const refresh = (): void => {
-    window.api.onboarding.getStatus().then((status) => {
+    void callIpc('onboarding.getStatus', () => window.api.onboarding.getStatus(), {
+      completed: true,
+      storageMode: null,
+      encryptionAvailable: false
+    }).then((status) => {
       setCurrentMode(status.storageMode)
       setEncryptionAvailable(status.encryptionAvailable)
     })
   }
 
   const loadStats = useCallback((): void => {
-    window.api.settings.getStorageStats().then((result) => {
-      setStats(result)
-      setStatsLoading(false)
-    })
+    void callIpc('settings.getStorageStats', () => window.api.settings.getStorageStats(), null).then(
+      (result) => {
+        setStats(result)
+        // Cleared either way, so a failed read shows the empty state
+        // rather than a permanent skeleton.
+        setStatsLoading(false)
+      }
+    )
   }, [])
 
   const handleRefreshStats = (): void => {
@@ -63,7 +72,11 @@ export default function StorageSection(): ReactElement {
   const handleConfirm = async (): Promise<void> => {
     if (!pendingMode) return
     setChanging(true)
-    const result = await window.api.settings.changeStorageMode(pendingMode)
+    const result = await callIpc(
+      'settings.changeStorageMode',
+      () => window.api.settings.changeStorageMode(pendingMode),
+      { ok: false }
+    )
     setChanging(false)
     setPendingMode(null)
     if (result.ok) {

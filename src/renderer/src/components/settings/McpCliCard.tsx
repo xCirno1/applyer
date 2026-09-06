@@ -5,6 +5,7 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import Dropdown from '../ui/Dropdown'
 import CopyBlock from '../ui/CopyBlock'
 import { useToast } from '../ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { CLI_LABELS } from './mcpCliLabels'
 import type { McpConfigDetection, McpScope } from '@shared/types/ipcEvents'
@@ -44,13 +45,21 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
   const configured = configuredScopes.includes(scope)
 
   useEffect(() => {
-    window.api.onboarding.getMcpSnippet(detection.cli, scope).then(setSnippet)
+    void callIpc(
+      'onboarding.getMcpSnippet',
+      () => window.api.onboarding.getMcpSnippet(detection.cli, scope),
+      ''
+    ).then(setSnippet)
   }, [detection.cli, scope])
 
   const handleAutoConfigure = async (): Promise<void> => {
     setConfirmOpen(false)
     setConfiguring(true)
-    const result = await window.api.onboarding.autoConfigureMcp(detection.cli, scope)
+    const result = await callIpc(
+      'onboarding.autoConfigureMcp',
+      () => window.api.onboarding.autoConfigureMcp(detection.cli, scope),
+      { success: false }
+    )
     setConfiguring(false)
     if (result.success) {
       setConfiguredScopes((prev) => (prev.includes(scope) ? prev : [...prev, scope]))
@@ -71,7 +80,11 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
 
     // Re-check the CLI's own config fresh rather than trusting local state — it may have
     // been configured manually (via the snippet) or in a previous app session.
-    const freshDetections = await window.api.onboarding.detectMcpConfigs()
+    const freshDetections = await callIpc(
+      'onboarding.detectMcpConfigs',
+      () => window.api.onboarding.detectMcpConfigs(),
+      []
+    )
     const freshScopes = freshDetections.find((d) => d.cli === detection.cli)?.configuredScopes ?? []
     setConfiguredScopes(freshScopes)
 
@@ -86,7 +99,11 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
       return
     }
 
-    const result = await window.api.onboarding.verifyMcpConnection()
+    const result = await callIpc(
+      'onboarding.verifyMcpConnection',
+      () => window.api.onboarding.verifyMcpConnection(),
+      { success: false }
+    )
     setVerifying(false)
     setVerifyResult(
       result.success

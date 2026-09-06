@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { callIpc } from '../lib/ipcCall'
 import type { JobRecord, JobSortOrder, JobStatus } from '@shared/types/job'
 
 const STATUSES: JobStatus[] = ['queued', 'filled', 'submitted', 'failed']
@@ -68,22 +69,30 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
 
   fetchAllColumns: () => {
+    // Not awaited (the four columns load independently), so each is voided
+    // explicitly — `fetchColumn` handles its own failure and never rejects.
     for (const status of STATUSES) {
-      get().fetchColumn(status)
+      void get().fetchColumn(status)
     }
   },
 
   fetchColumn: async (status) => {
     const { search, source, sortBy } = get().filters
     set((state) => ({ columns: { ...state.columns, [status]: { ...state.columns[status], loading: true } } }))
-    const result = await window.api.jobs.list({
-      status,
-      limit: PAGE_SIZE,
-      offset: 0,
-      search: search || undefined,
-      source: source || undefined,
-      sortBy
-    })
+    // An empty page on failure, never a column stuck loading: `loading` is what
+    // draws the skeleton, so a rejected call that skipped this `set` left one
+    // spinning for the rest of the session.
+    const result = await callIpc(`jobs.list(${status})`, () =>
+      window.api.jobs.list({
+        status,
+        limit: PAGE_SIZE,
+        offset: 0,
+        search: search || undefined,
+        source: source || undefined,
+        sortBy
+      }),
+      { jobs: [], total: 0 }
+    )
     set((state) => ({
       columns: {
         ...state.columns,
@@ -97,14 +106,19 @@ export const useJobsStore = create<JobsState>((set, get) => ({
     if (column.loading || column.jobs.length >= column.total) return
     const { search, source, sortBy } = get().filters
     set((state) => ({ columns: { ...state.columns, [status]: { ...state.columns[status], loading: true } } }))
-    const result = await window.api.jobs.list({
-      status,
-      limit: PAGE_SIZE,
-      offset: column.jobs.length,
-      search: search || undefined,
-      source: source || undefined,
-      sortBy
-    })
+    // Keeps the rows already loaded and reports the same total, so a failed
+    // "load more" leaves the column exactly as it was, still able to retry.
+    const result = await callIpc(`jobs.list(${status}, more)`, () =>
+      window.api.jobs.list({
+        status,
+        limit: PAGE_SIZE,
+        offset: column.jobs.length,
+        search: search || undefined,
+        source: source || undefined,
+        sortBy
+      }),
+      { jobs: [], total: column.total }
+    )
     set((state) => ({
       columns: {
         ...state.columns,
@@ -181,7 +195,9 @@ export const useJobsStore = create<JobsState>((set, get) => ({
       .find((j) => j.id === id)
     set({ openJobId: id, activeJob: fromColumns ?? null })
     if (fromColumns) return
-    window.api.jobs.get(id).then(({ job }) => {
+    void callIpc(`jobs.get(${id})`, () => window.api.jobs.get(id), { job: null }).then(({ job }) => {
+      // Guarded because the modal may have been closed, or another job opened,
+      // while this was in flight.
       if (get().openJobId === id) set({ activeJob: job })
     })
   },

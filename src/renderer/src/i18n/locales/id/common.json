@@ -67,5 +67,16 @@
     "saved": "Profil tersimpan.",
     "saveFailed": "Gagal menyimpan profil.",
     "changedElsewhere": "Profil diperbarui dari tempat lain. Perubahan yang belum disimpan di sini tetap dipertahankan, jadi menyimpan sekarang akan menimpa pembaruan itu."
+  },
+  "errorBoundary": {
+    "title": "Ada yang tidak beres di sini",
+    "body": "Bagian Applyer ini berhenti tampil. Bagian lain masih berjalan - coba lagi, dan kalau terus berulang, mulai ulang aplikasinya.",
+    "tryAgain": "Coba lagi",
+    "details": "Detail teknis"
+  },
+  "boot": {
+    "failedTitle": "Applyer tidak bisa dijalankan",
+    "failedBody": "Aplikasi tidak bisa membaca status penyimpanannya sendiri. Biasanya ini berarti folder penyimpanan tidak tersedia: drive terputus, atau foldernya dipindah atau jadi hanya-baca.",
+    "failedRetry": "Coba lagi"
   }
 }

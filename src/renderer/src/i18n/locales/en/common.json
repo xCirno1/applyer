@@ -67,5 +67,16 @@
     "saved": "Profile saved.",
     "saveFailed": "Failed to save profile.",
     "changedElsewhere": "Profile was updated elsewhere. Your unsaved edits here were kept, so saving now will overwrite that update."
+  },
+  "errorBoundary": {
+    "title": "Something went wrong here",
+    "body": "This part of Applyer stopped rendering. Everything else is still running - try again, and if it keeps happening, restart the app.",
+    "tryAgain": "Try again",
+    "details": "Technical details"
+  },
+  "boot": {
+    "failedTitle": "Applyer could not start",
+    "failedBody": "The app could not read its own storage state. This usually means the storage folder is unavailable: a disconnected drive, or a folder that has been moved or made read-only.",
+    "failedRetry": "Try again"
   }
 }

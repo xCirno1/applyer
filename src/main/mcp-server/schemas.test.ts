@@ -70,6 +70,15 @@ describe('getJobDetailsShape', () => {
     expect(getJobDetailsSchema.safeParse({ url: 'not-a-url' }).success).toBe(false)
     expect(getJobDetailsSchema.safeParse({}).success).toBe(false)
   })
+
+  // `z.url()` accepts all of these — they are well-formed URLs. This tool
+  // fetches whatever it is given in a browser page, so "well-formed" is not
+  // the bar: a `file:` URL here reads a local file and returns its text.
+  it('rejects schemes that are valid URLs but must never be fetched', () => {
+    expect(getJobDetailsSchema.safeParse({ url: 'file:///etc/passwd' }).success).toBe(false)
+    expect(getJobDetailsSchema.safeParse({ url: 'data:text/html,<h1>x</h1>' }).success).toBe(false)
+    expect(getJobDetailsSchema.safeParse({ url: 'javascript:alert(1)' }).success).toBe(false)
+  })
 })
 
 describe('queueJobShape', () => {
@@ -86,6 +95,13 @@ describe('queueJobShape', () => {
 
   it('rejects an invalid url', () => {
     expect(queueJobSchema.safeParse({ ...base, url: 'nope' }).success).toBe(false)
+  })
+
+  // Same rule as get_job_details: a queued job's URL is opened in a real
+  // window by fill_application, and in the OS browser from the job card.
+  it('rejects schemes that are valid URLs but must never be opened', () => {
+    expect(queueJobSchema.safeParse({ ...base, url: 'file:///etc/passwd' }).success).toBe(false)
+    expect(queueJobSchema.safeParse({ ...base, url: 'javascript:alert(1)' }).success).toBe(false)
   })
 
   it('rejects matchScore outside [0, 100]', () => {
@@ -163,6 +179,13 @@ describe('excludeJobShape', () => {
   it('requires a valid url; title/company/reason are optional', () => {
     expect(excludeJobSchema.safeParse({ url: 'https://example.com/1' }).success).toBe(true)
     expect(excludeJobSchema.safeParse({ url: 'not-a-url' }).success).toBe(false)
+  })
+
+  // An exclusion is matched against job URLs, which are http(s) by the time
+  // they are stored — so a `file:` exclusion could never match anything, and
+  // accepting one only invites it to be copied somewhere that acts on it.
+  it('rejects non-http(s) schemes', () => {
+    expect(excludeJobSchema.safeParse({ url: 'file:///etc/passwd' }).success).toBe(false)
   })
 
   it('rejects an over-long title/company/reason', () => {

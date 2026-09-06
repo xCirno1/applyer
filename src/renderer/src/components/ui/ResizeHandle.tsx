@@ -24,6 +24,8 @@ interface ResizeHandleProps {
  * ~9px via an absolutely-positioned `::after` overhang rather than a chunky
  * gutter, keeping depth from seams rather than a decorative resize bar.
  * A real focusable `separator` with arrow-key resizing, not pointer-only.
+ *
+ * Used by `WorkspacePage` for the overview/board and board/dock seams.
  */
 export default function ResizeHandle({
   orientation,

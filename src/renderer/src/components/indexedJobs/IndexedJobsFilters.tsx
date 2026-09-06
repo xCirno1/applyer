@@ -4,6 +4,11 @@ import { useIndexedJobsStore } from '../../state/indexedJobsStore'
 import Dropdown from '../ui/Dropdown'
 import type { IndexedJobMatchFilter } from '@shared/types/indexedJob'
 
+// Filter/search controls above `IndexedJobsList`. The far-right compact-mode
+// toggle (`indexedJobsStore.compact`) is the one control here that changes
+// layout rather than narrowing the query — it flips `IndexedJobRow` between
+// its comfortable card view and single dense table-like lines.
+
 function DensityIcon(): ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">

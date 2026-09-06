@@ -14,6 +14,17 @@ import { useTranslation } from 'react-i18next'
 import { searchAdvancedSettingsSections } from './advancedSettingsSections'
 import SettingsDisclosure from './SettingsDisclosure'
 
+// Developer-mode-only editor for the per-user `settings.json` override.
+// Borderless disclosure headings (see `SettingsDisclosure`) use indentation
+// and trailing rules to show subsystem/group depth without nested boxes.
+// Search filters keys and localized group names while forcing matching paths
+// open. The editor selects number/string/boolean/JSON controls from the
+// shipped default value's runtime type, marks overridden values, resets
+// individual keys, confirms `dangerous*` writes, and reports when a restart
+// is needed. The hierarchy (`advancedSettingsSections.ts`) has a coverage
+// test requiring every key from the canonical JSON file to appear exactly
+// once.
+
 function humanize(value: string): string {
   const withoutWarning = value.replace(/^dangerous/, '')
   return withoutWarning

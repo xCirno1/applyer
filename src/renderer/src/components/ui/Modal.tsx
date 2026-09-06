@@ -1,6 +1,8 @@
 import { useEffect, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
+// Base modal (backdrop + panel, shadow-overlay), Escape-to-close.
+
 interface ModalProps {
   open: boolean
   onClose: () => void

@@ -2,6 +2,12 @@ import { useCallback, useState, type ReactElement, type ReactNode } from 'react'
 import { ToastContext, type ToastVariant } from './ToastContext'
 import { toastInsetStyle } from './toastInset'
 
+// Toast notification system for success/error/info events (context split into
+// ToastContext.ts so this file stays a component-only export, required for Fast
+// Refresh). Mounted once at the root of App.tsx. Consumers call
+// useToast().success/error/info(message) rather than reaching into the context
+// directly.
+
 interface ToastItem {
   id: string
   message: string

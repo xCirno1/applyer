@@ -14,8 +14,40 @@ import type { SelectionModifiers } from './rowSelection'
 // which also keeps a server-filtered table honest, since it can hand this
 // component the rows it already fetched and drive the same controls.
 //
+// The filter strip and the header row share one recessed bg-canvas-inset
+// band, so the chrome reads as a single sunken region above the content, with
+// column labels as 10px all-caps micro-type (a ruler over the data, not
+// another row of it). `toolbar` takes extra controls in that strip, e.g.
+// dropdowns the caller narrows `rows` with itself — and a caller that does
+// narrow rows out there passes `narrowed`, since the empty table then has two
+// possible readings ("nothing is tracked" and "nothing is on that provider")
+// that the filter box alone cannot tell apart, and only one of them is true.
+//
+// `onRowClick` makes a row clickable and keyboard-operable, ignoring clicks
+// that land on a link, button or form control inside it (`isInteractiveTarget`,
+// matched with `closest` since the click usually lands on a text node's
+// parent), so a row action and a cell that does something else do not swallow
+// each other. It receives the click's modifiers already resolved (`modKey` is
+// Ctrl, or Cmd on macOS), so a multi-select caller hands them straight to
+// `rowSelection.ts` without knowing the platform.
+//
+// `selectable` + `isRowSelected` turn the table into a multi-select list:
+// every row reserves the 2px gutter the selected marker paints, so marking
+// one doesn't shift its cells sideways. Cell text stays selectable and
+// copyable — a slug or an error message is exactly the kind of thing to want
+// out of a table — which takes two guards rather than a blanket select-none:
+// Shift+mousedown prevents the browser's own range extension (and restores
+// focus by hand, since preventing the default also prevents that), and a
+// click that ends a text drag anchored inside the row is ignored instead of
+// changing the selection out from under the copy.
+//
 // There is no URL-driven variant here: this is a single-window Electron
 // renderer with no router, so a sort header is always a button, never a link.
+//
+// `useSortableTable(rows, { values, searchKeys })` is the client-side half,
+// holding the sort and filter-box state and applying them; `dataTable.ts` is
+// the plain-module half (same split as `workspace/workspaceLayout.ts`)
+// holding the rules worth testing on their own.
 
 export interface DataTableColumn<T> {
   key: string

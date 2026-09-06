@@ -21,7 +21,14 @@ const SCOPE_INLINE_KEYS = {
   workspace: 'mcp.scopeWorkspaceInline'
 } as const satisfies Record<McpScope, string>
 
-/** Used by both onboarding's McpSetup step and the Settings > Agent section's Connections subsection. */
+// One CLI's connection status + a scope Dropdown (`user` = the CLI's global config,
+// `workspace` = scoped to Applyer's dedicated terminal cwd via `agentWorkspaceDir()` so it
+// doesn't leak into the user's other projects — hidden for CLIs like Codex that have no
+// per-project MCP scope, see `McpAdapter.supportsWorkspaceScope`) + copyable snippet +
+// Auto-configure (behind `ConfirmDialog`) + Verify connection, all scoped to whichever
+// option is selected. Used by both onboarding's `McpSetup` and Settings > Agent's
+// Connections subsection — the only difference between those two call sites is
+// surrounding page chrome.
 export default function McpCliCard({ detection }: { detection: McpConfigDetection }): ReactElement {
   const { t } = useTranslation('settings')
   const toast = useToast()

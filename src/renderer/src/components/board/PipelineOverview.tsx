@@ -7,6 +7,12 @@ import Tag from '../ui/Tag'
 import DonutChart from '../ui/DonutChart'
 import MetaList from '../ui/MetaList'
 
+// The workspace's left sidebar — a `DonutChart` + legend of per-status job
+// counts/share, and a "needs verification" list (from `CaptchaAlertContext`'s
+// `pending`, clickable to open that job's detail modal via `jobsStore`). The
+// analogue of a persistent analysis rail alongside the board, rather than
+// requiring a separate page.
+
 const STATUS_ORDER: JobStatus[] = ['queued', 'filled', 'submitted', 'failed']
 
 /** Same status → color mapping `JobCard`'s left-border accent uses, so the

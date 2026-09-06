@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react'
 
+// Used by pages/Settings/ExportModal.tsx and ImportModal.tsx for per-domain selection.
+
 interface CheckboxProps {
   label: string
   checked: boolean

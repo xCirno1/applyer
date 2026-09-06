@@ -10,6 +10,9 @@ import { useAppInfo } from '../../state/useAppInfo'
  * Renders nothing at all in a packaged build, and nothing while app info is
  * still loading or if it failed to load (a missing marker is the safe
  * default: it only ever appears when we positively know it is a dev build).
+ * Rendered in both the top bar and the Settings header. Backed by
+ * `state/useAppInfo.ts`, whose `AppInfo` is fixed for the process lifetime
+ * and so is fetched once and shared across every call site.
  */
 export default function DevBuildTag(): ReactElement | null {
   const info = useAppInfo()

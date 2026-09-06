@@ -5,6 +5,12 @@ import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
 
+// Full-width banner rows (one per pending challenge) shown above the board
+// when `fill_application` hits a verification challenge — Resume (re-checks
+// the challenge is actually cleared before resolving) / Cancel (fails the
+// job as `captcha_verification`) per row. Driven by `CaptchaAlertProvider`,
+// not self-subscribing — see providers/CaptchaAlertProvider.tsx.
+
 interface CaptchaAlertBannerProps {
   pending: CaptchaDetectedPayload[]
   onRemove: (taskId: string) => void

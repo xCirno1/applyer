@@ -19,6 +19,67 @@ The main screen is a single panel-based workspace (`pages/Workspace/WorkspacePag
 
 ## Existing components
 
+<<<<<<< HEAD
+The *why* for each component — behavioral quirks, the bugs a given approach was fixing, cross-component contracts — lives in a doc comment at the top of its own file (after the imports, before the first export), not here. Read that comment before changing the file. This table is only an index: what exists and where.
+
+| Component | Path |
+|---|---|
+| `TerminalPane` | `terminal/TerminalPane.tsx` |
+| `TerminalGroup` | `terminal/TerminalGroup.tsx` |
+| `TerminalTabBar` | `terminal/TerminalTabBar.tsx` |
+| `TerminalSearchBar` | `terminal/TerminalSearchBar.tsx` |
+| `Button` | `ui/Button.tsx` |
+| `Spinner` | `ui/Spinner.tsx` |
+| `Skeleton` | `ui/Skeleton.tsx` |
+| `ProgressBar` | `ui/ProgressBar.tsx` |
+| `Tooltip` | `ui/Tooltip.tsx` |
+| `Pagination` | `ui/Pagination.tsx` |
+| `ToastContext` / `ToastProvider` / `useToast` | `ui/ToastContext.ts`, `ui/ToastProvider.tsx`, `ui/useToast.ts` |
+| `Modal` | `ui/Modal.tsx` |
+| `ConfirmDialog` | `ui/ConfirmDialog.tsx` |
+| `MetaList` | `ui/MetaList.tsx` |
+| `DataTable` / `useSortableTable` / `dataTable.ts` | `ui/DataTable.tsx`, `ui/useSortableTable.ts`, `ui/dataTable.ts` |
+| `rowSelection.ts` | `ui/rowSelection.ts` |
+| `Tag` | `ui/Tag.tsx` |
+| `TextField` | `ui/TextField.tsx` |
+| `Checkbox` | `ui/Checkbox.tsx` |
+| `Select` | `ui/Select.tsx` |
+| `Dropdown` | `ui/Dropdown.tsx` |
+| `FileDrop` | `ui/FileDrop.tsx` |
+| `DonutChart` | `ui/DonutChart.tsx` |
+| `StorageModeCard` | `onboarding/StorageModeCard.tsx` |
+| `McpConfigSnippet` | `onboarding/McpConfigSnippet.tsx` |
+| `KanbanBoard` | `board/KanbanBoard.tsx` |
+| `PipelineOverview` | `board/PipelineOverview.tsx` |
+| `KanbanColumn` | `board/KanbanColumn.tsx` |
+| `useJobContextMenu` | `board/useJobContextMenu.tsx` |
+| `useJobActions` | `board/useJobActions.ts` |
+| `BulkActionBar` | `board/BulkActionBar.tsx` |
+| `JobDetailModal` | `board/JobDetailModal.tsx` |
+| `DevBuildTag` | `navigation/DevBuildTag.tsx` |
+| `IconRail` | `navigation/IconRail.tsx` |
+| `IndexedJobsList` / `IndexedJobRow` / `IndexedJobsFilters` | `indexedJobs/` |
+| `IndexedJobsDateStrip` / `indexedJobsDateStrip.ts` | `indexedJobs/` |
+| `BoardBulkActionBar` | `companyBoards/BoardBulkActionBar.tsx` |
+| `BoardCsvImportModal` | `companyBoards/BoardCsvImportModal.tsx` |
+| `CompanyBoardsPanel` / `boardColumns.tsx` / `boardStatus.ts` | `companyBoards/` |
+| `IndexedJobsRetentionControl` | `indexedJobs/IndexedJobsRetentionControl.tsx` |
+| `ExclusionsPanel` | `indexedJobs/ExclusionsPanel.tsx` |
+| `CaptchaAlertBanner` | `board/CaptchaAlertBanner.tsx` |
+| `CaptchaAlertProvider` / `useBlockedJobIds` / `usePendingCaptchaAlerts` | `providers/CaptchaAlertProvider.tsx`, `providers/CaptchaAlertContext.ts` |
+| `BoardFilters` | `board/BoardFilters.tsx` |
+| `McpCliCard` | `settings/McpCliCard.tsx` (labels in `settings/mcpCliLabels.ts`, split out for Fast Refresh) |
+| `LanguagePicker` | `settings/LanguagePicker.tsx` |
+| `AdvancedSettingsEditor` / `SettingsDisclosure` | `settings/AdvancedSettingsEditor.tsx`, `settings/SettingsDisclosure.tsx` (hierarchy/search in `settings/advancedSettingsSections.ts`) |
+| `ResizeHandle` | `ui/ResizeHandle.tsx` |
+| `Collapsible` | `ui/Collapsible.tsx` |
+| `WorkspaceDock` | `workspace/WorkspaceDock.tsx` |
+| `Menu` / `MenuBar` | `ui/Menu.tsx` |
+| `ContextMenu` | `ui/ContextMenu.tsx` |
+| `AppMenuBar` | `workspace/AppMenuBar.tsx` |
+| `useWorkspaceLayout` / `workspaceLayout.ts` | `workspace/useWorkspaceLayout.ts`, `workspace/workspaceLayout.ts` |
+| `BrowserSetupModal` / `useBrowserSetupState` | `browser/BrowserSetupModal.tsx`, `browser/useBrowserSetupState.ts` |
+=======
 | Component | Path | Notes |
 |---|---|---|
 | `TerminalPane` | `terminal/TerminalPane.tsx` | xterm.js view bound 1:1 to a main-process `node-pty` session via `window.api.terminal`. Owns its own session lifecycle (create on mount, dispose on unmount), so multiple instances are simply multiple independent sessions. Also answers the terminal-side OSC 10/11 foreground/background color queries CLI agents (Codex, etc.) use to auto-detect light/dark, and re-pushes the resolved theme colors (background/foreground/cursor) into the live xterm instance whenever the app's theme changes. Installs the custom key handler that keeps Ctrl+Shift+C/V (Cmd+C/V on macOS), Shift+Enter, and Ctrl+Backspace away from xterm's stock keymap, which would otherwise send SIGINT for the first, a plain `\r` for the second, and a bare `BS` (one character, not a word) for the last — the rules themselves live in `terminal/terminalKeys.ts`. Also owns a `SearchAddon` instance and the `terminal.search` find-panel state (query/case-sensitive/whole-word/regex/current match/panel width), floating `TerminalSearchBar` over the xterm surface while open rather than reflowing it; exposes `openSearch()` via a forwarded imperative handle since the addon is bound 1:1 to this instance's terminal, so `TerminalGroup` — the only place that knows which pane is *active* — has to reach into the right one rather than owning the state itself. Reopening the panel, toggling a filter, or a theme repaint all clear the terminal's selection before re-searching (a `restartSearch` helper) so they land back on the newest match deterministically instead of `findNext`'s normal "continue past the current match" behavior, which would otherwise make those no-op-looking actions silently skip a match. Navigation is deliberately newest-first (most recent output is what you're usually after in a terminal) even though the addon itself numbers matches oldest-first by buffer row — `runSearch` maps our "next"/"previous" to the addon's `findPrevious`/`findNext` to walk that direction, and `TerminalSearchBar` un-flips the displayed "N of M" to match. |
@@ -78,5 +139,6 @@ The main screen is a single panel-based workspace (`pages/Workspace/WorkspacePag
 | `AppMenuBar` | `workspace/AppMenuBar.tsx` | The topbar's File/Terminal/Jobs/View/Help row, built from `Menu`. Rendered by `App.tsx`'s `MainShell` (not `WorkspacePage`) so the top bar spans the full window width above the icon rail. Terminal items go through `ShortcutsContext`'s `runCommand` so a menu click fires the exact same handler as the keyboard shortcut (and reveals the dock's Terminal tab first, in case it's hidden). Jobs > Retry All Failed hits the new `jobs:retryAll` bulk IPC behind a `ConfirmDialog`. Help > About renders the app version and user-data directory (where the advanced `settings.json` override lives) from `state/useAppInfo.ts`; Help > Keyboard Shortcuts deep-links Settings to its `shortcuts` section via `onOpenSettings(section)`. |
 | `useWorkspaceLayout` / `workspaceLayout.ts` | `workspace/useWorkspaceLayout.ts`, `workspace/workspaceLayout.ts` | Panel visibility + sidebar width + dock height + active dock tab, persisted to `localStorage` (debounced writes, flushed on `beforeunload`). Clamping/parsing logic lives in the plain `.ts` module (no React) so it's independently testable; the hook wraps it with debounced persistence. Called from `App.tsx`'s `MainShell` (not `WorkspacePage`, which receives the result as props) since `AppMenuBar`'s sidebar/dock toggles live in the shared top bar now. |
 | `BrowserSetupModal` / `useBrowserSetupState` | `browser/BrowserSetupModal.tsx`, `browser/useBrowserSetupState.ts` | Shown when a packaged build can't find a system Chrome/Edge and needs a managed Chromium at runtime (`main/browser/browserController.ts`'s `launchWithResolution`/`ensureManagedChromiumDownloaded`) — first a confirm step ("Install"/"Not now", answered via `window.api.browserSetup.respondInstall`; main-process resolution actually blocks on this answer, via `confirmManagedDownload()`'s gate, before starting any download), then a progress bar while downloading, or an error + Retry (`window.api.browserSetup.retryDownload`, which skips re-confirming — clicking Retry is already explicit consent) on failure. The hook subscribes to `browserSetup:progress`/`browserSetup:status` pushes; same push-driven shape as `CaptchaAlertProvider`, but kept as a plain hook (not a context provider) since nothing else in the tree needs this state. The download/error states are dismissible without canceling the background work (a toast still fires on completion); the confirm step is the one exception — closing it counts as declining, since there'd otherwise be no way to bring a merely-hidden prompt back. |
+>>>>>>> origin/main
 
 Update this table whenever a component is added, moved, or removed.

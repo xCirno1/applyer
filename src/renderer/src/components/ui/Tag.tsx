@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react'
 
+// Used for job failure-reason tags, tones: neutral/danger/warning/success.
+
 type Tone = 'neutral' | 'danger' | 'warning' | 'success'
 
 const TONE_CLASSES: Record<Tone, string> = {

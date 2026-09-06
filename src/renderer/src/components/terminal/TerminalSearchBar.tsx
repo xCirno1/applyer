@@ -24,6 +24,16 @@ export const SEARCH_WIDTH_MAX_PX = 520
  * `SearchAddon` instance, and the keyboard shortcut that opens it live in
  * `TerminalPane`, since a search addon is bound 1:1 to one xterm instance and
  * `TerminalGroup` keeps every tab's pane mounted at once.
+ *
+ * Renders a query input, match-case/whole-word/regex toggles, prev/next, a
+ * "N of M" counter, and close, `absolute`-positioned (same reasoning as
+ * `Tooltip`/`ContextMenu` floating rather than pushing layout). Starts small
+ * (`SEARCH_WIDTH_DEFAULT_PX`) and is user-resizable via a `ResizeHandle` on
+ * its left edge (`invert`, since the panel sits after the handle) rather
+ * than sizing to the query. Enter/Shift+Enter in the input step through
+ * matches; Escape closes. Matches are highlighted via the addon's
+ * `decorations` option (all matches in the theme's warning color, the
+ * current one in accent) rather than any DOM overlay.
  */
 export interface TerminalSearchBarProps {
   width: number

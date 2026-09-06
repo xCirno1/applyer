@@ -21,6 +21,40 @@ import TerminalSearchBar, {
   SEARCH_WIDTH_MIN_PX
 } from './TerminalSearchBar'
 
+// xterm.js view bound 1:1 to a main-process node-pty session via
+// window.api.terminal. Owns its own session lifecycle (create on mount,
+// dispose on unmount), so multiple instances are simply multiple independent
+// sessions. Also answers the terminal-side OSC 10/11 foreground/background
+// color queries CLI agents (Codex, etc.) use to auto-detect light/dark, and
+// re-pushes the resolved theme colors (background/foreground/cursor) into
+// the live xterm instance whenever the app's theme changes.
+//
+// Installs a custom key handler that keeps Ctrl+Shift+C/V (Cmd+C/V on
+// macOS), Shift+Enter, and Ctrl+Backspace away from xterm's stock keymap,
+// which would otherwise send SIGINT for the first, a plain \r for the
+// second, and a bare BS (one character, not a word) for the last — the
+// rules themselves live in terminalKeys.ts.
+//
+// Also owns a SearchAddon instance and the terminal.search find-panel state
+// (query/case-sensitive/whole-word/regex/current match/panel width),
+// floating TerminalSearchBar over the xterm surface while open rather than
+// reflowing it; exposes openSearch() via a forwarded imperative handle since
+// the addon is bound 1:1 to this instance's terminal, so TerminalGroup — the
+// only place that knows which pane is *active* — has to reach into the
+// right one rather than owning the state itself.
+//
+// Reopening the panel, toggling a filter, or a theme repaint all clear the
+// terminal's selection before re-searching (a restartSearch helper) so they
+// land back on the newest match deterministically instead of findNext's
+// normal "continue past the current match" behavior, which would otherwise
+// make those no-op-looking actions silently skip a match.
+//
+// Navigation is deliberately newest-first (most recent output is what
+// you're usually after in a terminal) even though the addon itself numbers
+// matches oldest-first by buffer row — runSearch maps our "next"/"previous"
+// to the addon's findPrevious/findNext to walk that direction, and
+// TerminalSearchBar un-flips the displayed "N of M" to match.
+
 /**
  * xterm's canvas/WebGL renderer needs a concrete color, not a CSS variable
  * or a transparent value (both render as opaque black) — so we resolve the

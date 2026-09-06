@@ -1,6 +1,8 @@
 import { useContext } from 'react'
 import { ToastContext } from './ToastContext'
 
+// Consumer-facing entry point to the toast system — see ToastProvider.tsx.
+
 export function useToast(): { success: (msg: string) => void; error: (msg: string) => void; info: (msg: string) => void } {
   const ctx = useContext(ToastContext)
   if (!ctx) throw new Error('useToast must be used within a ToastProvider')

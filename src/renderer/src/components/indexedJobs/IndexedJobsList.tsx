@@ -6,6 +6,24 @@ import Skeleton from '../ui/Skeleton'
 import Pagination from '../ui/Pagination'
 import Dropdown from '../ui/Dropdown'
 
+// The "Indexed" tab's body: every job a `search_jobs` call has surfaced
+// (matched or not — see `indexedJobsRepository.listIndexedJobs`), independent
+// of the board's queued/filled/submitted/failed columns, which only ever hold
+// jobs the agent chose to queue. Server-paged (`indexedJobsStore.page`/
+// `setPage`), not "Load more" — the opposite tradeoff from the client-paged
+// `CompanyBoardsPanel` table, since this list has no ceiling the way
+// `MAX_COMPANY_BOARDS` bounds that one. Live-updated via `indexedJobs:changed`
+// (`subscribeToChanges`), which re-fetches the current page in place and lands
+// on the new last page if pruning shrank the total out from under it.
+//
+// A rows-per-page `Dropdown` sits beside `Pagination` in the footer
+// (`indexedJobsStore.pageSize`/`setPageSize`, options from
+// `INDEXED_JOBS_PAGE_SIZE_OPTIONS`, capped server-side at
+// `LIST_INDEXED_JOBS_MAX_LIMIT`); changing it re-fetches at the new
+// limit/offset and resets to page 1, the same shape as `CompanyBoardsPanel`'s
+// own rows-per-page control. Matched rows are clickable and open the same
+// `JobDetailModal` as the board, via `jobsStore.openJob(matchedJobId)` (inside
+// `IndexedJobRow`).
 export default function IndexedJobsList(): ReactElement {
   const { t } = useTranslation('indexedJobs')
   const items = useIndexedJobsStore((s) => s.items)

@@ -5,6 +5,17 @@ import type { IndexedJobRecord } from '@shared/types/indexedJob'
 import Tag from '../ui/Tag'
 import { useJobsStore } from '../../state/jobsStore'
 
+// One card in `IndexedJobsList`'s default ("comfortable") view, laid out in a
+// responsive 1/2/3-column grid by the parent rather than one full-width
+// stacked column: a row's actual content (title, company, a Matched/Not
+// selected `Tag`, source, seen time, an external "View listing" link) is
+// short enough that a single column wastes most of the row's width.
+// `IndexedJobsFilters`' compact-mode toggle instead collapses the whole list
+// to single dense table-like lines via this component's own `compact` prop,
+// for when the grid's per-card padding costs more than it's worth. Matched
+// rows are clickable and open the same `JobDetailModal` as the board, via
+// `jobsStore.openJob(matchedJobId)`.
+
 /**
  * Coarse relative time. Deliberately not Intl.RelativeTimeFormat: the
  * catalog strings here are the abbreviated forms this dense list needs

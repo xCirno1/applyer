@@ -1,6 +1,10 @@
 import type { ButtonHTMLAttributes, ReactElement } from 'react'
 import Spinner from './Spinner'
 
+// Variants: primary/secondary/danger/ghost. Sizes: sm (h-6) / md (h-7). `loading`
+// shows a spinner and disables the button — the standard pattern for any action
+// that hits IPC.
+
 type Variant = 'primary' | 'secondary' | 'danger' | 'ghost'
 type Size = 'sm' | 'md'
 

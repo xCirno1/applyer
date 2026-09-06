@@ -20,6 +20,23 @@ import type { CompanyBoardRecord } from '@shared/types/companyBoard'
  * Only Remove confirms. Pausing and fetching are reversible; removing a run
  * of boards is not, and it is the one action here that can undo a long
  * afternoon of curating a watchlist.
+ *
+ * Each action is one IPC call (`setEnabledMany`/`removeMany`/`fetch`) rather
+ * than a loop of single-row calls, so a selection of fifty boards is one
+ * write and one list refresh instead of fifty. Fetch is the exception to
+ * "one refresh": the boards are fetched several at a time and each result is
+ * pushed back as it lands (`companyBoards:fetched`, carrying the stored row),
+ * so a row stops spinning and shows its new count the moment that board
+ * answers instead of the whole selection waiting on the slowest member — the
+ * panel replaces that one row rather than re-reading the list, and the
+ * summary toast (which is a summary) still waits for the whole batch.
+ *
+ * Both the selection and a Shift range span the whole filtered list rather
+ * than the current page: paging is a window onto one list, so anchoring on
+ * page 1 and Shift-clicking on page 2 selects everything between (scoping
+ * the range to the page instead would throw the anchor away whenever the
+ * page changed, which is not something the person did). A filter change
+ * still drops the rows it hides.
  */
 
 interface Props {

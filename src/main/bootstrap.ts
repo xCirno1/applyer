@@ -21,7 +21,12 @@ import { registerClipboardIpc } from './ipc/clipboard'
 import { registerDataTransferIpc } from './ipc/dataTransfer'
 import { registerStorageLocationIpc } from './ipc/storageLocation'
 import { registerJobsBroadcastTarget } from './ipc/jobsBroadcast'
-import { fallbackToDefaultStorageAfterOpenFailure, resolveActiveStorageRoot } from './config/storageLocation'
+import {
+  activeStorageRoot,
+  fallbackToDefaultStorageAfterOpenFailure,
+  resolveActiveStorageRoot
+} from './config/storageLocation'
+import { rebaseStoredPaths } from './storageLocation/rebasePaths'
 import { startMcpServerIfStorageResolved, closeMcpSocketServer } from './storageLocation/bootGate'
 import { disposeAllSessions } from './terminal/ptyManager'
 import { applyProductionCsp } from './security'
@@ -74,6 +79,19 @@ function initializeApp(): void {
       app.quit()
       return
     }
+  }
+
+  // Before anything reads a stored path. `documents.stored_path` and
+  // `jobs.screenshot_path` are absolute, so they are only correct while the
+  // database sits where it sat when they were written — and the app can boot
+  // into a folder that moved: the "connect to an existing location" flow
+  // writes the pointer and relaunches, so this is where that folder is first
+  // opened. A no-op when the paths already match, which is every ordinary boot.
+  const rebased = rebaseStoredPaths(activeStorageRoot())
+  if (rebased.documents > 0 || rebased.screenshots > 0) {
+    appLogger.info(
+      `Rebased ${rebased.documents} document path(s) and ${rebased.screenshots} screenshot path(s) onto ${activeStorageRoot()}`
+    )
   }
 
   reconcileOrphanedBlockedJobs()

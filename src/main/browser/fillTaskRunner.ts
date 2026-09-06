@@ -31,7 +31,11 @@ function materializeDocument(kind: 'resume' | 'cover_letter'): string | undefine
   const bytes = readDocumentBytes(doc.id)
   if (!bytes) return undefined
   const tempPath = join(tempDir(), `${randomUUID()}${extensionFor(doc.originalFilename)}`)
-  writeFileSync(tempPath, bytes)
+  // 0600: this is the decrypted resume, written to a directory every account
+  // on the machine can read. The default mode would leave it world-readable
+  // for as long as the fill takes. (No effect on Windows, which ignores the
+  // mode and inherits the directory's ACL.)
+  writeFileSync(tempPath, bytes, { mode: 0o600 })
   return tempPath
 }
 

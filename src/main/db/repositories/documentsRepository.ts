@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
+import { writeFileSync, readFileSync, unlinkSync, existsSync, chmodSync } from 'fs'
 import { join } from 'path'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../index'
@@ -91,7 +91,9 @@ export async function addDocument(input: AddDocumentInput): Promise<DocumentSumm
   return withStorageWriteLock(() => {
     const { data: storedBytes, isEncrypted } = writeSecureBuffer(input.data, mode)
     const storedPath = join(documentsDir(), id)
-    writeFileSync(storedPath, storedBytes)
+    // Owner-only: in plaintext storage mode this file *is* the resume, and
+    // even encrypted there is no reason for it to be world-readable.
+    writeFileSync(storedPath, storedBytes, { mode: 0o600 })
 
     const now = new Date().toISOString()
     getDb()
@@ -160,7 +162,12 @@ export function rewriteDocumentStorageMode(id: string, mode: StorageMode): Promi
     const decryptedText = readSecureField(row.extractedText)
 
     const { data: newBytes, isEncrypted } = writeSecureBuffer(decryptedBytes, mode)
+    // `mode` on an existing file is ignored, so the permissions of a document
+    // written before that became the default are fixed here — this path
+    // already rewrites every document, and switching to plaintext is exactly
+    // when the file's own permissions start carrying the weight.
     writeFileSync(row.storedPath, newBytes)
+    chmodSync(row.storedPath, 0o600)
 
     getDb()
       .update(documents)

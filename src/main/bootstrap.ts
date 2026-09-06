@@ -29,6 +29,7 @@ import { configureApplicationMenu } from './menu'
 import { closeAllBrowsers } from './browser/browserController'
 import { writeAgentInstructions } from './config/agentInstructions'
 import { reconcileOrphanedBlockedJobs } from './jobActions'
+import { purgeTempDir } from './config/paths'
 import { pruneIndexedJobs } from './db/repositories/indexedJobsRepository'
 
 function initializeApp(): void {
@@ -78,6 +79,7 @@ function initializeApp(): void {
 
   reconcileOrphanedBlockedJobs()
   pruneIndexedJobs()
+  purgeTempDir()
   writeAgentInstructions()
 
   registerJobsIpc()

@@ -4,6 +4,7 @@ const VIEWPORT_MARGIN = 8
 const GAP = 6
 
 /**
+ * Hover/focus tooltip for idiomatic, technical, or otherwise unfamiliar terms.
  * `fixed`-positioned (not `absolute`) and viewport-clamped, same reasoning
  * and technique as `Dropdown`'s option panel: a trigger near a screen edge
  * (e.g. the navigation rail pinned to the left edge) would otherwise have

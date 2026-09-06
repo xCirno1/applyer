@@ -6,6 +6,10 @@ import JobCard from './JobCard'
 import Skeleton from '../ui/Skeleton'
 import Button from '../ui/Button'
 
+// One status column — fetches its own page via `jobsStore`, skeleton while
+// loading, "Load more" pagination (no virtualization yet; revisit if column
+// sizes grow large — see plan Phase 3).
+
 export default function KanbanColumn({
   status,
   onOpenJob

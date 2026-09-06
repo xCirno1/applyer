@@ -1,6 +1,11 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 
+// Used by IndexedJobsList (server-paged, since that list has no ceiling) and by
+// CompanyBoardsPanel (client-paged over the whole watchlist, which
+// MAX_COMPANY_BOARDS bounds); the kanban board columns, Activity Log, and Indexed
+// Jobs' "Excluded" tab still use a "Load more" button instead (not yet migrated).
+
 type PageItem = number | 'ellipsis-left' | 'ellipsis-right'
 
 /** First, last, current page, and one sibling on each side — collapsing the rest behind an ellipsis once there are too many pages to show flat. */

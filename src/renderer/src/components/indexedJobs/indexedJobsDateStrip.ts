@@ -1,5 +1,9 @@
 import type { TFunction } from 'i18next'
 
+// Plain-module half of `IndexedJobsDateStrip.tsx` (same split as
+// `workspace/workspaceLayout.ts`): the day-rollover, gap-filling, and label
+// rules below, none of which need a DOM to exercise or test.
+
 /**
  * `YYYY-MM-DD` for the UTC calendar day `offsetDays` away from `now`
  * (0 = today, -1 = yesterday). Plain-module half of `IndexedJobsDateStrip`

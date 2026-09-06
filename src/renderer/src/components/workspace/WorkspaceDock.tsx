@@ -6,14 +6,12 @@ import type { DockTab } from './workspaceLayout'
 
 const TAB_IDS: DockTab[] = ['terminal', 'logs']
 
-/**
- * The bottom dock: terminal (itself a `TerminalGroup` of one or more
- * concurrent sessions) and activity log as tabs of one height-constrained
- * region rather than two full pages, since only one is being read at a time.
- * Both stay mounted across tab switches (CSS visibility, not conditional
- * render) — each terminal owns a live pty session that a remount would kill,
- * and keeping Logs alongside it means switching back doesn't re-fetch.
- */
+// The bottom dock: terminal (itself a `TerminalGroup` of one or more
+// concurrent sessions) and activity log as tabs of one height-constrained
+// region rather than two full pages, since only one is being read at a time.
+// Both stay mounted across tab switches (CSS visibility, not conditional
+// render) — each terminal owns a live pty session that a remount would kill,
+// and keeping Logs alongside it means switching back doesn't re-fetch.
 export default function WorkspaceDock({
   tab,
   onTabChange,

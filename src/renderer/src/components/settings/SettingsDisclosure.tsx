@@ -8,7 +8,11 @@ interface SettingsDisclosureProps {
   nested?: boolean
 }
 
-/** Borderless settings hierarchy: indentation shows depth and a rule carries the disclosure heading. */
+// Borderless settings hierarchy: indentation (`nested`) shows subsystem/group
+// depth and a bottom rule carries the disclosure heading, in place of the
+// nested-box look a bordered accordion would give the `AdvancedSettingsEditor`
+// tree. `forceOpen` lets a search there force a matching path open regardless
+// of the user's own collapsed/expanded choice.
 export default function SettingsDisclosure({
   label,
   children,

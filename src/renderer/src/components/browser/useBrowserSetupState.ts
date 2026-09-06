@@ -17,7 +17,25 @@ interface BrowserSetupHook {
   respondInstall: (accept: boolean) => Promise<void>
 }
 
-/** Push-driven, not click-driven — a background download can start on its own the first time a job action needs a browser, so unlike ExportModal/ImportModal there's no explicit "open" call site. */
+// Backs `BrowserSetupModal`, shown when a packaged build can't find a system
+// Chrome/Edge and needs a managed Chromium at runtime
+// (main/browser/browserController.ts's launchWithResolution /
+// ensureManagedChromiumDownloaded). Subscribes to the browserSetup:progress
+// and browserSetup:status IPC pushes; same push-driven shape as
+// CaptchaAlertProvider, but kept as a plain hook (not a context provider)
+// since nothing else in the tree needs this state — a background download
+// can start on its own the first time a job action needs a browser, so
+// unlike ExportModal/ImportModal there's no explicit "open" call site.
+//
+// The confirm ('Install'/'Not now') step is answered via
+// window.api.browserSetup.respondInstall — main-process resolution actually
+// blocks on this answer, via confirmManagedDownload()'s gate, before
+// starting any download. retryDownload() skips re-confirming, since
+// clicking Retry is already explicit consent. The download and error states
+// are dismissible without canceling the background work (a toast still
+// fires on completion, via the 'ready' status branch above); the confirm
+// step is the one exception — dismissing it counts as declining, since
+// there'd otherwise be no way to bring a merely-hidden prompt back.
 export function useBrowserSetupState(): BrowserSetupHook {
   const [state, setState] = useState<BrowserSetupState>({ status: 'idle' })
   const [dismissed, setDismissed] = useState(false)

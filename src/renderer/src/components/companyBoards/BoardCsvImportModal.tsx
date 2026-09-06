@@ -42,6 +42,25 @@ import {
  * provider keeps answering for years with an empty board, and those are the
  * majority of stale rows in a crawled feed, so importing without a floor
  * spends a watchlist's capacity on boards that can never return a posting.
+ * Combined with the per-import ceiling, boards are taken most-open-roles-first,
+ * so a file larger than the remaining capacity is truncated at the boards
+ * that contribute least.
+ *
+ * The plan is stored *with* the settings it was computed for, which is what
+ * keeps the "is this preview still true?" promise across the debounce:
+ * that question is answered by comparing those stored settings against the
+ * current ones, so Import disables the instant a dropdown or a number
+ * changes, rather than staying live for the 200ms until the timer fires and
+ * importing something other than what is on screen. The write re-plans
+ * again regardless, since the watchlist can change while the dialog is open.
+ *
+ * Imported boards arrive unchecked — hundreds of confirmation requests
+ * before the user has seen a result would be the wrong trade — and the
+ * list's "Last result" column fills in on the first search. The mapped
+ * open-roles count is still stored with each row (`seedJobCount`), since with
+ * nothing measured yet every imported board ties on "never fetched", and
+ * that count is the only thing that can order the first sweeps of a few
+ * hundred new boards (see `main/browser/ats/boardSweep.ts`).
  */
 
 /** How long the mapping has to stop changing before the main process re-plans. */

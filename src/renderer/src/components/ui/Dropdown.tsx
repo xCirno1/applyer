@@ -34,6 +34,9 @@ const ESTIMATED_PANEL_HEIGHT = 220
  * `overflow-hidden`/`auto` clipping (the same reasoning `Modal` relies on),
  * unlike `Tooltip`'s `absolute` panel which only works because its use
  * sites don't sit inside a clipping ancestor.
+ *
+ * Used directly (unlabeled, toolbar-style) by `BoardFilters` and `LogsPage`'s
+ * level filter; wrapped by `Select` wherever a labeled field is needed.
  */
 export default function Dropdown({
   options,

@@ -38,7 +38,14 @@ const ALL = 'all'
  * Job Discovery page next to the search history it feeds, rather than in
  * Settings. Adding one is a network round trip (the app probes the providers
  * to work out which board a company is on), so the add button spins and
- * disables rather than resolving silently.
+ * disables rather than resolving silently. The resulting toast distinguishes
+ * the four outcomes that matter: tracked with N roles, tracked but the board
+ * is empty (a real answer on these APIs, not a failure), tracked but
+ * unreachable so far, and already tracked — plus a second toast when the
+ * company answered on more than one ATS, which is what an in-progress
+ * migration looks like. Beside the add form, "Import CSV" opens
+ * `BoardCsvImportModal` for the bulk case, over this same list and the same
+ * `companyBoards:changed` refresh path.
  *
  * The list is a `DataTable`. Sorting and the filter box come from
  * `useSortableTable`; the provider and status dropdowns are applied here,

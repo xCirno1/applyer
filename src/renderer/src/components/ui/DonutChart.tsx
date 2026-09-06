@@ -24,6 +24,8 @@ const GAP_PX = 2
  * library — this is one shape). Segments render in the order given;
  * negative or zero values are dropped rather than plotted, and an all-zero
  * total renders as an empty track rather than dividing by zero.
+ *
+ * Used by `PipelineOverview` for the per-status job breakdown.
  */
 export default function DonutChart({
   segments,

@@ -17,6 +17,14 @@ import { useShortcutHandler } from '../../providers/ShortcutsContext'
  * `useTerminalTabs`' `paneOrder` (append-only, untouched by reordering) —
  * see the comment there for why that has to be a separate list from `tabs`'
  * reorderable display order.
+ *
+ * Shows an empty state ("No terminals open") with a New terminal button when
+ * the last tab is closed. Used by `workspace/WorkspaceDock.tsx`'s Terminal
+ * tab in place of a single `TerminalPane`. Keeps a
+ * `Map<paneId, TerminalPaneHandle>` from each pane's forwarded ref so the
+ * global `terminal.search` shortcut (registered here, like every other
+ * terminal command) can open the *active* pane's find bar specifically,
+ * without every mounted-but-hidden pane fighting over one shortcut handler.
  */
 export default function TerminalGroup(): ReactElement {
   const { t } = useTranslation('workspace')

@@ -1,6 +1,8 @@
 import { useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 
+// Copyable code block for the manual MCP config snippet.
+
 export default function McpConfigSnippet({ snippet }: { snippet: string }): ReactElement {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)

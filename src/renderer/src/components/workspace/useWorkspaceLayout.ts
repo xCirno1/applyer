@@ -9,6 +9,15 @@ import {
   type WorkspaceLayout
 } from './workspaceLayout'
 
+// Panel visibility + sidebar width + dock height + active dock tab, persisted
+// to localStorage with debounced writes (flushed on `beforeunload`).
+// Clamping/parsing rules live in the plain `workspaceLayout.ts` module (no
+// React) so they're independently testable; this hook only wraps that with
+// debounced persistence — same split as `terminal/terminalKeys.ts`. Called
+// from `App.tsx`'s `MainShell` (not `WorkspacePage`, which receives the
+// result as props) since `AppMenuBar`'s sidebar/dock toggles live in the
+// shared top bar now.
+
 /** A drag produces one layout change per pointer frame; debounce the write. */
 const PERSIST_DEBOUNCE_MS = 200
 

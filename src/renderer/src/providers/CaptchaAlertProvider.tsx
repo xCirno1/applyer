@@ -3,6 +3,14 @@ import CaptchaAlertBanner from '../components/board/CaptchaAlertBanner'
 import { CaptchaAlertContext } from './CaptchaAlertContext'
 import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
 
+// Subscribes to the captcha:detected/captcha:resolved IPC pushes, renders
+// `CaptchaAlertBanner`, and exposes both which job ids are currently blocked
+// (`useBlockedJobIds`, so `JobCard` can show a "needs verification" tag) and
+// the full pending payload list (`usePendingCaptchaAlerts`, so
+// `PipelineOverview` can render title/company without depending on which
+// page of a column happens to be loaded) — see CaptchaAlertContext.ts for
+// those two hooks. Wraps `<main>` in App.tsx's main shell.
+
 export default function CaptchaAlertProvider({ children }: { children: ReactNode }): ReactElement {
   const [pending, setPending] = useState<CaptchaDetectedPayload[]>([])
 

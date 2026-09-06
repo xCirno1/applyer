@@ -13,6 +13,19 @@ import type { JobRecord } from '@shared/types/job'
 import type { ActivityLogEntry } from '@shared/types/activity'
 import { failureLabelKey, failureMessageDisplay, humanizeFailureTag } from './failureDisplay'
 
+// Full job detail: description rendered as sanitized HTML, match reasons, a
+// screenshot preview for Filled jobs served via the `applyer-file://`
+// protocol, and status-contextual actions — Unqueue for Queued, Retry for
+// Failed, Mark Submitted for Filled, Exclude for anything not yet Submitted —
+// all behind spinner+disable / `ConfirmDialog`, never a bare click. Excluding
+// removes the job from the board and blacklists its URL (see
+// `indexedJobs/ExclusionsPanel.tsx`); Unqueue removes it from the board
+// without blacklisting, so the agent can still re-discover and re-queue it
+// later. Mounted once at `App.tsx`'s `MainShell` level (global `jobsStore`
+// state), not owned by `KanbanBoard` — see that store's `openJobId`/
+// `activeJob` for why: multiple panels across multiple screens (the board,
+// `PipelineOverview`'s verification list, Indexed Jobs rows) all open it.
+
 export default function JobDetailModal({ job, onClose }: { job: JobRecord | null; onClose: () => void }): ReactElement | null {
   const { t } = useTranslation('board')
   const errorMessage = useErrorMessage()

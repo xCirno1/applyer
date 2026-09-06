@@ -5,6 +5,12 @@ import Button from '../ui/Button'
 import ProgressBar from '../ui/ProgressBar'
 import type { BrowserSetupState } from './useBrowserSetupState'
 
+// Pure presentation over `useBrowserSetupState`'s state machine (see that
+// file's doc comment for the push-subscription and consent-gating details):
+// a confirm step ('Install'/'Not now'), a progress bar while downloading, or
+// an error message + Retry on failure. Mounted globally in App.tsx's
+// MainShell, like board/CaptchaAlertBanner.tsx.
+
 interface BrowserSetupModalProps {
   state: BrowserSetupState
   dismissed: boolean

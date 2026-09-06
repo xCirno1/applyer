@@ -11,14 +11,19 @@ import { useJobsStore } from '../../state/jobsStore'
 import { useAppInfo } from '../../state/useAppInfo'
 import type { SectionId } from '../../pages/Settings/SettingsPage'
 
-/**
- * The app's VS Code-style menu row (File/Terminal/Jobs/View/Help), replacing
- * what used to be a single standalone `ViewMenu`. Each top-level entry is a
- * `Menu` dropdown; behavior for commands owned by other mounted components
- * (the terminal tab actions) goes through `runCommand` rather than
- * duplicating that logic here, so the menu item and the keyboard shortcut
- * always do exactly the same thing.
- */
+// The app's VS Code-style menu row (File/Terminal/Jobs/View/Help), replacing
+// what used to be a single standalone `ViewMenu`. Each top-level entry is a
+// `Menu` dropdown; behavior for commands owned by other mounted components
+// (the terminal tab actions) goes through `ShortcutsContext`'s `runCommand`
+// rather than duplicating that logic here, so a menu click fires the exact
+// same handler as the keyboard shortcut (and reveals the dock's Terminal tab
+// first, in case it's hidden). Rendered by `App.tsx`'s `MainShell` (not
+// `WorkspacePage`) so the top bar spans the full window width above the icon
+// rail. Jobs > Retry All Failed hits the `jobs:retryAll` bulk IPC behind a
+// `ConfirmDialog`. Help > About renders the app version and user-data
+// directory (where the advanced `settings.json` override lives) from
+// `state/useAppInfo.ts`; Help > Keyboard Shortcuts deep-links Settings to its
+// `shortcuts` section via `onOpenSettings(section)`.
 export default function AppMenuBar({
   onOpenSettings,
   onOpenExport,

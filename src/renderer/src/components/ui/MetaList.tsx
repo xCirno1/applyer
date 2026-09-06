@@ -33,6 +33,9 @@ interface Props {
  *
  * Falsy items are dropped here rather than at each call site, so a missing
  * value cannot leave a leading or doubled separator behind.
+ *
+ * Used by JobDetailModal's meta line, ExclusionsPanel rows, PipelineOverview's
+ * legend counts, and the document lists in Settings/onboarding.
  */
 export default function MetaList({ items, className = '' }: Props): ReactElement {
   const visible = items.filter(

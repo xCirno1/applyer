@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react'
 
+// Small inline spinner, used by Button and standalone.
+
 export default function Spinner({ className = 'h-3.5 w-3.5' }: { className?: string }): ReactElement {
   return (
     <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" fill="none" aria-hidden="true">

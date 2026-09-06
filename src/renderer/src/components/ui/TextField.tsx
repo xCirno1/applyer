@@ -1,5 +1,7 @@
 import type { InputHTMLAttributes, ReactElement } from 'react'
 
+// Labeled text input, dense (h-7), with optional hint/error text.
+
 interface TextFieldProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> {
   label: string
   hint?: string

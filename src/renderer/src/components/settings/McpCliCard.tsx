@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Dropdown from '../ui/Dropdown'
-import McpConfigSnippet from '../onboarding/McpConfigSnippet'
+import CopyBlock from '../ui/CopyBlock'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { CLI_LABELS } from './mcpCliLabels'
@@ -114,7 +114,7 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
         </span>
       )}
 
-      <McpConfigSnippet snippet={snippet} />
+      <CopyBlock text={snippet} />
 
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={() => setConfirmOpen(true)} loading={configuring} disabled={!detection.exists}>

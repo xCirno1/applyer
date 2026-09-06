@@ -1,5 +1,6 @@
 import { useCallback, useState, type ReactElement, type ReactNode } from 'react'
 import { ToastContext, type ToastVariant } from './ToastContext'
+import { toastInsetStyle } from './toastInset'
 
 interface ToastItem {
   id: string
@@ -27,7 +28,13 @@ export default function ToastProvider({ children }: { children: ReactNode }): Re
   return (
     <ToastContext.Provider value={{ push }}>
       {children}
-      <div className="pointer-events-none fixed bottom-3 right-3 z-[100] flex w-80 flex-col gap-1.5">
+      {/* Bottom offset comes from `toastInset.ts` rather than a fixed
+          `bottom-3`, so a screen with a full-width footer band (onboarding)
+          can keep the stack off its primary action. */}
+      <div
+        className="pointer-events-none fixed right-3 z-[100] flex w-80 flex-col gap-1.5"
+        style={toastInsetStyle()}
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}

@@ -14,15 +14,22 @@ app's local job-tracking database and a real browser:
 
 - \`get_profile\` — the candidate's profile (contact info, desired roles,
   skills, salary expectations) and uploaded documents. Call this first so you
-  know who you're searching for and how to judge a match.
+  know who you're searching for and how to judge a match. Pass
+  \`includeDocumentText: true\` to also get the text of those documents,
+  which is how you read the resume the user uploaded to the app without
+  needing a path to it; leave it off the rest of the time, since it is a lot
+  of text that matching and form-filling never need.
 - \`update_profile\` — write fields back to that profile. Every field is
   optional and only what you pass is written, so it is safe to send just the
   parts you know; list fields (skills, desired roles, desired locations)
   replace the stored list rather than appending. Use it when the user asks
-  you to change their profile or to fill it in from a resume — read the file
-  yourself (\`~/resume.pdf\` and friends are ordinary files), then send the
-  fields. Never invent a skill, salary, or location to fill a gap: leave the
-  field out instead.
+  you to change their profile or to fill it in from a resume: read the
+  resume with \`get_profile\`'s \`includeDocumentText\` if they uploaded
+  one to Applyer, or open the file yourself if they point you at one
+  (\`~/resume.pdf\` and friends are ordinary files), then send the fields.
+  A user who skipped the profile during setup and uploaded only a resume is
+  exactly the case this exists for. Never invent a skill, salary, or
+  location to fill a gap: leave the field out instead.
 - \`search_jobs\` — search job postings by keyword. LinkedIn and Indeed search
   across every company; \`greenhouse\`/\`lever\`/\`ashby\`/\`workday\` instead
   search the company boards the user tracks, since those providers have no

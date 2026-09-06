@@ -102,6 +102,44 @@ describe('validateExportBundle', () => {
   })
 })
 
+describe('validateExportBundle — job descriptions', () => {
+  function bundleWithDescription(description: string): unknown {
+    const bundle = validBundle()
+    bundle.data.jobs![0]!.description = description
+    return bundle
+  }
+
+  function importedDescription(description: string): string | null {
+    const result = validateExportBundle(bundleWithDescription(description))
+    if (!result.ok) throw new Error('Expected the bundle to validate')
+    return result.bundle.data.jobs![0]!.description
+  }
+
+  // The column is rendered with `dangerouslySetInnerHTML` in the job detail
+  // modal. Every other writer already sanitizes (the scrapers at fetch,
+  // `queue_job` at the tool boundary); a bundle is a file, and was the one
+  // door that stored whatever it was handed.
+  it('strips script tags from an imported description', () => {
+    expect(importedDescription('<p>Real role</p><script>alert(1)</script>')).toBe('<p>Real role</p>')
+  })
+
+  it('strips event handlers and non-http schemes', () => {
+    expect(importedDescription('<img src=x onerror="alert(1)">')).not.toContain('onerror')
+    expect(importedDescription('<a href="javascript:alert(1)">apply</a>')).not.toContain('javascript:')
+  })
+
+  it('keeps the formatting a real posting uses', () => {
+    const description = importedDescription('<p>We need a <strong>backend</strong> engineer.</p><ul><li>Go</li></ul>')
+    expect(description).toContain('<strong>backend</strong>')
+    expect(description).toContain('<li>Go</li>')
+  })
+
+  it('leaves a null description null rather than turning it into an empty string', () => {
+    const result = validateExportBundle(validBundle())
+    expect(result.ok && result.bundle.data.jobs![0]!.description).toBeNull()
+  })
+})
+
 describe('validateExportBundle — indexed jobs', () => {
   const indexed = {
     url: 'https://example.com/jobs/1',

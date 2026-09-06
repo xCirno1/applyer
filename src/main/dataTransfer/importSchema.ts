@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTransfer'
 import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
 import { isValidBoardDescriptor } from '../browser/ats/providers'
+import { sanitizeDescriptionHtml } from '../browser/htmlContent'
 import { appError, type AppError } from '@shared/types/errorCodes'
 import {
   isValidCanvasTint,
@@ -22,7 +23,16 @@ const jobRecordSchema = z.object({
   company: z.string().min(1),
   location: z.string().nullable(),
   url: z.string().min(1),
-  description: z.string().nullable(),
+  // Sanitized on the way in, not on the way out. A job description is stored
+  // as HTML and rendered with `dangerouslySetInnerHTML` in the detail modal,
+  // and every other writer of this column already sanitizes: the scrapers do
+  // it at fetch, `queue_job` does it at the tool boundary. A bundle is a file
+  // — the one remaining door into that column, and the only one that was
+  // storing whatever it was handed.
+  description: z
+    .string()
+    .nullable()
+    .transform((html) => (html === null ? null : sanitizeDescriptionHtml(html))),
   salaryRange: z.string().nullable(),
   status: jobStatusSchema,
   matchScore: z.number().nullable(),
@@ -154,7 +164,7 @@ const cssPresetSchema = z.object({
   css: z.string().max(MAX_CUSTOM_CSS_LENGTH)
 })
 
-const themeStateSchema = z.object({
+export const themeStateSchema = z.object({
   mode: z.enum(['system', 'light', 'dark']),
   accent: z.string().refine(isValidHexColor).nullable(),
   canvasTint: z.number().refine(isValidCanvasTint).nullable(),

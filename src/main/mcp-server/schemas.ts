@@ -4,8 +4,23 @@ import {
   SEARCH_JOBS_MAX_LIMIT
 } from '@shared/constants'
 import { getSettings } from '@shared/settings'
+import { isNavigableUrl } from '@shared/url'
 
 const settings = getSettings()
+
+/**
+ * Every URL an agent hands us is one the app will eventually open: fetched
+ * in a headless page (`get_job_details`), navigated to in a real window
+ * (`fill_application`, via the queued job), or opened in the OS browser from
+ * the job card. `z.url()` alone is not that check — it accepts `file:`,
+ * `data:` and `javascript:` too — so the scheme rule lives here, at the door
+ * these arrive through. See `@shared/url` for why, and
+ * `browser/jobDetails.ts` / `browser/fillTaskRunner.ts` for the second door.
+ */
+const navigableUrl = z
+  .string()
+  .trim()
+  .refine(isNavigableUrl, 'must be an http:// or https:// URL')
 
 const jobSourceEnum = z.enum(['greenhouse', 'lever', 'ashby', 'workday', 'linkedin', 'indeed', 'generic'])
 const jobStatusEnum = z.enum(['queued', 'filled', 'submitted', 'failed'])
@@ -21,13 +36,13 @@ export const searchJobsShape = {
 }
 
 export const getJobDetailsShape = {
-  url: z.string().trim().url()
+  url: navigableUrl
 }
 
 export const queueJobShape = {
   title: z.string().trim().min(1).max(300),
   company: z.string().trim().min(1).max(300),
-  url: z.string().trim().url(),
+  url: navigableUrl,
   location: z.string().trim().max(300).optional(),
   source: z.string().trim().max(50).optional(),
   description: z.string().max(50000).optional(),
@@ -92,7 +107,7 @@ export const fillApplicationShape = {
 }
 
 export const excludeJobShape = {
-  url: z.string().trim().url(),
+  url: navigableUrl,
   title: z.string().trim().max(300).optional(),
   company: z.string().trim().max(300).optional(),
   reason: z.string().trim().max(300).optional()

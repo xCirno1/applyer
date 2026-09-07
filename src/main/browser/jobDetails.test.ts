@@ -22,6 +22,24 @@ afterEach(() => {
 })
 
 describe('fetchJobDetails routing', () => {
+  // The generic scraper is a bare `page.goto`, and `detectSource` sends
+  // every unrecognised host to it — so a URL that no adapter claims must be
+  // refused here rather than fetched. Asserting the scraper was never called
+  // is the point: a returned `not_found` alone would not prove that.
+  it('refuses a file:// URL instead of routing it to the generic scraper', async () => {
+    vi.mocked(fetchGenericJobDetails).mockClear()
+    const result = await fetchJobDetails('file:///etc/passwd')
+    expect(result).toEqual({ status: 'not_found', message: expect.stringContaining('http') })
+    expect(fetchGenericJobDetails).not.toHaveBeenCalled()
+  })
+
+  it('refuses data: and javascript: URLs the same way', async () => {
+    vi.mocked(fetchGenericJobDetails).mockClear()
+    expect((await fetchJobDetails('data:text/html,<h1>x</h1>')).status).toBe('not_found')
+    expect((await fetchJobDetails('javascript:alert(1)')).status).toBe('not_found')
+    expect(fetchGenericJobDetails).not.toHaveBeenCalled()
+  })
+
   it('routes a Greenhouse URL to the real Greenhouse API scraper', async () => {
     global.fetch = vi.fn(async () => new Response('', { status: 404 })) as typeof fetch
     const result = await fetchJobDetails('https://boards.greenhouse.io/acme/jobs/123')

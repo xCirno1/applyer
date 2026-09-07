@@ -2,6 +2,8 @@ import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { encodedSettingsArgument } from './config/settings'
+import { appLogger } from './logger'
+import { isNavigableUrl } from '@shared/url'
 
 // Not __dirname-relative — this module can end up bundled into a
 // dynamically-imported chunk under out/main/chunks/, which breaks a path
@@ -42,8 +44,23 @@ export function createMainWindow(): BrowserWindow {
 
   // Any link the app tries to open externally goes to the OS browser, never a
   // second Electron window with full node/main-process access.
+  //
+  // Only http(s) gets that far. The links that reach here are job URLs, and a
+  // job URL is not something the user typed: it arrives from the agent's
+  // `queue_job` or is copied out of an ATS feed's `applyUrl`. `openExternal`
+  // hands whatever it is given to the OS, which will happily act on a `file:`
+  // or `smb:` URL — so the scheme is checked before the handoff rather than
+  // trusting the source. See `@shared/url`.
   window.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (isNavigableUrl(details.url)) {
+      // Rejects when no handler exists for the URL; nothing to recover from,
+      // but it should not surface as an unhandled rejection either.
+      shell.openExternal(details.url).catch((err) => {
+        appLogger.warn(`Could not open ${details.url} externally: ${String(err)}`)
+      })
+    } else {
+      appLogger.warn(`Refused to open a non-http(s) URL externally: ${details.url}`)
+    }
     return { action: 'deny' }
   })
 

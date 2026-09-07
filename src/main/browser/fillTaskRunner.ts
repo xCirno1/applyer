@@ -14,6 +14,7 @@ import { broadcastJobUpdate, broadcastCaptchaDetected, broadcastCaptchaResolved 
 import { screenshotsDir, tempDir } from '../config/paths'
 import { withStorageWriteLock } from '../storageWriteLock'
 import { mcpLogger } from '../logger'
+import { isNavigableUrl } from '@shared/url'
 import type { ProfileFields } from '@shared/types/profile'
 
 export type FillTaskImmediateResult =
@@ -158,6 +159,19 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
   }
 
   const targetUrl = job.applicationUrl || job.url
+  // `applicationUrl` is the one field here that no tool schema ever saw: the
+  // scrapers copy it out of an ATS feed's `applyUrl`/`hostedUrl` (see
+  // `scrapers/ashby.ts`, `scrapers/lever.ts`), so it is third-party data
+  // being handed to `page.goto` in a *visible* window with the candidate's
+  // resume already staged for upload. Checked before a browser is even
+  // launched, so a bad URL costs nothing.
+  if (!isNavigableUrl(targetUrl)) {
+    return failAndReturn(
+      jobId,
+      'form_not_supported',
+      `This job's application link is not an http(s) URL, so it cannot be opened: ${targetUrl}`
+    )
+  }
 
   let browser: Browser
   let context: BrowserContext

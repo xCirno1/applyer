@@ -59,6 +59,19 @@
     "closeLabel": "Close {{title}}",
     "atMax": "You can have at most {{count}} terminals open",
     "pasteFailed": "Could not read the clipboard.",
+    "permissions": {
+      "trigger": "Agent access",
+      "title": "Agent permissions",
+      "intro": "Control what agents may enter on job sites. Applyer never submits an application for you.",
+      "allowAutoCompleteFields": "Automatically complete fields",
+      "allowAutoCompleteFieldsHint": "Names, contact details, locations, and profile links. Enabled by default.",
+      "allowAutoUploadDocuments": "Automatically upload documents",
+      "allowAutoUploadDocumentsHint": "Stored resumes and cover letters. Disabled by default.",
+      "saved": "Agent permissions saved.",
+      "saveFailed": "Could not save agent permissions.",
+      "loadFailed": "Could not load agent permissions.",
+      "retry": "Retry"
+    },
     "search": {
       "placeholder": "Find",
       "noResults": "No results",

@@ -27,6 +27,7 @@ The *why* for each component — behavioral quirks, the bugs a given approach wa
 | `TerminalGroup` | `terminal/TerminalGroup.tsx` |
 | `TerminalTabBar` | `terminal/TerminalTabBar.tsx` |
 | `TerminalSearchBar` | `terminal/TerminalSearchBar.tsx` |
+| `AgentPermissionsMenu` | `terminal/AgentPermissionsMenu.tsx` |
 | `Button` | `ui/Button.tsx` |
 | `Spinner` | `ui/Spinner.tsx` |
 | `Skeleton` | `ui/Skeleton.tsx` |

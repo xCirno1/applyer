@@ -8,6 +8,7 @@
   "invalidTable": "Invalid table.",
   "invalidJson": "That file is not valid JSON.",
   "invalidCommand": "Invalid command.",
+  "invalidAgentPermissions": "The agent permissions were invalid.",
   "invalidAdvancedSetting": "This advanced setting value is invalid. {{message}}",
   "invalidNotificationPreferences": "Invalid notification settings.",
   "invalidLocale": "Invalid language.",

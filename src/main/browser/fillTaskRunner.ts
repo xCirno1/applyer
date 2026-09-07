@@ -16,10 +16,18 @@ import { withStorageWriteLock } from '../storageWriteLock'
 import { mcpLogger } from '../logger'
 import { isNavigableUrl } from '@shared/url'
 import type { ProfileFields } from '@shared/types/profile'
+import type { AgentPermissions } from '@shared/types/agentPermissions'
+import { getAgentPermissions } from '../db/repositories/settingsRepository'
 
 export type FillTaskImmediateResult =
   | { status: 'filled'; jobId: string; screenshotPath: string; filledFields: string[]; skippedFields: string[] }
   | { status: 'paused_captcha'; jobId: string; taskId: string; message: string }
+  | {
+      status: 'permission_required'
+      jobId: string
+      requiredPermissions: Array<keyof AgentPermissions>
+      message: string
+    }
   | { status: 'failed'; jobId: string; reasonTag: string; message: string }
 
 function extensionFor(originalFilename: string): string {
@@ -91,22 +99,35 @@ async function performFill(
   jobId: string,
   page: Page,
   browser: Browser,
-  profile: ProfileFields
+  profile: ProfileFields,
+  permissions: AgentPermissions
 ): Promise<FillTaskImmediateResult> {
   let resumePath: string | undefined
   let coverLetterPath: string | undefined
 
   try {
-    resumePath = materializeDocument('resume')
-    coverLetterPath = materializeDocument('cover_letter')
+    if (permissions.autoUploadDocuments) {
+      resumePath = materializeDocument('resume')
+      coverLetterPath = materializeDocument('cover_letter')
+    }
 
-    const { filledFields, skippedFields } = await fillForm(page, profile, {
+    const { filledFields, skippedFields, requiredPermissions } = await fillForm(page, profile, {
+      allowFieldCompletion: permissions.autoCompleteFields,
+      allowDocumentUploads: permissions.autoUploadDocuments,
       resumeFilePath: resumePath,
       coverLetterFilePath: coverLetterPath
     })
 
     if (filledFields.length === 0) {
       await browser.close().catch(() => {})
+      if (requiredPermissions.length > 0) {
+        return {
+          status: 'permission_required',
+          jobId,
+          requiredPermissions,
+          message: 'This form needs an agent permission that is disabled. Review Agent Permissions in Settings, then retry.'
+        }
+      }
       return failAndReturn(jobId, 'form_not_supported', "Couldn't identify any recognizable fields on this application form. It may need to be filled manually.")
     }
 
@@ -136,7 +157,8 @@ async function continueAfterCaptcha(
   jobId: string,
   page: Page,
   browser: Browser,
-  profile: ProfileFields
+  profile: ProfileFields,
+  permissions: AgentPermissions
 ): Promise<void> {
   const outcome = await waitForCaptchaResolution(taskId, jobId, page)
   if (outcome === 'cancelled') {
@@ -145,7 +167,7 @@ async function continueAfterCaptcha(
     return
   }
   broadcastCaptchaResolved({ taskId, jobId })
-  await performFill(jobId, page, browser, profile)
+  await performFill(jobId, page, browser, profile, permissions)
 }
 
 export async function runFillTask(jobId: string): Promise<FillTaskImmediateResult> {
@@ -155,6 +177,16 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
   }
   if (job.status !== 'queued') {
     return { status: 'failed', jobId, reasonTag: 'other', message: `Job is not in the Queued state (currently: ${job.status}).` }
+  }
+
+  const permissions = getAgentPermissions()
+  if (!permissions.autoCompleteFields && !permissions.autoUploadDocuments) {
+    return {
+      status: 'permission_required',
+      jobId,
+      requiredPermissions: ['autoCompleteFields', 'autoUploadDocuments'],
+      message: 'Automatic field completion and document uploads are disabled. Review Agent Permissions in Settings, then retry.'
+    }
   }
 
   const profile = getProfile()
@@ -194,6 +226,7 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
     // Client-rendered application forms (Ashby, Workday) finish mounting fields shortly after load.
     await page.waitForTimeout(1500)
   } catch (err) {
+    await browser.close().catch(() => {})
     return failAndReturn(jobId, 'form_not_supported', `Failed to open the application page: ${String(err)}`)
   }
 
@@ -208,7 +241,7 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
 
     // Deliberately not awaited — the tool call must return now, not block
     // for up to 15 minutes on the user resolving the challenge.
-    continueAfterCaptcha(taskId, jobId, page, browser, profile).catch((err) => {
+    continueAfterCaptcha(taskId, jobId, page, browser, profile, permissions).catch((err) => {
       mcpLogger.error(`Fill task continuation crashed: ${String(err)}`)
     })
 
@@ -220,5 +253,5 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
     }
   }
 
-  return performFill(jobId, page, browser, profile)
+  return performFill(jobId, page, browser, profile, permissions)
 }

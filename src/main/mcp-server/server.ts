@@ -112,7 +112,7 @@ export function createApplyerMcpServer(): McpServer {
     {
       title: 'Fill out a job application',
       description:
-        "Opens a visible browser window and fills in the standard fields of a queued job's application form (name, email, phone, location, LinkedIn/GitHub/portfolio links, resume/cover-letter upload) using the candidate's profile — but NEVER submits it. The user reviews and submits it themselves. Custom essay/eligibility questions are left blank for the user. If the site presents a verification challenge, returns a 'paused_captcha' status immediately (it does not block waiting for the user) — the fill resumes automatically once they resolve it.",
+        "Opens a visible browser window and, when the corresponding Agent Permissions are enabled in Settings, fills standard fields and/or uploads the candidate's stored resume and cover letter, but NEVER submits the application. If a needed permission is disabled, returns 'permission_required'. The user reviews and submits the form themselves. Custom essay/eligibility questions are left blank. If the site presents a verification challenge, returns 'paused_captcha' immediately and resumes automatically once the user resolves it.",
       inputSchema: fillApplicationShape
     },
     fillApplicationTool

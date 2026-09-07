@@ -90,6 +90,7 @@ import type {
   ApplyerSettingKey,
   ApplyerSettings
 } from '@shared/settings'
+import type { AgentPermissions } from '@shared/types/agentPermissions'
 
 function settingsFromArguments(argv: readonly string[]): ApplyerSettings | undefined {
   const prefix = '--applyer-settings='
@@ -303,6 +304,11 @@ const settingsApi = {
     command: AutoStartCommand
   ): Promise<{ ok: boolean; command?: AutoStartCommand; error?: string }> =>
     ipcRenderer.invoke(IPC.settings.setAutoStartCommand, { command }),
+  getAgentPermissions: (): Promise<AgentPermissions> => ipcRenderer.invoke(IPC.settings.getAgentPermissions),
+  setAgentPermissions: (
+    permissions: AgentPermissions
+  ): Promise<{ ok: boolean; permissions?: AgentPermissions; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setAgentPermissions, { permissions }),
   getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats),
   getAdvanced: (): Promise<AdvancedSettingsSnapshot> => ipcRenderer.invoke(IPC.settings.getAdvanced),
   updateAdvanced: (

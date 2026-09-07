@@ -57,6 +57,19 @@
     "closeLabel": "Tutup {{title}}",
     "atMax": "Maksimal cuma bisa buka {{count}} terminal",
     "pasteFailed": "Gagal membaca papan klip.",
+    "permissions": {
+      "trigger": "Akses agen",
+      "title": "Izin agen",
+      "intro": "Atur apa yang boleh dimasukkan agen ke situs lowongan. Applyer tidak pernah mengirim lamaran untukmu.",
+      "allowAutoCompleteFields": "Isi kolom secara otomatis",
+      "allowAutoCompleteFieldsHint": "Nama, detail kontak, lokasi, dan tautan profil. Aktif secara bawaan.",
+      "allowAutoUploadDocuments": "Unggah dokumen secara otomatis",
+      "allowAutoUploadDocumentsHint": "Resume dan cover letter tersimpan. Nonaktif secara bawaan.",
+      "saved": "Izin agen tersimpan.",
+      "saveFailed": "Gagal menyimpan izin agen.",
+      "loadFailed": "Gagal memuat izin agen.",
+      "retry": "Coba lagi"
+    },
     "search": {
       "placeholder": "Cari",
       "noResults": "Tidak ada hasil",

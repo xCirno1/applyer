@@ -8,6 +8,7 @@
   "invalidTable": "Tabel tidak valid.",
   "invalidJson": "File itu bukan JSON yang valid.",
   "invalidCommand": "Perintah tidak valid.",
+  "invalidAgentPermissions": "Izin agen tidak valid.",
   "invalidAdvancedSetting": "Nilai pengaturan lanjutan ini tidak valid. {{message}}",
   "invalidNotificationPreferences": "Pengaturan notifikasi tidak valid.",
   "invalidLocale": "Bahasa tidak valid.",

@@ -22,6 +22,8 @@ import {
   setIndexedJobsRetentionDays,
   getBrowserPreference,
   setBrowserPreference,
+  getAgentPermissions,
+  setAgentPermissions,
   getNotificationPreferences,
   setNotificationPreferences,
   getNotificationLocale,
@@ -101,6 +103,35 @@ describe('browser preference', () => {
     // Simulates a value from a future/older app version rather than one this app wrote itself.
     testDb.insert(appSettings).values({ key: 'browser_preference', value: 'firefox' }).run()
     expect(getBrowserPreference()).toBe('auto')
+  })
+})
+
+describe('agent permissions', () => {
+  it('allows field completion but denies document uploads by default', () => {
+    expect(getAgentPermissions()).toEqual({
+      autoCompleteFields: true,
+      autoUploadDocuments: false
+    })
+  })
+
+  it('round-trips each permission independently', () => {
+    setAgentPermissions({ autoCompleteFields: true, autoUploadDocuments: false })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: true, autoUploadDocuments: false })
+    setAgentPermissions({ autoCompleteFields: false, autoUploadDocuments: true })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: true })
+  })
+
+  it('fails closed for malformed stored permissions', () => {
+    testDb.insert(appSettings).values({ key: 'agent_permissions', value: '{broken' }).run()
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false })
+  })
+
+  it('fails closed for incomplete stored permissions', () => {
+    testDb
+      .insert(appSettings)
+      .values({ key: 'agent_permissions', value: JSON.stringify({ autoCompleteFields: true }) })
+      .run()
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false })
   })
 })
 

@@ -90,6 +90,8 @@ export const IPC = {
     changeStorageMode: 'settings:changeStorageMode',
     getAutoStartCommand: 'settings:getAutoStartCommand',
     setAutoStartCommand: 'settings:setAutoStartCommand',
+    getAgentPermissions: 'settings:getAgentPermissions',
+    setAgentPermissions: 'settings:setAgentPermissions',
     getStorageStats: 'settings:getStorageStats',
     getAdvanced: 'settings:getAdvanced',
     updateAdvanced: 'settings:updateAdvanced',

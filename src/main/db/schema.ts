@@ -29,6 +29,8 @@ export const profile = sqliteTable('profile', {
   yearsExperience: integer('years_experience'),
   summary: text('summary'),
   skills: text('skills', { mode: 'json' }).$type<string[]>(),
+  /** Version-tagged encrypted JSON containing every ProfileFields value. Legacy columns above are read only for migration. */
+  securePayload: text('secure_payload'),
   createdAt: text('created_at').notNull().default(nowIso),
   updatedAt: text('updated_at').notNull().default(nowIso)
 })

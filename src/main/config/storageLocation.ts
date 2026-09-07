@@ -1,9 +1,9 @@
 import { app } from 'electron'
 import { accessSync, constants, existsSync, readFileSync, renameSync, writeFileSync } from 'fs'
 import { isAbsolute, join } from 'path'
-import Database from 'better-sqlite3'
 import type { StorageLocationPointer } from '@shared/types/storageLocation'
 import { appError, type AppError } from '@shared/types/errorCodes'
+import { openCipherDatabase } from '../db/databaseEncryption'
 
 const POINTER_FILENAME = 'storage-location.json'
 const DEFAULT_POINTER: StorageLocationPointer = { schemaVersion: 1, customRoot: null }
@@ -79,7 +79,7 @@ export function isCustomRootAvailable(customRoot: string): boolean {
     // because a folder happened to contain a file named applyer.db. Every
     // Applyer database, including the oldest supported schema, has these core
     // tables plus Drizzle's migration ledger.
-    const sqlite = new Database(databasePath, { readonly: true, fileMustExist: true })
+    const { sqlite } = openCipherDatabase(databasePath, { readonly: true, fileMustExist: true })
     try {
       const integrity = sqlite.pragma('quick_check') as { quick_check: string }[]
       if (integrity[0]?.quick_check !== 'ok') return false

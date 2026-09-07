@@ -16,6 +16,8 @@ import { withStorageWriteLock } from '../storageWriteLock'
 import { mcpLogger } from '../logger'
 import { isNavigableUrl } from '@shared/url'
 import type { ProfileFields } from '@shared/types/profile'
+import { getStorageMode } from '../db/repositories/settingsRepository'
+import { writeSecureFileBuffer } from '../db/encryption'
 
 export type FillTaskImmediateResult =
   | { status: 'filled'; jobId: string; screenshotPath: string; filledFields: string[]; skippedFields: string[] }
@@ -51,7 +53,11 @@ function safeUnlink(path: string | undefined): void {
 
 async function captureScreenshot(page: Page, jobId: string): Promise<string> {
   const path = join(screenshotsDir(), `${jobId}.png`)
-  await page.screenshot({ path }).catch(() => {})
+  const image = await page.screenshot().catch(() => null)
+  if (image) {
+    const mode = getStorageMode() ?? 'encrypted'
+    writeFileSync(path, writeSecureFileBuffer(image, mode), { mode: 0o600 })
+  }
   return path
 }
 

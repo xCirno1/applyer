@@ -129,9 +129,10 @@ is exposed to it.
 
 Everything stays on your computer. Settings gives you control over the details:
 
-- **Storage mode**: encrypted through your OS keychain, or plain readable files. You can
-  switch either way after onboarding, and your existing profile and documents are
-  rewritten in the new format.
+- **Storage mode**: encrypted through your OS keychain, or plain readable files. Encrypted
+  mode covers the complete SQLite database, documents and their metadata, screenshots, and
+  file logs. You can switch either way after onboarding; see
+  [`docs/encryption.md`](docs/encryption.md) for recovery and verification details.
 - **Storage location**: keep the default app-data directory, move everything (database,
   documents, screenshots, logs) to a folder of your choosing while the app keeps running,
   or connect to an existing Applyer dataset somewhere else. If a custom location is missing

@@ -59,6 +59,17 @@ describe('addDocument', () => {
     expect(getExtractedText(doc.id)).toBe('My resume content')
   })
 
+  it('encrypts document content, extracted text, filename, and MIME type in encrypted mode', async () => {
+    setStorageMode('encrypted')
+    const doc = await addDocument(textFile('private resume body'))
+    const row = getDb().select().from(documents).where(eq(documents.id, doc.id)).get()!
+    expect(row.originalFilename).toMatch(/^enc:v1:/)
+    expect(row.mimeType).toMatch(/^enc:v1:/)
+    expect(row.extractedText).toMatch(/^enc:v1:/)
+    expect(doc.originalFilename).toBe('resume.txt')
+    expect(readDocumentBytes(doc.id)?.toString()).toBe('private resume body')
+  })
+
   it('returns no extracted text for an unrecognized mime type, without throwing', async () => {
     const doc = await addDocument({ kind: 'other', originalFilename: 'x.bin', mimeType: 'application/octet-stream', data: Buffer.from('binary') })
     expect(doc.hasExtractedText).toBe(false)

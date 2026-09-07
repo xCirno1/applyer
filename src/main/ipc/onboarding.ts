@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
-import { appError } from '@shared/types/errorCodes'
+import { appError, unexpectedError } from '@shared/types/errorCodes'
 import {
   getStorageMode,
   setStorageMode,
@@ -16,6 +16,9 @@ import {
 } from '../config/mcpConfigWriter'
 import { mcpTargetPayload } from './payloadSchemas'
 import type { OnboardingStatus } from '@shared/types/ipcEvents'
+import { setDatabaseEncryptionMode } from '../db'
+import { setLogStorageMode } from '../logger'
+import { rewriteScreenshotStorageMode } from '../secureFiles'
 
 export function registerOnboardingIpc(): void {
   ipcMain.handle(IPC.onboarding.getStatus, (): OnboardingStatus => {
@@ -31,8 +34,23 @@ export function registerOnboardingIpc(): void {
     if (mode !== 'encrypted' && mode !== 'plaintext') {
       return { ok: false, error: appError('invalidStorageMode') }
     }
-    setStorageMode(mode)
-    return { ok: true }
+    if (mode === 'encrypted' && !isEncryptionAvailable()) {
+      return { ok: false, error: appError('keychainUnavailable') }
+    }
+    const currentMode = getStorageMode()
+    try {
+      setStorageMode(mode)
+      rewriteScreenshotStorageMode(mode)
+      setLogStorageMode(mode)
+      setDatabaseEncryptionMode(mode)
+      return { ok: true }
+    } catch (err) {
+      const rollbackMode = currentMode ?? 'plaintext'
+      setStorageMode(rollbackMode)
+      rewriteScreenshotStorageMode(rollbackMode)
+      setLogStorageMode(rollbackMode)
+      return { ok: false, error: unexpectedError(err) }
+    }
   })
 
   ipcMain.handle(IPC.onboarding.complete, () => {

@@ -15,6 +15,7 @@ import { pruneIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { reconcileOrphanedBlockedJobs } from '../jobActions'
 import { appLogger } from '../logger'
 import { withStorageWriteLock } from '../storageWriteLock'
+import { rebaseStoredPaths } from './rebasePaths'
 import type { StorageLocationMigrationResult } from '@shared/types/storageLocation'
 import { appError } from '@shared/types/errorCodes'
 
@@ -30,8 +31,14 @@ function canonicalPath(path: string): string {
   }
 }
 
-/** Startup's database-dependent maintenance, reused whenever the live connection changes mid-session. */
-function runDatabaseStartupMaintenance(): void {
+/**
+ * Startup's database-dependent maintenance, reused whenever the live
+ * connection changes mid-session. `root` is passed rather than read from
+ * `activeStorageRoot()` because the caller below runs this *during* a switch,
+ * with the new database open but the active root not yet flipped.
+ */
+function runDatabaseStartupMaintenance(root: string): void {
+  rebaseStoredPaths(root)
   seedFailureTags(getDb())
   reconcileOrphanedBlockedJobs()
   pruneIndexedJobs()
@@ -67,7 +74,7 @@ function switchToExistingRoot(root: string, persistPointer: boolean): StorageLoc
   closeDatabase()
   try {
     openDatabaseAt(targetDbPath, { runMigrations: true })
-    runDatabaseStartupMaintenance()
+    runDatabaseStartupMaintenance(targetRoot)
 
     if (persistPointer) {
       const isDefault = targetRoot === canonicalPath(defaultStorageRoot())
@@ -78,6 +85,9 @@ function switchToExistingRoot(root: string, persistPointer: boolean): StorageLoc
     try {
       closeDatabase()
       openDatabaseAt(previousDbPath, { runMigrations: false })
+      // Rebased back too: the failed attempt above may have pointed the rows
+      // at the root it was trying to switch to.
+      rebaseStoredPaths(previousRoot)
       setActiveStorageRoot(previousRoot)
     } catch (reopenErr) {
       appLogger.error(

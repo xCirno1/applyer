@@ -8,6 +8,7 @@ import MetaList from '../ui/MetaList'
 import { useToast } from '../ui/useToast'
 import { useJobsStore } from '../../state/jobsStore'
 import { useErrorMessage } from '../../i18n/formatError'
+import { callIpc } from '../../lib/ipcCall'
 import { useFormatters } from '../../i18n/format'
 import type { JobRecord } from '@shared/types/job'
 import type { ActivityLogEntry } from '@shared/types/activity'
@@ -45,7 +46,10 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   useEffect(() => {
     if (!job) return
     let cancelled = false
-    window.api.logs.list({ jobId: job.id, limit: 20 }).then((result) => {
+    void callIpc('logs.list(job)', () => window.api.logs.list({ jobId: job.id, limit: 20 }), {
+      entries: [],
+      total: 0
+    }).then((result) => {
       if (!cancelled) setActivity(result.entries)
     })
     return () => {
@@ -75,7 +79,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   const handleMarkSubmitted = async (): Promise<void> => {
     setConfirmSubmitOpen(false)
     setSubmitting(true)
-    const result = await window.api.jobs.markSubmitted(job.id)
+    const result = await callIpc(
+      'jobs.markSubmitted',
+      () => window.api.jobs.markSubmitted(job.id),
+      { ok: false }
+    )
     setSubmitting(false)
     if (result.ok && result.job) {
       applyUpdate(result.job)
@@ -88,7 +96,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
 
   const handleRetry = async (): Promise<void> => {
     setRetrying(true)
-    const result = await window.api.jobs.retry(job.id)
+    const result = await callIpc(
+      'jobs.retry',
+      () => window.api.jobs.retry(job.id),
+      { ok: false }
+    )
     setRetrying(false)
     if (result.ok && result.job) {
       applyUpdate(result.job)
@@ -102,7 +114,7 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   const handleExclude = async (): Promise<void> => {
     setConfirmExcludeOpen(false)
     setExcluding(true)
-    const result = await window.api.jobs.exclude(job.id)
+    const result = await callIpc('jobs.exclude', () => window.api.jobs.exclude(job.id), { ok: false })
     setExcluding(false)
     if (result.ok) {
       removeJobLocal(job.id)
@@ -116,7 +128,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   const handleUnqueue = async (): Promise<void> => {
     setConfirmUnqueueOpen(false)
     setUnqueueing(true)
-    const result = await window.api.jobs.unqueue(job.id)
+    const result = await callIpc(
+      'jobs.unqueue',
+      () => window.api.jobs.unqueue(job.id),
+      { ok: false }
+    )
     setUnqueueing(false)
     if (result.ok) {
       removeJobLocal(job.id)

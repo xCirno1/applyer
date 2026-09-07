@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useToast } from '../ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 
 export type BrowserSetupState =
   | { status: 'idle' }
@@ -74,7 +75,11 @@ export function useBrowserSetupState(): BrowserSetupHook {
   const retry = async (): Promise<void> => {
     setDismissed(false)
     setState({ status: 'downloading', percent: 0, totalSize: '' })
-    const result = await window.api.browserSetup.retryDownload()
+    const result = await callIpc(
+      'browserSetup.retryDownload',
+      () => window.api.browserSetup.retryDownload(),
+      { ok: false }
+    )
     if (!result.ok) {
       const message = result.error ?? 'Unknown error'
       toast.error(`Browser setup failed: ${message}`)
@@ -84,7 +89,14 @@ export function useBrowserSetupState(): BrowserSetupHook {
 
   const respondInstall = async (accept: boolean): Promise<void> => {
     setState(accept ? { status: 'downloading', percent: 0, totalSize: '' } : { status: 'idle' })
-    await window.api.browserSetup.respondInstall(accept)
+    // The main process is blocked on this answer inside
+    // `confirmManagedDownload()`; a lost answer times out there rather than
+    // hanging the modal, so there is nothing to report to the user here.
+    await callIpc(
+      'browserSetup.respondInstall',
+      () => window.api.browserSetup.respondInstall(accept),
+      { ok: false }
+    )
   }
 
   return { state, dismissed, dismiss: () => setDismissed(true), retry, respondInstall }

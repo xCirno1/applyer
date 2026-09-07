@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import Select from '../../components/ui/Select'
 import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import type { BrowserPreference, ResolvedBrowserStatus } from '@shared/types/ipcEvents'
 
 const KIND_KEYS = {
@@ -21,8 +22,14 @@ export default function BrowserSection(): ReactElement {
   const toast = useToast()
 
   const refresh = (): void => {
-    window.api.browserSetup.getPreference().then(setPreferenceState)
-    window.api.browserSetup.getStatus().then(setStatus)
+    void callIpc('browserSetup.getPreference', () => window.api.browserSetup.getPreference(), 'auto').then(
+      setPreferenceState
+    )
+    void callIpc('browserSetup.getStatus', () => window.api.browserSetup.getStatus(), {
+      packaged: false,
+      kind: 'unresolved',
+      executablePath: null
+    }).then(setStatus)
   }
 
   useEffect(refresh, [])
@@ -31,9 +38,17 @@ export default function BrowserSection(): ReactElement {
     const next = value as BrowserPreference
     setSaving(true)
     setPreferenceState(next)
-    await window.api.browserSetup.setPreference(next)
+    const result = await callIpc(
+      'browserSetup.setPreference',
+      () => window.api.browserSetup.setPreference(next),
+      { ok: false }
+    )
     setSaving(false)
-    toast.success(t('browser.saved'))
+    // Announced as saved only if it was: `refresh()` below would
+    // otherwise snap the control back to the stored value right after
+    // a success toast.
+    if (result.ok) toast.success(t('browser.saved'))
+    else toast.error(t('browser.saveFailed'))
     refresh()
   }
 

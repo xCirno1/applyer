@@ -4,6 +4,7 @@ import Menu, { MenuBar, type MenuEntry } from '../ui/Menu'
 import Modal from '../ui/Modal'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { useToast } from '../ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useShortcuts } from '../../providers/ShortcutsContext'
 import { comboIdToLabel } from '../../shortcuts/keyCombo'
 import type { CommandId } from '../../shortcuts/commands'
@@ -69,7 +70,10 @@ export default function AppMenuBar({
   const handleRetryAll = async (): Promise<void> => {
     setConfirmRetryAllOpen(false)
     setRetryingAll(true)
-    const result = await window.api.jobs.retryAll()
+    const result = await callIpc('jobs.retryAll', () => window.api.jobs.retryAll(), {
+      ok: false,
+      jobs: []
+    })
     setRetryingAll(false)
     if (!result.ok) {
       toast.error(t('retryAll.failed'))

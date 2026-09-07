@@ -6,6 +6,7 @@ import Checkbox from '../../components/ui/Checkbox'
 import Select from '../../components/ui/Select'
 import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { formatBytes } from '../../lib/formatBytes'
 import { useTheme } from '../../providers/ThemeContext'
@@ -55,9 +56,13 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
   useEffect(() => {
     if (!open) return
     let cancelled = false
-    window.api.data.getExportSizes(themeState).then((result) => {
-      if (!cancelled) setSizes(result)
-    })
+    void callIpc('data.getExportSizes', () => window.api.data.getExportSizes(themeState), null).then(
+      (result) => {
+        // Null leaves the sizes as they were (or unknown on a first
+        // open), which the totals below already render as 0.
+        if (!cancelled && result) setSizes(result)
+      }
+    )
     return () => {
       cancelled = true
     }
@@ -73,20 +78,24 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
 
   const handleExport = async (): Promise<void> => {
     setExporting(true)
-    const result =
-      format === 'json'
-        ? await window.api.data.exportJson(
-            selection,
-            {
-              title: t('data.exportDialogTitle'),
-              filterName: 'JSON'
-            },
-            themeState
-          )
-        : await window.api.data.exportCsv(csvTable, {
-            title: t('data.exportCsvDialogTitle'),
-            filterName: 'CSV'
-          })
+    const result = await callIpc(
+      `data.export(${format})`,
+      () =>
+        format === 'json'
+          ? window.api.data.exportJson(
+              selection,
+              {
+                title: t('data.exportDialogTitle'),
+                filterName: 'JSON'
+              },
+              themeState
+            )
+          : window.api.data.exportCsv(csvTable, {
+              title: t('data.exportCsvDialogTitle'),
+              filterName: 'CSV'
+            }),
+      { ok: false as const }
+    )
     setExporting(false)
     if (result.canceled) return
     if (!result.ok) {

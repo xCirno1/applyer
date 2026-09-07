@@ -3,6 +3,7 @@ import { Trans, useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
+import { callIpc } from '../../lib/ipcCall'
 import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
 
 // Full-width banner rows (one per pending challenge) shown above the board
@@ -24,7 +25,13 @@ function CaptchaAlertRow({ item, onRemove }: { item: CaptchaDetectedPayload; onR
 
   const handleResume = async (): Promise<void> => {
     setBusy('resume')
-    const result = await window.api.browserControl.resumeTask(item.taskId)
+    // The same shape a refused resume returns, so a bridge failure lands on
+    // the existing "still blocked" toast instead of a stuck button.
+    const result = await callIpc(
+      'browserControl.resumeTask',
+      () => window.api.browserControl.resumeTask(item.taskId),
+      { ok: false }
+    )
     setBusy(null)
     if (result.ok) {
       onRemove(item.taskId)
@@ -36,7 +43,11 @@ function CaptchaAlertRow({ item, onRemove }: { item: CaptchaDetectedPayload; onR
 
   const handleCancel = async (): Promise<void> => {
     setBusy('cancel')
-    const result = await window.api.browserControl.cancelTask(item.taskId)
+    const result = await callIpc(
+      'browserControl.cancelTask',
+      () => window.api.browserControl.cancelTask(item.taskId),
+      { ok: false }
+    )
     setBusy(null)
     if (result.ok) {
       onRemove(item.taskId)

@@ -4,6 +4,7 @@ import Modal from '../../components/ui/Modal'
 import Button from '../../components/ui/Button'
 import Checkbox from '../../components/ui/Checkbox'
 import { useToast } from '../../components/ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { useJobsStore } from '../../state/jobsStore'
 import { useFormatters } from '../../i18n/format'
@@ -75,10 +76,15 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const handlePickFile = async (): Promise<void> => {
     setPicking(true)
     setPickError(null)
-    const result = await window.api.data.pickImportFile({
-      title: t('data.importDialogTitle'),
-      filterName: 'JSON'
-    })
+    const result = await callIpc(
+      'data.pickImportFile',
+      () =>
+        window.api.data.pickImportFile({
+          title: t('data.importDialogTitle'),
+          filterName: 'JSON'
+        }),
+      { ok: false as const, canceled: true }
+    )
     setPicking(false)
     if (result.canceled) return
     if (!result.ok || !result.bundle) {
@@ -108,7 +114,11 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const handleImport = async (): Promise<void> => {
     if (!file) return
     setImporting(true)
-    const result = await window.api.data.import(file.bundle, selection)
+    const result = await callIpc(
+      'data.import',
+      () => window.api.data.import(file.bundle, selection),
+      { ok: false as const }
+    )
     setImporting(false)
     if (!result.ok || !result.summary) {
       toast.error(result.error ? errorMessage(result.error) : t('data.importFailed'))

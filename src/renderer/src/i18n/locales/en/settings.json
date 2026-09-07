@@ -128,7 +128,8 @@
     "devBuildNote": "This is a development build, so it always uses Playwright's bundled Chromium regardless of the preference below. The preference only takes effect in a packaged build.",
     "unresolvedNote": "Resolves the first time a browser is needed, e.g. searching or applying to a job.",
     "outro": "Auto tries system Chrome, then Edge, then a one-time managed download. Picking Chrome or Edge specifically fails with an error (instead of silently trying something else) if that browser isn't installed. Managed download always uses Applyer's own downloaded copy.",
-    "saved": "Browser preference saved. It takes effect the next time a browser is launched."
+    "saved": "Browser preference saved. It takes effect the next time a browser is launched.",
+    "saveFailed": "Could not save the browser preference."
   },
   "storage": {
     "intro": "Everything stays on this computer either way. This only changes how it's stored on disk, and re-writes your existing profile and documents in the new format.",

@@ -82,6 +82,8 @@ export const IPC = {
     respondInstall: 'browserSetup:respondInstall',
     getPreference: 'browserSetup:getPreference',
     setPreference: 'browserSetup:setPreference',
+    getAllowLocalAddresses: 'browserSetup:getAllowLocalAddresses',
+    setAllowLocalAddresses: 'browserSetup:setAllowLocalAddresses',
     getStatus: 'browserSetup:getStatus',
     onProgress: 'browserSetup:progress',
     onStatus: 'browserSetup:status'

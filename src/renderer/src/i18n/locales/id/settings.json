@@ -128,7 +128,15 @@
     "unresolvedNote": "Ditentukan waktu browser pertama kali dibutuhkan, misalnya waktu mencari atau melamar kerja.",
     "outro": "Mode otomatis mencoba Chrome dulu, lalu Edge, lalu mengunduh sendiri sekali saja. Kalau kamu memilih Chrome atau Edge secara khusus tapi browsernya tidak terpasang, Applyer akan menampilkan error, bukan diam-diam memakai yang lain. Pilihan unduh sendiri selalu memakai salinan milik Applyer.",
     "saved": "Pilihan browser tersimpan. Berlaku waktu browser dibuka berikutnya.",
-    "saveFailed": "Gagal menyimpan preferensi browser."
+    "saveFailed": "Gagal menyimpan preferensi browser.",
+    "networkAccessTitle": "Akses jaringan",
+    "allowLocalAddresses": "Izinkan Alamat Lokal",
+    "allowLocalAddressesHint": "Opsi developer buat menguji situs di localhost atau jaringan privat. Mati secara bawaan.",
+    "localAddressesConfirmTitle": "Izinkan akses ke jaringan lokalmu?",
+    "localAddressesConfirmMessage": "Agen dan halaman lowongan akan bisa terhubung ke localhost, alamat IP privat, dan layanan di jaringan lokalmu. Halaman berbahaya bisa memeriksa atau mengirim permintaan ke layanan tersebut. Aktifkan cuma saat menguji situs yang kamu percaya.",
+    "localAddressesConfirm": "Izinkan Alamat Lokal",
+    "localAddressesSaved": "Izin alamat lokal tersimpan. Berlaku buat sesi browser baru.",
+    "localAddressesSaveFailed": "Gagal menyimpan izin alamat lokal."
   },
   "browserSetup": {
     "title": "Menyiapkan browser",

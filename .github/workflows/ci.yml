@@ -51,3 +51,22 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      # Same --ignore-scripts reasoning as the jobs above: electron-vite only
+      # bundles, and every native dependency is externalized rather than
+      # loaded, so nothing here needs a rebuilt binary or a real browser.
+      - run: npm ci --ignore-scripts
+      # Typecheck and lint both pass on things this does not: the Rollup input
+      # graph, the preload's forced-CJS output, and the closeBundle hook that
+      # copies drizzle's migration .sql files into out/main. A break in any of
+      # those only shows up at package time otherwise.
+      - run: npm run build

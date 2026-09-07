@@ -13,7 +13,13 @@ import {
 } from '../db/repositories/jobsRepository'
 import { broadcastJobUpdate } from './jobsBroadcast'
 import { excludeJob, excludeJobsByIds, unqueueJob, unqueueJobsByIds } from '../jobActions'
-import type { ListJobsQuery } from '@shared/types/job'
+import {
+  excludeJobPayload,
+  jobIdPayload,
+  jobIdsPayload,
+  listJobsQuerySchema,
+  readListQuery
+} from './payloadSchemas'
 
 /**
  * A rejected state transition is a distinct, explainable failure ("this job
@@ -26,18 +32,28 @@ function toJobError(err: unknown): AppError {
     : unexpectedError(err)
 }
 
+/**
+ * Every mutation here addresses a row by id, so an unreadable payload is
+ * answered with `jobNotFound` — the same thing the caller gets for an id that
+ * doesn't exist, which is what an unreadable one amounts to.
+ */
+const jobNotFound = { ok: false, error: appError('jobNotFound') } as const
+
 export function registerJobsIpc(): void {
-  ipcMain.handle(IPC.jobs.list, (_event, query: ListJobsQuery) => {
-    return listJobs(query ?? {})
+  ipcMain.handle(IPC.jobs.list, (_event, query: unknown) => {
+    return listJobs(readListQuery(listJobsQuerySchema, query, IPC.jobs.list))
   })
 
-  ipcMain.handle(IPC.jobs.get, (_event, { jobId }: { jobId: string }) => {
-    return { job: getJob(jobId) }
+  ipcMain.handle(IPC.jobs.get, (_event, payload: unknown) => {
+    const parsed = jobIdPayload.safeParse(payload)
+    return { job: parsed.success ? getJob(parsed.data.jobId) : null }
   })
 
-  ipcMain.handle(IPC.jobs.markSubmitted, (_event, { jobId }: { jobId: string }) => {
+  ipcMain.handle(IPC.jobs.markSubmitted, (_event, payload: unknown) => {
+    const parsed = jobIdPayload.safeParse(payload)
+    if (!parsed.success) return jobNotFound
     try {
-      const job = setSubmitted(jobId)
+      const job = setSubmitted(parsed.data.jobId)
       broadcastJobUpdate(job)
       return { ok: true, job }
     } catch (err) {
@@ -45,9 +61,11 @@ export function registerJobsIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.jobs.retry, (_event, { jobId }: { jobId: string }) => {
+  ipcMain.handle(IPC.jobs.retry, (_event, payload: unknown) => {
+    const parsed = jobIdPayload.safeParse(payload)
+    if (!parsed.success) return jobNotFound
     try {
-      const job = retry(jobId)
+      const job = retry(parsed.data.jobId)
       broadcastJobUpdate(job)
       return { ok: true, job }
     } catch (err) {
@@ -61,47 +79,59 @@ export function registerJobsIpc(): void {
     return { ok: true, jobs: updated }
   })
 
-  ipcMain.handle(IPC.jobs.retryMany, (_event, { jobIds }: { jobIds: string[] }) => {
-    const updated = retryManyFailed(jobIds)
+  ipcMain.handle(IPC.jobs.retryMany, (_event, payload: unknown) => {
+    const parsed = jobIdsPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false, jobs: [] }
+    const updated = retryManyFailed(parsed.data.jobIds)
     for (const job of updated) broadcastJobUpdate(job)
     return { ok: true, jobs: updated }
   })
 
-  ipcMain.handle(IPC.jobs.remove, (_event, { jobId }: { jobId: string }) => {
-    removeJob(jobId)
+  ipcMain.handle(IPC.jobs.remove, (_event, payload: unknown) => {
+    const parsed = jobIdPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false }
+    removeJob(parsed.data.jobId)
     return { ok: true }
   })
 
-  ipcMain.handle(IPC.jobs.exclude, (_event, { jobId, reason }: { jobId: string; reason?: string }) => {
-    const job = getJob(jobId)
+  ipcMain.handle(IPC.jobs.exclude, (_event, payload: unknown) => {
+    const parsed = excludeJobPayload.safeParse(payload)
+    if (!parsed.success) return jobNotFound
+
+    const job = getJob(parsed.data.jobId)
     if (!job) {
-      return { ok: false, error: appError('jobNotFound') }
+      return jobNotFound
     }
     const { exclusion } = excludeJob({
       url: job.url,
       title: job.title,
       company: job.company,
-      reason: reason?.trim() || null,
+      reason: parsed.data.reason?.trim() || null,
       excludedBy: 'user'
     })
     return { ok: true, exclusion }
   })
 
-  ipcMain.handle(IPC.jobs.excludeMany, (_event, { jobIds }: { jobIds: string[] }) => {
-    const excludedIds = excludeJobsByIds(jobIds)
-    return { ok: true, excludedIds }
+  ipcMain.handle(IPC.jobs.excludeMany, (_event, payload: unknown) => {
+    const parsed = jobIdsPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false, excludedIds: [] }
+    return { ok: true, excludedIds: excludeJobsByIds(parsed.data.jobIds) }
   })
 
-  ipcMain.handle(IPC.jobs.unqueue, (_event, { jobId }: { jobId: string }) => {
-    const job = unqueueJob(jobId)
+  ipcMain.handle(IPC.jobs.unqueue, (_event, payload: unknown) => {
+    const parsed = jobIdPayload.safeParse(payload)
+    if (!parsed.success) return jobNotFound
+
+    const job = unqueueJob(parsed.data.jobId)
     if (!job) {
       return { ok: false, error: appError('jobNotQueued') }
     }
     return { ok: true, job }
   })
 
-  ipcMain.handle(IPC.jobs.unqueueMany, (_event, { jobIds }: { jobIds: string[] }) => {
-    const unqueuedIds = unqueueJobsByIds(jobIds)
-    return { ok: true, unqueuedIds }
+  ipcMain.handle(IPC.jobs.unqueueMany, (_event, payload: unknown) => {
+    const parsed = jobIdsPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false, unqueuedIds: [] }
+    return { ok: true, unqueuedIds: unqueueJobsByIds(parsed.data.jobIds) }
   })
 }

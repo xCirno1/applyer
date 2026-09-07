@@ -12,7 +12,7 @@ import type {
   ImportPickResult,
   ImportApplyResult
 } from '@shared/types/dataTransfer'
-import type { ThemeState } from '@shared/types/theme'
+import { DEFAULT_THEME_STATE, type ThemeState } from '@shared/types/theme'
 import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
 import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
@@ -20,13 +20,56 @@ import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository
 import { logActivity } from '../db/repositories/activityLogRepository'
 import { broadcastCompanyBoardsChanged, broadcastIndexedJobsChanged } from './jobsBroadcast'
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from '../dataTransfer/csv'
-import { validateExportBundle } from '../dataTransfer/importSchema'
+import { themeStateSchema, validateExportBundle } from '../dataTransfer/importSchema'
 import { buildExportBundle, computeExportSizes, filenameTimestamp } from '../dataTransfer/exportBundle'
 import { applyImport } from '../dataTransfer/applyImport'
+import { csvTablePayload, dialogLabelsPayload, exportSelectionSchema } from './payloadSchemas'
+import { appLogger } from '../logger'
+
+/**
+ * Dialog titles are cosmetic — the renderer translates them and passes them
+ * down because main has no locale — so an unreadable set is worth a blank
+ * title, not a refused export.
+ */
+function readLabels(payload: unknown): DialogLabels {
+  const parsed = dialogLabelsPayload.safeParse(payload)
+  return parsed.success ? parsed.data.labels : { title: '', filterName: '' }
+}
+
+/**
+ * The theme is renderer-owned state (localStorage), passed through this
+ * process only to be written into the bundle. It is checked against the same
+ * schema the import side applies, so a bundle this app writes is one it can
+ * read back; a theme that fails is dropped from the export rather than
+ * failing the whole thing, since the other six domains are unaffected.
+ */
+function readTheme(payload: unknown): ThemeState | null {
+  const parsed = themeStateSchema.safeParse(payload)
+  if (parsed.success) return parsed.data
+  appLogger.warn('Export requested with an unreadable theme; exporting without the theme domain')
+  return null
+}
+
+/** An unreadable selection exports nothing rather than guessing at everything. */
+function readSelection(payload: unknown): ExportSelection | null {
+  const parsed = exportSelectionSchema.safeParse(payload)
+  return parsed.success ? (parsed.data as ExportSelection) : null
+}
 
 export function registerDataTransferIpc(): void {
-  ipcMain.handle(IPC.data.exportJson, async (_event, { selection, labels, theme }: { selection: ExportSelection; labels: DialogLabels; theme: ThemeState }): Promise<ExportFileResult> => {
-    const bundle = buildExportBundle(selection, theme)
+  ipcMain.handle(IPC.data.exportJson, async (_event, payload: unknown): Promise<ExportFileResult> => {
+    const { selection: rawSelection, theme: rawTheme } = (payload ?? {}) as Record<string, unknown>
+    const selection = readSelection(rawSelection)
+    if (!selection) return { ok: false, error: appError('invalidExport') }
+
+    // An unreadable theme drops that one domain rather than failing the
+    // export; the other six come from the database and are unaffected.
+    const theme = readTheme(rawTheme)
+    const bundle = buildExportBundle(
+      theme === null ? { ...selection, theme: false } : selection,
+      theme ?? DEFAULT_THEME_STATE
+    )
+    const labels = readLabels(payload)
     const { canceled, filePath } = await dialog.showSaveDialog({
       title: labels.title,
       defaultPath: join(app.getPath('documents'), `applyer-export-${filenameTimestamp()}.json`),
@@ -42,18 +85,21 @@ export function registerDataTransferIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.data.exportCsv, async (_event, { table, labels }: { table: CsvTable; labels: DialogLabels }): Promise<ExportFileResult> => {
+  ipcMain.handle(IPC.data.exportCsv, async (_event, payload: unknown): Promise<ExportFileResult> => {
+    const parsedTable = csvTablePayload.safeParse(payload)
+    if (!parsedTable.success) {
+      return { ok: false, error: appError('invalidTable') }
+    }
+    const table: CsvTable = parsedTable.data.table
+    const labels = readLabels(payload)
+
     const csvForTable: Record<CsvTable, () => string> = {
       jobs: () => jobsToCsv(listAllJobs()),
       exclusions: () => exclusionsToCsv(listAllExclusions()),
       companyBoards: () => companyBoardsToCsv(listAllCompanyBoards()),
       indexedJobs: () => indexedJobsToCsv(listAllIndexedJobs())
     }
-    const build = Object.prototype.hasOwnProperty.call(csvForTable, table) ? csvForTable[table] : undefined
-    if (!build) {
-      return { ok: false, error: appError('invalidTable') }
-    }
-    const csv = build()
+    const csv = csvForTable[table]()
     const { canceled, filePath } = await dialog.showSaveDialog({
       title: labels.title,
       defaultPath: join(app.getPath('documents'), `applyer-${table}-${filenameTimestamp()}.csv`),
@@ -69,12 +115,13 @@ export function registerDataTransferIpc(): void {
     }
   })
 
-  ipcMain.handle(
-    IPC.data.getExportSizes,
-    (_event, { theme }: { theme: ThemeState }): ExportSizes => computeExportSizes(theme)
-  )
+  ipcMain.handle(IPC.data.getExportSizes, (_event, payload: unknown): ExportSizes => {
+    const theme = readTheme((payload as { theme?: unknown } | null | undefined)?.theme)
+    return computeExportSizes(theme ?? DEFAULT_THEME_STATE)
+  })
 
-  ipcMain.handle(IPC.data.pickImportFile, async (_event, { labels }: { labels: DialogLabels }): Promise<ImportPickResult> => {
+  ipcMain.handle(IPC.data.pickImportFile, async (_event, payload: unknown): Promise<ImportPickResult> => {
+    const labels = readLabels(payload)
     const { canceled, filePaths } = await dialog.showOpenDialog({
       title: labels.title,
       properties: ['openFile'],
@@ -112,12 +159,20 @@ export function registerDataTransferIpc(): void {
 
   ipcMain.handle(
     IPC.data.import,
-    (_event, { bundle, selection }: { bundle: unknown; selection: ExportSelection }): ImportApplyResult => {
+    (_event, payload: unknown): ImportApplyResult => {
+      const { bundle, selection: rawSelection } = (payload ?? {}) as Record<string, unknown>
+
       // Re-validated here rather than trusted from the earlier pickImportFile
       // round trip — the renderer echoes back whatever it was given, and this
       // handler has no way to know that echo wasn't tampered with in between.
       const validation = validateExportBundle(bundle)
       if (!validation.ok) return { ok: false, error: validation.error }
+
+      // Which domains to write is as load-bearing as the data itself: an
+      // unreadable selection would otherwise decide by accident which of the
+      // user's tables get overwritten.
+      const selection = readSelection(rawSelection)
+      if (!selection) return { ok: false, error: appError('invalidExport') }
 
       try {
         const summary = applyImport(validation.bundle, selection)

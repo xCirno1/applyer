@@ -31,13 +31,13 @@ import {
   MAX_COMPANY_BOARDS,
   MAX_MANUAL_BOARD_FETCH
 } from '@shared/constants'
+import { dialogLabelsPayload, listCompanyBoardsQuerySchema, readListQuery } from './payloadSchemas'
 import type {
   BoardCsvCapacity,
   BoardCsvImportResult,
   BoardCsvPickResult,
   BoardCsvPlanResult,
-  FetchCompanyBoardsResult,
-  ListCompanyBoardsQuery
+  FetchCompanyBoardsResult
 } from '@shared/types/companyBoard'
 
 /**
@@ -104,8 +104,8 @@ function planPending(
 }
 
 export function registerCompanyBoardsIpc(): void {
-  ipcMain.handle(IPC.companyBoards.list, (_event, query: ListCompanyBoardsQuery) => {
-    return listCompanyBoards(query ?? {})
+  ipcMain.handle(IPC.companyBoards.list, (_event, query: unknown) => {
+    return listCompanyBoards(readListQuery(listCompanyBoardsQuerySchema, query, IPC.companyBoards.list))
   })
 
   ipcMain.handle(
@@ -200,7 +200,11 @@ export function registerCompanyBoardsIpc(): void {
 
   ipcMain.handle(
     IPC.companyBoards.pickCsv,
-    async (_event, { labels }: { labels: DialogLabels }): Promise<BoardCsvPickResult> => {
+    async (_event, payload: unknown): Promise<BoardCsvPickResult> => {
+      const parsedLabels = dialogLabelsPayload.safeParse(payload)
+      const labels: DialogLabels = parsedLabels.success
+        ? parsedLabels.data.labels
+        : { title: '', filterName: '' }
       const { canceled, filePaths } = await dialog.showOpenDialog({
         title: labels.title,
         properties: ['openFile'],

@@ -6,6 +6,7 @@ import { getProfile, saveProfile } from '../db/repositories/profileRepository'
 import { listDocuments, addDocument, deleteDocument } from '../db/repositories/documentsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
 import { MAX_DOCUMENT_SIZE_BYTES } from '@shared/constants'
+import { documentIdPayload } from './payloadSchemas'
 import type { UploadDocumentRequest } from '@shared/types/ipcEvents'
 
 const profileFieldsSchema = z.object({
@@ -84,8 +85,10 @@ export function registerProfileIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.profile.deleteDocument, async (_event, { documentId }: { documentId: string }) => {
-    await deleteDocument(documentId)
+  ipcMain.handle(IPC.profile.deleteDocument, async (_event, payload: unknown) => {
+    const parsed = documentIdPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false }
+    await deleteDocument(parsed.data.documentId)
     return { ok: true }
   })
 }

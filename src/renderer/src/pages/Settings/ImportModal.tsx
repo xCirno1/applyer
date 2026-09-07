@@ -59,6 +59,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const [file, setFile] = useState<LoadedFile | null>(null)
   const [selection, setSelection] = useState<ExportSelection>(allDomainsSelected(false))
   const [importing, setImporting] = useState(false)
+  const [reviewingAutoStart, setReviewingAutoStart] = useState(false)
 
   if (!open) return null
 
@@ -66,6 +67,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
     setFile(null)
     setPickError(null)
     setSelection(allDomainsSelected(false))
+    setReviewingAutoStart(false)
   }
 
   const handleClose = (): void => {
@@ -111,12 +113,12 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
   const selectedCount = presentDomains.filter((d) => selection[d]).length
   const willOverwrite = presentDomains.some((d) => OVERWRITE_DOMAINS.includes(d) && selection[d])
 
-  const handleImport = async (): Promise<void> => {
+  const performImport = async (reviewedAutoStartCommand?: string): Promise<void> => {
     if (!file) return
     setImporting(true)
     const result = await callIpc(
       'data.import',
-      () => window.api.data.import(file.bundle, selection),
+      () => window.api.data.import(file.bundle, selection, reviewedAutoStartCommand),
       { ok: false as const }
     )
     setImporting(false)
@@ -153,8 +155,79 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
     handleClose()
   }
 
+  const importedAutoStartCommand =
+    selection.settings && file?.bundle.data.settings?.autoStartCommand
+      ? file.bundle.data.settings.autoStartCommand
+      : null
+
+  const handleImport = (): void => {
+    if (importedAutoStartCommand) {
+      setReviewingAutoStart(true)
+      return
+    }
+    void performImport()
+  }
+
+  const closeOrBack = (): void => {
+    if (reviewingAutoStart) {
+      setReviewingAutoStart(false)
+      return
+    }
+    handleClose()
+  }
+
   return (
-    <Modal open={open} onClose={handleClose} title={t('data.importModalTitle')} width="max-w-md">
+    <Modal
+      open={open}
+      onClose={closeOrBack}
+      title={reviewingAutoStart ? t('data.autoStartReviewTitle') : t('data.importModalTitle')}
+      width={reviewingAutoStart ? 'max-w-xl' : 'max-w-md'}
+    >
+      {reviewingAutoStart && importedAutoStartCommand ? (
+        <div className="border-2 border-danger bg-canvas-soft">
+          <div className="flex items-center gap-2 border-b-2 border-danger bg-danger px-3 py-2 text-white">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              className="h-7 w-7 shrink-0"
+            >
+              <path d="M12 3 22 21H2L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+              <path d="M12 9v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              <circle cx="12" cy="17.5" r="1" fill="currentColor" />
+            </svg>
+            <div>
+              <p className="text-[13px] font-bold uppercase tracking-wide">{t('data.autoStartReviewHeading')}</p>
+              <p className="mt-0.5 text-[12px] font-medium">{t('data.autoStartReviewWarning')}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 p-3">
+            <p className="text-[13px] font-medium text-danger">{t('data.autoStartReviewBody')}</p>
+            <div>
+              <p className="mb-1 text-[11px] font-bold uppercase tracking-wide text-danger">
+                {t('data.autoStartReviewCommandLabel')}
+              </p>
+              <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-all border-2 border-danger bg-canvas-inset p-3 font-mono text-[13px] font-semibold text-danger">
+                <code>{importedAutoStartCommand}</code>
+              </pre>
+            </div>
+            <p className="text-[12px] text-text-muted">{t('data.autoStartReviewAdvice')}</p>
+            <div className="flex justify-end gap-2 border-t border-danger pt-3">
+              <Button variant="ghost" onClick={() => setReviewingAutoStart(false)} disabled={importing}>
+                {t('data.autoStartReviewBack')}
+              </Button>
+              <Button
+                variant="danger"
+                loading={importing}
+                onClick={() => void performImport(importedAutoStartCommand)}
+              >
+                {t('data.autoStartReviewConfirm')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="flex flex-col gap-3.5">
         <p className="text-[12px] text-text-faint">{t('data.importOnlyJson')}</p>
 
@@ -222,6 +295,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
           </>
         )}
       </div>
+      )}
     </Modal>
   )
 }

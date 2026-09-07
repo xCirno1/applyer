@@ -365,8 +365,12 @@ const dataApi = {
     ipcRenderer.invoke(IPC.data.getExportSizes, { theme }),
   pickImportFile: (labels: DialogLabels): Promise<ImportPickResult> =>
     ipcRenderer.invoke(IPC.data.pickImportFile, { labels }),
-  import: (bundle: ExportBundle, selection: ExportSelection): Promise<ImportApplyResult> =>
-    ipcRenderer.invoke(IPC.data.import, { bundle, selection })
+  import: (
+    bundle: ExportBundle,
+    selection: ExportSelection,
+    reviewedAutoStartCommand?: string
+  ): Promise<ImportApplyResult> =>
+    ipcRenderer.invoke(IPC.data.import, { bundle, selection, reviewedAutoStartCommand })
 }
 
 const clipboardApi = {

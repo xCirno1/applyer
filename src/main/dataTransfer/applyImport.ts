@@ -31,6 +31,16 @@ function importBoards(boards: ExportCompanyBoard[]): { imported: number; skipped
   return { imported: result.imported, skipped: result.skipped + (boards.length - usable.length) }
 }
 
+/** True unless a selected executable setting was acknowledged verbatim. */
+export function requiresAutoStartReview(
+  bundle: ExportBundle,
+  selection: ExportSelection,
+  reviewedCommand: unknown
+): boolean {
+  const command = selection.settings ? bundle.data.settings?.autoStartCommand : undefined
+  return !!command && reviewedCommand !== command
+}
+
 /** Applies only the domains that are both selected by the user and actually present in the bundle — a partial export file (e.g. jobs-only) selected in full is a no-op for the missing domains rather than an error. */
 export function applyImport(bundle: ExportBundle, selection: ExportSelection): ImportSummary {
   const summary: ImportSummary = {}

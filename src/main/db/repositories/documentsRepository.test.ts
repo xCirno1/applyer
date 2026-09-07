@@ -22,6 +22,22 @@ import {
 } from './documentsRepository'
 import { setStorageMode } from './settingsRepository'
 import { MAX_DOCUMENT_SIZE_BYTES } from '@shared/constants'
+import { statSync, chmodSync } from 'fs'
+import { getDb } from '../index'
+import { documents } from '../schema'
+import { eq } from 'drizzle-orm'
+
+/** Permission bits, or null on Windows, where the mode is not meaningful. */
+function fileMode(path: string): number | null {
+  if (process.platform === 'win32') return null
+  return statSync(path).mode & 0o777
+}
+
+function storedPathOf(id: string): string {
+  const row = getDb().select().from(documents).where(eq(documents.id, id)).get()
+  if (!row) throw new Error(`No document row for ${id}`)
+  return row.storedPath
+}
 
 function textFile(content: string): { kind: 'resume'; originalFilename: string; mimeType: string; data: Buffer } {
   return { kind: 'resume' as const, originalFilename: 'resume.txt', mimeType: 'text/plain', data: Buffer.from(content, 'utf-8') }
@@ -67,6 +83,14 @@ describe('addDocument', () => {
 })
 
 describe('listDocuments', () => {
+  // The stored file is the resume itself in plaintext mode, and lives under a
+  // storage root the user may have pointed at a shared or synced folder.
+  it('writes the stored file owner-only', async () => {
+    const doc = await addDocument(textFile('My resume content'))
+    const mode = fileMode(storedPathOf(doc.id))
+    if (mode !== null) expect(mode).toBe(0o600)
+  })
+
   it('lists everything uploaded, most recent included', async () => {
     await addDocument(textFile('a'))
     await addDocument({ ...textFile('b'), kind: 'cover_letter', originalFilename: 'cover.txt' })
@@ -116,6 +140,19 @@ describe('rewriteDocumentStorageMode', () => {
     await rewriteDocumentStorageMode(doc.id, 'plaintext')
 
     expect(readDocumentBytes(doc.id)?.toString('utf-8')).toBe('sensitive content')
+  })
+
+  // A document written before 0600 became the default keeps its old, laxer
+  // permissions; this path already rewrites every file, so it fixes them too.
+  it('tightens the permissions of a document written before that was the default', async () => {
+    const doc = await addDocument(textFile('My resume content'))
+    const path = storedPathOf(doc.id)
+    if (process.platform === 'win32') return
+
+    chmodSync(path, 0o644)
+    await rewriteDocumentStorageMode(doc.id, 'encrypted')
+
+    expect(fileMode(path)).toBe(0o600)
   })
 
   it('is a no-op for an unknown id', async () => {

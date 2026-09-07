@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { join } from 'path'
-import { mkdirSync } from 'fs'
+import { mkdirSync, rmSync } from 'fs'
 import { activeStorageRoot } from './storageLocation'
 
 // documentsDir/screenshotsDir/logsDir are relocatable (see storageLocation.ts) —
@@ -29,6 +29,23 @@ export function tempDir(): string {
   const dir = join(app.getPath('temp'), 'applyer-tmp')
   mkdirSync(dir, { recursive: true })
   return dir
+}
+
+/**
+ * Empties the temp directory, called once at startup.
+ *
+ * What lands there is decrypted: `fillTaskRunner` writes the candidate's
+ * resume and cover letter out in the clear because Playwright uploads a file
+ * by path, and deletes them again in a `finally`. A crash, a kill, or a power
+ * cut skips that `finally`, and nothing else ever looked at the directory —
+ * so a copy of the user's resume could sit in the system temp directory
+ * indefinitely, having been encrypted at rest everywhere else.
+ *
+ * Best-effort by design: it runs before the window exists, and a file some
+ * other process still holds open is not a reason to fail the launch.
+ */
+export function purgeTempDir(): void {
+  rmSync(tempDir(), { recursive: true, force: true })
 }
 
 // Dedicated cwd for the embedded terminal — NOT the user's home directory —

@@ -16,6 +16,10 @@ export const NOTIFICATION_CATALOGS: Record<NotificationLocale, NotificationCatal
       title: 'Verification required',
       body: (jobTitle, company) => `${jobTitle} at ${company} needs your attention in the browser window.`
     },
+    permissionRequired: {
+      title: 'Agent permission required',
+      body: (jobTitle, company) => `The agent is waiting for permission to continue ${jobTitle} at ${company}.`
+    },
     jobFilled: {
       title: 'Application ready for review',
       body: (jobTitle, company) => `${jobTitle} at ${company} has been filled and is ready for your review.`
@@ -31,6 +35,10 @@ export const NOTIFICATION_CATALOGS: Record<NotificationLocale, NotificationCatal
     verificationRequired: {
       title: 'Verifikasi diperlukan',
       body: (jobTitle, company) => `${jobTitle} di ${company} perlu perhatianmu di jendela browser.`
+    },
+    permissionRequired: {
+      title: 'Izin agen diperlukan',
+      body: (jobTitle, company) => `Agen menunggu izin untuk melanjutkan lamaran ${jobTitle} di ${company}.`
     },
     jobFilled: {
       title: 'Lamaran siap diperiksa',

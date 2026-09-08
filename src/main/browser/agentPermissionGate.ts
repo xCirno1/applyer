@@ -19,6 +19,18 @@ interface PendingPermission {
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000
 const pending = new Map<string, PendingPermission>()
 
+function announceNextPendingRequest(): void {
+  const next = pending.values().next().value as PendingPermission | undefined
+  if (!next) return
+  try {
+    broadcastAgentPermissionRequested(next.request)
+  } catch (error) {
+    // The request remains listable and retains its own timeout. A recreated
+    // renderer can still recover it through the pending snapshot.
+    appLogger.warn(`Could not announce the next agent permission request: ${String(error)}`)
+  }
+}
+
 /**
  * Pauses a fill attempt until the renderer answers or the request expires.
  * Requests are retained for `listPendingPermissionRequests`, so a renderer
@@ -44,6 +56,7 @@ export function requestAgentPermissions(
         appLogger.warn(`Could not broadcast expired agent permission request: ${String(error)}`)
       }
       resolve('deny')
+      announceNextPendingRequest()
     }, timeoutMs)
 
     pending.set(request.requestId, { request, resolve, timeoutHandle })
@@ -78,6 +91,7 @@ export function resolveAgentPermissionRequest(requestId: string, decision: Agent
     appLogger.warn(`Could not broadcast resolved agent permission request: ${String(error)}`)
   }
   entry.resolve(decision)
+  announceNextPendingRequest()
   return true
 }
 

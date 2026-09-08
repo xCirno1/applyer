@@ -26,6 +26,8 @@
     "enabledHint": "Allow Applyer to send notifications through your operating system.",
     "verificationRequired": "Verification required",
     "verificationRequiredHint": "A CAPTCHA or another verification challenge needs your attention.",
+    "permissionRequired": "Agent permission requested",
+    "permissionRequiredHint": "An agent is waiting for approval to complete fields or upload a document.",
     "jobFilled": "Application filled",
     "jobFilledHint": "An application has been filled and is ready for you to review and submit.",
     "jobFailed": "Job failed",
@@ -129,7 +131,15 @@
     "unresolvedNote": "Resolves the first time a browser is needed, e.g. searching or applying to a job.",
     "outro": "Auto tries system Chrome, then Edge, then a one-time managed download. Picking Chrome or Edge specifically fails with an error (instead of silently trying something else) if that browser isn't installed. Managed download always uses Applyer's own downloaded copy.",
     "saved": "Browser preference saved. It takes effect the next time a browser is launched.",
-    "saveFailed": "Could not save the browser preference."
+    "saveFailed": "Could not save the browser preference.",
+    "networkAccessTitle": "Network access",
+    "allowLocalAddresses": "Allow Local Addresses",
+    "allowLocalAddressesHint": "Developer option for testing sites on localhost or a private network. Off by default.",
+    "localAddressesConfirmTitle": "Allow access to your local network?",
+    "localAddressesConfirmMessage": "Agents and job pages will be able to connect to localhost, private IP addresses, and services on your local network. A malicious page could probe or send requests to those services. Only enable this while testing sites you trust.",
+    "localAddressesConfirm": "Allow Local Addresses",
+    "localAddressesSaved": "Local address permission saved. It applies to new browser sessions.",
+    "localAddressesSaveFailed": "Could not save the local address permission."
   },
   "storage": {
     "intro": "Everything stays on this computer either way. This only changes how it's stored on disk, and re-writes your existing profile and documents in the new format.",

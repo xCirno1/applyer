@@ -136,12 +136,24 @@ describe('buildExportBundle', () => {
 
   it('includes settings when selected', () => {
     setAutoStartCommand('claude')
-    setNotificationPreferences({ enabled: true, verificationRequired: false, jobFilled: true, jobFailed: false })
+    setNotificationPreferences({
+      enabled: true,
+      verificationRequired: false,
+      permissionRequired: true,
+      jobFilled: true,
+      jobFailed: false
+    })
     const bundle = buildExportBundle({ ...allDomainsSelected(false), settings: true }, testTheme)
     expect(bundle.data.settings).toEqual({
       autoStartCommand: 'claude',
       indexedJobsRetentionDays: 30,
-      notificationPreferences: { enabled: true, verificationRequired: false, jobFilled: true, jobFailed: false }
+      notificationPreferences: {
+        enabled: true,
+        verificationRequired: false,
+        permissionRequired: true,
+        jobFilled: true,
+        jobFailed: false
+      }
     })
   })
 

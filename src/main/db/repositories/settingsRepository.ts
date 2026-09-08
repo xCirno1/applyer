@@ -25,6 +25,7 @@ const ONBOARDING_COMPLETED_KEY = 'onboarding_completed'
 const AUTO_START_COMMAND_KEY = 'auto_start_command'
 const INDEXED_JOBS_RETENTION_KEY = 'indexed_jobs_retention_days'
 const BROWSER_PREFERENCE_KEY = 'browser_preference'
+const ALLOW_LOCAL_ADDRESSES_KEY = 'allow_local_addresses'
 const NOTIFICATION_PREFERENCES_KEY = 'notification_preferences'
 const NOTIFICATION_LOCALE_KEY = 'notification_locale'
 const AGENT_PERMISSIONS_KEY = 'agent_permissions'
@@ -102,12 +103,43 @@ export function setBrowserPreference(preference: BrowserPreference): void {
   setSetting(BROWSER_PREFERENCE_KEY, preference)
 }
 
+/** Local/private browser destinations are denied unless the user explicitly opts in. */
+export function getAllowLocalAddresses(): boolean {
+  return getSetting(ALLOW_LOCAL_ADDRESSES_KEY) === '1'
+}
+
+export function setAllowLocalAddresses(allowed: boolean): void {
+  setSetting(ALLOW_LOCAL_ADDRESSES_KEY, allowed ? '1' : '0')
+}
+
 export function getNotificationPreferences(): NotificationPreferences {
   const value = getSetting(NOTIFICATION_PREFERENCES_KEY)
   if (!value) return { ...DEFAULT_NOTIFICATION_PREFERENCES }
   try {
     const parsed: unknown = JSON.parse(value)
-    return isNotificationPreferences(parsed) ? parsed : { ...DEFAULT_NOTIFICATION_PREFERENCES }
+    if (isNotificationPreferences(parsed)) return parsed
+    // Preferences written before permission-request notifications existed
+    // are upgraded one field at a time so a new release does not reset the
+    // user's existing category choices back to every default.
+    if (typeof parsed === 'object' && parsed !== null) {
+      const legacy = parsed as Partial<NotificationPreferences>
+      if (
+        typeof legacy.enabled === 'boolean' &&
+        typeof legacy.verificationRequired === 'boolean' &&
+        typeof legacy.jobFilled === 'boolean' &&
+        typeof legacy.jobFailed === 'boolean' &&
+        legacy.permissionRequired === undefined
+      ) {
+        return {
+          enabled: legacy.enabled,
+          verificationRequired: legacy.verificationRequired,
+          permissionRequired: DEFAULT_NOTIFICATION_PREFERENCES.permissionRequired,
+          jobFilled: legacy.jobFilled,
+          jobFailed: legacy.jobFailed
+        }
+      }
+    }
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES }
   } catch {
     return { ...DEFAULT_NOTIFICATION_PREFERENCES }
   }

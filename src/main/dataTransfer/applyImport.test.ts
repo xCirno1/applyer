@@ -193,7 +193,13 @@ describe('applyImport', () => {
         settings: {
           autoStartCommand: 'claude',
           indexedJobsRetentionDays: 14,
-          notificationPreferences: { enabled: false, verificationRequired: true, jobFilled: false, jobFailed: true }
+          notificationPreferences: {
+            enabled: false,
+            verificationRequired: true,
+            permissionRequired: false,
+            jobFilled: false,
+            jobFailed: true
+          }
         }
       }),
       { ...NO_SELECTION, settings: true }
@@ -204,6 +210,7 @@ describe('applyImport', () => {
     expect(getNotificationPreferences()).toEqual({
       enabled: false,
       verificationRequired: true,
+      permissionRequired: false,
       jobFilled: false,
       jobFailed: true
     })

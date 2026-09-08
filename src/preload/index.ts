@@ -307,6 +307,9 @@ const browserSetupApi = {
   getPreference: (): Promise<BrowserPreference> => ipcRenderer.invoke(IPC.browserSetup.getPreference),
   setPreference: (preference: BrowserPreference): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke(IPC.browserSetup.setPreference, { preference }),
+  getAllowLocalAddresses: (): Promise<boolean> => ipcRenderer.invoke(IPC.browserSetup.getAllowLocalAddresses),
+  setAllowLocalAddresses: (allowed: boolean): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke(IPC.browserSetup.setAllowLocalAddresses, { allowed }),
   getStatus: (): Promise<ResolvedBrowserStatus> => ipcRenderer.invoke(IPC.browserSetup.getStatus),
   onProgress: (callback: (payload: BrowserDownloadProgressPayload) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, payload: BrowserDownloadProgressPayload): void =>

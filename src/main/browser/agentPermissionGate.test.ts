@@ -64,6 +64,20 @@ describe('agentPermissionGate', () => {
     expect(listPendingPermissionRequests()).toEqual([])
   })
 
+  it('announces the next waiting request after the current request resolves', async () => {
+    const firstOutcome = requestAgentPermissions(INPUT)
+    const secondOutcome = requestAgentPermissions({ ...INPUT, jobId: 'job-2', jobTitle: 'Designer' })
+    const [first, second] = listPendingPermissionRequests()
+
+    requested.mockClear()
+    expect(resolveAgentPermissionRequest(first!.requestId, 'allow_once')).toBe(true)
+    expect(requested).toHaveBeenCalledWith(second)
+    expect(resolveAgentPermissionRequest(second!.requestId, 'deny')).toBe(true)
+
+    await expect(firstOutcome).resolves.toBe('allow_once')
+    await expect(secondOutcome).resolves.toBe('deny')
+  })
+
   it('enables only the permissions included in the approved request', () => {
     expect(
       allowRequestedPermissions(

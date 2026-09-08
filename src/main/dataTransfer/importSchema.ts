@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTransfer'
 import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
 import { isValidBoardDescriptor } from '../browser/ats/providers'
@@ -141,6 +142,7 @@ const settingsDataSchema = z.object({
     .object({
       enabled: z.boolean(),
       verificationRequired: z.boolean(),
+      permissionRequired: z.boolean().default(DEFAULT_NOTIFICATION_PREFERENCES.permissionRequired),
       jobFilled: z.boolean(),
       jobFailed: z.boolean()
     })

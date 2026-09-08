@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import Select from '../../components/ui/Select'
 import Skeleton from '../../components/ui/Skeleton'
+import Checkbox from '../../components/ui/Checkbox'
+import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import { useToast } from '../../components/ui/useToast'
 import { callIpc } from '../../lib/ipcCall'
 import type { BrowserPreference, ResolvedBrowserStatus } from '@shared/types/ipcEvents'
@@ -18,6 +20,9 @@ export default function BrowserSection(): ReactElement {
   const [preference, setPreferenceState] = useState<BrowserPreference | null>(null)
   const [status, setStatus] = useState<ResolvedBrowserStatus | null>(null)
   const [saving, setSaving] = useState(false)
+  const [allowLocalAddresses, setAllowLocalAddressesState] = useState<boolean | null>(null)
+  const [savingLocalAddresses, setSavingLocalAddresses] = useState(false)
+  const [confirmLocalAddresses, setConfirmLocalAddresses] = useState(false)
   const { t } = useTranslation('settings')
   const toast = useToast()
 
@@ -30,6 +35,30 @@ export default function BrowserSection(): ReactElement {
       kind: 'unresolved',
       executablePath: null
     }).then(setStatus)
+    void callIpc(
+      'browserSetup.getAllowLocalAddresses',
+      () => window.api.browserSetup.getAllowLocalAddresses(),
+      false
+    ).then(setAllowLocalAddressesState)
+  }
+
+  const saveAllowLocalAddresses = async (allowed: boolean): Promise<void> => {
+    setSavingLocalAddresses(true)
+    const result = await callIpc(
+      'browserSetup.setAllowLocalAddresses',
+      () => window.api.browserSetup.setAllowLocalAddresses(allowed),
+      { ok: false }
+    )
+    setSavingLocalAddresses(false)
+    setConfirmLocalAddresses(false)
+    if (result.ok) toast.success(t('browser.localAddressesSaved'))
+    else toast.error(t('browser.localAddressesSaveFailed'))
+    refresh()
+  }
+
+  const handleAllowLocalAddressesChange = (allowed: boolean): void => {
+    if (allowed) setConfirmLocalAddresses(true)
+    else void saveAllowLocalAddresses(false)
   }
 
   useEffect(refresh, [])
@@ -93,6 +122,40 @@ export default function BrowserSection(): ReactElement {
         />
       )}
       <p className="text-[12px] text-text-muted">{t('browser.outro')}</p>
+
+      <div className="flex flex-col gap-2 border border-warning bg-canvas-soft p-3">
+        <div className="flex items-center gap-2 text-warning">
+          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 3 22 21H2L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+            <path d="M12 9v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            <circle cx="12" cy="17.5" r="1" fill="currentColor" />
+          </svg>
+          <h2 className="text-[13px] font-semibold">{t('browser.networkAccessTitle')}</h2>
+        </div>
+        {allowLocalAddresses === null ? (
+          <Skeleton className="h-10 w-full" />
+        ) : (
+          <Checkbox
+            id="allow-local-addresses"
+            label={t('browser.allowLocalAddresses')}
+            hint={t('browser.allowLocalAddressesHint')}
+            checked={allowLocalAddresses}
+            onChange={handleAllowLocalAddressesChange}
+            disabled={savingLocalAddresses}
+          />
+        )}
+      </div>
+
+      <ConfirmDialog
+        open={confirmLocalAddresses}
+        title={t('browser.localAddressesConfirmTitle')}
+        message={t('browser.localAddressesConfirmMessage')}
+        confirmLabel={t('browser.localAddressesConfirm')}
+        danger
+        loading={savingLocalAddresses}
+        onConfirm={() => void saveAllowLocalAddresses(true)}
+        onCancel={() => setConfirmLocalAddresses(false)}
+      />
     </div>
   )
 }

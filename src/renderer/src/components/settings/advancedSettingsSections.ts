@@ -99,6 +99,7 @@ export const ADVANCED_SETTINGS_SECTIONS: AdvancedSettingsSection[] = [
         keys: [
           'notificationEnabledByDefault',
           'notificationVerificationRequiredByDefault',
+          'notificationPermissionRequiredByDefault',
           'notificationJobFilledByDefault',
           'notificationJobFailedByDefault',
           'notificationDefaultLocale'

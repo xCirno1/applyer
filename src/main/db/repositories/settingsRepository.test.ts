@@ -22,6 +22,10 @@ import {
   setIndexedJobsRetentionDays,
   getBrowserPreference,
   setBrowserPreference,
+  getAgentPermissions,
+  setAgentPermissions,
+  getAllowLocalAddresses,
+  setAllowLocalAddresses,
   getNotificationPreferences,
   setNotificationPreferences,
   getNotificationLocale,
@@ -104,6 +108,45 @@ describe('browser preference', () => {
   })
 })
 
+describe('agent permissions', () => {
+  it('allows field completion but denies document uploads by default', () => {
+    expect(getAgentPermissions()).toEqual({
+      autoCompleteFields: true,
+      autoUploadDocuments: false
+    })
+  })
+
+  it('round-trips each permission independently', () => {
+    setAgentPermissions({ autoCompleteFields: true, autoUploadDocuments: false })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: true, autoUploadDocuments: false })
+    setAgentPermissions({ autoCompleteFields: false, autoUploadDocuments: true })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: true })
+  })
+
+  it('fails closed for malformed stored permissions', () => {
+    testDb.insert(appSettings).values({ key: 'agent_permissions', value: '{broken' }).run()
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false })
+  })
+
+  it('fails closed for incomplete stored permissions', () => {
+    testDb
+      .insert(appSettings)
+      .values({ key: 'agent_permissions', value: JSON.stringify({ autoCompleteFields: true }) })
+      .run()
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false })
+  })
+})
+
+describe('local address permission', () => {
+  it('defaults to denied and round-trips explicit permission', () => {
+    expect(getAllowLocalAddresses()).toBe(false)
+    setAllowLocalAddresses(true)
+    expect(getAllowLocalAddresses()).toBe(true)
+    setAllowLocalAddresses(false)
+    expect(getAllowLocalAddresses()).toBe(false)
+  })
+})
+
 describe('notification preferences', () => {
   it('defaults every notification category to enabled', () => {
     expect(getNotificationPreferences()).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
@@ -113,11 +156,30 @@ describe('notification preferences', () => {
     const preferences = {
       enabled: true,
       verificationRequired: false,
+      permissionRequired: true,
       jobFilled: true,
       jobFailed: false
     }
     setNotificationPreferences(preferences)
     expect(getNotificationPreferences()).toEqual(preferences)
+  })
+
+  it('adds the permission category without resetting legacy choices', () => {
+    const legacy = {
+      enabled: false,
+      verificationRequired: false,
+      jobFilled: true,
+      jobFailed: false
+    }
+    testDb
+      .insert(appSettings)
+      .values({ key: 'notification_preferences', value: JSON.stringify(legacy) })
+      .run()
+
+    expect(getNotificationPreferences()).toEqual({
+      ...legacy,
+      permissionRequired: DEFAULT_NOTIFICATION_PREFERENCES.permissionRequired
+    })
   })
 
   it('falls back safely when the stored JSON is malformed or incomplete', () => {

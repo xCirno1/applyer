@@ -70,6 +70,7 @@
   "atsProbeTimeoutMs": 8000,
   "notificationEnabledByDefault": true,
   "notificationVerificationRequiredByDefault": true,
+  "notificationPermissionRequiredByDefault": true,
   "notificationJobFilledByDefault": true,
   "notificationJobFailedByDefault": true,
   "notificationDefaultLocale": "en",

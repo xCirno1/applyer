@@ -16,6 +16,7 @@ export const IPC = {
     retryAll: 'jobs:retryAll',
     retryMany: 'jobs:retryMany',
     remove: 'jobs:remove',
+    removeMany: 'jobs:removeMany',
     exclude: 'jobs:exclude',
     excludeMany: 'jobs:excludeMany',
     unqueue: 'jobs:unqueue',
@@ -77,11 +78,19 @@ export const IPC = {
     onCaptchaDetected: 'browser:captchaDetected',
     onCaptchaResolved: 'browser:captchaResolved'
   },
+  agentPermissions: {
+    listPending: 'agentPermissions:listPending',
+    respond: 'agentPermissions:respond',
+    onRequested: 'agentPermissions:requested',
+    onResolved: 'agentPermissions:resolved'
+  },
   browserSetup: {
     retryDownload: 'browserSetup:retryDownload',
     respondInstall: 'browserSetup:respondInstall',
     getPreference: 'browserSetup:getPreference',
     setPreference: 'browserSetup:setPreference',
+    getAllowLocalAddresses: 'browserSetup:getAllowLocalAddresses',
+    setAllowLocalAddresses: 'browserSetup:setAllowLocalAddresses',
     getStatus: 'browserSetup:getStatus',
     onProgress: 'browserSetup:progress',
     onStatus: 'browserSetup:status'
@@ -90,6 +99,9 @@ export const IPC = {
     changeStorageMode: 'settings:changeStorageMode',
     getAutoStartCommand: 'settings:getAutoStartCommand',
     setAutoStartCommand: 'settings:setAutoStartCommand',
+    getAgentPermissions: 'settings:getAgentPermissions',
+    setAgentPermissions: 'settings:setAgentPermissions',
+    onAgentPermissionsChanged: 'settings:agentPermissionsChanged',
     getStorageStats: 'settings:getStorageStats',
     getAdvanced: 'settings:getAdvanced',
     updateAdvanced: 'settings:updateAdvanced',

@@ -7,7 +7,7 @@ import { getProfile } from '../db/repositories/profileRepository'
 import { listDocuments, readDocumentBytes } from '../db/repositories/documentsRepository'
 import { launchHeadedContext } from './browserController'
 import { detectCaptcha } from './captchaDetector'
-import { fillForm } from './formFiller'
+import { fillForm, inspectFillRequirements } from './formFiller'
 import { openGate, resumeGate, isGateOpen, type GateOutcome } from './captchaGate'
 import { failJob } from '../jobActions'
 import { broadcastJobUpdate, broadcastCaptchaDetected, broadcastCaptchaResolved } from '../ipc/jobsBroadcast'
@@ -16,12 +16,20 @@ import { withStorageWriteLock } from '../storageWriteLock'
 import { mcpLogger } from '../logger'
 import { isNavigableUrl } from '@shared/url'
 import type { ProfileFields } from '@shared/types/profile'
-import { getStorageMode } from '../db/repositories/settingsRepository'
+import type { AgentPermissions } from '@shared/types/agentPermissions'
+import { getAgentPermissions, getStorageMode } from '../db/repositories/settingsRepository'
 import { writeSecureFileBuffer } from '../db/encryption'
+import { allowRequestedPermissions, requestAgentPermissions } from './agentPermissionGate'
 
-export type FillTaskImmediateResult =
+export type FillTaskResult =
   | { status: 'filled'; jobId: string; screenshotPath: string; filledFields: string[]; skippedFields: string[] }
   | { status: 'paused_captcha'; jobId: string; taskId: string; message: string }
+  | {
+      status: 'permission_denied'
+      jobId: string
+      requiredPermissions: Array<keyof AgentPermissions>
+      message: string
+    }
   | { status: 'failed'; jobId: string; reasonTag: string; message: string }
 
 function extensionFor(originalFilename: string): string {
@@ -61,7 +69,7 @@ async function captureScreenshot(page: Page, jobId: string): Promise<string> {
   return path
 }
 
-function failAndReturn(jobId: string, reasonTag: string, message: string): FillTaskImmediateResult {
+function failAndReturn(jobId: string, reasonTag: string, message: string): FillTaskResult {
   failJob(jobId, reasonTag, message)
   return { status: 'failed', jobId, reasonTag, message }
 }
@@ -97,19 +105,34 @@ async function performFill(
   jobId: string,
   page: Page,
   browser: Browser,
-  profile: ProfileFields
-): Promise<FillTaskImmediateResult> {
+  profile: ProfileFields,
+  permissions: AgentPermissions
+): Promise<FillTaskResult> {
   let resumePath: string | undefined
   let coverLetterPath: string | undefined
 
   try {
-    resumePath = materializeDocument('resume')
-    coverLetterPath = materializeDocument('cover_letter')
+    if (permissions.autoUploadDocuments) {
+      resumePath = materializeDocument('resume')
+      coverLetterPath = materializeDocument('cover_letter')
+    }
 
-    const { filledFields, skippedFields } = await fillForm(page, profile, {
+    const { filledFields, skippedFields, requiredPermissions } = await fillForm(page, profile, {
+      allowFieldCompletion: permissions.autoCompleteFields,
+      allowDocumentUploads: permissions.autoUploadDocuments,
       resumeFilePath: resumePath,
       coverLetterFilePath: coverLetterPath
     })
+
+    if (requiredPermissions.length > 0) {
+      await browser.close().catch(() => {})
+      return {
+        status: 'permission_denied',
+        jobId,
+        requiredPermissions,
+        message: 'The form changed after permission was approved and now needs additional access. Run fill_application again to review it.'
+      }
+    }
 
     if (filledFields.length === 0) {
       await browser.close().catch(() => {})
@@ -137,12 +160,58 @@ async function performFill(
   }
 }
 
+async function authorizeAndPerformFill(
+  jobId: string,
+  jobTitle: string,
+  company: string,
+  page: Page,
+  browser: Browser,
+  profile: ProfileFields
+): Promise<FillTaskResult> {
+  try {
+    const storedPermissions = getAgentPermissions()
+    const documents = listDocuments()
+    const requiredPermissions = await inspectFillRequirements(page, profile, {
+      resume: documents.some((document) => document.kind === 'resume'),
+      coverLetter: documents.some((document) => document.kind === 'cover_letter')
+    })
+    const disabledPermissions = requiredPermissions.filter((permission) => !storedPermissions[permission])
+
+    let effectivePermissions = storedPermissions
+    if (disabledPermissions.length > 0) {
+      const decision = await requestAgentPermissions({
+        jobId,
+        jobTitle,
+        company,
+        permissions: disabledPermissions
+      })
+      if (decision === 'deny') {
+        await browser.close().catch(() => {})
+        return {
+          status: 'permission_denied',
+          jobId,
+          requiredPermissions: disabledPermissions,
+          message: 'The user denied this permission request or it timed out. The job remains Queued.'
+        }
+      }
+      effectivePermissions = allowRequestedPermissions(storedPermissions, disabledPermissions)
+    }
+
+    return performFill(jobId, page, browser, profile, effectivePermissions)
+  } catch (error) {
+    await browser.close().catch(() => {})
+    return failAndReturn(jobId, 'other', `Could not inspect or authorize this application form: ${String(error)}`)
+  }
+}
+
 async function continueAfterCaptcha(
   taskId: string,
   jobId: string,
   page: Page,
   browser: Browser,
-  profile: ProfileFields
+  profile: ProfileFields,
+  jobTitle: string,
+  company: string
 ): Promise<void> {
   const outcome = await waitForCaptchaResolution(taskId, jobId, page)
   if (outcome === 'cancelled') {
@@ -151,10 +220,10 @@ async function continueAfterCaptcha(
     return
   }
   broadcastCaptchaResolved({ taskId, jobId })
-  await performFill(jobId, page, browser, profile)
+  await authorizeAndPerformFill(jobId, jobTitle, company, page, browser, profile)
 }
 
-export async function runFillTask(jobId: string): Promise<FillTaskImmediateResult> {
+export async function runFillTask(jobId: string): Promise<FillTaskResult> {
   const job = getJob(jobId)
   if (!job) {
     return failAndReturn(jobId, 'other', 'Job not found.')
@@ -200,6 +269,7 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
     // Client-rendered application forms (Ashby, Workday) finish mounting fields shortly after load.
     await page.waitForTimeout(1500)
   } catch (err) {
+    await browser.close().catch(() => {})
     return failAndReturn(jobId, 'form_not_supported', `Failed to open the application page: ${String(err)}`)
   }
 
@@ -214,7 +284,7 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
 
     // Deliberately not awaited — the tool call must return now, not block
     // for up to 15 minutes on the user resolving the challenge.
-    continueAfterCaptcha(taskId, jobId, page, browser, profile).catch((err) => {
+    continueAfterCaptcha(taskId, jobId, page, browser, profile, job.title, job.company).catch((err) => {
       mcpLogger.error(`Fill task continuation crashed: ${String(err)}`)
     })
 
@@ -226,5 +296,5 @@ export async function runFillTask(jobId: string): Promise<FillTaskImmediateResul
     }
   }
 
-  return performFill(jobId, page, browser, profile)
+  return authorizeAndPerformFill(jobId, job.title, job.company, page, browser, profile)
 }

@@ -36,6 +36,7 @@ export interface ApplyerSettings {
   atsProbeTimeoutMs: number
   notificationEnabledByDefault: boolean
   notificationVerificationRequiredByDefault: boolean
+  notificationPermissionRequiredByDefault: boolean
   notificationJobFilledByDefault: boolean
   notificationJobFailedByDefault: boolean
   notificationDefaultLocale: 'en' | 'id'

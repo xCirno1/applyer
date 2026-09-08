@@ -7,8 +7,13 @@ import {
   invalidateResolvedBrowser,
   resolveManagedDownloadConfirmation
 } from '../browser/browserController'
-import { getBrowserPreference, setBrowserPreference } from '../db/repositories/settingsRepository'
-import { browserPreferencePayload, respondInstallPayload } from './payloadSchemas'
+import {
+  getAllowLocalAddresses,
+  getBrowserPreference,
+  setAllowLocalAddresses,
+  setBrowserPreference
+} from '../db/repositories/settingsRepository'
+import { allowLocalAddressesPayload, browserPreferencePayload, respondInstallPayload } from './payloadSchemas'
 
 export function registerBrowserSetupIpc(): void {
   ipcMain.handle(IPC.browserSetup.retryDownload, async () => {
@@ -38,6 +43,15 @@ export function registerBrowserSetupIpc(): void {
     if (!parsed.success) return { ok: false }
     setBrowserPreference(parsed.data.preference)
     invalidateResolvedBrowser()
+    return { ok: true }
+  })
+
+  ipcMain.handle(IPC.browserSetup.getAllowLocalAddresses, () => getAllowLocalAddresses())
+
+  ipcMain.handle(IPC.browserSetup.setAllowLocalAddresses, (_event, payload: unknown) => {
+    const parsed = allowLocalAddressesPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false }
+    setAllowLocalAddresses(parsed.data.allowed)
     return { ok: true }
   })
 

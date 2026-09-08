@@ -122,6 +122,10 @@ export class Notification {
   show(): void {
     void this.options
   }
+
+  close(): void {
+    void this.options
+  }
 }
 
 export const BrowserWindow = {

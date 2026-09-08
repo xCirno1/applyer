@@ -1,6 +1,6 @@
 import { app, safeStorage } from 'electron'
 import { randomBytes } from 'node:crypto'
-import { existsSync, readFileSync, renameSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import Database from 'better-sqlite3'
 import { isEncryptionAvailable } from './encryption'
@@ -85,29 +85,73 @@ export function openCipherDatabase(path: string, options: Database.Options): Ope
   }
 }
 
+/**
+ * SQLite3MultipleCiphers cannot rekey a database while WAL journaling is
+ * active. Production connections use WAL, so conversion must checkpoint and
+ * temporarily switch to the rollback journal. Restore WAL even after a
+ * failed rekey so the still-open connection remains in its expected mode.
+ */
+function rekeyOpenDatabase(sqlite: Database.Database, key: Buffer): void {
+  const currentMode = sqlite.pragma('journal_mode', { simple: true })
+  const restoreWal = typeof currentMode === 'string' && currentMode.toLowerCase() === 'wal'
+
+  if (restoreWal) {
+    sqlite.pragma('wal_checkpoint(TRUNCATE)')
+    const switchedMode = sqlite.pragma('journal_mode = DELETE', { simple: true })
+    if (typeof switchedMode !== 'string' || switchedMode.toLowerCase() !== 'delete') {
+      throw new Error(`Could not leave WAL mode before database conversion (received ${String(switchedMode)}).`)
+    }
+  }
+
+  let rekeyFailed = false
+  let rekeyError: unknown
+  try {
+    sqlite.rekey(key)
+  } catch (error) {
+    rekeyFailed = true
+    rekeyError = error
+  }
+
+  let restoreFailed = false
+  let restoreError: unknown
+  if (restoreWal) {
+    try {
+      const restoredMode = sqlite.pragma('journal_mode = WAL', { simple: true })
+      if (typeof restoredMode !== 'string' || restoredMode.toLowerCase() !== 'wal') {
+        throw new Error(`Could not restore WAL mode after database conversion (received ${String(restoredMode)}).`)
+      }
+    } catch (error) {
+      restoreFailed = true
+      restoreError = error
+    }
+  }
+
+  if (rekeyFailed) throw rekeyError
+  if (restoreFailed) throw restoreError
+}
+
 export function encryptOpenDatabase(sqlite: Database.Database): void {
   if (!isEncryptionAvailable()) throw new Error('Cannot encrypt the database without a secure OS keychain.')
   const existingKey = readDatabaseKey()
   const key = existingKey ?? randomBytes(32)
   if (!existingKey) persistDatabaseKey(key)
   try {
-    sqlite.pragma('wal_checkpoint(TRUNCATE)')
-    sqlite.rekey(key)
+    rekeyOpenDatabase(sqlite, key)
   } catch (err) {
-    if (!existingKey) {
-      try {
-        unlinkSync(databaseKeyPath())
-      } catch {
-        // Best effort. A stale key is recognized safely on the next open.
-      }
-    }
-    throw err
+    // Retain a newly persisted key after any ambiguous rekey failure. If the
+    // database stayed plaintext, openCipherDatabase safely recognizes the
+    // stale key. If rekey committed before reporting an error, deleting the
+    // only wrapped copy of the key would make the database unrecoverable.
+    throw new Error(`Could not encrypt database pages: ${String(err)}`)
   }
 }
 
 export function decryptOpenDatabase(sqlite: Database.Database): void {
-  sqlite.pragma('wal_checkpoint(TRUNCATE)')
-  sqlite.rekey(Buffer.alloc(0))
+  try {
+    rekeyOpenDatabase(sqlite, Buffer.alloc(0))
+  } catch (err) {
+    throw new Error(`Could not decrypt database pages: ${String(err)}`)
+  }
   // Keep the wrapped key: another storage location owned by this install may
   // still contain an encrypted database, and a future opt-in can reuse it.
 }

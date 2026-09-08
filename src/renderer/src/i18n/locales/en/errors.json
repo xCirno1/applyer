@@ -15,6 +15,7 @@
   "invalidExport": "This file is not a valid Applyer export.",
   "jobNotFound": "Job not found.",
   "jobNotQueued": "Job not found or no longer Queued.",
+  "jobNotCompleted": "Job not found or no longer Filled or Submitted.",
   "illegalTransition": "That job is no longer {{from}}, so it can't be moved to {{to}}.",
   "taskNotWaiting": "This task is no longer waiting. It may have already resolved or timed out.",
   "captchaUnresolved": "The verification challenge still looks unresolved. Finish it in the browser window, then try again.",

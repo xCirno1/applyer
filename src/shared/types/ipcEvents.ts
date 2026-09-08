@@ -16,6 +16,7 @@ export const IPC = {
     retryAll: 'jobs:retryAll',
     retryMany: 'jobs:retryMany',
     remove: 'jobs:remove',
+    removeMany: 'jobs:removeMany',
     exclude: 'jobs:exclude',
     excludeMany: 'jobs:excludeMany',
     unqueue: 'jobs:unqueue',

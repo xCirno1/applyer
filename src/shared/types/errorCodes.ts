@@ -28,6 +28,7 @@ export type ErrorCode =
   | 'invalidExport'
   | 'jobNotFound'
   | 'jobNotQueued'
+  | 'jobNotCompleted'
   | 'illegalTransition'
   | 'taskNotWaiting'
   | 'captchaUnresolved'

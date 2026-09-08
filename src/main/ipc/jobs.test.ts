@@ -38,7 +38,6 @@ const setSubmitted = vi.fn<(id: string) => JobRecord>(() => job({ status: 'submi
 const retry = vi.fn<(id: string) => JobRecord>(() => job())
 const retryAllFailed = vi.fn(() => [] as JobRecord[])
 const retryManyFailed = vi.fn<(ids: string[]) => JobRecord[]>(() => [])
-const removeJob = vi.fn()
 
 // Declared inside the factory, not above it: `vi.mock` is hoisted above every
 // top-level binding, and a class referenced eagerly in the returned object
@@ -59,7 +58,6 @@ vi.mock('../db/repositories/jobsRepository', () => {
     retry: (id: string) => retry(id),
     retryAllFailed: () => retryAllFailed(),
     retryManyFailed: (ids: string[]) => retryManyFailed(ids),
-    removeJob: (id: string) => removeJob(id),
     IllegalTransitionError
   }
 })
@@ -68,12 +66,16 @@ const excludeJob = vi.fn(() => ({ exclusion: { id: 'exc-1' } }))
 const excludeJobsByIds = vi.fn((ids: string[]) => ids)
 const unqueueJob = vi.fn<(id: string) => JobRecord | null>(() => job())
 const unqueueJobsByIds = vi.fn((ids: string[]) => ids)
+const removeCompletedJob = vi.fn<(id: string) => JobRecord | null>(() => job({ status: 'filled' }))
+const removeCompletedJobsByIds = vi.fn((ids: string[]) => ids)
 
 vi.mock('../jobActions', () => ({
   excludeJob: (...args: unknown[]) => excludeJob(...(args as [])),
   excludeJobsByIds: (ids: string[]) => excludeJobsByIds(ids),
   unqueueJob: (id: string) => unqueueJob(id),
-  unqueueJobsByIds: (ids: string[]) => unqueueJobsByIds(ids)
+  unqueueJobsByIds: (ids: string[]) => unqueueJobsByIds(ids),
+  removeCompletedJob: (id: string) => removeCompletedJob(id),
+  removeCompletedJobsByIds: (ids: string[]) => removeCompletedJobsByIds(ids)
 }))
 
 vi.mock('./jobsBroadcast', () => ({ broadcastJobUpdate: vi.fn() }))
@@ -160,8 +162,21 @@ describe('mutations', () => {
   })
 
   it.each(badPayloads)('refuses remove for %s, deleting nothing', (_label, payload) => {
-    expect(__invokeIpc(IPC.jobs.remove, payload)).toEqual({ ok: false })
-    expect(removeJob).not.toHaveBeenCalled()
+    expect(__invokeIpc(IPC.jobs.remove, payload)).toEqual({ ok: false, error: { code: 'jobNotFound' } })
+    expect(removeCompletedJob).not.toHaveBeenCalled()
+  })
+
+  it('removes a completed job', () => {
+    expect(__invokeIpc(IPC.jobs.remove, { jobId: 'job-1' })).toMatchObject({ ok: true })
+    expect(removeCompletedJob).toHaveBeenCalledWith('job-1')
+  })
+
+  it('refuses a job that is no longer completed', () => {
+    removeCompletedJob.mockReturnValueOnce(null)
+    expect(__invokeIpc(IPC.jobs.remove, { jobId: 'job-1' })).toEqual({
+      ok: false,
+      error: { code: 'jobNotCompleted' }
+    })
   })
 
   it.each(badPayloads)('refuses unqueue for %s', (_label, payload) => {
@@ -195,6 +210,7 @@ describe('bulk mutations', () => {
   it('acts on a valid list', () => {
     expect(__invokeIpc(IPC.jobs.excludeMany, { jobIds: ['a', 'b'] })).toEqual({ ok: true, excludedIds: ['a', 'b'] })
     expect(__invokeIpc(IPC.jobs.unqueueMany, { jobIds: ['a'] })).toEqual({ ok: true, unqueuedIds: ['a'] })
+    expect(__invokeIpc(IPC.jobs.removeMany, { jobIds: ['a'] })).toEqual({ ok: true, removedIds: ['a'] })
     expect(__invokeIpc(IPC.jobs.retryMany, { jobIds: ['a'] })).toEqual({ ok: true, jobs: [] })
   })
 
@@ -206,6 +222,11 @@ describe('bulk mutations', () => {
   it.each(badLists)('refuses unqueueMany for %s', (_label, payload) => {
     expect(__invokeIpc(IPC.jobs.unqueueMany, payload)).toEqual({ ok: false, unqueuedIds: [] })
     expect(unqueueJobsByIds).not.toHaveBeenCalled()
+  })
+
+  it.each(badLists)('refuses removeMany for %s', (_label, payload) => {
+    expect(__invokeIpc(IPC.jobs.removeMany, payload)).toEqual({ ok: false, removedIds: [] })
+    expect(removeCompletedJobsByIds).not.toHaveBeenCalled()
   })
 
   it.each(badLists)('refuses retryMany for %s', (_label, payload) => {

@@ -120,3 +120,28 @@ export function unqueueJobsByIds(jobIds: string[]): string[] {
   }
   return unqueuedIds
 }
+
+/**
+ * Removes a completed job from the board without excluding its URL. Keeping
+ * this separate from Unqueue makes the destructive history loss explicit in
+ * the UI, while still allowing discovery to surface the posting again later.
+ * The status check lives in the main process so a stale or compromised
+ * renderer cannot use the generic delete channel to discard an in-flight job.
+ */
+export function removeCompletedJob(jobId: string): JobRecord | null {
+  const job = getJob(jobId)
+  if (!job || (job.status !== 'filled' && job.status !== 'submitted')) return null
+  removeJob(jobId)
+  broadcastJobRemoved(jobId)
+  logActivity('info', `Removed completed job: ${job.title}`, { jobId, url: job.url, status: job.status })
+  return job
+}
+
+/** Removes only eligible completed jobs and reports exactly which ids changed. */
+export function removeCompletedJobsByIds(jobIds: string[]): string[] {
+  const removedIds: string[] = []
+  for (const id of jobIds) {
+    if (removeCompletedJob(id)) removedIds.push(id)
+  }
+  return removedIds
+}

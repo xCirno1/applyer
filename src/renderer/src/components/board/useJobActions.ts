@@ -15,6 +15,7 @@ export function useJobActions(): {
   retryMany: (ids: string[]) => Promise<void>
   excludeMany: (ids: string[]) => Promise<void>
   unqueueMany: (ids: string[]) => Promise<void>
+  removeCompletedMany: (ids: string[]) => Promise<void>
 } {
   const { t } = useTranslation('board')
   const applyUpdate = useJobsStore((s) => s.applyUpdate)
@@ -65,5 +66,19 @@ export function useJobActions(): {
     toast.success(t('toast.unqueued', { count: result.unqueuedIds.length }))
   }
 
-  return { retryMany, excludeMany, unqueueMany }
+  const removeCompletedMany = async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return
+    const result = await callIpc('jobs.removeMany', () => window.api.jobs.removeMany(ids), {
+      ok: false,
+      removedIds: []
+    })
+    if (!result.ok) {
+      toast.error(t('toast.removeFailed'))
+      return
+    }
+    for (const id of result.removedIds) removeJobLocal(id)
+    toast.success(t('toast.removed', { count: result.removedIds.length }))
+  }
+
+  return { retryMany, excludeMany, unqueueMany, removeCompletedMany }
 }

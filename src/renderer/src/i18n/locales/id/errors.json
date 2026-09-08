@@ -16,6 +16,7 @@
   "autoStartReviewRequired": "Tinjau dan setujui perintah otomatis yang diimpor sebelum melanjutkan.",
   "jobNotFound": "Lowongan tidak ditemukan.",
   "jobNotQueued": "Lowongan tidak ditemukan atau sudah tidak ada di Antre.",
+  "jobNotCompleted": "Lowongan tidak ditemukan atau sudah tidak berstatus Terisi atau Terkirim.",
   "illegalTransition": "Lowongan itu sudah tidak berstatus {{from}}, jadi tidak bisa dipindah ke {{to}}.",
   "taskNotWaiting": "Tugas ini sudah tidak menunggu. Mungkin sudah selesai atau kelamaan.",
   "captchaUnresolved": "Verifikasinya kelihatan belum selesai. Selesaikan dulu di jendela browser, lalu coba lagi.",

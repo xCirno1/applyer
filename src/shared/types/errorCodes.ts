@@ -29,6 +29,7 @@ export type ErrorCode =
   | 'autoStartReviewRequired'
   | 'jobNotFound'
   | 'jobNotQueued'
+  | 'jobNotCompleted'
   | 'illegalTransition'
   | 'taskNotWaiting'
   | 'captchaUnresolved'

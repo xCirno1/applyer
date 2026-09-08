@@ -13,6 +13,7 @@
   "invalidLocale": "Bahasa tidak valid.",
   "notificationsUnsupported": "Notifikasi desktop tidak didukung atau tidak bisa dikirim di sistem ini.",
   "invalidExport": "File ini bukan hasil ekspor Applyer.",
+  "autoStartReviewRequired": "Tinjau dan setujui perintah otomatis yang diimpor sebelum melanjutkan.",
   "jobNotFound": "Lowongan tidak ditemukan.",
   "jobNotQueued": "Lowongan tidak ditemukan atau sudah tidak ada di Antre.",
   "illegalTransition": "Lowongan itu sudah tidak berstatus {{from}}, jadi tidak bisa dipindah ke {{to}}.",

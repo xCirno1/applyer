@@ -26,6 +26,7 @@ export type ErrorCode =
   | 'invalidLocale'
   | 'notificationsUnsupported'
   | 'invalidExport'
+  | 'autoStartReviewRequired'
   | 'jobNotFound'
   | 'jobNotQueued'
   | 'illegalTransition'

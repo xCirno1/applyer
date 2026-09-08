@@ -22,7 +22,7 @@ import { broadcastCompanyBoardsChanged, broadcastIndexedJobsChanged } from './jo
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from '../dataTransfer/csv'
 import { themeStateSchema, validateExportBundle } from '../dataTransfer/importSchema'
 import { buildExportBundle, computeExportSizes, filenameTimestamp } from '../dataTransfer/exportBundle'
-import { applyImport } from '../dataTransfer/applyImport'
+import { applyImport, requiresAutoStartReview } from '../dataTransfer/applyImport'
 import { csvTablePayload, dialogLabelsPayload, exportSelectionSchema } from './payloadSchemas'
 import { appLogger } from '../logger'
 
@@ -160,7 +160,7 @@ export function registerDataTransferIpc(): void {
   ipcMain.handle(
     IPC.data.import,
     (_event, payload: unknown): ImportApplyResult => {
-      const { bundle, selection: rawSelection } = (payload ?? {}) as Record<string, unknown>
+      const { bundle, selection: rawSelection, reviewedAutoStartCommand } = (payload ?? {}) as Record<string, unknown>
 
       // Re-validated here rather than trusted from the earlier pickImportFile
       // round trip — the renderer echoes back whatever it was given, and this
@@ -173,6 +173,14 @@ export function registerDataTransferIpc(): void {
       // user's tables get overwritten.
       const selection = readSelection(rawSelection)
       if (!selection) return { ok: false, error: appError('invalidExport') }
+
+      // Auto-start is executable shell input, not an ordinary preference. A
+      // bundle may only enable it after the renderer has shown the exact
+      // command in its dedicated danger review and echoes that same value
+      // back. This keeps a direct/tampered IPC call from bypassing the review.
+      if (requiresAutoStartReview(validation.bundle, selection, reviewedAutoStartCommand)) {
+        return { ok: false, error: appError('autoStartReviewRequired') }
+      }
 
       try {
         const summary = applyImport(validation.bundle, selection)

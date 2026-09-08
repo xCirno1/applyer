@@ -13,6 +13,7 @@
   "invalidLocale": "Invalid language.",
   "notificationsUnsupported": "Desktop notifications are not supported or could not be delivered on this system.",
   "invalidExport": "This file is not a valid Applyer export.",
+  "autoStartReviewRequired": "Review and approve the imported auto-start command before importing it.",
   "jobNotFound": "Job not found.",
   "jobNotQueued": "Job not found or no longer Queued.",
   "illegalTransition": "That job is no longer {{from}}, so it can't be moved to {{to}}.",

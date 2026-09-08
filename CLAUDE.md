@@ -42,6 +42,9 @@
 - You don't need to start a development server to test, just run simple curls/typecheck/lint is enough.
 - If you start it, don't forget to terminate after use.
 
+## App-specific Guidelines
+- When adding new data model to the app, respect user's data storage encryption setting.
+
 ## Components
 Catalog of existing components, organization conventions, and where to add new ones — kept in its own file since it documents the codebase (not agent behavior) and changes independently of the guidelines above.
 @src/renderer/src/components/CLAUDE.md

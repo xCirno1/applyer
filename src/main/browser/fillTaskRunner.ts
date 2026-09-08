@@ -17,7 +17,8 @@ import { mcpLogger } from '../logger'
 import { isNavigableUrl } from '@shared/url'
 import type { ProfileFields } from '@shared/types/profile'
 import type { AgentPermissions } from '@shared/types/agentPermissions'
-import { getAgentPermissions } from '../db/repositories/settingsRepository'
+import { getAgentPermissions, getStorageMode } from '../db/repositories/settingsRepository'
+import { writeSecureFileBuffer } from '../db/encryption'
 import { allowRequestedPermissions, requestAgentPermissions } from './agentPermissionGate'
 
 export type FillTaskResult =
@@ -60,7 +61,11 @@ function safeUnlink(path: string | undefined): void {
 
 async function captureScreenshot(page: Page, jobId: string): Promise<string> {
   const path = join(screenshotsDir(), `${jobId}.png`)
-  await page.screenshot({ path }).catch(() => {})
+  const image = await page.screenshot().catch(() => null)
+  if (image) {
+    const mode = getStorageMode() ?? 'encrypted'
+    writeFileSync(path, writeSecureFileBuffer(image, mode), { mode: 0o600 })
+  }
   return path
 }
 

@@ -14,7 +14,7 @@ import {
 } from 'fs'
 import { randomBytes } from 'crypto'
 import { isAbsolute, join, resolve } from 'path'
-import Database from 'better-sqlite3'
+import { openCipherDatabase } from '../db/databaseEncryption'
 import { documentsDir, screenshotsDir, logsDir } from '../config/paths'
 import { activeStorageRoot, defaultStorageRoot, setActiveStorageRoot, writeStorageLocationPointer } from '../config/storageLocation'
 import { dbPath, openDatabaseAt, closeDatabase, checkpointDatabase } from '../db'
@@ -305,7 +305,7 @@ async function runMigration(
       onProgress({ phase: 'database', percent: 100 })
 
       onProgress({ phase: 'verifying', percent: 0 })
-      const tempDb = new Database(destDbPath)
+      const { sqlite: tempDb } = openCipherDatabase(destDbPath, { fileMustExist: true })
       try {
         tempDb.prepare('UPDATE documents SET stored_path = REPLACE(stored_path, ?, ?)').run(oldDocumentsDir, newDocumentsDir)
         // jobs.screenshot_path is never dereferenced directly (the renderer

@@ -43,6 +43,13 @@
       "when": 1788508764411,
       "tag": "0005_low_king_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1788793590601,
+      "tag": "0006_motionless_blink",
+      "breakpoints": true
     }
   ]
 }

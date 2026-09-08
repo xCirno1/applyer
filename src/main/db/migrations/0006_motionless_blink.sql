@@ -1,0 +1,1 @@
+ALTER TABLE `profile` ADD `secure_payload` text;

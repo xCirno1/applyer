@@ -1,11 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { __resetElectronMock, __setEncryptionAvailable } from '../../../test/mocks/electron'
+import {
+  __resetElectronMock,
+  __setEncryptionAvailable,
+  __setStorageBackend
+} from '../../../test/mocks/electron'
 import {
   isEncryptionAvailable,
   writeSecureField,
   readSecureField,
   writeSecureBuffer,
-  readSecureBuffer
+  readSecureBuffer,
+  writeSecureFileBuffer,
+  readSecureFileBuffer
 } from './encryption'
 
 beforeEach(() => {
@@ -16,6 +22,12 @@ describe('isEncryptionAvailable', () => {
   it('reflects safeStorage.isEncryptionAvailable()', () => {
     expect(isEncryptionAvailable()).toBe(true)
     __setEncryptionAvailable(false)
+    expect(isEncryptionAvailable()).toBe(false)
+  })
+
+  it('rejects Electron basic_text on Linux because it is not secure encryption', () => {
+    if (process.platform !== 'linux') return
+    __setStorageBackend('basic_text')
     expect(isEncryptionAvailable()).toBe(false)
   })
 })
@@ -39,10 +51,9 @@ describe('writeSecureField / readSecureField', () => {
     expect(readSecureField(null)).toBeNull()
   })
 
-  it('falls back to plaintext when encryption is requested but unavailable, so writes never silently fail', () => {
+  it('fails closed when encryption is requested but unavailable', () => {
     __setEncryptionAvailable(false)
-    const stored = writeSecureField('secret value', 'encrypted')
-    expect(stored).toBe('secret value')
+    expect(() => writeSecureField('secret value', 'encrypted')).toThrow(/no secure OS keychain/)
   })
 
   it('reads a value written before encryption became unavailable and throws a clear error', () => {
@@ -73,12 +84,10 @@ describe('writeSecureBuffer / readSecureBuffer', () => {
     expect(readSecureBuffer(data, false).equals(original)).toBe(true)
   })
 
-  it('falls back to plaintext when encryption is unavailable', () => {
+  it('fails closed when buffer encryption is unavailable', () => {
     __setEncryptionAvailable(false)
     const original = Buffer.from('binary file contents', 'utf-8')
-    const { data, isEncrypted } = writeSecureBuffer(original, 'encrypted')
-    expect(isEncrypted).toBe(false)
-    expect(data.equals(original)).toBe(true)
+    expect(() => writeSecureBuffer(original, 'encrypted')).toThrow(/no secure OS keychain/)
   })
 
   it('throws a clear error reading an encrypted buffer when encryption is currently unavailable', () => {
@@ -86,5 +95,19 @@ describe('writeSecureBuffer / readSecureBuffer', () => {
     const { data } = writeSecureBuffer(original, 'encrypted')
     __setEncryptionAvailable(false)
     expect(() => readSecureBuffer(data, true)).toThrow(/encrypted storage is unavailable/)
+  })
+})
+
+describe('self-describing encrypted files', () => {
+  it('round-trips encrypted files without a separate flag', () => {
+    const raw = Buffer.from('image bytes')
+    const stored = writeSecureFileBuffer(raw, 'encrypted')
+    expect(stored.equals(raw)).toBe(false)
+    expect(readSecureFileBuffer(stored)).toEqual(raw)
+  })
+
+  it('keeps plaintext-mode files readable', () => {
+    const raw = Buffer.from('image bytes')
+    expect(readSecureFileBuffer(writeSecureFileBuffer(raw, 'plaintext'))).toEqual(raw)
   })
 })

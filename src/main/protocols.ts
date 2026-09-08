@@ -1,7 +1,8 @@
-import { protocol, net } from 'electron'
-import { pathToFileURL } from 'url'
+import { protocol } from 'electron'
 import { join } from 'path'
+import { readFileSync } from 'fs'
 import { screenshotsDir } from './config/paths'
+import { readSecureFileBuffer } from './db/encryption'
 
 // Must run before app.whenReady() — Electron requires privileged schemes to
 // be registered at module load time.
@@ -28,6 +29,11 @@ export function registerApplyerFileProtocol(): void {
     }
 
     const filePath = join(screenshotsDir(), filename)
-    return net.fetch(pathToFileURL(filePath).toString())
+    try {
+      const image = readSecureFileBuffer(readFileSync(filePath))
+      return new Response(new Uint8Array(image), { headers: { 'Content-Type': 'image/png' } })
+    } catch {
+      return new Response('Not found', { status: 404 })
+    }
   })
 }

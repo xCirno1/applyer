@@ -9,6 +9,9 @@ import { appLogger } from '../logger'
 import { failureTags } from './schema'
 import { activeStorageRoot, activeStorageRootRequiresExistingDatabase } from '../config/storageLocation'
 import { BUILTIN_FAILURE_TAGS } from '@shared/constants'
+import { decryptOpenDatabase, encryptOpenDatabase, openCipherDatabase } from './databaseEncryption'
+import { setLogStorageMode } from '../logger'
+import { rewriteScreenshotStorageMode } from '../secureFiles'
 
 /**
  * Deliberately NOT __dirname-relative: this module can end up bundled into
@@ -31,6 +34,7 @@ function resolveMigrationsFolder(): string {
 
 let sqlite: Database.Database | undefined
 let db: ReturnType<typeof drizzle<typeof schema>> | undefined
+let databaseEncrypted = false
 
 export function getDb(): ReturnType<typeof drizzle<typeof schema>> {
   if (!db) {
@@ -68,7 +72,9 @@ export function openDatabaseAt(
   path: string,
   options: { runMigrations: boolean; requireExisting?: boolean }
 ): ReturnType<typeof drizzle<typeof schema>> {
-  sqlite = new Database(path, { fileMustExist: options.requireExisting ?? true })
+  const opened = openCipherDatabase(path, { fileMustExist: options.requireExisting ?? true })
+  sqlite = opened.sqlite
+  databaseEncrypted = opened.encrypted
   sqlite.pragma('journal_mode = WAL')
   sqlite.pragma('foreign_keys = ON')
 
@@ -76,7 +82,37 @@ export function openDatabaseAt(
   if (options.runMigrations) {
     migrate(db, { migrationsFolder: resolveMigrationsFolder() })
   }
+
+  const storedMode = sqlite
+    .prepare("SELECT value FROM app_settings WHERE key = 'storage_mode'")
+    .get() as { value?: unknown } | undefined
+  if (storedMode?.value === 'encrypted' && !databaseEncrypted) {
+    encryptOpenDatabase(sqlite)
+    databaseEncrypted = true
+  } else if (storedMode?.value === 'plaintext' && databaseEncrypted) {
+    decryptOpenDatabase(sqlite)
+    databaseEncrypted = false
+  }
+  if (storedMode?.value === 'encrypted' || storedMode?.value === 'plaintext') {
+    rewriteScreenshotStorageMode(storedMode.value)
+    setLogStorageMode(storedMode.value)
+  }
   return db
+}
+
+export function setDatabaseEncryptionMode(mode: 'encrypted' | 'plaintext'): void {
+  if (!sqlite) throw new Error('Database not initialized')
+  if (mode === 'encrypted' && !databaseEncrypted) {
+    encryptOpenDatabase(sqlite)
+    databaseEncrypted = true
+  } else if (mode === 'plaintext' && databaseEncrypted) {
+    decryptOpenDatabase(sqlite)
+    databaseEncrypted = false
+  }
+}
+
+export function isDatabaseEncryptedAtRest(): boolean {
+  return databaseEncrypted
 }
 
 /** Flushes the WAL into the main db file — used before snapshotting the file for a storage-location migration. */
@@ -114,4 +150,5 @@ export function closeDatabase(): void {
   sqlite?.close()
   sqlite = undefined
   db = undefined
+  databaseEncrypted = false
 }

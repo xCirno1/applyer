@@ -19,7 +19,7 @@ function toSummary(row: DocumentRow): DocumentSummary {
   return {
     id: row.id,
     kind: row.kind,
-    originalFilename: row.originalFilename,
+    originalFilename: readSecureField(row.originalFilename) ?? '',
     sizeBytes: row.sizeBytes,
     hasExtractedText: !!row.extractedText,
     createdAt: row.createdAt
@@ -102,9 +102,9 @@ export async function addDocument(input: AddDocumentInput): Promise<DocumentSumm
         id,
         profileId: PROFILE_ID,
         kind: input.kind,
-        originalFilename: input.originalFilename,
+        originalFilename: writeSecureField(input.originalFilename, mode) ?? '',
         storedPath,
-        mimeType: input.mimeType,
+        mimeType: writeSecureField(input.mimeType, mode) ?? '',
         sizeBytes: input.data.byteLength,
         extractedText: writeSecureField(extractedTextRaw, mode),
         isEncryptedAtRest: isEncrypted,
@@ -160,6 +160,8 @@ export function rewriteDocumentStorageMode(id: string, mode: StorageMode): Promi
 
     const decryptedBytes = readSecureBuffer(readFileSync(row.storedPath), row.isEncryptedAtRest)
     const decryptedText = readSecureField(row.extractedText)
+    const decryptedFilename = readSecureField(row.originalFilename) ?? ''
+    const decryptedMimeType = readSecureField(row.mimeType) ?? ''
 
     const { data: newBytes, isEncrypted } = writeSecureBuffer(decryptedBytes, mode)
     // `mode` on an existing file is ignored, so the permissions of a document
@@ -171,7 +173,12 @@ export function rewriteDocumentStorageMode(id: string, mode: StorageMode): Promi
 
     getDb()
       .update(documents)
-      .set({ isEncryptedAtRest: isEncrypted, extractedText: writeSecureField(decryptedText, mode) })
+      .set({
+        isEncryptedAtRest: isEncrypted,
+        originalFilename: writeSecureField(decryptedFilename, mode) ?? '',
+        mimeType: writeSecureField(decryptedMimeType, mode) ?? '',
+        extractedText: writeSecureField(decryptedText, mode)
+      })
       .where(eq(documents.id, id))
       .run()
   })

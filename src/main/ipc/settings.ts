@@ -29,6 +29,9 @@ import {
   type NotificationPreferences
 } from '@shared/types/notification'
 import { sendTestNotification } from '../notificationService'
+import { setDatabaseEncryptionMode } from '../db'
+import { setLogStorageMode } from '../logger'
+import { rewriteScreenshotStorageMode } from '../secureFiles'
 import { isAgentPermissions, type AgentPermissions } from '@shared/types/agentPermissions'
 import { broadcastAgentPermissionsChanged } from './jobsBroadcast'
 
@@ -59,6 +62,12 @@ export function registerSettingsIpc(): void {
       for (const doc of listDocuments()) {
         await rewriteDocumentStorageMode(doc.id, mode)
       }
+      rewriteScreenshotStorageMode(mode)
+      setLogStorageMode(mode)
+
+      // Whole-database encryption covers jobs, search history, exclusions,
+      // boards, settings, caches and activity logs without weakening queries.
+      setDatabaseEncryptionMode(mode)
 
       logActivity('info', `Storage mode changed to ${mode}`)
       return { ok: true }

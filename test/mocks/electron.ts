@@ -18,6 +18,7 @@ export function __resetElectronMock(): void {
   root = mkdtempSync(join(tmpdir(), 'applyer-test-'))
   pathCache = {}
   __encryptionAvailable = true
+  __storageBackend = 'gnome_libsecret'
   __packaged = false
   __resetIpcMock()
 }
@@ -56,13 +57,17 @@ export const app = {
   }
 }
 
+type StorageBackend = ReturnType<(typeof import('electron'))['safeStorage']['getSelectedStorageBackend']>
+
 let __encryptionAvailable = true
+let __storageBackend: StorageBackend = 'gnome_libsecret'
 
 /** Reversible stand-in for OS-keychain encryption — real enough to exercise the tag/format logic in db/encryption.ts without a real keyring. */
 const ENC_MARKER = 'TEST_ENCRYPTED:'
 
 export const safeStorage = {
   isEncryptionAvailable: (): boolean => __encryptionAvailable,
+  getSelectedStorageBackend: (): StorageBackend => __storageBackend,
   encryptString: (value: string): Buffer => Buffer.from(ENC_MARKER + value, 'utf-8'),
   decryptString: (buffer: Buffer): string => {
     const str = buffer.toString('utf-8')
@@ -80,6 +85,10 @@ export const safeStorage = {
  */
 export function __setEncryptionAvailable(value: boolean): void {
   __encryptionAvailable = value
+}
+
+export function __setStorageBackend(value: StorageBackend): void {
+  __storageBackend = value
 }
 
 export const session = {

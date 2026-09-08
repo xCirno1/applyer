@@ -11,7 +11,9 @@ import { useJobActions } from './useJobActions'
  * Retry/Exclude actions each `JobCard`'s right-click menu also offers once
  * a selection exists (see `useJobContextMenu`). Retry only confirms when it
  * would touch more than one job at once, matching that menu's rule and
- * `JobDetailModal`'s existing single-job behavior; Exclude always confirms.
+ * `JobDetailModal`'s existing single-job behavior; destructive actions
+ * always confirm. Remove is limited to Filled/Submitted jobs and does not
+ * blacklist their URLs.
  */
 export default function BulkActionBar(): ReactElement | null {
   const { t } = useTranslation('board')
@@ -27,20 +29,25 @@ export default function BulkActionBar(): ReactElement | null {
   const selectedJobs = Object.values(columns)
     .flatMap((c) => c.jobs)
     .filter((j) => selectedJobIds.has(j.id))
-  const { retryMany, excludeMany, unqueueMany } = useJobActions()
+  const { retryMany, excludeMany, unqueueMany, removeCompletedMany } = useJobActions()
 
   const [confirmRetryOpen, setConfirmRetryOpen] = useState(false)
   const [confirmExcludeOpen, setConfirmExcludeOpen] = useState(false)
   const [confirmUnqueueOpen, setConfirmUnqueueOpen] = useState(false)
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [excluding, setExcluding] = useState(false)
   const [unqueueing, setUnqueueing] = useState(false)
+  const [removing, setRemoving] = useState(false)
 
   if (selectedJobIds.size === 0) return null
 
   const retryableIds = selectedJobs.filter((j) => j.status === 'failed').map((j) => j.id)
   const excludableIds = selectedJobs.filter((j) => j.status !== 'submitted').map((j) => j.id)
   const unqueueableIds = selectedJobs.filter((j) => j.status === 'queued').map((j) => j.id)
+  const removableIds = selectedJobs
+    .filter((j) => j.status === 'filled' || j.status === 'submitted')
+    .map((j) => j.id)
 
   const handleRetry = async (): Promise<void> => {
     setConfirmRetryOpen(false)
@@ -66,6 +73,14 @@ export default function BulkActionBar(): ReactElement | null {
     clearSelection()
   }
 
+  const handleRemove = async (): Promise<void> => {
+    setConfirmRemoveOpen(false)
+    setRemoving(true)
+    await removeCompletedMany(removableIds)
+    setRemoving(false)
+    clearSelection()
+  }
+
   return (
     <div className="flex h-7 shrink-0 items-center gap-2 border-b border-border-soft bg-canvas-soft px-2">
       <span className="text-[12px] font-medium text-text">{t('selection.count', { count: selectedJobIds.size })}</span>
@@ -73,6 +88,15 @@ export default function BulkActionBar(): ReactElement | null {
         {t('selection.clear')}
       </Button>
       <div className="ml-auto flex gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={removableIds.length === 0}
+          loading={removing}
+          onClick={() => setConfirmRemoveOpen(true)}
+        >
+          {removableIds.length > 0 ? t('actions.removeCount', { count: removableIds.length }) : t('actions.remove')}
+        </Button>
         <Button
           size="sm"
           disabled={retryableIds.length === 0}
@@ -119,6 +143,16 @@ export default function BulkActionBar(): ReactElement | null {
         loading={excluding}
         onConfirm={handleExclude}
         onCancel={() => setConfirmExcludeOpen(false)}
+      />
+      <ConfirmDialog
+        open={confirmRemoveOpen}
+        title={t('confirm.removeTitle', { count: removableIds.length })}
+        message={t('confirm.removeMessage', { count: removableIds.length })}
+        confirmLabel={t('actions.remove')}
+        danger
+        loading={removing}
+        onConfirm={handleRemove}
+        onCancel={() => setConfirmRemoveOpen(false)}
       />
       <ConfirmDialog
         open={confirmUnqueueOpen}

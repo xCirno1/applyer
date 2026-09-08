@@ -7,12 +7,18 @@ import {
   retry,
   retryAllFailed,
   retryManyFailed,
-  removeJob,
   getJob,
   IllegalTransitionError
 } from '../db/repositories/jobsRepository'
 import { broadcastJobUpdate } from './jobsBroadcast'
-import { excludeJob, excludeJobsByIds, unqueueJob, unqueueJobsByIds } from '../jobActions'
+import {
+  excludeJob,
+  excludeJobsByIds,
+  removeCompletedJob,
+  removeCompletedJobsByIds,
+  unqueueJob,
+  unqueueJobsByIds
+} from '../jobActions'
 import {
   excludeJobPayload,
   jobIdPayload,
@@ -89,9 +95,15 @@ export function registerJobsIpc(): void {
 
   ipcMain.handle(IPC.jobs.remove, (_event, payload: unknown) => {
     const parsed = jobIdPayload.safeParse(payload)
-    if (!parsed.success) return { ok: false }
-    removeJob(parsed.data.jobId)
-    return { ok: true }
+    if (!parsed.success) return jobNotFound
+    const job = removeCompletedJob(parsed.data.jobId)
+    return job ? { ok: true, job } : { ok: false, error: appError('jobNotCompleted') }
+  })
+
+  ipcMain.handle(IPC.jobs.removeMany, (_event, payload: unknown) => {
+    const parsed = jobIdsPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false, removedIds: [] }
+    return { ok: true, removedIds: removeCompletedJobsByIds(parsed.data.jobIds) }
   })
 
   ipcMain.handle(IPC.jobs.exclude, (_event, payload: unknown) => {

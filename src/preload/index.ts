@@ -139,7 +139,10 @@ const jobsApi = {
   retryAll: (): Promise<{ ok: boolean; jobs: JobRecord[] }> => ipcRenderer.invoke(IPC.jobs.retryAll),
   retryMany: (jobIds: string[]): Promise<{ ok: boolean; jobs: JobRecord[] }> =>
     ipcRenderer.invoke(IPC.jobs.retryMany, { jobIds }),
-  remove: (jobId: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.jobs.remove, { jobId }),
+  remove: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.jobs.remove, { jobId }),
+  removeMany: (jobIds: string[]): Promise<{ ok: boolean; removedIds: string[] }> =>
+    ipcRenderer.invoke(IPC.jobs.removeMany, { jobIds }),
   exclude: (
     jobId: string,
     reason?: string

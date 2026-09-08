@@ -6,19 +6,32 @@ import type * as schema from './db/schema'
 let testDb: ReturnType<typeof drizzle<typeof schema>>
 vi.mock('./db/index', () => ({ getDb: () => testDb }))
 
-const { broadcastExclusionsChanged } = vi.hoisted(() => ({ broadcastExclusionsChanged: vi.fn() }))
+const { broadcastExclusionsChanged, broadcastJobRemoved } = vi.hoisted(() => ({
+  broadcastExclusionsChanged: vi.fn(),
+  broadcastJobRemoved: vi.fn()
+}))
 vi.mock('./ipc/jobsBroadcast', () => ({
   broadcastJobUpdate: vi.fn(),
-  broadcastJobRemoved: vi.fn(),
+  broadcastJobRemoved,
   broadcastExclusionsChanged
 }))
 
 beforeEach(() => {
   testDb = createTestDb().db
   broadcastExclusionsChanged.mockClear()
+  broadcastJobRemoved.mockClear()
 })
 
-import { failJob, reconcileOrphanedBlockedJobs, excludeJob, excludeJobsByIds, unqueueJob, unqueueJobsByIds } from './jobActions'
+import {
+  failJob,
+  reconcileOrphanedBlockedJobs,
+  excludeJob,
+  excludeJobsByIds,
+  removeCompletedJob,
+  removeCompletedJobsByIds,
+  unqueueJob,
+  unqueueJobsByIds
+} from './jobActions'
 import { queueJob, getJob, setBlocking, setFilled, setSubmitted } from './db/repositories/jobsRepository'
 import { listFailureTags } from './db/repositories/failureTagsRepository'
 import { listActivity } from './db/repositories/activityLogRepository'
@@ -177,5 +190,52 @@ describe('unqueueJobsByIds', () => {
     const unqueuedIds = unqueueJobsByIds([failed.id, 'does-not-exist'])
     expect(unqueuedIds).toEqual([])
     expect(getJob(failed.id)?.status).toBe('failed')
+  })
+})
+
+describe('removeCompletedJob', () => {
+  it.each(['filled', 'submitted'] as const)('removes a %s job without blacklisting its URL', (status) => {
+    const queued = newJob(`https://x.com/${status}`)
+    setFilled(queued.id)
+    if (status === 'submitted') setSubmitted(queued.id)
+
+    const removed = removeCompletedJob(queued.id)
+
+    expect(removed?.status).toBe(status)
+    expect(getJob(queued.id)).toBeNull()
+    expect(isUrlExcluded(queued.url)).toBe(false)
+    expect(broadcastJobRemoved).toHaveBeenCalledWith(queued.id)
+  })
+
+  it('does not remove queued, failed, or unknown jobs', () => {
+    const queued = newJob('https://x.com/queued-remove')
+    const failed = newJob('https://x.com/failed-remove')
+    failJob(failed.id, 'other')
+
+    expect(removeCompletedJob(queued.id)).toBeNull()
+    expect(removeCompletedJob(failed.id)).toBeNull()
+    expect(removeCompletedJob('does-not-exist')).toBeNull()
+    expect(getJob(queued.id)?.status).toBe('queued')
+    expect(getJob(failed.id)?.status).toBe('failed')
+    expect(broadcastJobRemoved).not.toHaveBeenCalled()
+  })
+})
+
+describe('removeCompletedJobsByIds', () => {
+  it('removes only completed jobs and returns the ids that changed', () => {
+    const filled = newJob('https://x.com/filled-remove-many')
+    const submitted = newJob('https://x.com/submitted-remove-many')
+    const queued = newJob('https://x.com/queued-remove-many')
+    setFilled(filled.id)
+    setFilled(submitted.id)
+    setSubmitted(submitted.id)
+
+    expect(removeCompletedJobsByIds([filled.id, submitted.id, queued.id, 'missing'])).toEqual([
+      filled.id,
+      submitted.id
+    ])
+    expect(getJob(filled.id)).toBeNull()
+    expect(getJob(submitted.id)).toBeNull()
+    expect(getJob(queued.id)).not.toBeNull()
   })
 })

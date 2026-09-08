@@ -38,6 +38,7 @@ export const browserPreferencePayload = z.object({
   preference: z.enum(['auto', 'chrome', 'msedge', 'managed'])
 })
 export const respondInstallPayload = z.object({ accept: z.boolean() })
+export const allowLocalAddressesPayload = z.object({ allowed: z.boolean() })
 
 export const mcpTargetPayload = z.object({
   cli: z.enum(['claude', 'codex']),

@@ -19,6 +19,7 @@ const ONBOARDING_COMPLETED_KEY = 'onboarding_completed'
 const AUTO_START_COMMAND_KEY = 'auto_start_command'
 const INDEXED_JOBS_RETENTION_KEY = 'indexed_jobs_retention_days'
 const BROWSER_PREFERENCE_KEY = 'browser_preference'
+const ALLOW_LOCAL_ADDRESSES_KEY = 'allow_local_addresses'
 const NOTIFICATION_PREFERENCES_KEY = 'notification_preferences'
 const NOTIFICATION_LOCALE_KEY = 'notification_locale'
 
@@ -78,6 +79,15 @@ export function getBrowserPreference(): BrowserPreference {
 
 export function setBrowserPreference(preference: BrowserPreference): void {
   setSetting(BROWSER_PREFERENCE_KEY, preference)
+}
+
+/** Local/private browser destinations are denied unless the user explicitly opts in. */
+export function getAllowLocalAddresses(): boolean {
+  return getSetting(ALLOW_LOCAL_ADDRESSES_KEY) === '1'
+}
+
+export function setAllowLocalAddresses(allowed: boolean): void {
+  setSetting(ALLOW_LOCAL_ADDRESSES_KEY, allowed ? '1' : '0')
 }
 
 export function getNotificationPreferences(): NotificationPreferences {

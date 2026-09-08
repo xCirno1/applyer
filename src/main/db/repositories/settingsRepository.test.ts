@@ -22,6 +22,8 @@ import {
   setIndexedJobsRetentionDays,
   getBrowserPreference,
   setBrowserPreference,
+  getAllowLocalAddresses,
+  setAllowLocalAddresses,
   getNotificationPreferences,
   setNotificationPreferences,
   getNotificationLocale,
@@ -101,6 +103,16 @@ describe('browser preference', () => {
     // Simulates a value from a future/older app version rather than one this app wrote itself.
     testDb.insert(appSettings).values({ key: 'browser_preference', value: 'firefox' }).run()
     expect(getBrowserPreference()).toBe('auto')
+  })
+})
+
+describe('local address permission', () => {
+  it('defaults to denied and round-trips explicit permission', () => {
+    expect(getAllowLocalAddresses()).toBe(false)
+    setAllowLocalAddresses(true)
+    expect(getAllowLocalAddresses()).toBe(true)
+    setAllowLocalAddresses(false)
+    expect(getAllowLocalAddresses()).toBe(false)
   })
 })
 

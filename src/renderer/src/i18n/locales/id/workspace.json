@@ -49,6 +49,21 @@
     "settings": "Pengaturan",
     "backToWorkspace": "Kembali ke workspace"
   },
+  "permissionPrompt": {
+    "title": "Izin agen diperlukan",
+    "agentWantsAccess": "Agen meminta akses.",
+    "context": "Untuk mengisi lamaran {{title}} di {{company}}",
+    "requested": "Tindakan yang diminta",
+    "completeFields": "Isi kolom yang dikenali memakai informasi profil tersimpan",
+    "uploadDocuments": "Unggah resume atau cover letter tersimpan",
+    "explanation": "Izinkan kali ini hanya berlaku untuk lamaran ini. Selalu izinkan memperbarui pengaturan Akses agen untuk lamaran berikutnya. Applyer tidak pernah mengirim formulir.",
+    "deny": "Tolak",
+    "allowAlways": "Selalu izinkan",
+    "allowOnce": "Izinkan kali ini",
+    "saved": "Izin agen disimpan untuk lamaran berikutnya.",
+    "loadFailed": "Gagal memuat permintaan izin agen yang menunggu.",
+    "respondFailed": "Gagal menjawab permintaan izin agen."
+  },
   "terminal": {
     "none": "Tidak ada terminal yang kebuka.",
     "new": "Terminal baru",

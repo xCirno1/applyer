@@ -52,8 +52,9 @@ app's local job-tracking database and a real browser:
 - \`queue_job\` — add a matching job to the user's task board once you've
   judged it a good fit. Deduplicated by URL, safe to call again.
 - \`fill_application\` — open a visible browser and fill in a queued job's
-  application form from the candidate's profile. Never submits — the user
-  reviews and submits it themselves.
+  application form from the candidate's profile. If access is disabled,
+  Applyer asks the user to allow it once, always allow it, or deny it. Never
+  submits — the user reviews and submits it themselves.
 - \`flag_failure\` — mark a job Failed with a reason when you can't proceed
   with it (e.g. a login wall or an expired listing).
 - \`exclude_job\` — permanently blacklist a job posting URL: removed from the

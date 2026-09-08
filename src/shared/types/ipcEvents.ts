@@ -78,6 +78,12 @@ export const IPC = {
     onCaptchaDetected: 'browser:captchaDetected',
     onCaptchaResolved: 'browser:captchaResolved'
   },
+  agentPermissions: {
+    listPending: 'agentPermissions:listPending',
+    respond: 'agentPermissions:respond',
+    onRequested: 'agentPermissions:requested',
+    onResolved: 'agentPermissions:resolved'
+  },
   browserSetup: {
     retryDownload: 'browserSetup:retryDownload',
     respondInstall: 'browserSetup:respondInstall',
@@ -93,6 +99,7 @@ export const IPC = {
     setAutoStartCommand: 'settings:setAutoStartCommand',
     getAgentPermissions: 'settings:getAgentPermissions',
     setAgentPermissions: 'settings:setAgentPermissions',
+    onAgentPermissionsChanged: 'settings:agentPermissionsChanged',
     getStorageStats: 'settings:getStorageStats',
     getAdvanced: 'settings:getAdvanced',
     updateAdvanced: 'settings:updateAdvanced',

@@ -51,6 +51,21 @@
     "settings": "Settings",
     "backToWorkspace": "Back to workspace"
   },
+  "permissionPrompt": {
+    "title": "Agent permission required",
+    "agentWantsAccess": "Agent wants access.",
+    "context": "To fill the application for {{title}} at {{company}}",
+    "requested": "Requested actions",
+    "completeFields": "Complete recognized fields using your saved profile information",
+    "uploadDocuments": "Upload your saved resume or cover letter",
+    "explanation": "Allow this time applies only to this application. Always allow updates the Agent access setting for future applications. Applyer never submits the form.",
+    "deny": "Deny",
+    "allowAlways": "Always allow",
+    "allowOnce": "Allow this time",
+    "saved": "Agent permission saved for future applications.",
+    "loadFailed": "Could not load pending agent permission requests.",
+    "respondFailed": "Could not answer the agent permission request."
+  },
   "terminal": {
     "none": "No terminals open.",
     "new": "New terminal",

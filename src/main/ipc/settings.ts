@@ -30,6 +30,7 @@ import {
 } from '@shared/types/notification'
 import { sendTestNotification } from '../notificationService'
 import { isAgentPermissions, type AgentPermissions } from '@shared/types/agentPermissions'
+import { broadcastAgentPermissionsChanged } from './jobsBroadcast'
 
 const AUTO_START_COMMAND_MAX_LENGTH = getSettings().dangerousAutoStartCommandMaxLength
 
@@ -83,6 +84,7 @@ export function registerSettingsIpc(): void {
     if (!isAgentPermissions(permissions)) return { ok: false, error: appError('invalidAgentPermissions') }
     try {
       setAgentPermissions(permissions)
+      broadcastAgentPermissionsChanged(permissions)
       logActivity('info', 'Agent permissions updated', { ...permissions })
       return { ok: true, permissions }
     } catch (err) {

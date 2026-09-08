@@ -22,6 +22,7 @@ export type ErrorCode =
   | 'invalidJson'
   | 'invalidCommand'
   | 'invalidAgentPermissions'
+  | 'agentPermissionNotWaiting'
   | 'invalidAdvancedSetting'
   | 'invalidNotificationPreferences'
   | 'invalidLocale'

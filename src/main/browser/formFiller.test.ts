@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { Page } from 'playwright'
-import { fillForm } from './formFiller'
+import { fillForm, inspectFillRequirements } from './formFiller'
 import type { ProfileFields } from '@shared/types/profile'
 
 const EMPTY_PROFILE: ProfileFields = {
@@ -178,5 +178,43 @@ describe('fillForm', () => {
     })
     expect(uploadSpy).not.toHaveBeenCalled()
     expect(result.requiredPermissions).toEqual(['autoUploadDocuments'])
+  })
+})
+
+describe('inspectFillRequirements', () => {
+  it('requests field completion only when a recognized field has saved data', async () => {
+    const { page } = fakePage([
+      { selector: '#email', tag: 'input', type: 'email', label: 'Email' },
+      { selector: '#github', tag: 'input', type: 'text', label: 'GitHub' }
+    ])
+
+    await expect(
+      inspectFillRequirements(page, profile({ email: 'jane@example.com', githubUrl: '' }), {
+        resume: false,
+        coverLetter: false
+      })
+    ).resolves.toEqual(['autoCompleteFields'])
+  })
+
+  it('requests document upload only for a matching file input and stored document', async () => {
+    const { page } = fakePage([
+      { selector: '#resume', tag: 'input', type: 'file', label: 'Resume' },
+      { selector: '#cover', tag: 'textarea', type: 'text', label: 'Cover Letter' }
+    ])
+
+    await expect(
+      inspectFillRequirements(page, profile(), { resume: true, coverLetter: true })
+    ).resolves.toEqual(['autoUploadDocuments'])
+  })
+
+  it('does not request access for recognized fields that cannot be populated', async () => {
+    const { page } = fakePage([
+      { selector: '#email', tag: 'input', type: 'email', label: 'Email' },
+      { selector: '#resume', tag: 'input', type: 'file', label: 'Resume' }
+    ])
+
+    await expect(
+      inspectFillRequirements(page, profile(), { resume: false, coverLetter: false })
+    ).resolves.toEqual([])
   })
 })

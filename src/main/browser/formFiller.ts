@@ -1,5 +1,6 @@
 import type { Page } from 'playwright'
 import type { ProfileFields } from '@shared/types/profile'
+import type { AgentPermission } from '@shared/types/agentPermissions'
 
 type FieldCategory =
   | 'fullName'
@@ -138,7 +139,43 @@ export interface FillFormOptions {
 export interface FillFormResult {
   filledFields: string[]
   skippedFields: string[]
-  requiredPermissions: Array<'autoCompleteFields' | 'autoUploadDocuments'>
+  requiredPermissions: AgentPermission[]
+}
+
+export interface AvailableFillDocuments {
+  resume: boolean
+  coverLetter: boolean
+}
+
+/**
+ * Inspects the live form without entering any data. Only capabilities that
+ * would perform a real action are returned: an empty profile field or a file
+ * input with no matching stored document does not produce a needless prompt.
+ */
+export async function inspectFillRequirements(
+  page: Page,
+  profile: ProfileFields,
+  documents: AvailableFillDocuments
+): Promise<AgentPermission[]> {
+  const fields = await collectFields(page)
+  const required = new Set<AgentPermission>()
+
+  for (const field of fields) {
+    const category = matchCategory(field.label)
+    if (!category) continue
+
+    if (category === 'resume' && field.type === 'file') {
+      if (documents.resume) required.add('autoUploadDocuments')
+      continue
+    }
+    if (category === 'coverLetter') {
+      if (field.type === 'file' && documents.coverLetter) required.add('autoUploadDocuments')
+      continue
+    }
+    if (valueForCategory(category, profile)) required.add('autoCompleteFields')
+  }
+
+  return [...required]
 }
 
 /**
@@ -152,7 +189,7 @@ export async function fillForm(page: Page, profile: ProfileFields, options: Fill
   const filledFields: string[] = []
   const skippedFields: string[] = []
   const filledCategories = new Set<FieldCategory>()
-  const requiredPermissions = new Set<'autoCompleteFields' | 'autoUploadDocuments'>()
+  const requiredPermissions = new Set<AgentPermission>()
 
   for (const field of fields) {
     const category = matchCategory(field.label)

@@ -36,6 +36,12 @@ export default function AgentPermissionsMenu(): ReactElement {
     }
   }, [])
 
+  useEffect(() =>
+    window.api.settings.onAgentPermissionsChanged((next) => {
+      if (isAgentPermissions(next)) setPermissions(next)
+      else console.error('Ignored malformed agent permissions update', next)
+    }), [])
+
   useEffect(() => {
     if (!open) return
     const onPointerDown = (event: PointerEvent): void => {

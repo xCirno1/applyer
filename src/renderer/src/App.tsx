@@ -17,6 +17,7 @@ import JobDetailModal from './components/board/JobDetailModal'
 import ExportModal from './pages/Settings/ExportModal'
 import ImportModal from './pages/Settings/ImportModal'
 import BrowserSetupModal from './components/browser/BrowserSetupModal'
+import AgentPermissionPrompt from './components/terminal/AgentPermissionPrompt'
 import { useBrowserSetupState } from './components/browser/useBrowserSetupState'
 import AppMenuBar from './components/workspace/AppMenuBar'
 import DevBuildTag from './components/navigation/DevBuildTag'
@@ -228,6 +229,7 @@ function MainShell(): ReactElement {
           without navigating to Settings > Data first. */}
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
+      <AgentPermissionPrompt />
       <BrowserSetupModal
         state={browserSetup.state}
         dismissed={browserSetup.dismissed}

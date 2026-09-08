@@ -19,8 +19,9 @@ describe('isNotificationPreferences', () => {
 })
 
 describe('isNotificationTestKind', () => {
-  it('accepts only the three supported test notification categories', () => {
+  it('accepts only the supported test notification categories', () => {
     expect(isNotificationTestKind('verificationRequired')).toBe(true)
+    expect(isNotificationTestKind('permissionRequired')).toBe(true)
     expect(isNotificationTestKind('jobFilled')).toBe(true)
     expect(isNotificationTestKind('jobFailed')).toBe(true)
     expect(isNotificationTestKind('submitted')).toBe(false)

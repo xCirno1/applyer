@@ -21,6 +21,8 @@ export type ErrorCode =
   | 'invalidTable'
   | 'invalidJson'
   | 'invalidCommand'
+  | 'invalidAgentPermissions'
+  | 'agentPermissionNotWaiting'
   | 'invalidAdvancedSetting'
   | 'invalidNotificationPreferences'
   | 'invalidLocale'

@@ -90,6 +90,11 @@ import type {
   ApplyerSettingKey,
   ApplyerSettings
 } from '@shared/settings'
+import type {
+  AgentPermissionDecision,
+  AgentPermissionRequest,
+  AgentPermissions
+} from '@shared/types/agentPermissions'
 
 function settingsFromArguments(argv: readonly string[]): ApplyerSettings | undefined {
   const prefix = '--applyer-settings='
@@ -276,6 +281,25 @@ const browserControlApi = {
   }
 }
 
+const agentPermissionsApi = {
+  listPending: (): Promise<AgentPermissionRequest[]> => ipcRenderer.invoke(IPC.agentPermissions.listPending),
+  respond: (
+    requestId: string,
+    decision: AgentPermissionDecision
+  ): Promise<{ ok: boolean; permissions?: AgentPermissions; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.agentPermissions.respond, { requestId, decision }),
+  onRequested: (callback: (payload: AgentPermissionRequest) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: AgentPermissionRequest): void => callback(payload)
+    ipcRenderer.on(IPC.agentPermissions.onRequested, listener)
+    return () => ipcRenderer.removeListener(IPC.agentPermissions.onRequested, listener)
+  },
+  onResolved: (callback: (payload: { requestId: string }) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: { requestId: string }): void => callback(payload)
+    ipcRenderer.on(IPC.agentPermissions.onResolved, listener)
+    return () => ipcRenderer.removeListener(IPC.agentPermissions.onResolved, listener)
+  }
+}
+
 const browserSetupApi = {
   retryDownload: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke(IPC.browserSetup.retryDownload),
   respondInstall: (accept: boolean): Promise<{ ok: boolean }> =>
@@ -309,6 +333,16 @@ const settingsApi = {
     command: AutoStartCommand
   ): Promise<{ ok: boolean; command?: AutoStartCommand; error?: string }> =>
     ipcRenderer.invoke(IPC.settings.setAutoStartCommand, { command }),
+  getAgentPermissions: (): Promise<AgentPermissions> => ipcRenderer.invoke(IPC.settings.getAgentPermissions),
+  setAgentPermissions: (
+    permissions: AgentPermissions
+  ): Promise<{ ok: boolean; permissions?: AgentPermissions; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setAgentPermissions, { permissions }),
+  onAgentPermissionsChanged: (callback: (permissions: AgentPermissions) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, permissions: AgentPermissions): void => callback(permissions)
+    ipcRenderer.on(IPC.settings.onAgentPermissionsChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.settings.onAgentPermissionsChanged, listener)
+  },
   getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats),
   getAdvanced: (): Promise<AdvancedSettingsSnapshot> => ipcRenderer.invoke(IPC.settings.getAdvanced),
   updateAdvanced: (
@@ -394,6 +428,7 @@ const api = {
   profile: profileApi,
   onboarding: onboardingApi,
   browserControl: browserControlApi,
+  agentPermissions: agentPermissionsApi,
   browserSetup: browserSetupApi,
   settings: settingsApi,
   storageLocation: storageLocationApi,

@@ -3,6 +3,7 @@ import { getNotificationLocale, getNotificationPreferences } from './db/reposito
 import { appLogger } from './logger'
 import { NOTIFICATION_CATALOGS, notificationMessage } from './notificationCatalogs'
 import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
+import type { AgentPermissionRequest } from '@shared/types/agentPermissions'
 import type { JobRecord } from '@shared/types/job'
 import type { NotificationLocale, NotificationPreferences, NotificationTestKind } from '@shared/types/notification'
 
@@ -12,6 +13,7 @@ export interface DesktopNotificationContent {
 }
 
 const activeNotifications = new Set<Notification>()
+let activeAgentPermissionNotification: Notification | null = null
 
 export function contentForJobUpdate(
   job: JobRecord,
@@ -37,8 +39,25 @@ export function contentForVerification(
   return notificationMessage(locale, 'verificationRequired', payload.jobTitle, payload.company)
 }
 
+export function contentForPermissionRequest(
+  payload: AgentPermissionRequest,
+  preferences: NotificationPreferences,
+  locale: NotificationLocale = 'en'
+): DesktopNotificationContent | null {
+  if (!preferences.enabled || !preferences.permissionRequired) return null
+  return notificationMessage(locale, 'permissionRequired', payload.jobTitle, payload.company)
+}
+
+function activeMainWindow(): BrowserWindow | null {
+  return BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed()) ?? null
+}
+
+function isMainWindowFocused(): boolean {
+  return activeMainWindow()?.isFocused() ?? false
+}
+
 function focusMainWindow(): void {
-  const window = BrowserWindow.getAllWindows().find((candidate) => !candidate.isDestroyed())
+  const window = activeMainWindow()
   if (!window) return
   if (window.isMinimized()) window.restore()
   window.show()
@@ -53,26 +72,37 @@ export function testNotificationContent(
   return notificationMessage(locale, kind, catalog.testJobTitle, catalog.testCompany)
 }
 
-export function showDesktopNotification(content: DesktopNotificationContent): boolean {
+function deliverDesktopNotification(
+  content: DesktopNotificationContent,
+  onFinished?: (notification: Notification) => void
+): Notification | null {
   try {
     if (!Notification.isSupported()) {
       appLogger.warn('Desktop notifications are not supported on this system')
-      return false
+      return null
     }
     const notification = new Notification(content)
     activeNotifications.add(notification)
     notification.on('click', focusMainWindow)
-    notification.once('close', () => activeNotifications.delete(notification))
+    notification.once('close', () => {
+      activeNotifications.delete(notification)
+      onFinished?.(notification)
+    })
     notification.once('failed', (_event, error) => {
       activeNotifications.delete(notification)
+      onFinished?.(notification)
       appLogger.warn(`Desktop notification failed: ${error}`)
     })
     notification.show()
-    return true
+    return notification
   } catch (err) {
     appLogger.warn(`Could not show desktop notification: ${String(err)}`)
-    return false
+    return null
   }
+}
+
+export function showDesktopNotification(content: DesktopNotificationContent): boolean {
+  return deliverDesktopNotification(content) !== null
 }
 
 export function sendTestNotification(kind: NotificationTestKind): boolean {
@@ -96,5 +126,30 @@ export function notifyForVerification(payload: CaptchaDetectedPayload): void {
     if (content) showDesktopNotification(content)
   } catch (err) {
     appLogger.warn(`Could not prepare verification notification: ${String(err)}`)
+  }
+}
+
+export function notifyForPermissionRequest(payload: AgentPermissionRequest): void {
+  try {
+    if (isMainWindowFocused() || activeAgentPermissionNotification) return
+    const content = contentForPermissionRequest(payload, getNotificationPreferences(), getNotificationLocale())
+    if (!content) return
+    const notification = deliverDesktopNotification(content, (finished) => {
+      if (activeAgentPermissionNotification === finished) activeAgentPermissionNotification = null
+    })
+    if (notification) activeAgentPermissionNotification = notification
+  } catch (error) {
+    appLogger.warn(`Could not prepare agent permission notification: ${String(error)}`)
+  }
+}
+
+export function clearPermissionRequestNotification(): void {
+  const notification = activeAgentPermissionNotification
+  activeAgentPermissionNotification = null
+  if (!notification) return
+  try {
+    notification.close()
+  } catch (error) {
+    appLogger.warn(`Could not close agent permission notification: ${String(error)}`)
   }
 }

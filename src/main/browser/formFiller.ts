@@ -1,5 +1,6 @@
 import type { Page } from 'playwright'
 import type { ProfileFields } from '@shared/types/profile'
+import type { AgentPermission } from '@shared/types/agentPermissions'
 
 type FieldCategory =
   | 'fullName'
@@ -129,6 +130,8 @@ function valueForCategory(category: FieldCategory, profile: ProfileFields): stri
 }
 
 export interface FillFormOptions {
+  allowFieldCompletion: boolean
+  allowDocumentUploads: boolean
   resumeFilePath?: string
   coverLetterFilePath?: string
 }
@@ -136,6 +139,43 @@ export interface FillFormOptions {
 export interface FillFormResult {
   filledFields: string[]
   skippedFields: string[]
+  requiredPermissions: AgentPermission[]
+}
+
+export interface AvailableFillDocuments {
+  resume: boolean
+  coverLetter: boolean
+}
+
+/**
+ * Inspects the live form without entering any data. Only capabilities that
+ * would perform a real action are returned: an empty profile field or a file
+ * input with no matching stored document does not produce a needless prompt.
+ */
+export async function inspectFillRequirements(
+  page: Page,
+  profile: ProfileFields,
+  documents: AvailableFillDocuments
+): Promise<AgentPermission[]> {
+  const fields = await collectFields(page)
+  const required = new Set<AgentPermission>()
+
+  for (const field of fields) {
+    const category = matchCategory(field.label)
+    if (!category) continue
+
+    if (category === 'resume' && field.type === 'file') {
+      if (documents.resume) required.add('autoUploadDocuments')
+      continue
+    }
+    if (category === 'coverLetter') {
+      if (field.type === 'file' && documents.coverLetter) required.add('autoUploadDocuments')
+      continue
+    }
+    if (valueForCategory(category, profile)) required.add('autoCompleteFields')
+  }
+
+  return [...required]
 }
 
 /**
@@ -144,11 +184,12 @@ export interface FillFormResult {
  * questions untouched — answering those requires actual judgment about the
  * candidate, which belongs to the agent's reasoning, not a heuristic filler.
  */
-export async function fillForm(page: Page, profile: ProfileFields, options: FillFormOptions = {}): Promise<FillFormResult> {
+export async function fillForm(page: Page, profile: ProfileFields, options: FillFormOptions): Promise<FillFormResult> {
   const fields = await collectFields(page)
   const filledFields: string[] = []
   const skippedFields: string[] = []
   const filledCategories = new Set<FieldCategory>()
+  const requiredPermissions = new Set<AgentPermission>()
 
   for (const field of fields) {
     const category = matchCategory(field.label)
@@ -161,6 +202,11 @@ export async function fillForm(page: Page, profile: ProfileFields, options: Fill
 
     try {
       if (category === 'resume' && field.type === 'file') {
+        if (!options.allowDocumentUploads) {
+          skippedFields.push(`${field.label} (automatic document uploads are not allowed)`)
+          requiredPermissions.add('autoUploadDocuments')
+          continue
+        }
         if (!options.resumeFilePath) {
           skippedFields.push(`${field.label} (no resume on file)`)
           continue
@@ -172,6 +218,11 @@ export async function fillForm(page: Page, profile: ProfileFields, options: Fill
       }
 
       if (category === 'coverLetter' && field.type === 'file') {
+        if (!options.allowDocumentUploads) {
+          skippedFields.push(`${field.label} (automatic document uploads are not allowed)`)
+          requiredPermissions.add('autoUploadDocuments')
+          continue
+        }
         if (!options.coverLetterFilePath) {
           skippedFields.push(`${field.label} (no cover letter on file)`)
           continue
@@ -185,6 +236,12 @@ export async function fillForm(page: Page, profile: ProfileFields, options: Fill
       if (category === 'coverLetter' && field.tag === 'textarea') {
         // No dedicated cover-letter text to put here without inventing content — skip.
         skippedFields.push(`${field.label} (free-text cover letter, left for you)`)
+        continue
+      }
+
+      if (!options.allowFieldCompletion) {
+        skippedFields.push(`${field.label} (automatic field completion is not allowed)`)
+        requiredPermissions.add('autoCompleteFields')
         continue
       }
 
@@ -202,5 +259,5 @@ export async function fillForm(page: Page, profile: ProfileFields, options: Fill
     }
   }
 
-  return { filledFields, skippedFields }
+  return { filledFields, skippedFields, requiredPermissions: [...requiredPermissions] }
 }

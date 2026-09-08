@@ -3,6 +3,7 @@ import { validateExportBundle } from './importSchema'
 import { EXPORT_SCHEMA_VERSION } from '@shared/types/dataTransfer'
 import type { ExportBundle } from '@shared/types/dataTransfer'
 import { DEFAULT_THEME_STATE, MAX_CSS_PRESETS, MAX_CUSTOM_CSS_LENGTH, MAX_PRESET_NAME_LENGTH } from '@shared/types/theme'
+import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 
 function validBundle(): ExportBundle {
   return {
@@ -82,17 +83,21 @@ describe('validateExportBundle', () => {
 
   it('accepts notification preferences and rejects malformed values', () => {
     const settings = { autoStartCommand: '', indexedJobsRetentionDays: 30 }
-    expect(
-      validateExportBundle({
-        ...validBundle(),
-        data: {
-          settings: {
-            ...settings,
-            notificationPreferences: { enabled: true, verificationRequired: true, jobFilled: false, jobFailed: true }
-          }
+    const legacyResult = validateExportBundle({
+      ...validBundle(),
+      data: {
+        settings: {
+          ...settings,
+          notificationPreferences: { enabled: true, verificationRequired: true, jobFilled: false, jobFailed: true }
         }
-      }).ok
-    ).toBe(true)
+      }
+    })
+    expect(legacyResult.ok).toBe(true)
+    if (legacyResult.ok) {
+      expect(legacyResult.bundle.data.settings?.notificationPreferences?.permissionRequired).toBe(
+        DEFAULT_NOTIFICATION_PREFERENCES.permissionRequired
+      )
+    }
     expect(
       validateExportBundle({
         ...validBundle(),

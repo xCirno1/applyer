@@ -3,11 +3,12 @@ import { getSettings } from '@shared/settings'
 export interface NotificationPreferences {
   enabled: boolean
   verificationRequired: boolean
+  permissionRequired: boolean
   jobFilled: boolean
   jobFailed: boolean
 }
 
-export type NotificationTestKind = 'verificationRequired' | 'jobFilled' | 'jobFailed'
+export type NotificationTestKind = 'verificationRequired' | 'permissionRequired' | 'jobFilled' | 'jobFailed'
 export type NotificationLocale = 'en' | 'id'
 
 const settings = getSettings()
@@ -15,7 +16,12 @@ const settings = getSettings()
 export const DEFAULT_NOTIFICATION_LOCALE: NotificationLocale = settings.notificationDefaultLocale
 
 export function isNotificationTestKind(value: unknown): value is NotificationTestKind {
-  return value === 'verificationRequired' || value === 'jobFilled' || value === 'jobFailed'
+  return (
+    value === 'verificationRequired' ||
+    value === 'permissionRequired' ||
+    value === 'jobFilled' ||
+    value === 'jobFailed'
+  )
 }
 
 export function isNotificationLocale(value: unknown): value is NotificationLocale {
@@ -25,6 +31,7 @@ export function isNotificationLocale(value: unknown): value is NotificationLocal
 export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   enabled: settings.notificationEnabledByDefault,
   verificationRequired: settings.notificationVerificationRequiredByDefault,
+  permissionRequired: settings.notificationPermissionRequiredByDefault,
   jobFilled: settings.notificationJobFilledByDefault,
   jobFailed: settings.notificationJobFailedByDefault
 }
@@ -36,6 +43,7 @@ export function isNotificationPreferences(value: unknown): value is Notification
   return (
     typeof candidate.enabled === 'boolean' &&
     typeof candidate.verificationRequired === 'boolean' &&
+    typeof candidate.permissionRequired === 'boolean' &&
     typeof candidate.jobFilled === 'boolean' &&
     typeof candidate.jobFailed === 'boolean'
   )

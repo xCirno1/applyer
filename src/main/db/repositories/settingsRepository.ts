@@ -13,6 +13,12 @@ import {
   type NotificationLocale,
   type NotificationPreferences
 } from '@shared/types/notification'
+import {
+  DENIED_AGENT_PERMISSIONS,
+  DEFAULT_AGENT_PERMISSIONS,
+  isAgentPermissions,
+  type AgentPermissions
+} from '@shared/types/agentPermissions'
 
 const STORAGE_MODE_KEY = 'storage_mode'
 const ONBOARDING_COMPLETED_KEY = 'onboarding_completed'
@@ -22,6 +28,7 @@ const BROWSER_PREFERENCE_KEY = 'browser_preference'
 const ALLOW_LOCAL_ADDRESSES_KEY = 'allow_local_addresses'
 const NOTIFICATION_PREFERENCES_KEY = 'notification_preferences'
 const NOTIFICATION_LOCALE_KEY = 'notification_locale'
+const AGENT_PERMISSIONS_KEY = 'agent_permissions'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -61,6 +68,21 @@ export function setAutoStartCommand(command: AutoStartCommand): void {
   setSetting(AUTO_START_COMMAND_KEY, command)
 }
 
+export function getAgentPermissions(): AgentPermissions {
+  const value = getSetting(AGENT_PERMISSIONS_KEY)
+  if (!value) return { ...DEFAULT_AGENT_PERMISSIONS }
+  try {
+    const parsed: unknown = JSON.parse(value)
+    return isAgentPermissions(parsed) ? parsed : { ...DENIED_AGENT_PERMISSIONS }
+  } catch {
+    return { ...DENIED_AGENT_PERMISSIONS }
+  }
+}
+
+export function setAgentPermissions(permissions: AgentPermissions): void {
+  setSetting(AGENT_PERMISSIONS_KEY, JSON.stringify(permissions))
+}
+
 export function getIndexedJobsRetentionDays(): IndexedJobsRetention {
   const value = getSetting(INDEXED_JOBS_RETENTION_KEY)
   if (value === 'unlimited') return 'unlimited'
@@ -95,7 +117,29 @@ export function getNotificationPreferences(): NotificationPreferences {
   if (!value) return { ...DEFAULT_NOTIFICATION_PREFERENCES }
   try {
     const parsed: unknown = JSON.parse(value)
-    return isNotificationPreferences(parsed) ? parsed : { ...DEFAULT_NOTIFICATION_PREFERENCES }
+    if (isNotificationPreferences(parsed)) return parsed
+    // Preferences written before permission-request notifications existed
+    // are upgraded one field at a time so a new release does not reset the
+    // user's existing category choices back to every default.
+    if (typeof parsed === 'object' && parsed !== null) {
+      const legacy = parsed as Partial<NotificationPreferences>
+      if (
+        typeof legacy.enabled === 'boolean' &&
+        typeof legacy.verificationRequired === 'boolean' &&
+        typeof legacy.jobFilled === 'boolean' &&
+        typeof legacy.jobFailed === 'boolean' &&
+        legacy.permissionRequired === undefined
+      ) {
+        return {
+          enabled: legacy.enabled,
+          verificationRequired: legacy.verificationRequired,
+          permissionRequired: DEFAULT_NOTIFICATION_PREFERENCES.permissionRequired,
+          jobFilled: legacy.jobFilled,
+          jobFailed: legacy.jobFailed
+        }
+      }
+    }
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES }
   } catch {
     return { ...DEFAULT_NOTIFICATION_PREFERENCES }
   }

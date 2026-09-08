@@ -9,7 +9,13 @@ import type {
 } from '@shared/types/ipcEvents'
 import type { StorageLocationProgressPayload } from '@shared/types/storageLocation'
 import type { BoardFetchedPayload } from '@shared/types/companyBoard'
-import { notifyForJobUpdate, notifyForVerification } from '../notificationService'
+import type { AgentPermissionRequest, AgentPermissions } from '@shared/types/agentPermissions'
+import {
+  clearPermissionRequestNotification,
+  notifyForJobUpdate,
+  notifyForPermissionRequest,
+  notifyForVerification
+} from '../notificationService'
 
 let webContentsRef: WebContents | null = null
 
@@ -104,6 +110,26 @@ export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void 
 export function broadcastCaptchaResolved(payload: CaptchaResolvedPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaResolved, payload)
+  }
+}
+
+export function broadcastAgentPermissionRequested(payload: AgentPermissionRequest): void {
+  notifyForPermissionRequest(payload)
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.agentPermissions.onRequested, payload)
+  }
+}
+
+export function broadcastAgentPermissionResolved(requestId: string): void {
+  clearPermissionRequestNotification()
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.agentPermissions.onResolved, { requestId })
+  }
+}
+
+export function broadcastAgentPermissionsChanged(permissions: AgentPermissions): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.settings.onAgentPermissionsChanged, permissions)
   }
 }
 

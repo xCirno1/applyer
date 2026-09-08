@@ -77,6 +77,7 @@ export default function NotificationsSection(): ReactElement {
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
           <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-full" />
         </div>
       ) : (
         <div className="flex flex-col gap-4">
@@ -90,6 +91,27 @@ export default function NotificationsSection(): ReactElement {
           />
 
           <div className="flex flex-col gap-3 border-t border-border-soft pt-4">
+            <div className="flex items-start gap-4">
+              <div className="min-w-0 flex-1">
+                <Checkbox
+                  id="notifications-permission"
+                  label={t('notifications.permissionRequired')}
+                  hint={t('notifications.permissionRequiredHint')}
+                  checked={preferences.permissionRequired}
+                  disabled={busy || !preferences.enabled}
+                  onChange={(permissionRequired) => void update({ permissionRequired })}
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                loading={testing === 'permissionRequired'}
+                disabled={busy || !preferences.enabled || !preferences.permissionRequired}
+                onClick={() => void testNotification('permissionRequired')}
+              >
+                {t('notifications.sendTest')}
+              </Button>
+            </div>
             <div className="flex items-start gap-4">
               <div className="min-w-0 flex-1">
                 <Checkbox

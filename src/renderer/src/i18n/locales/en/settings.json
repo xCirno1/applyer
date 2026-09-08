@@ -26,6 +26,8 @@
     "enabledHint": "Allow Applyer to send notifications through your operating system.",
     "verificationRequired": "Verification required",
     "verificationRequiredHint": "A CAPTCHA or another verification challenge needs your attention.",
+    "permissionRequired": "Agent permission requested",
+    "permissionRequiredHint": "An agent is waiting for approval to complete fields or upload a document.",
     "jobFilled": "Application filled",
     "jobFilledHint": "An application has been filled and is ready for you to review and submit.",
     "jobFailed": "Job failed",

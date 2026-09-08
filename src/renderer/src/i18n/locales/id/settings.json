@@ -26,6 +26,8 @@
     "enabledHint": "Izinkan Applyer mengirim notifikasi lewat sistem operasimu.",
     "verificationRequired": "Perlu verifikasi",
     "verificationRequiredHint": "CAPTCHA atau tantangan verifikasi lain perlu diperhatikan.",
+    "permissionRequired": "Izin agen diminta",
+    "permissionRequiredHint": "Agen menunggu persetujuan untuk mengisi kolom atau mengunggah dokumen.",
     "jobFilled": "Lamaran terisi",
     "jobFilledHint": "Lamaran sudah diisi dan siap kamu periksa lalu kirim.",
     "jobFailed": "Lowongan gagal",

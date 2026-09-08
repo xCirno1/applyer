@@ -8,7 +8,9 @@ import {
   setAutoStartCommand,
   getNotificationPreferences,
   setNotificationPreferences,
-  setNotificationLocale
+  setNotificationLocale,
+  getAgentPermissions,
+  setAgentPermissions
 } from '../db/repositories/settingsRepository'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
@@ -27,6 +29,8 @@ import {
   type NotificationPreferences
 } from '@shared/types/notification'
 import { sendTestNotification } from '../notificationService'
+import { isAgentPermissions, type AgentPermissions } from '@shared/types/agentPermissions'
+import { broadcastAgentPermissionsChanged } from './jobsBroadcast'
 
 const AUTO_START_COMMAND_MAX_LENGTH = getSettings().dangerousAutoStartCommandMaxLength
 
@@ -69,6 +73,24 @@ export function registerSettingsIpc(): void {
   })
 
   ipcMain.handle(IPC.settings.getAutoStartCommand, (): AutoStartCommand => getAutoStartCommand())
+
+  ipcMain.handle(IPC.settings.getAgentPermissions, (): AgentPermissions => getAgentPermissions())
+
+  ipcMain.handle(IPC.settings.setAgentPermissions, (_event, payload: unknown) => {
+    const permissions =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { permissions?: unknown }).permissions
+        : undefined
+    if (!isAgentPermissions(permissions)) return { ok: false, error: appError('invalidAgentPermissions') }
+    try {
+      setAgentPermissions(permissions)
+      broadcastAgentPermissionsChanged(permissions)
+      logActivity('info', 'Agent permissions updated', { ...permissions })
+      return { ok: true, permissions }
+    } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
+  })
 
   ipcMain.handle(IPC.settings.setAutoStartCommand, (_event, { command }: { command: unknown }) => {
     if (typeof command !== 'string') {

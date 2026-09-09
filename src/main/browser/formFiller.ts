@@ -1,171 +1,245 @@
 import type { Page } from 'playwright'
-import type { ProfileFields } from '@shared/types/profile'
 import type { AgentPermission } from '@shared/types/agentPermissions'
 
-type FieldCategory =
-  | 'fullName'
-  | 'firstName'
-  | 'lastName'
-  | 'email'
-  | 'phone'
-  | 'location'
-  | 'linkedin'
-  | 'github'
-  | 'portfolio'
-  | 'resume'
-  | 'coverLetter'
+export type ApplicationFieldValue = string | boolean | string[]
 
-interface FieldDescriptor {
-  selector: string
-  tag: 'input' | 'textarea'
-  type: string
+export interface ApplicationFieldAnswer {
+  /** Must be copied from the latest inspect_application result. */
+  fieldId: string
+  value: ApplicationFieldValue
+}
+
+export interface ApplicationFieldOption {
   label: string
+  value: string
+}
+
+export interface ApplicationField {
+  /** Opaque identity tied to this control in the retained live DOM. */
+  fieldId: string
+  label: string
+  name?: string
+  placeholder?: string
+  autocomplete?: string
+  control: 'input' | 'textarea' | 'select' | 'radio' | 'checkbox' | 'file'
+  inputType?: string
+  required: boolean
+  currentValue: ApplicationFieldValue
+  options?: ApplicationFieldOption[]
+}
+
+interface FieldDescriptor extends ApplicationField {
+  selector?: string
+  options?: Array<ApplicationFieldOption & { fieldId?: string; selector?: string; checked?: boolean }>
 }
 
 /**
- * Ordered so more specific patterns (first/last name) are checked before the
- * generic "name" pattern they'd otherwise also match.
+ * Reads native form controls without interpreting what any question means.
+ * The returned opaque field IDs are the only identifiers accepted later.
  */
-const CATEGORY_PATTERNS: [FieldCategory, RegExp][] = [
-  ['firstName', /first\s*name/i],
-  ['lastName', /last\s*name/i],
-  ['fullName', /full\s*name|legal\s*name|your\s*name|^name$/i],
-  ['email', /e-?mail/i],
-  ['phone', /phone|mobile|telephone/i],
-  ['linkedin', /linked\s*in/i],
-  ['github', /git\s*hub/i],
-  ['portfolio', /portfolio|personal\s*(site|website)|^website$/i],
-  ['location', /location|city|current\s*(location|city)|where.*(live|based)/i],
-  ['resume', /r[ée]sum[ée]|\bcv\b/i],
-  ['coverLetter', /cover\s*letter/i]
-]
-
-function matchCategory(label: string): FieldCategory | null {
-  const normalized = label.trim()
-  if (!normalized) return null
-  for (const [category, pattern] of CATEGORY_PATTERNS) {
-    if (pattern.test(normalized)) return category
-  }
-  return null
-}
-
-/** Collects a serializable description of every fillable field on the page — resolution happens in-page since it needs live DOM/label associations. */
 async function collectFields(page: Page): Promise<FieldDescriptor[]> {
   return page.evaluate((): FieldDescriptor[] => {
-    function resolveLabel(el: Element): string {
+    const claimedFieldIds = new Set<string>()
+
+    function visible(el: Element): boolean {
+      const style = window.getComputedStyle(el)
+      return style.display !== 'none' && style.visibility !== 'hidden'
+    }
+
+    function labelledBy(el: Element): string {
+      const ids = el.getAttribute('aria-labelledby')?.trim().split(/\s+/) ?? []
+      return ids
+        .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+        .filter(Boolean)
+        .join(' ')
+    }
+
+    function directLabel(el: Element): string {
       const id = el.getAttribute('id')
       if (id) {
-        const forLabel = document.querySelector(`label[for="${CSS.escape(id)}"]`)
-        if (forLabel?.textContent?.trim()) return forLabel.textContent.trim()
+        const label = document.querySelector(`label[for="${CSS.escape(id)}"]`)
+        if (label?.textContent?.trim()) return label.textContent.trim()
       }
-      const ariaLabel = el.getAttribute('aria-label')
-      if (ariaLabel?.trim()) return ariaLabel.trim()
-      const ariaLabelledBy = el.getAttribute('aria-labelledby')
-      if (ariaLabelledBy) {
-        const labelled = document.getElementById(ariaLabelledBy)
-        if (labelled?.textContent?.trim()) return labelled.textContent.trim()
-      }
+      const ariaLabel = el.getAttribute('aria-label')?.trim()
+      if (ariaLabel) return ariaLabel
+      const ariaLabelledBy = labelledBy(el)
+      if (ariaLabelledBy) return ariaLabelledBy
       const closestLabel = el.closest('label')
       if (closestLabel?.textContent?.trim()) return closestLabel.textContent.trim()
-      const placeholder = el.getAttribute('placeholder')
-      if (placeholder?.trim()) return placeholder.trim()
-      return el.getAttribute('name') ?? id ?? ''
+      const placeholder = el.getAttribute('placeholder')?.trim()
+      if (placeholder) return placeholder
+      return el.getAttribute('name')?.trim() || id?.trim() || ''
     }
 
-    function cssSelectorFor(el: Element): string {
-      const id = el.getAttribute('id')
-      if (id) return `#${CSS.escape(id)}`
-      const name = el.getAttribute('name')
-      if (name) return `[name="${CSS.escape(name)}"]`
-      // Last resort: a data attribute we tag onto the element ourselves.
-      const tagged = `applyer-field-${Math.random().toString(36).slice(2)}`
+    function groupLabel(el: Element): string {
+      const fieldset = el.closest('fieldset')
+      const legend = fieldset?.querySelector(':scope > legend')?.textContent?.trim()
+      return legend || labelledBy(el) || el.getAttribute('name')?.trim() || directLabel(el)
+    }
+
+    function fieldIdFor(el: Element, signature: string): string {
+      let tagged = el.getAttribute('data-applyer-field')
+      const previousSignature = el.getAttribute('data-applyer-field-signature')
+      if (!tagged?.startsWith('applyer-field-') || claimedFieldIds.has(tagged) || previousSignature !== signature) {
+        do tagged = `applyer-field-${Math.random().toString(36).slice(2)}`
+        while (claimedFieldIds.has(tagged))
+      }
       el.setAttribute('data-applyer-field', tagged)
-      return `[data-applyer-field="${tagged}"]`
+      el.setAttribute('data-applyer-field-signature', signature)
+      claimedFieldIds.add(tagged)
+      return tagged
     }
 
-    const results: FieldDescriptor[] = []
-    document.querySelectorAll('input, textarea').forEach((el) => {
-      const type = (el.getAttribute('type') ?? 'text').toLowerCase()
-      if (['hidden', 'checkbox', 'radio', 'submit', 'button'].includes(type)) return
-      const style = window.getComputedStyle(el)
-      if (style.display === 'none' || style.visibility === 'hidden') return
+    function selectorFor(fieldId: string): string {
+      return `[data-applyer-field="${CSS.escape(fieldId)}"]`
+    }
 
+    const controls = Array.from(document.querySelectorAll('input, textarea, select')).filter(visible)
+    const results: FieldDescriptor[] = []
+    const grouped = new Set<Element>()
+
+    for (const el of controls) {
+      if (grouped.has(el)) continue
+      const tag = el.tagName.toLowerCase()
+      const inputType = tag === 'input' ? (el.getAttribute('type') ?? 'text').toLowerCase() : undefined
+      if (inputType && ['hidden', 'password', 'submit', 'button', 'image', 'reset'].includes(inputType)) continue
+
+      if (inputType === 'radio' || inputType === 'checkbox') {
+        const name = el.getAttribute('name')
+        const peers = name
+          ? controls.filter(
+              (candidate) =>
+                candidate.tagName.toLowerCase() === 'input' &&
+                (candidate.getAttribute('type') ?? 'text').toLowerCase() === inputType &&
+                candidate.getAttribute('name') === name
+            )
+          : [el]
+        peers.forEach((peer) => grouped.add(peer))
+
+        const isSingleCheckbox = inputType === 'checkbox' && peers.length === 1
+        const label = isSingleCheckbox ? directLabel(el) : groupLabel(el)
+        const optionDetails = peers.map((peer) => {
+          const input = peer as HTMLInputElement
+          return {
+            label: directLabel(peer),
+            value: input.value,
+            checked: input.checked
+          }
+        })
+        const signature = JSON.stringify({
+          label,
+          name,
+          inputType,
+          required: peers.some((peer) => (peer as HTMLInputElement).required),
+          options: optionDetails.map(({ label: optionLabel, value }) => ({ label: optionLabel, value }))
+        })
+        const fieldId = fieldIdFor(peers[0]!, signature)
+        const options = optionDetails.map((option, index) => {
+          const optionFieldId = index === 0
+            ? fieldId
+            : fieldIdFor(peers[index]!, JSON.stringify({ group: signature, index, label: option.label, value: option.value }))
+          return { ...option, fieldId: optionFieldId, selector: selectorFor(optionFieldId) }
+        })
+        results.push({
+          fieldId,
+          selector: isSingleCheckbox ? options[0]?.selector : undefined,
+          label,
+          name: el.getAttribute('name')?.trim() || undefined,
+          control: inputType,
+          required: peers.some((peer) => (peer as HTMLInputElement).required),
+          currentValue: inputType === 'radio'
+            ? options.find((option) => option.checked)?.value ?? ''
+            : isSingleCheckbox
+              ? (peers[0] as HTMLInputElement).checked
+              : options.filter((option) => option.checked).map((option) => option.value),
+          options: isSingleCheckbox ? undefined : options
+        })
+        continue
+      }
+
+      if (tag === 'select') {
+        const select = el as HTMLSelectElement
+        const label = directLabel(el)
+        const selectOptions = Array.from(select.options).map((option) => ({ label: option.text.trim(), value: option.value }))
+        const fieldId = fieldIdFor(el, JSON.stringify({
+          label,
+          name: el.getAttribute('name'),
+          autocomplete: el.getAttribute('autocomplete'),
+          multiple: select.multiple,
+          required: select.required,
+          options: selectOptions
+        }))
+        results.push({
+          fieldId,
+          selector: selectorFor(fieldId),
+          label,
+          name: el.getAttribute('name')?.trim() || undefined,
+          autocomplete: el.getAttribute('autocomplete')?.trim() || undefined,
+          control: 'select',
+          required: select.required,
+          currentValue: select.multiple
+            ? Array.from(select.selectedOptions).map((option) => option.value)
+            : select.value,
+          options: selectOptions
+        })
+        continue
+      }
+
+      const input = el as HTMLInputElement | HTMLTextAreaElement
+      const label = directLabel(el)
+      const fieldId = fieldIdFor(el, JSON.stringify({
+        label,
+        name: el.getAttribute('name'),
+        tag,
+        inputType,
+        placeholder: el.getAttribute('placeholder'),
+        autocomplete: el.getAttribute('autocomplete'),
+        required: input.required
+      }))
       results.push({
-        selector: cssSelectorFor(el),
-        tag: el.tagName.toLowerCase() as 'input' | 'textarea',
-        type,
-        label: resolveLabel(el)
+        fieldId,
+        selector: selectorFor(fieldId),
+        label,
+        name: el.getAttribute('name')?.trim() || undefined,
+        placeholder: el.getAttribute('placeholder')?.trim() || undefined,
+        autocomplete: el.getAttribute('autocomplete')?.trim() || undefined,
+        control: inputType === 'file' ? 'file' : tag === 'textarea' ? 'textarea' : 'input',
+        inputType,
+        required: input.required,
+        currentValue: inputType === 'file' ? '' : input.value
       })
-    })
-    return results
+    }
+
+    return results.filter((field) => field.label.trim().length > 0)
   })
 }
 
-function valueForCategory(category: FieldCategory, profile: ProfileFields): string | null {
-  switch (category) {
-    case 'fullName':
-      return profile.fullName || null
-    case 'firstName':
-      return profile.fullName.split(/\s+/)[0] || null
-    case 'lastName': {
-      const parts = profile.fullName.split(/\s+/)
-      return parts.length > 1 ? parts.slice(1).join(' ') : null
+export async function inspectApplicationFields(page: Page): Promise<ApplicationField[]> {
+  const fields = await collectFields(page)
+  return fields.map((field) => {
+    const inspected: ApplicationField = {
+      fieldId: field.fieldId,
+      label: field.label,
+      control: field.control,
+      required: field.required,
+      currentValue: field.currentValue
     }
-    case 'email':
-      return profile.email || null
-    case 'phone':
-      return profile.phone || null
-    case 'location':
-      return profile.location || null
-    case 'linkedin':
-      return profile.linkedinUrl || null
-    case 'github':
-      return profile.githubUrl || null
-    case 'portfolio':
-      return profile.portfolioUrl || null
-    case 'resume':
-    case 'coverLetter':
-      return null // handled separately as file uploads
-  }
-}
-
-const QUESTION_NOISE_WORDS = new Set([
-  'a', 'an', 'are', 'do', 'does', 'how', 'i', 'is', 'of', 'please', 'the', 'to', 'what', 'when', 'where', 'why', 'you', 'your'
-])
-
-function questionTokens(value: string): string[] {
-  return value
-    .toLocaleLowerCase()
-    .replace(/what['’]s/g, 'what is')
-    .normalize('NFKD')
-    .match(/[\p{L}\p{N}]+/gu)?.filter((word) => !QUESTION_NOISE_WORDS.has(word)) ?? []
-}
-
-/**
- * Labels vary a little between ATSs (for example, "What is your hobby?" and
- * "Hobby *"). Match a saved answer when its meaningful words are the same,
- * while keeping this deterministic and confined to answers the user stored.
- */
-function matchesQuestion(label: string, question: string): boolean {
-  const labelTokens = questionTokens(label)
-  const savedTokens = questionTokens(question)
-  if (labelTokens.length === 0 || savedTokens.length === 0) return false
-  if (labelTokens.join(' ') === savedTokens.join(' ')) return true
-  return labelTokens.length === 1 && savedTokens.length === 1 && labelTokens[0] === savedTokens[0]
-}
-
-function additionalAnswerFor(label: string, profile: ProfileFields): string | null {
-  const match = profile.additionalInformation.find((item) => matchesQuestion(label, item.question))
-  return match?.answer.trim() || null
-}
-
-function supportsAdditionalAnswer(field: FieldDescriptor): boolean {
-  return field.tag === 'textarea' || (field.tag === 'input' && ['text', 'search'].includes(field.type))
+    if (field.inputType !== undefined) inspected.inputType = field.inputType
+    if (field.name !== undefined) inspected.name = field.name
+    if (field.placeholder !== undefined) inspected.placeholder = field.placeholder
+    if (field.autocomplete !== undefined) inspected.autocomplete = field.autocomplete
+    if (field.options !== undefined) {
+      inspected.options = field.options.map((option) => ({ label: option.label, value: option.value }))
+    }
+    return inspected
+  })
 }
 
 export interface FillFormOptions {
   allowFieldCompletion: boolean
   allowDocumentUploads: boolean
+  /** File controls are immutable during edit_application. */
+  updateDocuments?: boolean
   resumeFilePath?: string
   coverLetterFilePath?: string
 }
@@ -176,139 +250,116 @@ export interface FillFormResult {
   requiredPermissions: AgentPermission[]
 }
 
-export interface AvailableFillDocuments {
-  resume: boolean
-  coverLetter: boolean
-}
+export function inspectAnswerRequirements(
+  fields: ApplicationField[],
+  answers: ApplicationFieldAnswer[],
+  includeDocumentUploads = true
+): AgentPermission[] {
+  const byFieldId = new Map(fields.map((field) => [field.fieldId, field]))
 
-/**
- * Inspects the live form without entering any data. Only capabilities that
- * would perform a real action are returned: an empty profile field or a file
- * input with no matching stored document does not produce a needless prompt.
- */
-export async function inspectFillRequirements(
-  page: Page,
-  profile: ProfileFields,
-  documents: AvailableFillDocuments
-): Promise<AgentPermission[]> {
-  const fields = await collectFields(page)
   const required = new Set<AgentPermission>()
-
-  for (const field of fields) {
-    const category = matchCategory(field.label)
-    if (!category) {
-      if (supportsAdditionalAnswer(field) && additionalAnswerFor(field.label, profile)) {
-        required.add('autoCompleteFields')
-      }
-      continue
+  for (const answer of answers) {
+    const field = byFieldId.get(answer.fieldId)
+    if (!field) continue
+    if (field.control === 'file') {
+      if (includeDocumentUploads) required.add('autoUploadDocuments')
+    } else {
+      required.add('autoCompleteFields')
     }
-
-    if (category === 'resume' && field.type === 'file') {
-      if (documents.resume) required.add('autoUploadDocuments')
-      continue
-    }
-    if (category === 'coverLetter') {
-      if (field.type === 'file' && documents.coverLetter) required.add('autoUploadDocuments')
-      continue
-    }
-    if (valueForCategory(category, profile)) required.add('autoCompleteFields')
   }
-
   return [...required]
 }
 
-/**
- * Fills standard fields and custom text questions with answers explicitly
- * saved in the profile. Unmatched custom/essay/eligibility questions stay
- * untouched, so the filler never invents a candidate's answer.
- */
-export async function fillForm(page: Page, profile: ProfileFields, options: FillFormOptions): Promise<FillFormResult> {
+function scalarValue(value: ApplicationFieldValue): string | null {
+  return typeof value === 'string' ? value : null
+}
+
+/** Fills only opaque field IDs explicitly supplied by the MCP agent. */
+export async function fillForm(
+  page: Page,
+  answers: ApplicationFieldAnswer[],
+  options: FillFormOptions
+): Promise<FillFormResult> {
   const fields = await collectFields(page)
+  const byFieldId = new Map(fields.map((field) => [field.fieldId, field]))
+
   const filledFields: string[] = []
   const skippedFields: string[] = []
-  const filledCategories = new Set<FieldCategory>()
   const requiredPermissions = new Set<AgentPermission>()
+  const usedFieldIds = new Set<string>()
 
-  for (const field of fields) {
-    const category = matchCategory(field.label)
-    if (!category) {
-      if (!supportsAdditionalAnswer(field)) continue
-      const answer = additionalAnswerFor(field.label, profile)
-      if (!answer) continue
-
-      try {
-        if (!options.allowFieldCompletion) {
-          skippedFields.push(`${field.label} (automatic field completion is not allowed)`)
-          requiredPermissions.add('autoCompleteFields')
-          continue
-        }
-        await page.locator(field.selector).fill(answer)
-        filledFields.push(field.label || 'Additional information')
-      } catch (err) {
-        skippedFields.push(`${field.label} (failed: ${String(err)})`)
-      }
+  for (const answer of answers) {
+    if (usedFieldIds.has(answer.fieldId)) {
+      skippedFields.push(`${answer.fieldId} (duplicate answer)`)
       continue
     }
-
-    // Don't fill the same logical field twice (e.g. two inputs both matching "email").
-    if (filledCategories.has(category)) continue
-
+    usedFieldIds.add(answer.fieldId)
+    const field = byFieldId.get(answer.fieldId)
+    if (!field) {
+      skippedFields.push(`${answer.fieldId} (field not found; inspect the form again)`)
+      continue
+    }
     try {
-      if (category === 'resume' && field.type === 'file') {
+      if (field.control === 'file') {
+        if (options.updateDocuments === false) {
+          skippedFields.push(`${field.label} (attachments cannot be changed during editing)`)
+          continue
+        }
         if (!options.allowDocumentUploads) {
-          skippedFields.push(`${field.label} (automatic document uploads are not allowed)`)
           requiredPermissions.add('autoUploadDocuments')
-          continue
-        }
-        if (!options.resumeFilePath) {
-          skippedFields.push(`${field.label} (no resume on file)`)
-          continue
-        }
-        await page.locator(field.selector).setInputFiles(options.resumeFilePath)
-        filledFields.push(field.label || 'Resume')
-        filledCategories.add(category)
-        continue
-      }
-
-      if (category === 'coverLetter' && field.type === 'file') {
-        if (!options.allowDocumentUploads) {
           skippedFields.push(`${field.label} (automatic document uploads are not allowed)`)
-          requiredPermissions.add('autoUploadDocuments')
           continue
         }
-        if (!options.coverLetterFilePath) {
-          skippedFields.push(`${field.label} (no cover letter on file)`)
+        const documentKind = scalarValue(answer.value)
+        const path = documentKind === 'resume' ? options.resumeFilePath : documentKind === 'cover_letter' ? options.coverLetterFilePath : undefined
+        if (!path) {
+          skippedFields.push(`${field.label} (value must name an available stored document: resume or cover_letter)`)
           continue
         }
-        await page.locator(field.selector).setInputFiles(options.coverLetterFilePath)
-        filledFields.push(field.label || 'Cover Letter')
-        filledCategories.add(category)
-        continue
-      }
-
-      if (category === 'coverLetter' && field.tag === 'textarea') {
-        // No dedicated cover-letter text to put here without inventing content — skip.
-        skippedFields.push(`${field.label} (free-text cover letter, left for you)`)
+        await page.locator(field.selector!).setInputFiles(path)
+        filledFields.push(field.label)
         continue
       }
 
       if (!options.allowFieldCompletion) {
-        skippedFields.push(`${field.label} (automatic field completion is not allowed)`)
         requiredPermissions.add('autoCompleteFields')
+        skippedFields.push(`${field.label} (automatic field completion is not allowed)`)
         continue
       }
 
-      const value = valueForCategory(category, profile)
-      if (!value) {
-        skippedFields.push(`${field.label} (no matching profile data)`)
-        continue
+      if (field.control === 'input' || field.control === 'textarea') {
+        const value = scalarValue(answer.value)
+        if (value === null) throw new Error('expected a string value')
+        await page.locator(field.selector!).fill(value)
+      } else if (field.control === 'select') {
+        if (typeof answer.value !== 'string' && !Array.isArray(answer.value)) throw new Error('expected an option value')
+        await page.locator(field.selector!).selectOption(answer.value)
+      } else if (field.control === 'radio') {
+        const value = scalarValue(answer.value)
+        const option = value === null ? undefined : field.options?.find((candidate) => candidate.value === value)
+        if (!option?.selector) throw new Error('value is not one of the inspected options')
+        await page.locator(option.selector).check()
+      } else if (field.control === 'checkbox') {
+        if (field.options) {
+          if (!Array.isArray(answer.value)) throw new Error('expected an array of option values')
+          const requested = new Set(answer.value)
+          const known = new Set(field.options.map((option) => option.value))
+          if ([...requested].some((value) => !known.has(value))) throw new Error('value is not one of the inspected options')
+          for (const option of field.options) {
+            const locator = page.locator(option.selector!)
+            if (requested.has(option.value)) await locator.check()
+            else await locator.uncheck()
+          }
+        } else {
+          if (typeof answer.value !== 'boolean') throw new Error('expected a boolean value')
+          const locator = page.locator(field.selector!)
+          if (answer.value) await locator.check()
+          else await locator.uncheck()
+        }
       }
-
-      await page.locator(field.selector).fill(value)
-      filledFields.push(field.label || category)
-      filledCategories.add(category)
-    } catch (err) {
-      skippedFields.push(`${field.label} (failed: ${String(err)})`)
+      filledFields.push(field.label)
+    } catch (error) {
+      skippedFields.push(`${field.label} (failed: ${String(error)})`)
     }
   }
 

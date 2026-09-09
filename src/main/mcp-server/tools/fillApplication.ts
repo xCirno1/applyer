@@ -9,7 +9,7 @@ type Args = { [K in keyof typeof fillApplicationShape]: z.infer<(typeof fillAppl
 
 export async function fillApplicationTool(args: Args): Promise<CallToolResult> {
   try {
-    const result = await runFillTask(args.jobId)
+    const result = await runFillTask(args.jobId, args.answers)
     logActivity('info', `fill_application -> ${result.status}`, { jobId: args.jobId })
     return jsonResult(result)
   } catch (err) {

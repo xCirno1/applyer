@@ -27,7 +27,9 @@ describe('writeAgentInstructions', () => {
       'get_job_details',
       'list_jobs',
       'queue_job',
+      'inspect_application',
       'fill_application',
+      'edit_application',
       'flag_failure',
       'exclude_job'
     ]) {

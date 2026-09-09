@@ -117,6 +117,17 @@ describe('updateProfileTool', () => {
     expect(getProfile()?.additionalInformation).toEqual([{ question: 'Hobby', answer: 'Cycling' }])
   })
 
+  it('treats structurally identical saved custom answers as unchanged', async () => {
+    const additionalInformation = [{ question: 'Hobby', answer: 'Cycling' }]
+    seedProfile({ additionalInformation })
+
+    const result = await call({ additionalInformation: [{ question: 'Hobby', answer: 'Cycling' }] })
+
+    expect(bodyOf(result)).toMatchObject({ status: 'unchanged', updatedFields: [] })
+    expect(broadcastProfileChanged).not.toHaveBeenCalled()
+    expect(listActivity({}).entries).toEqual([])
+  })
+
   it('drops blank and case-insensitively duplicated list entries', async () => {
     seedProfile()
     await call({ skills: ['Go', 'go', ' ', 'GO ', 'Rust'] })

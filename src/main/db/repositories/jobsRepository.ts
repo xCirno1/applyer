@@ -180,6 +180,27 @@ export function setFilled(id: string, meta: { screenshotPath?: string | null } =
   return getJob(id) as JobRecord
 }
 
+/** Updates evidence for the same live application without changing its Filled state. */
+export function refreshFilled(id: string, meta: { screenshotPath?: string | null } = {}): JobRecord {
+  const db = getDb()
+  const current = getJob(id)
+  if (!current) throw new Error(`Job not found: ${id}`)
+  if (current.status !== 'filled') throw new Error(`Job is not Filled: ${id}`)
+
+  const now = nowIso()
+  db.update(jobs)
+    .set({
+      screenshotPath: meta.screenshotPath ?? current.screenshotPath,
+      blockingReason: null,
+      blockingTaskId: null,
+      updatedAt: now
+    })
+    .where(eq(jobs.id, id))
+    .run()
+
+  return getJob(id) as JobRecord
+}
+
 export function setSubmitted(id: string): JobRecord {
   const db = getDb()
   const current = getJob(id)

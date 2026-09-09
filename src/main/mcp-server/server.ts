@@ -7,7 +7,9 @@ import {
   flagFailureShape,
   getProfileShape,
   updateProfileShape,
+  inspectApplicationShape,
   fillApplicationShape,
+  editApplicationShape,
   excludeJobShape,
   addCompanyBoardShape,
   listCompanyBoardsShape
@@ -19,7 +21,9 @@ import { getJobDetailsTool } from './tools/getJobDetails'
 import { queueJobTool } from './tools/queueJob'
 import { listJobsTool } from './tools/listJobs'
 import { flagFailureTool } from './tools/flagFailure'
+import { inspectApplicationTool } from './tools/inspectApplication'
 import { fillApplicationTool } from './tools/fillApplication'
+import { editApplicationTool } from './tools/editApplication'
 import { excludeJobTool } from './tools/excludeJob'
 import { addCompanyBoardTool } from './tools/addCompanyBoard'
 import { listCompanyBoardsTool } from './tools/listCompanyBoards'
@@ -108,14 +112,36 @@ export function createApplyerMcpServer(): McpServer {
   )
 
   server.registerTool(
+    'inspect_application',
+    {
+      title: 'Inspect a job application form',
+      description:
+        'Opens and retains a visible application form for a Queued job, then returns every supported live field with an opaque fieldId, semantic label, raw name/placeholder/autocomplete hints, control type, current value, required state, and available options. Password controls are omitted. For a Filled job it only re-inspects the original still-open form. Read the candidate profile separately, decide what each question means yourself, and pass fieldId/value pairs to fill_application or edit_application. Labels and hints are context only and must never be used as identifiers. This tool never changes a field, clicks a button, advances a page, or submits the application.',
+      inputSchema: inspectApplicationShape
+    },
+    inspectApplicationTool
+  )
+
+  server.registerTool(
     'fill_application',
     {
       title: 'Fill out a job application',
       description:
-        "Opens a visible browser window and fills standard fields, saved additional-information answers for matching custom text questions, and/or uploads the candidate's stored resume and cover letter, but NEVER submits the application. If a required Agent Permission is disabled, the app asks the user to allow this attempt, always allow it, or deny it; the tool waits for that decision and returns 'permission_denied' when denied or timed out. The user reviews and submits the form themselves. Custom essay/eligibility questions without a saved answer are left blank. If the site presents a verification challenge, returns 'paused_captcha' immediately and resumes automatically once the user resolves it.",
+        'Fills only the fieldId/value pairs supplied from the latest inspect_application result, then marks the job Filled for user review. Never target a field by label. Use option values exactly as inspected. A file field value may be resume or cover_letter when that stored document was listed by inspection. It never clicks buttons, advances the form, or submits. If permission is disabled, Applyer asks the user before changing the form.',
       inputSchema: fillApplicationShape
     },
     fillApplicationTool
+  )
+
+  server.registerTool(
+    'edit_application',
+    {
+      title: 'Edit an open job application',
+      description:
+        'Updates only fieldId/value pairs from a fresh inspection of the original visible form retained for a Filled job. Labels are semantic context only. It never opens a replacement session, changes document attachments, clicks buttons, advances the form, or submits it. The user reviews every changed answer before submitting.',
+      inputSchema: editApplicationShape
+    },
+    editApplicationTool
   )
 
   server.registerTool(

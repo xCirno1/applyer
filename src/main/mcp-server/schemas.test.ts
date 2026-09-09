@@ -8,7 +8,9 @@ import {
   flagFailureShape,
   getProfileShape,
   updateProfileShape,
+  inspectApplicationShape,
   fillApplicationShape,
+  editApplicationShape,
   excludeJobShape,
   addCompanyBoardShape,
   listCompanyBoardsShape
@@ -21,7 +23,9 @@ const listJobsSchema = z.object(listJobsShape)
 const flagFailureSchema = z.object(flagFailureShape)
 const getProfileSchema = z.object(getProfileShape)
 const updateProfileSchema = z.object(updateProfileShape)
+const inspectApplicationSchema = z.object(inspectApplicationShape)
 const fillApplicationSchema = z.object(fillApplicationShape)
+const editApplicationSchema = z.object(editApplicationShape)
 const excludeJobSchema = z.object(excludeJobShape)
 const addCompanyBoardSchema = z.object(addCompanyBoardShape)
 const listCompanyBoardsSchema = z.object(listCompanyBoardsShape)
@@ -98,7 +102,7 @@ describe('queueJobShape', () => {
   })
 
   // Same rule as get_job_details: a queued job's URL is opened in a real
-  // window by fill_application, and in the OS browser from the job card.
+  // window by inspect_application, and in the OS browser from the job card.
   it('rejects schemes that are valid URLs but must never be opened', () => {
     expect(queueJobSchema.safeParse({ ...base, url: 'file:///etc/passwd' }).success).toBe(false)
     expect(queueJobSchema.safeParse({ ...base, url: 'javascript:alert(1)' }).success).toBe(false)
@@ -168,10 +172,25 @@ describe('getProfileShape', () => {
 })
 
 describe('fillApplicationShape', () => {
-  it('requires a non-empty jobId', () => {
-    expect(fillApplicationSchema.safeParse({ jobId: 'job-1' }).success).toBe(true)
+  it('requires a non-empty jobId and explicit fieldId/value answers', () => {
+    expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [{ fieldId: 'field-email', value: 'jane@example.com' }] }).success).toBe(true)
     expect(fillApplicationSchema.safeParse({ jobId: '' }).success).toBe(false)
-    expect(fillApplicationSchema.safeParse({}).success).toBe(false)
+    expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [] }).success).toBe(false)
+  })
+})
+
+describe('inspectApplicationShape', () => {
+  it('requires a non-empty job id', () => {
+    expect(inspectApplicationSchema.safeParse({ jobId: 'job-1' }).success).toBe(true)
+    expect(inspectApplicationSchema.safeParse({ jobId: ' ' }).success).toBe(false)
+  })
+})
+
+describe('editApplicationShape', () => {
+  it('accepts string, boolean, and multi-option answer values', () => {
+    expect(editApplicationSchema.safeParse({ jobId: 'job-1', answers: [{ fieldId: 'field-name', value: 'Jane Doe' }, { fieldId: 'field-agree', value: true }, { fieldId: 'field-skills', value: ['ts'] }] }).success).toBe(true)
+    expect(editApplicationSchema.safeParse({ jobId: '  ' }).success).toBe(false)
+    expect(editApplicationSchema.safeParse({ jobId: 'job-1', answers: [{ fieldId: '', value: 'x' }] }).success).toBe(false)
   })
 })
 

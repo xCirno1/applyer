@@ -16,6 +16,7 @@ import {
   getJobByUrl,
   listJobs,
   setFilled,
+  refreshFilled,
   setSubmitted,
   setFailed,
   retry,
@@ -167,6 +168,16 @@ describe('job status transitions', () => {
     const submitted = setSubmitted(job.id)
     expect(submitted.status).toBe('submitted')
     expect(submitted.submittedAt).toBeTruthy()
+  })
+
+  it('refreshes a filled job’s screenshot without changing its status', () => {
+    const { job } = queueJob(baseInput())
+    const filled = setFilled(job.id, { screenshotPath: '/tmp/first-shot.png' })
+
+    const refreshed = refreshFilled(job.id, { screenshotPath: '/tmp/corrected-shot.png' })
+    expect(refreshed.status).toBe('filled')
+    expect(refreshed.screenshotPath).toBe('/tmp/corrected-shot.png')
+    expect(refreshed.filledAt).toBe(filled.filledAt)
   })
 
   it('allows queued -> failed -> queued (retry)', () => {

@@ -53,6 +53,7 @@ function profile(overrides: Partial<ProfileFields> = {}): ProfileFields {
     yearsExperience: null,
     summary: '',
     skills: [],
+    additionalInformation: [],
     ...overrides
   }
 }

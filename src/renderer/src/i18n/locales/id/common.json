@@ -15,7 +15,8 @@
     "back": "Kembali",
     "next": "Lanjut",
     "skip": "Lewati",
-    "browse": "Pilih…"
+    "browse": "Pilih…",
+    "done": "Selesai"
   },
   "dropdown": {
     "placeholder": "Pilih…"
@@ -63,6 +64,14 @@
     "skills": "Skill",
     "commaSeparated": "pisahkan pakai koma",
     "summary": "Ringkasan",
+    "additionalInformation": "Informasi tambahan",
+    "additionalInformationHint": "Simpan jawaban untuk pertanyaan lamaran, misalnya \"Apa hobimu?\", agar Applyer dapat mengisinya saat pertanyaan muncul.",
+    "addAdditionalInformation": "Tambah jawaban",
+    "question": "Pertanyaan",
+    "answer": "Jawaban",
+    "notSet": "Belum diisi",
+    "editField": "Edit {{field}}",
+    "editAdditionalInformation": "Edit jawaban untuk {{question}}",
     "nameEmailRequired": "Nama lengkap dan email harus diisi.",
     "saved": "Profil tersimpan.",
     "saveFailed": "Gagal menyimpan profil.",

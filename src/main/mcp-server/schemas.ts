@@ -99,7 +99,11 @@ export const updateProfileShape = {
   salaryCurrency: z.string().trim().max(10).optional(),
   yearsExperience: z.number().int().min(0).max(80).nullable().optional(),
   summary: z.string().trim().max(5000).optional(),
-  skills: z.array(z.string().trim().max(100)).max(100).optional()
+  skills: z.array(z.string().trim().max(100)).max(100).optional(),
+  additionalInformation: z
+    .array(z.object({ question: z.string().trim().min(1).max(500), answer: z.string().max(5000) }))
+    .max(50)
+    .optional()
 }
 
 export const fillApplicationShape = {

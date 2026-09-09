@@ -103,7 +103,8 @@ const profileFixture: ProfileFields = {
   salaryCurrency: '',
   yearsExperience: null,
   summary: '',
-  skills: []
+  skills: [],
+  additionalInformation: []
 }
 
 const indexedFixture = {

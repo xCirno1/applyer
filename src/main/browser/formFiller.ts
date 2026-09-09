@@ -129,6 +129,40 @@ function valueForCategory(category: FieldCategory, profile: ProfileFields): stri
   }
 }
 
+const QUESTION_NOISE_WORDS = new Set([
+  'a', 'an', 'are', 'do', 'does', 'how', 'i', 'is', 'of', 'please', 'the', 'to', 'what', 'when', 'where', 'why', 'you', 'your'
+])
+
+function questionTokens(value: string): string[] {
+  return value
+    .toLocaleLowerCase()
+    .replace(/what['’]s/g, 'what is')
+    .normalize('NFKD')
+    .match(/[\p{L}\p{N}]+/gu)?.filter((word) => !QUESTION_NOISE_WORDS.has(word)) ?? []
+}
+
+/**
+ * Labels vary a little between ATSs (for example, "What is your hobby?" and
+ * "Hobby *"). Match a saved answer when its meaningful words are the same,
+ * while keeping this deterministic and confined to answers the user stored.
+ */
+function matchesQuestion(label: string, question: string): boolean {
+  const labelTokens = questionTokens(label)
+  const savedTokens = questionTokens(question)
+  if (labelTokens.length === 0 || savedTokens.length === 0) return false
+  if (labelTokens.join(' ') === savedTokens.join(' ')) return true
+  return labelTokens.length === 1 && savedTokens.length === 1 && labelTokens[0] === savedTokens[0]
+}
+
+function additionalAnswerFor(label: string, profile: ProfileFields): string | null {
+  const match = profile.additionalInformation.find((item) => matchesQuestion(label, item.question))
+  return match?.answer.trim() || null
+}
+
+function supportsAdditionalAnswer(field: FieldDescriptor): boolean {
+  return field.tag === 'textarea' || (field.tag === 'input' && ['text', 'search'].includes(field.type))
+}
+
 export interface FillFormOptions {
   allowFieldCompletion: boolean
   allowDocumentUploads: boolean
@@ -162,7 +196,12 @@ export async function inspectFillRequirements(
 
   for (const field of fields) {
     const category = matchCategory(field.label)
-    if (!category) continue
+    if (!category) {
+      if (supportsAdditionalAnswer(field) && additionalAnswerFor(field.label, profile)) {
+        required.add('autoCompleteFields')
+      }
+      continue
+    }
 
     if (category === 'resume' && field.type === 'file') {
       if (documents.resume) required.add('autoUploadDocuments')
@@ -179,10 +218,9 @@ export async function inspectFillRequirements(
 }
 
 /**
- * Fills only well-understood standard fields (name, contact info, links,
- * resume/cover-letter uploads). Deliberately leaves custom/essay/eligibility
- * questions untouched — answering those requires actual judgment about the
- * candidate, which belongs to the agent's reasoning, not a heuristic filler.
+ * Fills standard fields and custom text questions with answers explicitly
+ * saved in the profile. Unmatched custom/essay/eligibility questions stay
+ * untouched, so the filler never invents a candidate's answer.
  */
 export async function fillForm(page: Page, profile: ProfileFields, options: FillFormOptions): Promise<FillFormResult> {
   const fields = await collectFields(page)
@@ -194,6 +232,21 @@ export async function fillForm(page: Page, profile: ProfileFields, options: Fill
   for (const field of fields) {
     const category = matchCategory(field.label)
     if (!category) {
+      if (!supportsAdditionalAnswer(field)) continue
+      const answer = additionalAnswerFor(field.label, profile)
+      if (!answer) continue
+
+      try {
+        if (!options.allowFieldCompletion) {
+          skippedFields.push(`${field.label} (automatic field completion is not allowed)`)
+          requiredPermissions.add('autoCompleteFields')
+          continue
+        }
+        await page.locator(field.selector).fill(answer)
+        filledFields.push(field.label || 'Additional information')
+      } catch (err) {
+        skippedFields.push(`${field.label} (failed: ${String(err)})`)
+      }
       continue
     }
 

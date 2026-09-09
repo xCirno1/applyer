@@ -119,7 +119,7 @@ Other things worth knowing:
 | `queue_job` | Adds a posting to your board, deduplicated by URL. |
 | `list_jobs` | Lists what's already on the board, optionally by status, to avoid re-queuing. |
 | `flag_failure` | Marks a job Failed with a reason tag (login required, expired listing, and so on; unrecognized tags register themselves). |
-| `fill_application` | Opens a visible browser, fills the standard fields from your profile, and never submits. Custom essay questions are left for you. If the site throws up a verification challenge it returns right away and resumes once you clear it. |
+| `fill_application` | Opens a visible browser, fills the standard fields and any custom text questions with an answer you saved in your profile, and never submits. Unmatched essay questions are left for you. If the site throws up a verification challenge it returns right away and resumes once you clear it. |
 | `exclude_job` | Blacklists a posting URL permanently, at your explicit request only. The tool description tells the agent not to use it as its own quality filter. |
 
 That is the entire surface area the agent has. Nothing else in the app or on your machine

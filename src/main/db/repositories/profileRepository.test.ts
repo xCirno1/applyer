@@ -37,6 +37,7 @@ function profile(overrides: Partial<ProfileFields> = {}): ProfileFields {
     yearsExperience: 5,
     summary: 'Experienced backend engineer.',
     skills: ['TypeScript', 'Node.js'],
+    additionalInformation: [],
     ...overrides
   }
 }
@@ -60,6 +61,18 @@ describe('saveProfile / getProfile round trip', () => {
     setStorageMode('plaintext')
     saveProfile(profile())
     expect(getProfile()).toEqual(profile())
+  })
+
+  it('reads an encrypted profile saved before additional information existed', () => {
+    setStorageMode('encrypted')
+    const legacyProfile: Record<string, unknown> = { ...profile() }
+    delete legacyProfile.additionalInformation
+    testDb
+      .insert(profileTable)
+      .values({ id: 1, securePayload: writeSecureField(JSON.stringify(legacyProfile), 'encrypted') })
+      .run()
+
+    expect(getProfile()).toEqual(profile({ additionalInformation: [] }))
   })
 
   it('defaults to encrypted mode ("fails closed") when no storage mode has been chosen yet', () => {

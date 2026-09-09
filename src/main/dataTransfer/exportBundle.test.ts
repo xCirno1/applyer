@@ -195,9 +195,10 @@ describe('computeExportSizes', () => {
       salaryMin: null,
       salaryMax: null,
       salaryCurrency: '',
-      yearsExperience: null,
-      summary: '',
-      skills: []
+  yearsExperience: null,
+  summary: '',
+  skills: [],
+  additionalInformation: []
     })
     setAutoStartCommand('claude')
 

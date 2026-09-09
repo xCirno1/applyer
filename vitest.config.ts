@@ -4,6 +4,7 @@ import { resolve } from 'path'
 export default defineConfig({
   resolve: {
     alias: {
+      'electron-log/main': resolve(__dirname, 'test/mocks/electronLog.ts'),
       // See test/mocks/electron.ts for why this alias is load-bearing, not
       // just a convenience.
       electron: resolve(__dirname, 'test/mocks/electron.ts'),

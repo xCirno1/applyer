@@ -1,0 +1,12 @@
+diff --git a/node_modules/plist/lib/parse.js b/node_modules/plist/lib/parse.js
+--- a/node_modules/plist/lib/parse.js
++++ b/node_modules/plist/lib/parse.js
+@@ -61,7 +61,7 @@ function invariant(test, message) {
+  */
+ 
+ function parse (xml) {
+-  var doc = new DOMParser().parseFromString(xml);
++  var doc = new DOMParser().parseFromString(xml, 'application/xml');
+   invariant(
+     doc.documentElement.nodeName === 'plist',
+     'malformed document. First element should be <plist>'

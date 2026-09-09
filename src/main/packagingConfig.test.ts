@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'fs'
 import { resolve } from 'path'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const builderRequire = createRequire(require.resolve('app-builder-lib'))
+const plist = builderRequire('plist') as {
+  build(value: Record<string, unknown>): string
+  parse(xml: string): Record<string, unknown>
+}
 
 const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf-8')) as {
   build: { electronLanguages?: string[]; files: string[]; asar?: boolean; asarUnpack?: string[] }
@@ -10,6 +18,16 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'u
 const catalogs = readdirSync(resolve(__dirname, '../renderer/src/i18n/locales'))
 
 describe('packaging config', () => {
+  it('round-trips macOS application metadata through the packaging plist parser', () => {
+    const info = {
+      CFBundleIdentifier: 'com.applyer.app',
+      CFBundleDisplayName: 'Applyer & Résumé',
+      LSUIElement: false,
+      CFBundleDocumentTypes: [{ CFBundleTypeExtensions: ['docx', 'pdf'] }]
+    }
+    expect(plist.parse(plist.build(info))).toEqual(info)
+  })
+
   // `electronLanguages` prunes Electron's *own* locale resources, which is
   // what the native surfaces read: file dialogs, the context menu, the
   // application menu. Asserted against the catalog directory rather than a

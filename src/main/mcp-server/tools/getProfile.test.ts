@@ -34,7 +34,8 @@ const FULL_PROFILE = {
   salaryCurrency: '',
   yearsExperience: null,
   summary: '',
-  skills: []
+  skills: [],
+  additionalInformation: []
 }
 
 describe('getProfileTool', () => {

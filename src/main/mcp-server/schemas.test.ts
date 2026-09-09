@@ -232,6 +232,12 @@ describe('updateProfileShape', () => {
     expect(updateProfileSchema.safeParse({ summary: 'a'.repeat(5001) }).success).toBe(false)
   })
 
+  it('accepts bounded question-and-answer pairs for custom application fields', () => {
+    expect(updateProfileSchema.safeParse({ additionalInformation: [{ question: 'Hobby', answer: 'Cycling' }] }).success).toBe(true)
+    expect(updateProfileSchema.safeParse({ additionalInformation: [{ question: '', answer: 'Cycling' }] }).success).toBe(false)
+    expect(updateProfileSchema.safeParse({ additionalInformation: Array(51).fill({ question: 'Hobby', answer: 'Cycling' }) }).success).toBe(false)
+  })
+
   it('trims string fields and list entries', () => {
     const parsed = updateProfileSchema.parse({ fullName: '  Jane Doe  ', skills: ['  Go  '] })
     expect(parsed.fullName).toBe('Jane Doe')

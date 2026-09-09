@@ -26,7 +26,10 @@ const profileFieldsSchema = z.object({
   salaryCurrency: z.string().max(10),
   yearsExperience: z.number().int().min(0).max(80).nullable(),
   summary: z.string().max(5000),
-  skills: z.array(z.string().max(100)).max(100)
+  skills: z.array(z.string().max(100)).max(100),
+  additionalInformation: z
+    .array(z.object({ question: z.string().trim().min(1).max(500), answer: z.string().max(5000) }))
+    .max(50)
 })
 
 const ALLOWED_MIME_TYPES = new Set([

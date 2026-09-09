@@ -112,7 +112,7 @@ export function createApplyerMcpServer(): McpServer {
     {
       title: 'Fill out a job application',
       description:
-        "Opens a visible browser window and fills standard fields and/or uploads the candidate's stored resume and cover letter, but NEVER submits the application. If a required Agent Permission is disabled, the app asks the user to allow this attempt, always allow it, or deny it; the tool waits for that decision and returns 'permission_denied' when denied or timed out. The user reviews and submits the form themselves. Custom essay/eligibility questions are left blank. If the site presents a verification challenge, returns 'paused_captcha' immediately and resumes automatically once the user resolves it.",
+        "Opens a visible browser window and fills standard fields, saved additional-information answers for matching custom text questions, and/or uploads the candidate's stored resume and cover letter, but NEVER submits the application. If a required Agent Permission is disabled, the app asks the user to allow this attempt, always allow it, or deny it; the tool waits for that decision and returns 'permission_denied' when denied or timed out. The user reviews and submits the form themselves. Custom essay/eligibility questions without a saved answer are left blank. If the site presents a verification challenge, returns 'paused_captcha' immediately and resumes automatically once the user resolves it.",
       inputSchema: fillApplicationShape
     },
     fillApplicationTool

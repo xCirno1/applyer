@@ -3,7 +3,7 @@ import { getDb } from '../index'
 import { profile } from '../schema'
 import { readSecureField, writeSecureField } from '../encryption'
 import { getStorageMode } from './settingsRepository'
-import { isProfileFields, type ProfileFields } from '@shared/types/profile'
+import { normalizeProfileFields, type ProfileFields } from '@shared/types/profile'
 
 const PROFILE_ID = 1
 
@@ -25,7 +25,8 @@ const SECURE_FIELDS = [
   'salaryCurrency',
   'yearsExperience',
   'summary',
-  'skills'
+  'skills',
+  'additionalInformation'
 ] as const
 
 export function getProfile(): ProfileFields | null {
@@ -41,10 +42,11 @@ export function getProfile(): ProfileFields | null {
     } catch {
       throw new Error('The stored profile payload is invalid or corrupted.')
     }
-    if (!isProfileFields(parsed)) {
+    const normalized = normalizeProfileFields(parsed)
+    if (!normalized) {
       throw new Error('The stored profile payload is invalid or corrupted.')
     }
-    return parsed
+    return normalized
   }
 
   // Legacy rows are read long enough to be re-saved into the envelope by a
@@ -66,7 +68,8 @@ export function getProfile(): ProfileFields | null {
     salaryCurrency: row.salaryCurrency ?? '',
     yearsExperience: row.yearsExperience,
     summary: readSecureField(row.summary) ?? '',
-    skills: row.skills ?? []
+    skills: row.skills ?? [],
+    additionalInformation: []
   }
 }
 

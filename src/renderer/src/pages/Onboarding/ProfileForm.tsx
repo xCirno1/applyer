@@ -9,6 +9,7 @@ import { useToast } from '../../components/ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { useProfileStore } from '../../state/profileStore'
 import type { ProfileFields } from '@shared/types/profile'
+import AdditionalInformationEditor from '../../components/profile/AdditionalInformationEditor'
 
 function splitList(value: string): string[] {
   return value
@@ -257,6 +258,11 @@ export default function ProfileForm({
             />
           </label>
         </FieldGroup>
+
+        <AdditionalInformationEditor
+          value={fields.additionalInformation}
+          onChange={(additionalInformation) => set('additionalInformation', additionalInformation)}
+        />
 
         {error && <p className="text-[12px] text-danger">{error}</p>}
       </div>

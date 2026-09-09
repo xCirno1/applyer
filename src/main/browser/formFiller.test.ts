@@ -20,7 +20,8 @@ const EMPTY_PROFILE: ProfileFields = {
   salaryCurrency: 'USD',
   yearsExperience: null,
   summary: '',
-  skills: []
+  skills: [],
+  additionalInformation: []
 }
 
 const ALLOW_ALL = { allowFieldCompletion: true, allowDocumentUploads: true } as const
@@ -98,6 +99,20 @@ describe('fillForm', () => {
     expect(result.skippedFields).toEqual([])
   })
 
+  it('fills a custom text question with its saved additional-information answer', async () => {
+    const { page, fillSpy } = fakePage([
+      { selector: '#hobby', tag: 'input', type: 'text', label: "What's your hobby?" }
+    ])
+    const result = await fillForm(
+      page,
+      profile({ additionalInformation: [{ question: 'Hobby', answer: 'Landscape photography' }] }),
+      ALLOW_ALL
+    )
+
+    expect(fillSpy).toHaveBeenCalledWith('#hobby', 'Landscape photography', "What's your hobby?")
+    expect(result.filledFields).toEqual(["What's your hobby?"])
+  })
+
   it('fills only the first of two fields matching the same category', async () => {
     const { page, fillSpy } = fakePage([
       { selector: '#email1', tag: 'input', type: 'email', label: 'Email' },
@@ -165,6 +180,16 @@ describe('fillForm', () => {
     })
     expect(fillSpy).not.toHaveBeenCalled()
     expect(result.requiredPermissions).toEqual(['autoCompleteFields'])
+  })
+
+  it('requires field-completion permission for a saved custom answer', async () => {
+    const { page } = fakePage([{ selector: '#hobby', tag: 'input', type: 'text', label: 'Hobby' }])
+    const permissions = await inspectFillRequirements(
+      page,
+      profile({ additionalInformation: [{ question: 'What is your hobby?', answer: 'Painting' }] }),
+      { resume: false, coverLetter: false }
+    )
+    expect(permissions).toEqual(['autoCompleteFields'])
   })
 
   it('does not attach documents without upload permission', async () => {

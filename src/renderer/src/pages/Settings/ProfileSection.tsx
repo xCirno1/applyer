@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
-import TextField from '../../components/ui/TextField'
-import Select from '../../components/ui/Select'
+import Dropdown from '../../components/ui/Dropdown'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { EMPTY_PROFILE, useProfileStore } from '../../state/profileStore'
 import type { ProfileFields } from '@shared/types/profile'
+import AdditionalInformationEditor from '../../components/profile/AdditionalInformationEditor'
+import EditableProfileField from '../../components/profile/EditableProfileField'
 
 /**
  * Field-by-field rather than a stringify comparison: both sides are built by
@@ -42,6 +43,8 @@ export default function ProfileSection(): ReactElement {
 
   const [fields, setFields] = useState<ProfileFields>(profile)
   const [saving, setSaving] = useState(false)
+  const [editingField, setEditingField] = useState<keyof ProfileFields | null>(null)
+  const [saveVersion, setSaveVersion] = useState(0)
   // The store value the draft was last taken from; anything else in `fields`
   // is an unsaved local edit.
   const syncedRef = useRef<ProfileFields>(profile)
@@ -84,102 +87,159 @@ export default function ProfileSection(): ReactElement {
     const result = await save(fields)
     setSaving(false)
     if (result.ok) {
+      setEditingField(null)
+      setSaveVersion((version) => version + 1)
       toast.success(t('profile.saved', { ns: 'common' }))
     } else {
       toast.error(result.error ? errorMessage(result.error) : t('profile.saveFailed', { ns: 'common' }))
     }
   }
 
+  const remotePreferenceLabels: Record<ProfileFields['remotePreference'], string> = {
+    no_preference: t('profile.remoteNoPreference', { ns: 'common' }),
+    remote: t('profile.remoteRemote', { ns: 'common' }),
+    hybrid: t('profile.remoteHybrid', { ns: 'common' }),
+    onsite: t('profile.remoteOnsite', { ns: 'common' })
+  }
+  const inputClass = 'h-7 border border-border bg-canvas-soft px-2 text-[13px] text-text outline-none focus:border-accent'
+  const edit = (field: keyof ProfileFields): void => setEditingField(field)
+
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 gap-3">
-        <TextField label={t('profile.fullName', { ns: 'common' })} value={fields.fullName} onChange={(e) => set('fullName', e.target.value)} />
-        <TextField label={t('profile.email', { ns: 'common' })} type="email" value={fields.email} onChange={(e) => set('email', e.target.value)} />
-        <TextField label={t('profile.phone', { ns: 'common' })} value={fields.phone} onChange={(e) => set('phone', e.target.value)} />
-        <TextField label={t('profile.location', { ns: 'common' })} value={fields.location} onChange={(e) => set('location', e.target.value)} />
-        <TextField
+        <EditableProfileField label={t('profile.fullName', { ns: 'common' })} value={fields.fullName} editing={editingField === 'fullName'} onEdit={() => edit('fullName')}>
+          <input autoFocus value={fields.fullName} onChange={(event) => set('fullName', event.target.value)} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField label={t('profile.email', { ns: 'common' })} value={fields.email} editing={editingField === 'email'} onEdit={() => edit('email')}>
+          <input autoFocus type="email" value={fields.email} onChange={(event) => set('email', event.target.value)} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField label={t('profile.phone', { ns: 'common' })} value={fields.phone} editing={editingField === 'phone'} onEdit={() => edit('phone')}>
+          <input autoFocus value={fields.phone} onChange={(event) => set('phone', event.target.value)} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField label={t('profile.location', { ns: 'common' })} value={fields.location} editing={editingField === 'location'} onEdit={() => edit('location')}>
+          <input autoFocus value={fields.location} onChange={(event) => set('location', event.target.value)} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.linkedinUrl', { ns: 'common' })}
           value={fields.linkedinUrl}
-          onChange={(e) => set('linkedinUrl', e.target.value)}
-        />
-        <TextField label={t('profile.githubUrl', { ns: 'common' })} value={fields.githubUrl} onChange={(e) => set('githubUrl', e.target.value)} />
-        <TextField
+          editing={editingField === 'linkedinUrl'}
+          onEdit={() => edit('linkedinUrl')}
+        >
+          <input autoFocus value={fields.linkedinUrl} onChange={(event) => set('linkedinUrl', event.target.value)} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField label={t('profile.githubUrl', { ns: 'common' })} value={fields.githubUrl} editing={editingField === 'githubUrl'} onEdit={() => edit('githubUrl')}>
+          <input autoFocus value={fields.githubUrl} onChange={(event) => set('githubUrl', event.target.value)} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.portfolioUrl', { ns: 'common' })}
           value={fields.portfolioUrl}
-          onChange={(e) => set('portfolioUrl', e.target.value)}
-        />
-        <TextField
+          editing={editingField === 'portfolioUrl'}
+          onEdit={() => edit('portfolioUrl')}
+        >
+          <input autoFocus value={fields.portfolioUrl} onChange={(event) => set('portfolioUrl', event.target.value)} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.workAuthorization', { ns: 'common' })}
           value={fields.workAuthorization}
-          onChange={(e) => set('workAuthorization', e.target.value)}
-        />
-        <TextField
+          editing={editingField === 'workAuthorization'}
+          onEdit={() => edit('workAuthorization')}
+        >
+          <input autoFocus value={fields.workAuthorization} onChange={(event) => set('workAuthorization', event.target.value)} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.desiredRoles', { ns: 'common' })}
           hint={t('profile.commaSeparated', { ns: 'common' })}
           value={fields.desiredRoles.join(', ')}
-          onChange={(e) => set('desiredRoles', splitList(e.target.value))}
-        />
-        <TextField
+          editing={editingField === 'desiredRoles'}
+          onEdit={() => edit('desiredRoles')}
+        >
+          <input autoFocus value={fields.desiredRoles.join(', ')} onChange={(event) => set('desiredRoles', splitList(event.target.value))} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.desiredLocations', { ns: 'common' })}
           hint={t('profile.commaSeparated', { ns: 'common' })}
           value={fields.desiredLocations.join(', ')}
-          onChange={(e) => set('desiredLocations', splitList(e.target.value))}
-        />
-        <Select
+          editing={editingField === 'desiredLocations'}
+          onEdit={() => edit('desiredLocations')}
+        >
+          <input autoFocus value={fields.desiredLocations.join(', ')} onChange={(event) => set('desiredLocations', splitList(event.target.value))} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.remotePreference', { ns: 'common' })}
-          value={fields.remotePreference}
-          onChange={(v) => set('remotePreference', v as ProfileFields['remotePreference'])}
-          options={[
+          value={remotePreferenceLabels[fields.remotePreference]}
+          editing={editingField === 'remotePreference'}
+          onEdit={() => edit('remotePreference')}
+        >
+          <Dropdown
+            value={fields.remotePreference}
+            onChange={(value) => set('remotePreference', value as ProfileFields['remotePreference'])}
+            options={[
             { value: 'no_preference', label: t('profile.remoteNoPreference', { ns: 'common' }) },
             { value: 'remote', label: t('profile.remoteRemote', { ns: 'common' }) },
             { value: 'hybrid', label: t('profile.remoteHybrid', { ns: 'common' }) },
             { value: 'onsite', label: t('profile.remoteOnsite', { ns: 'common' }) }
-          ]}
-        />
-        <TextField
+            ]}
+          />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.yearsExperience', { ns: 'common' })}
-          type="number"
-          min={0}
-          value={fields.yearsExperience ?? ''}
-          onChange={(e) => set('yearsExperience', e.target.value === '' ? null : Number(e.target.value))}
-        />
-        <TextField
+          value={fields.yearsExperience?.toString() ?? ''}
+          editing={editingField === 'yearsExperience'}
+          onEdit={() => edit('yearsExperience')}
+        >
+          <input autoFocus type="number" min={0} value={fields.yearsExperience ?? ''} onChange={(event) => set('yearsExperience', event.target.value === '' ? null : Number(event.target.value))} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.salaryMin', { ns: 'common' })}
-          type="number"
-          min={0}
-          value={fields.salaryMin ?? ''}
-          onChange={(e) => set('salaryMin', e.target.value === '' ? null : Number(e.target.value))}
-        />
-        <TextField
+          value={fields.salaryMin?.toString() ?? ''}
+          editing={editingField === 'salaryMin'}
+          onEdit={() => edit('salaryMin')}
+        >
+          <input autoFocus type="number" min={0} value={fields.salaryMin ?? ''} onChange={(event) => set('salaryMin', event.target.value === '' ? null : Number(event.target.value))} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.salaryMax', { ns: 'common' })}
-          type="number"
-          min={0}
-          value={fields.salaryMax ?? ''}
-          onChange={(e) => set('salaryMax', e.target.value === '' ? null : Number(e.target.value))}
-        />
-        <TextField
+          value={fields.salaryMax?.toString() ?? ''}
+          editing={editingField === 'salaryMax'}
+          onEdit={() => edit('salaryMax')}
+        >
+          <input autoFocus type="number" min={0} value={fields.salaryMax ?? ''} onChange={(event) => set('salaryMax', event.target.value === '' ? null : Number(event.target.value))} className={inputClass} />
+        </EditableProfileField>
+        <EditableProfileField
           label={t('profile.salaryCurrency', { ns: 'common' })}
           value={fields.salaryCurrency}
-          onChange={(e) => set('salaryCurrency', e.target.value)}
-        />
+          editing={editingField === 'salaryCurrency'}
+          onEdit={() => edit('salaryCurrency')}
+        >
+          <input autoFocus value={fields.salaryCurrency} onChange={(event) => set('salaryCurrency', event.target.value)} className={inputClass} />
+        </EditableProfileField>
       </div>
 
-      <TextField
+      <EditableProfileField
         label={t('profile.skills', { ns: 'common' })}
         hint={t('profile.commaSeparated', { ns: 'common' })}
         value={fields.skills.join(', ')}
-        onChange={(e) => set('skills', splitList(e.target.value))}
-      />
+        editing={editingField === 'skills'}
+        onEdit={() => edit('skills')}
+      >
+        <input autoFocus value={fields.skills.join(', ')} onChange={(event) => set('skills', splitList(event.target.value))} className={inputClass} />
+      </EditableProfileField>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-[12px] font-medium text-text-muted">{t('profile.summary', { ns: 'common' })}</span>
+      <EditableProfileField label={t('profile.summary', { ns: 'common' })} value={fields.summary} editing={editingField === 'summary'} onEdit={() => edit('summary')}>
         <textarea
+          autoFocus
           value={fields.summary}
-          onChange={(e) => set('summary', e.target.value)}
+          onChange={(event) => set('summary', event.target.value)}
           rows={3}
           className="border border-border bg-canvas-soft px-2 py-1.5 text-[13px] text-text outline-none focus:border-accent"
         />
-      </label>
+      </EditableProfileField>
+
+      <AdditionalInformationEditor
+        key={saveVersion}
+        value={fields.additionalInformation}
+        onChange={(additionalInformation) => set('additionalInformation', additionalInformation)}
+      />
 
       <div className="flex justify-end">
         <Button variant="primary" onClick={handleSave} loading={saving}>

@@ -41,7 +41,8 @@ const BASE_PROFILE: ProfileFields = {
   salaryCurrency: 'EUR',
   yearsExperience: 6,
   summary: 'Backend engineer.',
-  skills: ['Go']
+  skills: ['Go'],
+  additionalInformation: []
 }
 
 /** The MCP SDK hands the handler a parsed object; these tests call it the same way. */
@@ -106,6 +107,14 @@ describe('updateProfileTool', () => {
     seedProfile()
     await call({ skills: ['Rust'] })
     expect(getProfile()?.skills).toEqual(['Rust'])
+  })
+
+  it('updates saved answers for custom application questions', async () => {
+    seedProfile()
+    const result = await call({ additionalInformation: [{ question: 'Hobby', answer: 'Cycling' }] })
+
+    expect(bodyOf(result).updatedFields).toEqual(['additionalInformation'])
+    expect(getProfile()?.additionalInformation).toEqual([{ question: 'Hobby', answer: 'Cycling' }])
   })
 
   it('drops blank and case-insensitively duplicated list entries', async () => {

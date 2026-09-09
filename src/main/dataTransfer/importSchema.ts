@@ -132,7 +132,9 @@ const profileFieldsSchema = z.object({
   salaryCurrency: z.string(),
   yearsExperience: z.number().nullable(),
   summary: z.string(),
-  skills: z.array(z.string())
+  skills: z.array(z.string()),
+  // Bundles produced before this field existed remain importable.
+  additionalInformation: z.array(z.object({ question: z.string(), answer: z.string() })).default([])
 })
 
 const settingsDataSchema = z.object({

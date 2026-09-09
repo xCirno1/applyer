@@ -4,6 +4,12 @@ export type StorageMode = 'encrypted' | 'plaintext'
 
 export type DocumentKind = 'resume' | 'cover_letter' | 'other'
 
+/** A saved answer to a question that does not map to a standard profile field. */
+export interface AdditionalInformation {
+  question: string
+  answer: string
+}
+
 export interface ProfileFields {
   fullName: string
   email: string
@@ -22,6 +28,7 @@ export interface ProfileFields {
   yearsExperience: number | null
   summary: string
   skills: string[]
+  additionalInformation: AdditionalInformation[]
 }
 
 const REMOTE_PREFERENCES: readonly RemotePreference[] = [
@@ -37,6 +44,19 @@ function isStringArray(value: unknown): value is string[] {
 
 function isNullableFiniteNumber(value: unknown): value is number | null {
   return value === null || (typeof value === 'number' && Number.isFinite(value))
+}
+
+function isAdditionalInformation(value: unknown): value is AdditionalInformation[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (item) =>
+        item !== null &&
+        typeof item === 'object' &&
+        typeof (item as Record<string, unknown>).question === 'string' &&
+        typeof (item as Record<string, unknown>).answer === 'string'
+    )
+  )
 }
 
 /** Validates profile data after it crosses a storage or IPC boundary. */
@@ -62,8 +82,17 @@ export function isProfileFields(value: unknown): value is ProfileFields {
     typeof candidate.salaryCurrency === 'string' &&
     isNullableFiniteNumber(candidate.yearsExperience) &&
     typeof candidate.summary === 'string' &&
-    isStringArray(candidate.skills)
+    isStringArray(candidate.skills) &&
+    isAdditionalInformation(candidate.additionalInformation)
   )
+}
+
+/** Keeps profiles saved before this field was added readable after an update. */
+export function normalizeProfileFields(value: unknown): ProfileFields | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null
+  const candidate = value as Record<string, unknown>
+  const normalized = { ...candidate, additionalInformation: candidate.additionalInformation ?? [] }
+  return isProfileFields(normalized) ? normalized : null
 }
 
 export interface DocumentSummary {
@@ -103,5 +132,6 @@ export const EMPTY_PROFILE: ProfileFields = {
   salaryCurrency: 'USD',
   yearsExperience: null,
   summary: '',
-  skills: []
+  skills: [],
+  additionalInformation: []
 }

@@ -26,6 +26,19 @@ import { statSync, chmodSync } from 'fs'
 import { getDb } from '../index'
 import { documents } from '../schema'
 import { eq } from 'drizzle-orm'
+import JSZip from 'jszip'
+
+async function docxFile(body: string): Promise<Buffer> {
+  const zip = new JSZip()
+  zip.file('[Content_Types].xml', `<?xml version="1.0"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+    </Types>`)
+  zip.file('word/document.xml', `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`)
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
+}
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
 /** Permission bits, or null on Windows, where the mode is not meaningful. */
 function fileMode(path: string): number | null {
@@ -57,6 +70,26 @@ describe('addDocument', () => {
     const doc = await addDocument(textFile('  My resume content  '))
     expect(doc.hasExtractedText).toBe(true)
     expect(getExtractedText(doc.id)).toBe('My resume content')
+  })
+
+  it.each(['encrypted', 'plaintext'] as const)('extracts DOCX text with xmldom 0.9 in %s mode', async (mode) => {
+    setStorageMode(mode)
+    const data = await docxFile('<w:p><w:r><w:t>Résumé &amp; skills</w:t></w:r></w:p><w:p><w:r><w:t>TypeScript</w:t></w:r></w:p>')
+    const doc = await addDocument({ kind: 'resume', originalFilename: 'resume.docx', mimeType: DOCX_MIME, data })
+
+    expect(doc.hasExtractedText).toBe(true)
+    expect(getExtractedText(doc.id)).toBe('Résumé & skills\n\nTypeScript')
+    expect(readDocumentBytes(doc.id)).toEqual(data)
+  })
+
+  it('preserves an uploaded DOCX when malformed XML prevents text extraction', async () => {
+    // The long malformed end tag exercised quadratic backtracking in xmldom 0.8.
+    const data = await docxFile(`<w:p><w:r><w:t>Invalid</w:t${' '.repeat(65536)}x></w:r></w:p>`)
+    const doc = await addDocument({ kind: 'resume', originalFilename: 'malformed.docx', mimeType: DOCX_MIME, data })
+
+    expect(doc.hasExtractedText).toBe(false)
+    expect(getExtractedText(doc.id)).toBeNull()
+    expect(readDocumentBytes(doc.id)).toEqual(data)
   })
 
   it('encrypts document content, extracted text, filename, and MIME type in encrypted mode', async () => {

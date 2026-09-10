@@ -167,6 +167,14 @@ export default function AgentPermissionsMenu(): ReactElement {
                   onChange={(allowed) => void updatePermission('autoUploadDocuments', allowed)}
                   disabled={savingPermission !== null}
                 />
+                <Checkbox
+                  id="agent-auto-press-buttons"
+                  label={t('terminal.permissions.allowAutoPressButtons')}
+                  hint={t('terminal.permissions.allowAutoPressButtonsHint')}
+                  checked={permissions.autoPressButtons}
+                  onChange={(allowed) => void updatePermission('autoPressButtons', allowed)}
+                  disabled={savingPermission !== null}
+                />
               </div>
             ) : null}
           </div>

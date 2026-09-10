@@ -191,14 +191,22 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
           </div>
         )}
 
-        {job.screenshotPath && (
+        {(job.screenshotPaths.length > 0 || job.screenshotPath) && (
           <div>
             <p className="text-[12px] font-medium text-text-muted">{t('detail.screenshot')}</p>
-            <img
-              src={`applyer-file://screenshots/${job.id}.png`}
-              alt={t('detail.screenshotAlt')}
-              className="mt-1 max-h-64 w-full border border-border-soft object-contain object-top"
-            />
+            <div className="mt-1 grid gap-2 sm:grid-cols-2">
+              {(job.screenshotPaths.length > 0 ? job.screenshotPaths : [job.screenshotPath as string]).map((path, index) => {
+                const filename = path.split(/[\\/]/).pop() ?? ''
+                return (
+                  <img
+                    key={path}
+                    src={`applyer-file://screenshots/${encodeURIComponent(filename)}`}
+                    alt={t('detail.screenshotAlt', { page: index + 1 })}
+                    className="max-h-64 w-full border border-border-soft object-contain object-top"
+                  />
+                )
+              })}
+            </div>
           </div>
         )}
 

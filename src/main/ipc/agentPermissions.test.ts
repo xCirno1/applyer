@@ -63,7 +63,7 @@ beforeEach(() => {
   listPendingPermissionRequests.mockReturnValue([REQUEST])
   getPendingPermissionRequest.mockReturnValue(REQUEST)
   resolveAgentPermissionRequest.mockReturnValue(true)
-  getAgentPermissions.mockReturnValue({ autoCompleteFields: false, autoUploadDocuments: false })
+  getAgentPermissions.mockReturnValue({ autoCompleteFields: false, autoUploadDocuments: false, autoPressButtons: false })
   __resetIpcMock()
   registerAgentPermissionsIpc()
 })
@@ -86,16 +86,21 @@ describe('agent permission IPC', () => {
       __invokeIpc(IPC.agentPermissions.respond, { requestId: REQUEST.requestId, decision: 'allow_always' })
     ).toEqual({
       ok: true,
-      permissions: { autoCompleteFields: false, autoUploadDocuments: true }
+      permissions: { autoCompleteFields: false, autoUploadDocuments: true, autoPressButtons: false }
     })
     expect(allowRequestedPermissions).toHaveBeenCalledWith(
-      { autoCompleteFields: false, autoUploadDocuments: false },
+      { autoCompleteFields: false, autoUploadDocuments: false, autoPressButtons: false },
       ['autoUploadDocuments']
     )
-    expect(setAgentPermissions).toHaveBeenCalledWith({ autoCompleteFields: false, autoUploadDocuments: true })
+    expect(setAgentPermissions).toHaveBeenCalledWith({
+      autoCompleteFields: false,
+      autoUploadDocuments: true,
+      autoPressButtons: false
+    })
     expect(broadcastAgentPermissionsChanged).toHaveBeenCalledWith({
       autoCompleteFields: false,
-      autoUploadDocuments: true
+      autoUploadDocuments: true,
+      autoPressButtons: false
     })
   })
 

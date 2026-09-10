@@ -114,8 +114,8 @@
   "detail": {
     "match": "{{score}}% match",
     "whyMatched": "Why it matched",
-    "screenshot": "Filled application (screenshot)",
-    "screenshotAlt": "Screenshot of the filled application form",
+    "screenshot": "Filled application (screenshots)",
+    "screenshotAlt": "Screenshot of filled application page {{page}}",
     "activity": "Activity",
     "openListing": "Open original listing ↗"
   },

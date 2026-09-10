@@ -112,20 +112,21 @@ describe('agent permissions', () => {
   it('allows field completion but denies document uploads by default', () => {
     expect(getAgentPermissions()).toEqual({
       autoCompleteFields: true,
-      autoUploadDocuments: false
+      autoUploadDocuments: false,
+      autoPressButtons: false
     })
   })
 
   it('round-trips each permission independently', () => {
-    setAgentPermissions({ autoCompleteFields: true, autoUploadDocuments: false })
-    expect(getAgentPermissions()).toEqual({ autoCompleteFields: true, autoUploadDocuments: false })
-    setAgentPermissions({ autoCompleteFields: false, autoUploadDocuments: true })
-    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: true })
+    setAgentPermissions({ autoCompleteFields: true, autoUploadDocuments: false, autoPressButtons: true })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: true, autoUploadDocuments: false, autoPressButtons: true })
+    setAgentPermissions({ autoCompleteFields: false, autoUploadDocuments: true, autoPressButtons: false })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: true, autoPressButtons: false })
   })
 
   it('fails closed for malformed stored permissions', () => {
     testDb.insert(appSettings).values({ key: 'agent_permissions', value: '{broken' }).run()
-    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false, autoPressButtons: false })
   })
 
   it('fails closed for incomplete stored permissions', () => {
@@ -133,7 +134,22 @@ describe('agent permissions', () => {
       .insert(appSettings)
       .values({ key: 'agent_permissions', value: JSON.stringify({ autoCompleteFields: true }) })
       .run()
-    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false, autoPressButtons: false })
+  })
+
+  it('upgrades permissions saved before button pressing was introduced', () => {
+    testDb
+      .insert(appSettings)
+      .values({
+        key: 'agent_permissions',
+        value: JSON.stringify({ autoCompleteFields: true, autoUploadDocuments: false })
+      })
+      .run()
+    expect(getAgentPermissions()).toEqual({
+      autoCompleteFields: true,
+      autoUploadDocuments: false,
+      autoPressButtons: false
+    })
   })
 })
 

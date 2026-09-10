@@ -18,6 +18,8 @@ export interface JobRecord {
   applicationUrl: string | null
   applyMethod: ApplyMethod | null
   screenshotPath: string | null
+  /** Ordered screenshots for every retained application step. */
+  screenshotPaths: string[]
   failureTag: string | null
   failureMessage: string | null
   blockingReason: string | null

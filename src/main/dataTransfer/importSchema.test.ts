@@ -28,6 +28,7 @@ function validBundle(): ExportBundle {
           applicationUrl: null,
           applyMethod: null,
           screenshotPath: null,
+          screenshotPaths: [],
           failureTag: null,
           failureMessage: null,
           blockingReason: null,

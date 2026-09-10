@@ -20,6 +20,7 @@ const job = (overrides: Partial<JobRecord> = {}): JobRecord =>
     applicationUrl: null,
     applyMethod: null,
     screenshotPath: null,
+    screenshotPaths: [],
     failureTag: null,
     failureMessage: null,
     blockingReason: null,

@@ -11,7 +11,7 @@ const settings = getSettings()
 /**
  * Every URL an agent hands us is one the app will eventually open: fetched
  * in a headless page (`get_job_details`), navigated to in a real window
- * (`fill_application`, via the queued job), or opened in the OS browser from
+ * (`inspect_application`, via the queued job), or opened in the OS browser from
  * the job card. `z.url()` alone is not that check — it accepts `file:`,
  * `data:` and `javascript:` too — so the scheme rule lives here, at the door
  * these arrive through. See `@shared/url` for why, and
@@ -106,8 +106,35 @@ export const updateProfileShape = {
     .optional()
 }
 
+const applicationAnswers = z
+  .array(
+    z.object({
+      fieldId: z.string().trim().min(1).max(200),
+      value: z.union([z.string().max(5000), z.boolean(), z.array(z.string().max(1000)).max(100)])
+    })
+  )
+  .max(100)
+
 export const fillApplicationShape = {
+  jobId: z.string().trim().min(1),
+  answers: applicationAnswers,
+  finalStep: z.boolean().optional().describe(
+    'Set true only when every application page has been filled and the retained form is ready for user review. This changes only the Applyer board state and never submits the form.'
+  )
+}
+
+export const inspectApplicationShape = {
   jobId: z.string().trim().min(1)
+}
+
+export const clickApplicationButtonShape = {
+  jobId: z.string().trim().min(1),
+  buttonId: z.string().trim().min(1).max(200)
+}
+
+export const editApplicationShape = {
+  jobId: z.string().trim().min(1),
+  answers: applicationAnswers.min(1)
 }
 
 export const excludeJobShape = {

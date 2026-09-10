@@ -81,9 +81,9 @@ describe('agentPermissionGate', () => {
   it('enables only the permissions included in the approved request', () => {
     expect(
       allowRequestedPermissions(
-        { autoCompleteFields: false, autoUploadDocuments: false },
+        { autoCompleteFields: false, autoUploadDocuments: false, autoPressButtons: false },
         ['autoUploadDocuments']
       )
-    ).toEqual({ autoCompleteFields: false, autoUploadDocuments: true })
+    ).toEqual({ autoCompleteFields: false, autoUploadDocuments: true, autoPressButtons: false })
   })
 })

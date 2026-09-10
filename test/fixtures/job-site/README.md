@@ -22,4 +22,14 @@ APPLYER_TEST_SITE_HOST=127.0.0.1 APPLYER_TEST_SITE_PORT=9000 npm run test:site
 4. For the resolvable challenge, click **Resolve test challenge** in the browser window. Applyer polls for resolution and should continue within about two seconds.
 5. Use a new URL or add a unique query string for each queued test job because `queue_job` deduplicates by URL.
 
+## Button navigation flow
+
+Use <http://127.0.0.1:8765/buttons.html> to exercise agent-controlled buttons:
+
+1. Inspect step 1, fill the contact fields with `finalStep: false`, and confirm the job remains Queued. Only **Next** should be exposed; **Show test note** is an arbitrary action.
+2. Press **Next** with button permission, inspect step 2, fill the application questions with `finalStep: false`, then press **Continue**. **Save draft** must not be exposed.
+3. Inspect step 3 and upload the stored resume. Use `finalStep: true` only after every requested answer succeeds. **Previous** should be exposed, while scripted **Finish** and native **Submit application** must not appear.
+
+The scripted **Finish** handler attempts a POST to demonstrate why button labels are not proof of safety. The fixture server rejects the POST, and Applyer must not expose that control to the agent.
+
 The fixture server binds to loopback by default and sets `Cache-Control: no-store`, so edits are visible after a refresh and the site is not exposed to the local network.

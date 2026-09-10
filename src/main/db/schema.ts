@@ -70,6 +70,7 @@ export const jobs = sqliteTable('jobs', {
     enum: ['external_form', 'easy_apply', 'email', 'unknown']
   }),
   screenshotPath: text('screenshot_path'),
+  screenshotPaths: text('screenshot_paths', { mode: 'json' }).$type<string[]>().notNull().default(sql`'[]'`),
   failureTag: text('failure_tag'),
   failureMessage: text('failure_message'),
   blockingReason: text('blocking_reason'),

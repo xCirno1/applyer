@@ -7,7 +7,10 @@ import {
   flagFailureShape,
   getProfileShape,
   updateProfileShape,
+  inspectApplicationShape,
+  clickApplicationButtonShape,
   fillApplicationShape,
+  editApplicationShape,
   excludeJobShape,
   addCompanyBoardShape,
   listCompanyBoardsShape
@@ -19,7 +22,10 @@ import { getJobDetailsTool } from './tools/getJobDetails'
 import { queueJobTool } from './tools/queueJob'
 import { listJobsTool } from './tools/listJobs'
 import { flagFailureTool } from './tools/flagFailure'
+import { inspectApplicationTool } from './tools/inspectApplication'
+import { clickApplicationButtonTool } from './tools/clickApplicationButton'
 import { fillApplicationTool } from './tools/fillApplication'
+import { editApplicationTool } from './tools/editApplication'
 import { excludeJobTool } from './tools/excludeJob'
 import { addCompanyBoardTool } from './tools/addCompanyBoard'
 import { listCompanyBoardsTool } from './tools/listCompanyBoards'
@@ -108,14 +114,47 @@ export function createApplyerMcpServer(): McpServer {
   )
 
   server.registerTool(
+    'inspect_application',
+    {
+      title: 'Inspect a job application form',
+      description:
+        'Opens and retains a visible application form for a Queued job, then returns every supported field and explicitly recognized navigation button on the current visible step with opaque IDs. Fields include semantic labels, raw name/placeholder/autocomplete hints, control type, current value, required state, and available options. Password, hidden-step, arbitrary action, and final-action controls are omitted. A retained multi-step fill stays Queued and in fill mode across pages, including later document-upload steps. A Filled job can only re-inspect its original still-open form for editing. Labels and hints are context only and must never be used as identifiers. Inspection never changes the page or submits the application.',
+      inputSchema: inspectApplicationShape
+    },
+    inspectApplicationTool
+  )
+
+  server.registerTool(
+    'click_application_button',
+    {
+      title: 'Click an application navigation button',
+      description:
+        'With the user\'s Press application buttons permission, clicks one visible, enabled navigation-like button in the retained application window using a buttonId from the latest inspect_application result. Only Next, Continue, Proceed, Back, or Previous labels are listed, but a site may attach an arbitrary or irreversible script to any button, so the permission is disabled by default. Every inspected buttonId is consumed by a click and clicks are serialized, so inspect again afterward. Native form submission is blocked while the click is dispatched, but site scripts can use other mechanisms. This tool never marks the Applyer job Submitted.',
+      inputSchema: clickApplicationButtonShape
+    },
+    clickApplicationButtonTool
+  )
+
+  server.registerTool(
     'fill_application',
     {
       title: 'Fill out a job application',
       description:
-        "Opens a visible browser window and fills standard fields, saved additional-information answers for matching custom text questions, and/or uploads the candidate's stored resume and cover letter, but NEVER submits the application. If a required Agent Permission is disabled, the app asks the user to allow this attempt, always allow it, or deny it; the tool waits for that decision and returns 'permission_denied' when denied or timed out. The user reviews and submits the form themselves. Custom essay/eligibility questions without a saved answer are left blank. If the site presents a verification challenge, returns 'paused_captcha' immediately and resumes automatically once the user resolves it.",
+        'Fills only the fieldId/value pairs supplied from the latest inspect_application result. By default it returns partially_filled and keeps the job Queued so later pages, including document-upload steps, remain fillable. Set finalStep to true only when every application page is complete and the retained form is ready for user review; that moves the job to Filled but never clicks or submits the ATS form. An empty answers list is accepted only for finalStep true, for a fieldless final review page. Never target a field by label. Use option values exactly as inspected. If permission is disabled, Applyer asks the user before changing the form.',
       inputSchema: fillApplicationShape
     },
     fillApplicationTool
+  )
+
+  server.registerTool(
+    'edit_application',
+    {
+      title: 'Edit an open job application',
+      description:
+        'Updates only fieldId/value pairs from a fresh inspection of the original visible form retained for a Filled job. Labels are semantic context only. It never opens a replacement session, changes document attachments, clicks buttons, advances the form, or submits it. The user reviews every changed answer before submitting.',
+      inputSchema: editApplicationShape
+    },
+    editApplicationTool
   )
 
   server.registerTool(

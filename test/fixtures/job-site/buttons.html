@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Multi-step buttons | Applyer test site</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <h1>Multi-step application buttons</h1>
+    <p class="hint">
+      This fixture verifies that Applyer can click intermediate buttons while keeping the final submit action unavailable.
+    </p>
+
+    <form id="application-form">
+      <fieldset data-step="1">
+        <legend>Step 1 of 3 — Contact details</legend>
+
+        <label for="full-name">Full name</label>
+        <input id="full-name" name="fullName" autocomplete="name">
+
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email">
+
+        <div class="button-row">
+          <button id="show-note" type="button">Show test note</button>
+          <button id="next-step" type="button">Next</button>
+        </div>
+        <p id="test-note" class="panel" hidden>This non-navigation button was clicked successfully.</p>
+      </fieldset>
+
+      <fieldset data-step="2" hidden>
+        <legend>Step 2 of 3 — Application questions</legend>
+
+        <label for="portfolio">Portfolio</label>
+        <input id="portfolio" name="portfolio" type="url">
+
+        <label for="hobby">What's your hobby?</label>
+        <input id="hobby" name="hobby" type="text">
+
+        <label for="arrangement">Preferred work arrangement</label>
+        <select id="arrangement" name="arrangement">
+          <option value="">Choose one</option>
+          <option value="remote">Remote</option>
+          <option value="hybrid">Hybrid</option>
+        </select>
+
+        <div class="button-row">
+          <button id="previous-step" type="button">Back</button>
+          <button id="save-draft" type="button">Save draft</button>
+          <button id="next-to-documents" type="button">Continue</button>
+        </div>
+      </fieldset>
+
+      <fieldset data-step="3" hidden>
+        <legend>Step 3 of 3 — Documents and review</legend>
+
+        <label for="resume">Resume</label>
+        <input id="resume" name="resume" type="file" accept=".pdf,.doc,.docx" required>
+
+        <label for="additional-information">Additional information</label>
+        <textarea id="additional-information" name="additionalInformation" rows="4"></textarea>
+
+        <div class="button-row">
+          <button id="previous-to-questions" type="button">Previous</button>
+          <button id="finish-application" type="button">Finish</button>
+          <button id="submit-application" type="submit">Submit application</button>
+        </div>
+      </fieldset>
+
+      <p id="button-status" class="status" role="status" aria-live="polite">Ready on step 1.</p>
+    </form>
+
+    <script>
+      const form = document.getElementById('application-form')
+      const firstStep = document.querySelector('[data-step="1"]')
+      const secondStep = document.querySelector('[data-step="2"]')
+      const thirdStep = document.querySelector('[data-step="3"]')
+      const note = document.getElementById('test-note')
+      const status = document.getElementById('button-status')
+
+      function showStep(step) {
+        firstStep.hidden = step !== 1
+        secondStep.hidden = step !== 2
+        thirdStep.hidden = step !== 3
+        status.textContent = `Moved to step ${step}. Re-inspect the application to get the current IDs.`
+      }
+
+      document.getElementById('show-note').addEventListener('click', () => {
+        note.hidden = !note.hidden
+        status.textContent = note.hidden ? 'Test note hidden.' : 'Test note shown.'
+      })
+      document.getElementById('next-step').addEventListener('click', () => showStep(2))
+      document.getElementById('previous-step').addEventListener('click', () => showStep(1))
+      document.getElementById('next-to-documents').addEventListener('click', () => showStep(3))
+      document.getElementById('previous-to-questions').addEventListener('click', () => showStep(2))
+      document.getElementById('save-draft').addEventListener('click', () => {
+        status.textContent = 'Draft action clicked. No form submission occurred.'
+      })
+      document.getElementById('finish-application').addEventListener('click', async () => {
+        status.textContent = 'Scripted Finish action ran. Applyer must never expose this button.'
+        await fetch('/scripted-final-action', { method: 'POST' })
+      })
+      form.addEventListener('submit', (event) => {
+        event.preventDefault()
+        status.textContent = 'Manual submit clicked. The fixture prevented its network request.'
+      })
+    </script>
+  </body>
+</html>

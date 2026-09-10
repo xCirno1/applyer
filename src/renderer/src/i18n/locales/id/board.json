@@ -104,7 +104,7 @@
     "match": "cocok {{score}}%",
     "whyMatched": "Kenapa cocok",
     "screenshot": "Lamaran yang sudah diisi (screenshot)",
-    "screenshotAlt": "Screenshot formulir lamaran yang sudah diisi",
+    "screenshotAlt": "Screenshot halaman {{page}} formulir lamaran yang sudah diisi",
     "activity": "Aktivitas",
     "openListing": "Buka lowongan aslinya ↗"
   },

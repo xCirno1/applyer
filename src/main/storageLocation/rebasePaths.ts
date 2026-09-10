@@ -7,7 +7,7 @@ import { documents, jobs } from '../db/schema'
  * Points the two absolute-path columns at the storage root that is actually
  * open.
  *
- * `documents.stored_path` and `jobs.screenshot_path` hold absolute paths, so
+ * `documents.stored_path` and the job screenshot paths hold absolute paths, so
  * they only stay correct while the database sits where it sat when they were
  * written. `migrateStorageLocation` knows both roots and rewrites them as part
  * of the move — but *connecting* to an existing location does not have that
@@ -62,7 +62,7 @@ export function rebaseStoredPaths(root: string): RebaseResult {
   }
 
   const jobRows = db
-    .select({ id: jobs.id, screenshotPath: jobs.screenshotPath })
+    .select({ id: jobs.id, screenshotPath: jobs.screenshotPath, screenshotPaths: jobs.screenshotPaths })
     .from(jobs)
     .where(isNotNull(jobs.screenshotPath))
     .all()
@@ -71,8 +71,10 @@ export function rebaseStoredPaths(root: string): RebaseResult {
     // Narrowing only: the query already excludes nulls.
     if (!row.screenshotPath) continue
     const expected = join(screenshotsDir, fileNameOf(row.screenshotPath))
-    if (expected === row.screenshotPath) continue
-    db.update(jobs).set({ screenshotPath: expected }).where(eq(jobs.id, row.id)).run()
+    const sourcePaths = row.screenshotPaths.length > 0 ? row.screenshotPaths : [row.screenshotPath]
+    const expectedPaths = sourcePaths.map((path) => join(screenshotsDir, fileNameOf(path)))
+    if (expected === row.screenshotPath && expectedPaths.every((path, index) => path === sourcePaths[index])) continue
+    db.update(jobs).set({ screenshotPath: expected, screenshotPaths: expectedPaths }).where(eq(jobs.id, row.id)).run()
     result.screenshots += 1
   }
 

@@ -12,7 +12,8 @@ protocol.registerSchemesAsPrivileged([
 
 /**
  * Serves screenshots to the renderer without exposing raw file:// access.
- * URLs look like applyer-file://screenshots/<filename> — the filename is
+ * URLs look like applyer-file://screenshots/<filename> — each retained form
+ * step has its own filename, and the filename is
  * validated to be a bare name (no path traversal) before joining it against
  * the one directory this protocol is allowed to read from.
  */

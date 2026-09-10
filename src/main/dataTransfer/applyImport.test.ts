@@ -51,6 +51,7 @@ const jobFixture: JobRecord = {
   applicationUrl: null,
   applyMethod: null,
   screenshotPath: null,
+  screenshotPaths: [],
   failureTag: null,
   failureMessage: null,
   blockingReason: null,

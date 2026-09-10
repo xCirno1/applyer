@@ -73,7 +73,24 @@ export function getAgentPermissions(): AgentPermissions {
   if (!value) return { ...DEFAULT_AGENT_PERMISSIONS }
   try {
     const parsed: unknown = JSON.parse(value)
-    return isAgentPermissions(parsed) ? parsed : { ...DENIED_AGENT_PERMISSIONS }
+    if (isAgentPermissions(parsed)) return parsed
+    // Settings written before button pressing became a separate permission
+    // keep their existing choices while the new capability fails closed.
+    if (typeof parsed === 'object' && parsed !== null) {
+      const legacy = parsed as Partial<AgentPermissions>
+      if (
+        typeof legacy.autoCompleteFields === 'boolean' &&
+        typeof legacy.autoUploadDocuments === 'boolean' &&
+        legacy.autoPressButtons === undefined
+      ) {
+        return {
+          autoCompleteFields: legacy.autoCompleteFields,
+          autoUploadDocuments: legacy.autoUploadDocuments,
+          autoPressButtons: false
+        }
+      }
+    }
+    return { ...DENIED_AGENT_PERMISSIONS }
   } catch {
     return { ...DENIED_AGENT_PERMISSIONS }
   }

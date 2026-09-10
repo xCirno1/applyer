@@ -23,11 +23,19 @@ function parse(result: Awaited<ReturnType<typeof fillApplicationTool>>): unknown
 
 describe('fillApplicationTool', () => {
   it('returns the fill result as-is on success', async () => {
-    runFillTask.mockResolvedValue({ status: 'filled', jobId: 'job-1', screenshotPath: '/tmp/x.png', filledFields: ['Email'], skippedFields: [] })
+    runFillTask.mockResolvedValue({ status: 'filled', jobId: 'job-1', screenshotPath: '/tmp/x.png', screenshotPaths: ['/tmp/x.png'], filledFields: ['Email'], skippedFields: [] })
     const answers = [{ fieldId: 'field-email', value: 'jane@example.com' }]
     const result = await fillApplicationTool({ jobId: 'job-1', answers })
     expect(parse(result)).toMatchObject({ status: 'filled', jobId: 'job-1' })
-    expect(runFillTask).toHaveBeenCalledWith('job-1', answers)
+    expect(runFillTask).toHaveBeenCalledWith('job-1', answers, false)
+  })
+
+  it('passes through the explicit final-step signal', async () => {
+    runFillTask.mockResolvedValue({ status: 'filled', jobId: 'job-1', screenshotPath: '/tmp/x.png', screenshotPaths: ['/tmp/x.png'], filledFields: [], skippedFields: [] })
+
+    await fillApplicationTool({ jobId: 'job-1', answers: [], finalStep: true })
+
+    expect(runFillTask).toHaveBeenCalledWith('job-1', [], true)
   })
 
   it('logs an activity entry summarizing the outcome', async () => {

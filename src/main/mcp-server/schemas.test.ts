@@ -9,6 +9,7 @@ import {
   getProfileShape,
   updateProfileShape,
   inspectApplicationShape,
+  clickApplicationButtonShape,
   fillApplicationShape,
   editApplicationShape,
   excludeJobShape,
@@ -24,6 +25,7 @@ const flagFailureSchema = z.object(flagFailureShape)
 const getProfileSchema = z.object(getProfileShape)
 const updateProfileSchema = z.object(updateProfileShape)
 const inspectApplicationSchema = z.object(inspectApplicationShape)
+const clickApplicationButtonSchema = z.object(clickApplicationButtonShape)
 const fillApplicationSchema = z.object(fillApplicationShape)
 const editApplicationSchema = z.object(editApplicationShape)
 const excludeJobSchema = z.object(excludeJobShape)
@@ -172,10 +174,11 @@ describe('getProfileShape', () => {
 })
 
 describe('fillApplicationShape', () => {
-  it('requires a non-empty jobId and explicit fieldId/value answers', () => {
+  it('requires a non-empty jobId and accepts an explicit final-step signal', () => {
     expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [{ fieldId: 'field-email', value: 'jane@example.com' }] }).success).toBe(true)
+    expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [], finalStep: true }).success).toBe(true)
+    expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [], finalStep: 'yes' }).success).toBe(false)
     expect(fillApplicationSchema.safeParse({ jobId: '' }).success).toBe(false)
-    expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [] }).success).toBe(false)
   })
 })
 
@@ -186,11 +189,20 @@ describe('inspectApplicationShape', () => {
   })
 })
 
+describe('clickApplicationButtonShape', () => {
+  it('requires opaque job and button IDs', () => {
+    expect(clickApplicationButtonSchema.safeParse({ jobId: 'job-1', buttonId: 'applyer-button-1' }).success).toBe(true)
+    expect(clickApplicationButtonSchema.safeParse({ jobId: '', buttonId: 'applyer-button-1' }).success).toBe(false)
+    expect(clickApplicationButtonSchema.safeParse({ jobId: 'job-1', buttonId: ' ' }).success).toBe(false)
+  })
+})
+
 describe('editApplicationShape', () => {
   it('accepts string, boolean, and multi-option answer values', () => {
     expect(editApplicationSchema.safeParse({ jobId: 'job-1', answers: [{ fieldId: 'field-name', value: 'Jane Doe' }, { fieldId: 'field-agree', value: true }, { fieldId: 'field-skills', value: ['ts'] }] }).success).toBe(true)
     expect(editApplicationSchema.safeParse({ jobId: '  ' }).success).toBe(false)
     expect(editApplicationSchema.safeParse({ jobId: 'job-1', answers: [{ fieldId: '', value: 'x' }] }).success).toBe(false)
+    expect(editApplicationSchema.safeParse({ jobId: 'job-1', answers: [] }).success).toBe(false)
   })
 })
 

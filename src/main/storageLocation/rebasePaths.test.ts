@@ -35,7 +35,7 @@ function addDocument(id: string, storedPath: string): void {
     .run()
 }
 
-function addJob(id: string, screenshotPath: string | null): void {
+function addJob(id: string, screenshotPath: string | null, screenshotPaths: string[] = []): void {
   const now = '2026-01-01T00:00:00.000Z'
   testDb
     .insert(jobs)
@@ -46,6 +46,7 @@ function addJob(id: string, screenshotPath: string | null): void {
       url: `https://example.com/${id}`,
       status: 'filled',
       screenshotPath,
+      screenshotPaths,
       queuedAt: now,
       createdAt: now,
       updatedAt: now
@@ -58,6 +59,9 @@ const storedPathOf = (id: string): string | undefined =>
 
 const screenshotPathOf = (id: string): string | null | undefined =>
   testDb.select().from(jobs).all().find((row) => row.id === id)?.screenshotPath
+
+const screenshotPathsOf = (id: string): string[] | undefined =>
+  testDb.select().from(jobs).all().find((row) => row.id === id)?.screenshotPaths
 
 describe('fileNameOf', () => {
   it('reads the last segment of a POSIX path', () => {
@@ -97,6 +101,21 @@ describe('rebaseStoredPaths', () => {
 
     expect(screenshotPathOf('job-1')).toBe(join(NEW_ROOT, 'screenshots', 'job-1.png'))
     expect(result.screenshots).toBe(1)
+  })
+
+  it('rebases every screenshot for a multi-page form', () => {
+    addJob(
+      'job-1',
+      join('/old', 'root', 'screenshots', 'job-1-2.png'),
+      [join('/old', 'root', 'screenshots', 'job-1.png'), join('/old', 'root', 'screenshots', 'job-1-2.png')]
+    )
+
+    rebaseStoredPaths(NEW_ROOT)
+
+    expect(screenshotPathsOf('job-1')).toEqual([
+      join(NEW_ROOT, 'screenshots', 'job-1.png'),
+      join(NEW_ROOT, 'screenshots', 'job-1-2.png')
+    ])
   })
 
   it('rebases a path written on another platform', () => {

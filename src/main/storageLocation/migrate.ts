@@ -308,12 +308,11 @@ async function runMigration(
       const { sqlite: tempDb } = openCipherDatabase(destDbPath, { fileMustExist: true })
       try {
         tempDb.prepare('UPDATE documents SET stored_path = REPLACE(stored_path, ?, ?)').run(oldDocumentsDir, newDocumentsDir)
-        // jobs.screenshot_path is never dereferenced directly (the renderer
-        // resolves a screenshot live, by job id, through the applyer-file://
-        // protocol) but it IS echoed verbatim through jobs:get/jobs:list and
-        // persisted in data exports — rewritten here so it doesn't keep
-        // pointing at a directory that's about to be deleted.
+        // Screenshot paths are echoed through jobs:get/jobs:list and persisted
+        // in data exports, so rewrite both the legacy primary path and the JSON
+        // list before the source directory is removed.
         tempDb.prepare('UPDATE jobs SET screenshot_path = REPLACE(screenshot_path, ?, ?) WHERE screenshot_path IS NOT NULL').run(oldScreenshotsDir, newScreenshotsDir)
+        tempDb.prepare('UPDATE jobs SET screenshot_paths = REPLACE(screenshot_paths, ?, ?)').run(oldScreenshotsDir, newScreenshotsDir)
         const check = tempDb.pragma('quick_check') as { quick_check: string }[]
         if (check[0]?.quick_check !== 'ok') {
           throw new Error(`Database integrity check failed: ${check[0]?.quick_check ?? 'unknown'}`)

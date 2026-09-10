@@ -22,7 +22,7 @@ function parse(result: Awaited<ReturnType<typeof editApplicationTool>>): unknown
 
 describe('editApplicationTool', () => {
   it('passes exact answer pairs to the retained-session runner', async () => {
-    runEditTask.mockResolvedValue({ status: 'edited', jobId: 'job-1', screenshotPath: '/tmp/x.png', filledFields: ['Contact me here'], skippedFields: [] })
+    runEditTask.mockResolvedValue({ status: 'edited', jobId: 'job-1', screenshotPath: '/tmp/x.png', screenshotPaths: ['/tmp/x.png'], filledFields: ['Contact me here'], skippedFields: [] })
     const answers = [{ fieldId: 'field-contact', value: 'jane@example.com' }]
     const result = await editApplicationTool({ jobId: 'job-1', answers })
     expect(parse(result)).toMatchObject({ status: 'edited', jobId: 'job-1' })

@@ -41,6 +41,7 @@ function job(status: JobRecord['status']): JobRecord {
     applicationUrl: null,
     applyMethod: null,
     screenshotPath: null,
+    screenshotPaths: [],
     failureTag: status === 'failed' ? 'form_not_supported' : null,
     failureMessage: null,
     blockingReason: null,

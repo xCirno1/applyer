@@ -25,6 +25,11 @@ function toJobRecord(row: JobRow): JobRecord {
     applicationUrl: row.applicationUrl,
     applyMethod: row.applyMethod,
     screenshotPath: row.screenshotPath,
+    screenshotPaths: row.screenshotPaths.length > 0
+      ? row.screenshotPaths
+      : row.screenshotPath
+        ? [row.screenshotPath]
+        : [],
     failureTag: row.failureTag,
     failureMessage: row.failureMessage,
     blockingReason: row.blockingReason,
@@ -158,7 +163,20 @@ function assertLegalTransition(from: JobStatus, to: JobStatus): void {
   }
 }
 
-export function setFilled(id: string, meta: { screenshotPath?: string | null } = {}): JobRecord {
+interface ScreenshotMeta {
+  screenshotPath?: string | null
+  screenshotPaths?: string[]
+}
+
+function screenshotUpdate(current: JobRecord, meta: ScreenshotMeta): Pick<JobRecord, 'screenshotPath' | 'screenshotPaths'> {
+  const screenshotPaths = meta.screenshotPaths ?? current.screenshotPaths
+  return {
+    screenshotPath: meta.screenshotPath ?? screenshotPaths.at(-1) ?? current.screenshotPath,
+    screenshotPaths
+  }
+}
+
+export function setFilled(id: string, meta: ScreenshotMeta = {}): JobRecord {
   const db = getDb()
   const current = getJob(id)
   if (!current) throw new Error(`Job not found: ${id}`)
@@ -168,7 +186,7 @@ export function setFilled(id: string, meta: { screenshotPath?: string | null } =
   db.update(jobs)
     .set({
       status: 'filled',
-      screenshotPath: meta.screenshotPath ?? current.screenshotPath,
+      ...screenshotUpdate(current, meta),
       filledAt: now,
       blockingReason: null,
       blockingTaskId: null,
@@ -181,7 +199,7 @@ export function setFilled(id: string, meta: { screenshotPath?: string | null } =
 }
 
 /** Updates evidence for the same live application without changing its Filled state. */
-export function refreshFilled(id: string, meta: { screenshotPath?: string | null } = {}): JobRecord {
+export function refreshFilled(id: string, meta: ScreenshotMeta = {}): JobRecord {
   const db = getDb()
   const current = getJob(id)
   if (!current) throw new Error(`Job not found: ${id}`)
@@ -190,7 +208,7 @@ export function refreshFilled(id: string, meta: { screenshotPath?: string | null
   const now = nowIso()
   db.update(jobs)
     .set({
-      screenshotPath: meta.screenshotPath ?? current.screenshotPath,
+      ...screenshotUpdate(current, meta),
       blockingReason: null,
       blockingTaskId: null,
       updatedAt: now
@@ -331,7 +349,7 @@ export function listAllJobs(): JobRecord[] {
  * already exists (URL is a job's identity elsewhere in this file too — see
  * `queueJob`/`getJobByUrl`). Ids are regenerated rather than reused from the
  * file, since two independently-exported bundles could theoretically carry
- * colliding ids; `screenshotPath` and the in-memory-only blocking fields are
+ * colliding ids; screenshot paths and the in-memory-only blocking fields are
  * dropped since they'd point at another machine's filesystem/live task.
  */
 export function importJobs(records: JobRecord[]): { imported: number; skipped: number } {
@@ -357,6 +375,7 @@ export function importJobs(records: JobRecord[]): { imported: number; skipped: n
         applicationUrl: r.applicationUrl,
         applyMethod: r.applyMethod,
         screenshotPath: null,
+        screenshotPaths: [],
         failureTag: r.failureTag,
         failureMessage: r.failureMessage,
         blockingReason: null,

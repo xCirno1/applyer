@@ -57,9 +57,11 @@ submit, in your hands.
 - **The agent is sandboxed to a small toolset.** It gets exactly the MCP tools listed
   [below](#what-the-agent-can-do-mcp-tools). It cannot browse your filesystem, run
   arbitrary commands outside its own terminal, or touch anything else on your machine.
-- **Nothing gets submitted without you.** `inspect_application` opens a real,
+- **Button presses require your approval.** `inspect_application` opens a real,
   visible browser window and `fill_application` fills only the answers the agent
-  selected. You review them and click submit yourself.
+  selected. Direct submit controls remain unavailable. Pressing a navigation-like
+  button is disabled by default because site scripts can attach irreversible actions
+  to any button; enable it once or persistently only when you accept that risk.
 
 ## How it works
 
@@ -120,8 +122,9 @@ Other things worth knowing:
 | `queue_job` | Adds a posting to your board, deduplicated by URL. |
 | `list_jobs` | Lists what's already on the board, optionally by status, to avoid re-queuing. |
 | `flag_failure` | Marks a job Failed with a reason tag (login required, expired listing, and so on; unrecognized tags register themselves). |
-| `inspect_application` | Opens and retains a visible application form, returning opaque field IDs with semantic labels, browser hints, types, current values, and choices without changing anything. Re-inspection of a Filled job uses only its original live window. |
-| `fill_application` | Fills only explicit fieldId/value pairs chosen by the agent from an inspection, then leaves the form open for your review. It never clicks a button, advances a page, or submits. |
+| `inspect_application` | Opens and retains a visible application form, returning opaque field and recognized navigation-button IDs for the current visible step with semantic labels, browser hints, types, current values, and choices without changing anything. Password, hidden-step, arbitrary action, and final-action controls are omitted. Re-inspection uses only the original live window. |
+| `click_application_button` | With explicit button-press permission, clicks an inspected Next, Continue, Proceed, Back, or Previous button, consumes every button ID from that inspection, then requires a fresh inspection. Native form submission is suppressed, but website scripts may still perform arbitrary or irreversible actions. |
+| `fill_application` | Fills only explicit fieldId/value pairs chosen by the agent from an inspection. Partial pages remain Queued so later steps and stored-document uploads stay available; an explicit `finalStep` flag moves the completed form to Filled for review. It never clicks a button, advances a page, or submits. |
 | `edit_application` | Updates only explicit fieldId/value pairs in that original live form. It leaves attachments untouched and never opens a replacement, clicks a button, or submits. |
 | `exclude_job` | Blacklists a posting URL permanently, at your explicit request only. The tool description tells the agent not to use it as its own quality filter. |
 

@@ -45,6 +45,29 @@ form {
   gap: 12px;
 }
 
+fieldset {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 16px;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button-row button {
+  flex: 1 1 140px;
+}
+
+.status {
+  border-inline-start: 4px solid currentColor;
+  margin: 0;
+  padding: 8px 12px;
+}
+
 input,
 textarea,
 button,

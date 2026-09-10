@@ -28,9 +28,19 @@ export interface ApplicationField {
   options?: ApplicationFieldOption[]
 }
 
+export interface ApplicationButton {
+  /** Must be copied from the latest inspect_application result. */
+  buttonId: string
+  label: string
+}
+
 interface FieldDescriptor extends ApplicationField {
   selector?: string
   options?: Array<ApplicationFieldOption & { fieldId?: string; selector?: string; checked?: boolean }>
+}
+
+interface ButtonDescriptor extends ApplicationButton {
+  selector: string
 }
 
 /**
@@ -42,8 +52,28 @@ async function collectFields(page: Page): Promise<FieldDescriptor[]> {
     const claimedFieldIds = new Set<string>()
 
     function visible(el: Element): boolean {
-      const style = window.getComputedStyle(el)
-      return style.display !== 'none' && style.visibility !== 'hidden'
+      for (let current: Element | null = el; current; current = current.parentElement) {
+        const style = window.getComputedStyle(current)
+        const normalizedClip = style.clip.replace(/\s+/g, '')
+        const normalizedClipPath = style.clipPath.replace(/\s+/g, '')
+        if (current.hasAttribute('hidden') || current.getAttribute('aria-hidden') === 'true' ||
+          style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse' ||
+          style.contentVisibility === 'hidden' || Number.parseFloat(style.opacity) === 0 ||
+          /^rect\(0(?:px)?,0(?:px)?,0(?:px)?,0(?:px)?\)$/.test(normalizedClip) ||
+          /^(?:inset\(50%(?:50%){0,3}\)|circle\(0(?:px|%)?\))$/.test(normalizedClipPath)) return false
+      }
+      const rect = el.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0 || el.getClientRects().length === 0) return false
+      for (let current = el.parentElement; current; current = current.parentElement) {
+        const style = window.getComputedStyle(current)
+        const clipsX = style.overflowX === 'hidden' || style.overflowX === 'clip'
+        const clipsY = style.overflowY === 'hidden' || style.overflowY === 'clip'
+        if (!clipsX && !clipsY) continue
+        const ancestorRect = current.getBoundingClientRect()
+        if ((clipsX && (rect.right <= ancestorRect.left || rect.left >= ancestorRect.right)) ||
+          (clipsY && (rect.bottom <= ancestorRect.top || rect.top >= ancestorRect.bottom))) return false
+      }
+      return true
     }
 
     function labelledBy(el: Element): string {
@@ -94,7 +124,8 @@ async function collectFields(page: Page): Promise<FieldDescriptor[]> {
       return `[data-applyer-field="${CSS.escape(fieldId)}"]`
     }
 
-    const controls = Array.from(document.querySelectorAll('input, textarea, select')).filter(visible)
+    const controls = Array.from(document.querySelectorAll('input, textarea, select'))
+      .filter((control) => visible(control) && !control.matches(':disabled'))
     const results: FieldDescriptor[] = []
     const grouped = new Set<Element>()
 
@@ -106,12 +137,16 @@ async function collectFields(page: Page): Promise<FieldDescriptor[]> {
 
       if (inputType === 'radio' || inputType === 'checkbox') {
         const name = el.getAttribute('name')
+        const formOwner = (el as HTMLInputElement).form
+        const semanticGroup = el.closest('fieldset')
         const peers = name
           ? controls.filter(
               (candidate) =>
                 candidate.tagName.toLowerCase() === 'input' &&
                 (candidate.getAttribute('type') ?? 'text').toLowerCase() === inputType &&
-                candidate.getAttribute('name') === name
+                candidate.getAttribute('name') === name &&
+                (candidate as HTMLInputElement).form === formOwner &&
+                candidate.closest('fieldset') === semanticGroup
             )
           : [el]
         peers.forEach((peer) => grouped.add(peer))
@@ -232,6 +267,253 @@ export async function inspectApplicationFields(page: Page): Promise<ApplicationF
       inspected.options = field.options.map((option) => ({ label: option.label, value: option.value }))
     }
     return inspected
+  })
+}
+
+/**
+ * Returns only controls with a navigation-like label. A label cannot prove
+ * what an arbitrary site handler will do, so the caller must obtain explicit
+ * button-press permission before using any returned capability.
+ */
+async function collectButtons(page: Page, newInspection: boolean): Promise<ButtonDescriptor[]> {
+  return page.evaluate(({ newInspection }): ButtonDescriptor[] => {
+    const claimedButtonIds = new Set<string>()
+    const buttonAttribute = 'data-applyer-button'
+    const signatureAttribute = 'data-applyer-button-signature'
+    const generationAttribute = 'data-applyer-button-generation'
+
+    let generation: string | null
+    if (newInspection) {
+      for (const tagged of Array.from(document.querySelectorAll(`[${buttonAttribute}]`))) {
+        tagged.removeAttribute(buttonAttribute)
+        tagged.removeAttribute(signatureAttribute)
+        tagged.removeAttribute(generationAttribute)
+      }
+      generation = Math.random().toString(36).slice(2)
+      document.documentElement.setAttribute(generationAttribute, generation)
+    } else {
+      generation = document.documentElement.getAttribute(generationAttribute)
+    }
+    if (!generation) return []
+    const activeGeneration = generation
+
+    function visible(el: Element): boolean {
+      for (let current: Element | null = el; current; current = current.parentElement) {
+        const style = window.getComputedStyle(current)
+        const normalizedClip = style.clip.replace(/\s+/g, '')
+        const normalizedClipPath = style.clipPath.replace(/\s+/g, '')
+        if (current.hasAttribute('hidden') || current.getAttribute('aria-hidden') === 'true' ||
+          style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse' ||
+          style.contentVisibility === 'hidden' || Number.parseFloat(style.opacity) === 0 ||
+          /^rect\(0(?:px)?,0(?:px)?,0(?:px)?,0(?:px)?\)$/.test(normalizedClip) ||
+          /^(?:inset\(50%(?:50%){0,3}\)|circle\(0(?:px|%)?\))$/.test(normalizedClipPath)) return false
+      }
+      const rect = el.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0 || el.getClientRects().length === 0) return false
+      for (let current = el.parentElement; current; current = current.parentElement) {
+        const style = window.getComputedStyle(current)
+        const clipsX = style.overflowX === 'hidden' || style.overflowX === 'clip'
+        const clipsY = style.overflowY === 'hidden' || style.overflowY === 'clip'
+        if (!clipsX && !clipsY) continue
+        const ancestorRect = current.getBoundingClientRect()
+        if ((clipsX && (rect.right <= ancestorRect.left || rect.left >= ancestorRect.right)) ||
+          (clipsY && (rect.bottom <= ancestorRect.top || rect.top >= ancestorRect.bottom))) return false
+      }
+      return true
+    }
+
+    function labelledBy(el: Element): string {
+      const ids = el.getAttribute('aria-labelledby')?.trim().split(/\s+/) ?? []
+      return ids
+        .map((id) => document.getElementById(id)?.textContent?.trim() ?? '')
+        .filter(Boolean)
+        .join(' ')
+    }
+
+    function buttonLabel(el: Element): string {
+      const ariaLabel = el.getAttribute('aria-label')?.trim()
+      if (ariaLabel) return ariaLabel
+      const ariaLabelledBy = labelledBy(el)
+      if (ariaLabelledBy) return ariaLabelledBy
+      if (el.tagName.toLowerCase() === 'input' && (el as HTMLInputElement).value.trim()) {
+        return (el as HTMLInputElement).value.trim()
+      }
+      const text = el.textContent?.trim()
+      if (text) return text
+      return el.getAttribute('title')?.trim() || el.getAttribute('name')?.trim() || el.id.trim()
+    }
+
+    function isSafeButton(el: Element): boolean {
+      if (!visible(el)) return false
+      if (el.matches(':disabled')) return false
+      const tag = el.tagName.toLowerCase()
+      if (tag === 'button') {
+        const button = el as HTMLButtonElement
+        if (button.disabled || button.type === 'reset') return false
+        // A missing type defaults to submit only when the button owns a form.
+        return button.type !== 'submit' || button.form === null
+      }
+      if (tag === 'input') {
+        const input = el as HTMLInputElement
+        return !input.disabled && input.type === 'button'
+      }
+      return el.getAttribute('role') === 'button' && el.getAttribute('aria-disabled') !== 'true'
+    }
+
+    function looksLikeFinalSubmission(el: Element, label: string): boolean {
+      const semanticText = [
+        label,
+        el.id,
+        el.getAttribute('name'),
+        el.getAttribute('value'),
+        el.getAttribute('title'),
+        el.getAttribute('data-testid')
+      ].filter(Boolean).join(' ')
+      return /\b(submit|apply\s*(?:now)?|send\s+(?:my\s+)?application|complete\s+application|finish\s+application|finali[sz]e\s+application)\b/i.test(semanticText)
+    }
+
+    function isNavigationLabel(label: string): boolean {
+      const normalized = label.toLowerCase().replace(/\s+/g, ' ').trim()
+      return /^(?:(?:←|‹|«)\s*)?(?:back|go back|previous)(?:\s+(?:step|page))?$/.test(normalized) ||
+        /^(?:next|continue|proceed)(?:\s+(?:to\s+)?(?:the\s+)?(?:next\s+)?(?:step|page))?(?:\s*(?:→|›|»))?$/.test(normalized)
+    }
+
+    function buttonIdFor(el: Element, signature: string): string {
+      let tagged = el.getAttribute(buttonAttribute)
+      const previousSignature = el.getAttribute(signatureAttribute)
+      const previousGeneration = el.getAttribute(generationAttribute)
+      if (!newInspection) {
+        if (!tagged?.startsWith('applyer-button-') || claimedButtonIds.has(tagged) ||
+          previousSignature !== signature || previousGeneration !== activeGeneration) return ''
+        claimedButtonIds.add(tagged)
+        return tagged
+      }
+      if (!tagged?.startsWith('applyer-button-') || claimedButtonIds.has(tagged)) {
+        do tagged = `applyer-button-${Math.random().toString(36).slice(2)}`
+        while (claimedButtonIds.has(tagged))
+      }
+      el.setAttribute(buttonAttribute, tagged)
+      el.setAttribute(signatureAttribute, signature)
+      el.setAttribute(generationAttribute, activeGeneration)
+      claimedButtonIds.add(tagged)
+      return tagged
+    }
+
+    const results: ButtonDescriptor[] = []
+    for (const el of Array.from(document.querySelectorAll('button, input[type="button"], [role="button"]'))) {
+      if (!isSafeButton(el)) continue
+      const label = buttonLabel(el)
+      if (!label || !isNavigationLabel(label) || looksLikeFinalSubmission(el, label)) continue
+      const signature = JSON.stringify({
+        label,
+        tag: el.tagName.toLowerCase(),
+        type: el.tagName.toLowerCase() === 'button' || el.tagName.toLowerCase() === 'input'
+          ? (el as HTMLButtonElement | HTMLInputElement).type
+          : undefined,
+        role: el.getAttribute('role'),
+        name: el.getAttribute('name')
+      })
+      const buttonId = buttonIdFor(el, signature)
+      if (!buttonId) continue
+      results.push({
+        buttonId,
+        label,
+        selector: `[data-applyer-button="${CSS.escape(buttonId)}"]`
+      })
+    }
+    return results
+  }, { newInspection })
+}
+
+export async function inspectApplicationButtons(page: Page): Promise<ApplicationButton[]> {
+  const buttons = await collectButtons(page, true)
+  return buttons.map(({ buttonId, label }) => ({ buttonId, label }))
+}
+
+const buttonClickQueues = new WeakMap<Page, Promise<unknown>>()
+
+function serializeButtonClick<T>(page: Page, click: () => Promise<T>): Promise<T> {
+  const previous = buttonClickQueues.get(page) ?? Promise.resolve()
+  const current = previous.catch(() => {}).then(click)
+  buttonClickQueues.set(page, current)
+  return current.finally(() => {
+    if (buttonClickQueues.get(page) === current) buttonClickQueues.delete(page)
+  })
+}
+
+/**
+ * Clicks one inspected navigation button after caller-provided authorization,
+ * while suppressing native form submission APIs. Arbitrary site handlers are
+ * why authorization is mandatory. The descriptor is checked again so a
+ * repurposed DOM node cannot be clicked under a stale ID.
+ */
+export async function clickApplicationButton(
+  page: Page,
+  buttonId: string,
+  authorize: (button: ApplicationButton) => Promise<boolean>,
+  beforeClick?: () => Promise<void>
+): Promise<ApplicationButton> {
+  return serializeButtonClick(page, async () => {
+    const button = (await collectButtons(page, false)).find((candidate) => candidate.buttonId === buttonId)
+    if (!button) throw new Error('button not found or is no longer safe; inspect the form again')
+
+    try {
+      if (!(await authorize({ buttonId: button.buttonId, label: button.label }))) {
+        throw new Error('button press permission denied; inspect the form again')
+      }
+      const currentButton = (await collectButtons(page, false)).find((candidate) => candidate.buttonId === buttonId)
+      if (!currentButton || currentButton.label !== button.label || currentButton.selector !== button.selector) {
+        throw new Error('button changed while permission was pending; inspect the form again')
+      }
+      await beforeClick?.()
+      const dispatchButton = (await collectButtons(page, false)).find((candidate) => candidate.buttonId === buttonId)
+      if (!dispatchButton || dispatchButton.label !== button.label || dispatchButton.selector !== button.selector) {
+        throw new Error('button changed before it could be clicked; inspect the form again')
+      }
+      // Consume the whole inspection generation immediately before dispatch,
+      // so queued calls cannot reuse this button or one of its siblings.
+      await page.evaluate(() => {
+        document.documentElement.removeAttribute('data-applyer-button-generation')
+      })
+      await page.evaluate(() => {
+        const guardedWindow = window as typeof window & { __applyerRestoreSubmissionGuard?: () => void }
+        guardedWindow.__applyerRestoreSubmissionGuard?.()
+
+        const formPrototype = window.HTMLFormElement.prototype
+        const originalSubmit = formPrototype.submit
+        const originalRequestSubmit = formPrototype.requestSubmit
+        const preventSubmit = (event: Event): void => {
+          event.preventDefault()
+          event.stopImmediatePropagation()
+        }
+        document.addEventListener('submit', preventSubmit, true)
+        formPrototype.submit = function blockedSubmit(): void {
+          // Deliberately suppress scripted submission during an approved agent click.
+        }
+        formPrototype.requestSubmit = function blockedRequestSubmit(): void {
+          // Deliberately suppress scripted submission during an approved agent click.
+        }
+        guardedWindow.__applyerRestoreSubmissionGuard = (): void => {
+          document.removeEventListener('submit', preventSubmit, true)
+          formPrototype.submit = originalSubmit
+          formPrototype.requestSubmit = originalRequestSubmit
+          delete guardedWindow.__applyerRestoreSubmissionGuard
+        }
+      })
+      await page.locator(dispatchButton.selector).click()
+    } finally {
+      await page.evaluate(() => {
+        const guardedWindow = window as typeof window & { __applyerRestoreSubmissionGuard?: () => void }
+        guardedWindow.__applyerRestoreSubmissionGuard?.()
+        for (const tagged of Array.from(document.querySelectorAll('[data-applyer-button]'))) {
+          tagged.removeAttribute('data-applyer-button')
+          tagged.removeAttribute('data-applyer-button-signature')
+          tagged.removeAttribute('data-applyer-button-generation')
+        }
+      }).catch(() => {})
+    }
+
+    return { buttonId: button.buttonId, label: button.label }
   })
 }
 

@@ -360,12 +360,14 @@ describe('migrateStorageLocation', () => {
     cpSpy.mockRestore()
   })
 
-  it('rewrites jobs.screenshot_path alongside documents.storedPath', async () => {
+  it('rewrites every job screenshot path alongside documents.storedPath', async () => {
     seedOldLocationDb()
     const sqlite = new Database(dbModule.dbPath())
     const db = drizzle(sqlite, { schema: { jobs } })
     const oldShotPath = join(screenshotsDir(), 'job1.png')
+    const oldSecondShotPath = join(screenshotsDir(), 'job1-2.png')
     writeFileSync(oldShotPath, 'fake-png-bytes')
+    writeFileSync(oldSecondShotPath, 'fake-png-bytes-2')
     db.insert(jobs)
       .values({
         id: 'job1',
@@ -373,7 +375,8 @@ describe('migrateStorageLocation', () => {
         company: 'Acme',
         url: 'https://acme.example/1',
         status: 'filled',
-        screenshotPath: oldShotPath
+        screenshotPath: oldSecondShotPath,
+        screenshotPaths: [oldShotPath, oldSecondShotPath]
       })
       .run()
     sqlite.close()
@@ -383,7 +386,11 @@ describe('migrateStorageLocation', () => {
     expect(result).toEqual({ ok: true })
 
     const row = dbModule.getDb().select().from(jobs).where(eq(jobs.id, 'job1')).get()
-    expect(row?.screenshotPath).toBe(join(dest, 'screenshots', 'job1.png'))
+    expect(row?.screenshotPath).toBe(join(dest, 'screenshots', 'job1-2.png'))
+    expect(row?.screenshotPaths).toEqual([
+      join(dest, 'screenshots', 'job1.png'),
+      join(dest, 'screenshots', 'job1-2.png')
+    ])
   })
 
   it('allows a new call once a previous one has finished', async () => {

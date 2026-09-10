@@ -50,6 +50,13 @@
       "when": 1788793590601,
       "tag": "0006_motionless_blink",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789054836698,
+      "tag": "0007_serious_dreadnoughts",
+      "breakpoints": true
     }
   ]
 }

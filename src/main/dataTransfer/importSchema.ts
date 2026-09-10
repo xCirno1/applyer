@@ -41,6 +41,8 @@ const jobRecordSchema = z.object({
   applicationUrl: z.string().nullable(),
   applyMethod: applyMethodSchema.nullable(),
   screenshotPath: z.string().nullable(),
+  // Optional so export bundles from the single-screenshot format still import.
+  screenshotPaths: z.array(z.string()).optional().default([]),
   failureTag: z.string().nullable(),
   failureMessage: z.string().nullable(),
   blockingReason: z.string().nullable(),

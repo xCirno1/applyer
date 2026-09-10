@@ -3,6 +3,8 @@ export interface AgentPermissions {
   autoCompleteFields: boolean
   /** Lets form automation attach stored resumes and cover letters. */
   autoUploadDocuments: boolean
+  /** Lets form automation press an inspected application navigation button. */
+  autoPressButtons: boolean
 }
 
 export type AgentPermission = keyof AgentPermissions
@@ -16,7 +18,11 @@ export interface AgentPermissionRequest {
   permissions: AgentPermission[]
 }
 
-const AGENT_PERMISSION_KEYS = new Set<AgentPermission>(['autoCompleteFields', 'autoUploadDocuments'])
+const AGENT_PERMISSION_KEYS = new Set<AgentPermission>([
+  'autoCompleteFields',
+  'autoUploadDocuments',
+  'autoPressButtons'
+])
 
 export function isAgentPermission(value: unknown): value is AgentPermission {
   return typeof value === 'string' && AGENT_PERMISSION_KEYS.has(value as AgentPermission)
@@ -44,17 +50,23 @@ export function isAgentPermissionRequest(value: unknown): value is AgentPermissi
 
 export const DEFAULT_AGENT_PERMISSIONS: AgentPermissions = {
   autoCompleteFields: true,
-  autoUploadDocuments: false
+  autoUploadDocuments: false,
+  autoPressButtons: false
 }
 
 /** Safe fallback for unreadable or invalid persisted permission data. */
 export const DENIED_AGENT_PERMISSIONS: AgentPermissions = {
   autoCompleteFields: false,
-  autoUploadDocuments: false
+  autoUploadDocuments: false,
+  autoPressButtons: false
 }
 
 export function isAgentPermissions(value: unknown): value is AgentPermissions {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Partial<AgentPermissions>
-  return typeof candidate.autoCompleteFields === 'boolean' && typeof candidate.autoUploadDocuments === 'boolean'
+  return (
+    typeof candidate.autoCompleteFields === 'boolean' &&
+    typeof candidate.autoUploadDocuments === 'boolean' &&
+    typeof candidate.autoPressButtons === 'boolean'
+  )
 }

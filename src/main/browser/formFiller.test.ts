@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import type { Page } from 'playwright'
 import { JSDOM } from 'jsdom'
-import { fillForm, inspectAnswerRequirements, inspectApplicationFields } from './formFiller'
+import {
+  clickApplicationButton,
+  fillForm,
+  inspectAnswerRequirements,
+  inspectApplicationButtons,
+  inspectApplicationFields
+} from './formFiller'
 
 interface FakeField {
   fieldId: string
@@ -36,8 +42,14 @@ function fakePage(fields: FakeField[]): { page: Page; calls: Record<string, Retu
 
 function domPage(html: string): { page: Page; document: Document } {
   const dom = new JSDOM(html)
+  const visibleRect = {
+    x: 0, y: 0, top: 0, left: 0, right: 100, bottom: 20, width: 100, height: 20,
+    toJSON: () => ({})
+  } as DOMRect
+  dom.window.HTMLElement.prototype.getBoundingClientRect = () => visibleRect
+  dom.window.HTMLElement.prototype.getClientRects = () => [visibleRect] as unknown as DOMRectList
   const page = {
-    evaluate: vi.fn().mockImplementation(async (callback: () => unknown) => {
+    evaluate: vi.fn().mockImplementation(async (callback: (...args: unknown[]) => unknown, arg?: unknown) => {
       const previousWindow = Object.getOwnPropertyDescriptor(globalThis, 'window')
       const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document')
       const previousCss = Object.getOwnPropertyDescriptor(globalThis, 'CSS')
@@ -45,7 +57,7 @@ function domPage(html: string): { page: Page; document: Document } {
       Object.defineProperty(globalThis, 'document', { configurable: true, value: dom.window.document })
       Object.defineProperty(globalThis, 'CSS', { configurable: true, value: { escape: (value: string) => value } })
       try {
-        return callback()
+        return callback(arg)
       } finally {
         if (previousWindow) Object.defineProperty(globalThis, 'window', previousWindow)
         else delete (globalThis as { window?: unknown }).window
@@ -54,7 +66,19 @@ function domPage(html: string): { page: Page; document: Document } {
         if (previousCss) Object.defineProperty(globalThis, 'CSS', previousCss)
         else delete (globalThis as { CSS?: unknown }).CSS
       }
-    })
+    }),
+    locator: vi.fn().mockImplementation((selector: string) => ({
+      fill: async (value: string) => {
+        const element = dom.window.document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement | null
+        if (!element) throw new Error(`No element matches ${selector}`)
+        element.value = value
+      },
+      click: async () => {
+        const element = dom.window.document.querySelector(selector) as HTMLElement | null
+        if (!element) throw new Error(`No element matches ${selector}`)
+        element.click()
+      }
+    }))
   } as unknown as Page
   return { page, document: dom.window.document }
 }
@@ -109,6 +133,236 @@ describe('inspectApplicationFields', () => {
 
     expect(fields).toHaveLength(1)
     expect(fields[0]).toMatchObject({ control: 'radio', currentValue: 'yes' })
+  })
+
+  it('does not merge same-name choice controls across forms or fieldsets', async () => {
+    const { page } = domPage(`
+      <form>
+        <fieldset><legend>Employment type</legend>
+          <label><input type="radio" name="choice" value="full-time">Full time</label>
+          <label><input type="radio" name="choice" value="part-time">Part time</label>
+        </fieldset>
+        <fieldset><legend>Work location</legend>
+          <label><input type="radio" name="choice" value="remote">Remote</label>
+          <label><input type="radio" name="choice" value="office">Office</label>
+        </fieldset>
+      </form>
+      <form>
+        <fieldset><legend>Contact method</legend>
+          <label><input type="radio" name="choice" value="email">Email</label>
+          <label><input type="radio" name="choice" value="phone">Phone</label>
+        </fieldset>
+      </form>
+    `)
+
+    const fields = await inspectApplicationFields(page)
+
+    expect(fields.map((field) => ({ label: field.label, values: field.options?.map((option) => option.value) }))).toEqual([
+      { label: 'Employment type', values: ['full-time', 'part-time'] },
+      { label: 'Work location', values: ['remote', 'office'] },
+      { label: 'Contact method', values: ['email', 'phone'] }
+    ])
+  })
+
+  it('omits fields inside a hidden application step', async () => {
+    const { page } = domPage(`
+      <section><label for="visible">Visible</label><input id="visible"></section>
+      <section hidden><label for="hidden">Hidden</label><input id="hidden"></section>
+    `)
+
+    const fields = await inspectApplicationFields(page)
+
+    expect(fields.map((field) => field.label)).toEqual(['Visible'])
+  })
+
+  it('omits transparent, zero-size, and effectively disabled fields', async () => {
+    const { page, document } = domPage(`
+      <label for="visible">Visible</label><input id="visible">
+      <section style="opacity: 0"><label for="transparent">Transparent</label><input id="transparent"></section>
+      <section style="clip-path: inset(50%)"><label for="clipped">Clipped</label><input id="clipped"></section>
+      <label for="zero-size">Zero size</label><input id="zero-size">
+      <fieldset disabled><label for="disabled">Disabled</label><input id="disabled"></fieldset>
+    `)
+    document.getElementById('zero-size')!.getBoundingClientRect = () => ({
+      x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0,
+      toJSON: () => ({})
+    }) as DOMRect
+
+    const fields = await inspectApplicationFields(page)
+
+    expect(fields.map((field) => field.label)).toEqual(['Visible'])
+  })
+})
+
+describe('application buttons', () => {
+  it('returns visible navigation buttons and omits arbitrary or submit-capable controls', async () => {
+    const { page } = domPage(`
+      <form>
+        <button type="button">Next</button>
+        <button type="button">Submit application</button>
+        <button type="submit">Submit application</button>
+        <button type="reset">Reset</button>
+        <input type="button" value="Help">
+        <input type="submit" value="Apply now">
+        <div role="button" aria-label="More options"></div>
+        <section hidden><button type="button">Hidden step action</button></section>
+      </form>
+      <button>Outside action</button>
+      <button type="button" disabled>Disabled action</button>
+    `)
+
+    const buttons = await inspectApplicationButtons(page)
+
+    expect(buttons.map((button) => button.label)).toEqual(['Next'])
+    expect(buttons.every((button) => button.buttonId.startsWith('applyer-button-'))).toBe(true)
+  })
+
+  it('does not expose scripted final actions merely because their native type cannot submit', async () => {
+    const { page } = domPage(`
+      <button type="button">Finish</button>
+      <div role="button">Confirm</div>
+      <input type="button" value="Complete">
+      <button type="button">Continue</button>
+    `)
+
+    expect((await inspectApplicationButtons(page)).map((button) => button.label)).toEqual(['Continue'])
+  })
+
+  it('omits transparent, zero-size, and effectively disabled navigation buttons', async () => {
+    const { page, document } = domPage(`
+      <button type="button">Next</button>
+      <section style="opacity: 0"><button type="button">Continue</button></section>
+      <section style="clip-path: inset(50%)"><button type="button">Previous</button></section>
+      <button id="zero-size" type="button">Proceed</button>
+      <fieldset disabled><button type="button">Back</button></fieldset>
+    `)
+    document.getElementById('zero-size')!.getBoundingClientRect = () => ({
+      x: 0, y: 0, top: 0, left: 0, right: 0, bottom: 0, width: 0, height: 0,
+      toJSON: () => ({})
+    }) as DOMRect
+
+    expect((await inspectApplicationButtons(page)).map((button) => button.label)).toEqual(['Next'])
+  })
+
+  it('invalidates a button ID when the control meaning changes', async () => {
+    const { page, document } = domPage('<button type="button" id="action">Next</button>')
+    const first = (await inspectApplicationButtons(page))[0]!
+
+    document.getElementById('action')!.textContent = 'Back'
+    const repurposed = (await inspectApplicationButtons(page))[0]!
+
+    expect(repurposed.buttonId).not.toBe(first.buttonId)
+  })
+
+  it('blocks scripted form submission while clicking an allowed button', async () => {
+    const { page, document } = domPage(`
+      <form id="application"><button type="button" id="next">Next</button></form>
+    `)
+    const form = document.getElementById('application') as HTMLFormElement
+    const originalRequestSubmit = form.ownerDocument.defaultView!.HTMLFormElement.prototype.requestSubmit
+    const submitted = vi.fn((event: Event) => event.preventDefault())
+    form.addEventListener('submit', submitted)
+    document.getElementById('next')!.addEventListener('click', () => form.requestSubmit())
+    const button = (await inspectApplicationButtons(page))[0]!
+
+    await clickApplicationButton(page, button.buttonId, async () => true)
+
+    expect(submitted).not.toHaveBeenCalled()
+    expect(form.ownerDocument.defaultView!.HTMLFormElement.prototype.requestSubmit).toBe(originalRequestSubmit)
+  })
+
+  it('refuses a stale ID after an allowed button becomes a submit button', async () => {
+    const { page, document } = domPage(`
+      <form><button type="button" id="action">Next</button></form>
+    `)
+    const button = (await inspectApplicationButtons(page))[0]!
+    ;(document.getElementById('action') as HTMLButtonElement).type = 'submit'
+
+    await expect(clickApplicationButton(page, button.buttonId, async () => true)).rejects.toThrow('no longer safe')
+  })
+
+  it('revalidates the button after permission is granted', async () => {
+    const { page, document } = domPage('<button type="button" id="action">Next</button>')
+    const button = (await inspectApplicationButtons(page))[0]!
+
+    await expect(clickApplicationButton(page, button.buttonId, async () => {
+      document.getElementById('action')!.textContent = 'Back'
+      return true
+    })).rejects.toThrow('button changed while permission was pending')
+  })
+
+  it('consumes every button ID from an inspection after one click', async () => {
+    const { page } = domPage(`
+      <button type="button">Back</button>
+      <button type="button">Next</button>
+    `)
+    const buttons = await inspectApplicationButtons(page)
+
+    await clickApplicationButton(page, buttons[1]!.buttonId, async () => true)
+
+    await expect(clickApplicationButton(page, buttons[0]!.buttonId, async () => true)).rejects.toThrow('inspect the form again')
+    const fresh = await inspectApplicationButtons(page)
+    expect(fresh.map((button) => button.buttonId)).not.toEqual(buttons.map((button) => button.buttonId))
+  })
+
+  it('serializes concurrent clicks so only one capability can be consumed', async () => {
+    const { page } = domPage('<button type="button">Next</button>')
+    const button = (await inspectApplicationButtons(page))[0]!
+
+    const outcomes = await Promise.allSettled([
+      clickApplicationButton(page, button.buttonId, async () => true),
+      clickApplicationButton(page, button.buttonId, async () => true)
+    ])
+
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1)
+    expect(outcomes.filter((outcome) => outcome.status === 'rejected')).toHaveLength(1)
+  })
+
+  it('consumes the capability without clicking when authorization is denied', async () => {
+    const { page, document } = domPage('<button id="next" type="button">Next</button>')
+    const clicked = vi.fn()
+    document.getElementById('next')!.addEventListener('click', clicked)
+    const button = (await inspectApplicationButtons(page))[0]!
+
+    await expect(clickApplicationButton(page, button.buttonId, async () => false)).rejects.toThrow('permission denied')
+
+    expect(clicked).not.toHaveBeenCalled()
+    await expect(clickApplicationButton(page, button.buttonId, async () => true)).rejects.toThrow('inspect the form again')
+  })
+
+  it('navigates back, re-inspects, and edits a field from an earlier step', async () => {
+    const { page, document } = domPage(`
+      <form>
+        <fieldset id="step-one" hidden>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" value="old@example.com">
+        </fieldset>
+        <fieldset id="step-two">
+          <label for="portfolio">Portfolio</label>
+          <input id="portfolio" name="portfolio" type="url">
+          <button id="back" type="button">Back</button>
+          <button type="submit">Submit application</button>
+        </fieldset>
+      </form>
+    `)
+    document.getElementById('back')!.addEventListener('click', () => {
+      ;(document.getElementById('step-one') as HTMLElement).hidden = false
+      ;(document.getElementById('step-two') as HTMLElement).hidden = true
+    })
+
+    expect((await inspectApplicationFields(page)).map((field) => field.label)).toEqual(['Portfolio'])
+    const buttons = await inspectApplicationButtons(page)
+    expect(buttons.map((button) => button.label)).toEqual(['Back'])
+
+    await clickApplicationButton(page, buttons[0]!.buttonId, async () => true)
+    const email = (await inspectApplicationFields(page)).find((field) => field.label === 'Email')!
+    const result = await fillForm(page, [{ fieldId: email.fieldId, value: 'new@example.com' }], {
+      allowFieldCompletion: true,
+      allowDocumentUploads: false
+    })
+
+    expect(result.filledFields).toEqual(['Email'])
+    expect((document.getElementById('email') as HTMLInputElement).value).toBe('new@example.com')
   })
 })
 

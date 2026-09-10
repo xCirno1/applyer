@@ -96,10 +96,11 @@ export default function AgentPermissionPrompt(): ReactElement | null {
     if (decision === 'allow_always') toast.success(t('permissionPrompt.saved'))
   }
 
-  const permissionLabel = (permission: AgentPermission): string =>
-    permission === 'autoCompleteFields'
-      ? t('permissionPrompt.completeFields')
-      : t('permissionPrompt.uploadDocuments')
+  const permissionLabel = (permission: AgentPermission): string => {
+    if (permission === 'autoCompleteFields') return t('permissionPrompt.completeFields')
+    if (permission === 'autoUploadDocuments') return t('permissionPrompt.uploadDocuments')
+    return t('permissionPrompt.pressButtons')
+  }
 
   return (
     <Modal

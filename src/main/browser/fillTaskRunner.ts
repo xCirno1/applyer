@@ -7,9 +7,12 @@ import { listDocuments, readDocumentBytes } from '../db/repositories/documentsRe
 import { launchHeadedContext } from './browserController'
 import { detectCaptcha } from './captchaDetector'
 import {
+  clickApplicationButton,
   fillForm,
   inspectAnswerRequirements,
+  inspectApplicationButtons,
   inspectApplicationFields,
+  type ApplicationButton,
   type ApplicationField,
   type ApplicationFieldAnswer
 } from './formFiller'
@@ -26,13 +29,22 @@ import { writeSecureFileBuffer } from '../db/encryption'
 import { allowRequestedPermissions, requestAgentPermissions } from './agentPermissionGate'
 
 export type FillTaskResult =
-  | { status: 'filled'; jobId: string; screenshotPath: string; filledFields: string[]; skippedFields: string[] }
+  | { status: 'filled'; jobId: string; screenshotPath: string; screenshotPaths: string[]; filledFields: string[]; skippedFields: string[] }
+  | {
+      status: 'partially_filled'
+      jobId: string
+      screenshotPath: string
+      screenshotPaths: string[]
+      filledFields: string[]
+      skippedFields: string[]
+      message: string
+    }
   | { status: 'no_active_session'; jobId: string; message: string }
   | { status: 'permission_denied'; jobId: string; requiredPermissions: Array<keyof AgentPermissions>; message: string }
   | { status: 'failed'; jobId: string; reasonTag: string; message: string }
 
 export type EditTaskResult =
-  | { status: 'edited'; jobId: string; screenshotPath: string; filledFields: string[]; skippedFields: string[] }
+  | { status: 'edited'; jobId: string; screenshotPath: string; screenshotPaths: string[]; filledFields: string[]; skippedFields: string[] }
   | { status: 'no_active_session'; jobId: string; message: string }
   | { status: 'permission_denied'; jobId: string; requiredPermissions: Array<keyof AgentPermissions>; message: string }
   | { status: 'failed'; jobId: string; reasonTag: string; message: string }
@@ -43,6 +55,7 @@ export type InspectTaskResult =
       jobId: string
       mode: 'fill' | 'edit'
       fields: ApplicationField[]
+      buttons: ApplicationButton[]
       storedDocuments: Array<{ kind: 'resume' | 'cover_letter'; filename: string }>
       message: string
     }
@@ -50,9 +63,22 @@ export type InspectTaskResult =
   | { status: 'no_active_session'; jobId: string; message: string }
   | { status: 'failed'; jobId: string; reasonTag: string; message: string }
 
+export type ClickButtonTaskResult =
+  | { status: 'clicked'; jobId: string; button: ApplicationButton; message: string }
+  | { status: 'no_active_session'; jobId: string; message: string }
+  | { status: 'permission_denied'; jobId: string; requiredPermissions: ['autoPressButtons']; message: string }
+  | { status: 'failed'; jobId: string; reasonTag: string; message: string }
+
 interface ApplicationSession {
   browser: Browser
   page: Page
+  /** Remains fill while the agent advances through the initially opened form. */
+  phase: 'fill' | 'edit'
+  currentStepIndex: number
+  stepFingerprints: string[]
+  screenshotPaths: string[]
+  obsoleteScreenshotPaths: string[]
+  pendingNavigation?: { direction: 'forward' | 'back'; fromFingerprint: string }
 }
 
 const activeApplicationSessions = new Map<string, ApplicationSession>()
@@ -60,7 +86,15 @@ const activeApplicationSessions = new Map<string, ApplicationSession>()
 function retainApplicationSession(jobId: string, browser: Browser, page: Page): void {
   const previous = activeApplicationSessions.get(jobId)
   if (previous && previous.page !== page) void previous.browser.close().catch(() => {})
-  const session = { browser, page }
+  const session: ApplicationSession = {
+    browser,
+    page,
+    phase: 'fill',
+    currentStepIndex: 0,
+    stepFingerprints: [],
+    screenshotPaths: [],
+    obsoleteScreenshotPaths: []
+  }
   activeApplicationSessions.set(jobId, session)
   const discard = (): void => {
     if (activeApplicationSessions.get(jobId) === session) activeApplicationSessions.delete(jobId)
@@ -101,14 +135,57 @@ function safeUnlink(path: string | undefined): void {
   }
 }
 
-async function captureScreenshot(page: Page, jobId: string): Promise<string> {
-  const path = join(screenshotsDir(), `${jobId}.png`)
+function screenshotPathFor(jobId: string, stepIndex: number): string {
+  return join(screenshotsDir(), stepIndex === 0 ? `${jobId}.png` : `${jobId}-${stepIndex + 1}.png`)
+}
+
+async function captureScreenshot(page: Page, jobId: string, session: ApplicationSession): Promise<string> {
+  const path = screenshotPathFor(jobId, session.currentStepIndex)
   const image = await page.screenshot().catch(() => null)
   if (image) {
     const mode = getStorageMode() ?? 'encrypted'
     writeFileSync(path, writeSecureFileBuffer(image, mode), { mode: 0o600 })
   }
+  session.screenshotPaths[session.currentStepIndex] = path
   return path
+}
+
+function stepFingerprint(fields: ApplicationField[], buttons: ApplicationButton[]): string {
+  return JSON.stringify({
+    fields: fields.map(({ label, name, placeholder, autocomplete, control, inputType, options }) => ({
+      label,
+      name,
+      placeholder,
+      autocomplete,
+      control,
+      inputType,
+      options
+    })),
+    buttons: buttons.map(({ label }) => label)
+  })
+}
+
+function recordInspectedStep(session: ApplicationSession, fingerprint: string): void {
+  const pending = session.pendingNavigation
+  delete session.pendingNavigation
+
+  if (pending && fingerprint !== pending.fromFingerprint) {
+    const knownIndex = session.stepFingerprints.indexOf(fingerprint)
+    if (knownIndex >= 0) {
+      session.currentStepIndex = knownIndex
+    } else {
+      const nextIndex = pending.direction === 'forward'
+        ? session.currentStepIndex + 1
+        : Math.max(0, session.currentStepIndex - 1)
+      if (pending.direction === 'forward') {
+        session.obsoleteScreenshotPaths.push(...session.screenshotPaths.splice(nextIndex))
+        session.stepFingerprints.splice(nextIndex)
+      }
+      session.currentStepIndex = nextIndex
+    }
+  }
+
+  session.stepFingerprints[session.currentStepIndex] = fingerprint
 }
 
 function failAndReturn(jobId: string, reasonTag: string, message: string): InspectTaskResult {
@@ -152,6 +229,7 @@ async function continueInspectionAfterCaptcha(
 async function inspectSession(jobId: string, page: Page): Promise<InspectTaskResult> {
   const job = getJob(jobId)
   if (!job) return { status: 'failed', jobId, reasonTag: 'other', message: 'Job not found.' }
+  const mode = activeApplicationSessions.get(jobId)?.phase ?? (job.status === 'filled' ? 'edit' : 'fill')
   try {
     await page.bringToFront()
     const captcha = await detectCaptcha(page)
@@ -163,7 +241,12 @@ async function inspectSession(jobId: string, page: Page): Promise<InspectTaskRes
         message: 'Resolve the verification challenge in the open application window, then inspect the form again.'
       }
     }
-    const fields = await inspectApplicationFields(page)
+    const [fields, buttons] = await Promise.all([
+      inspectApplicationFields(page),
+      inspectApplicationButtons(page)
+    ])
+    const session = activeApplicationSessions.get(jobId)
+    if (session?.page === page) recordInspectedStep(session, stepFingerprint(fields, buttons))
     const storedDocuments = listDocuments().filter(
       (document): document is typeof document & { kind: 'resume' | 'cover_letter' } =>
         document.kind === 'resume' || document.kind === 'cover_letter'
@@ -174,13 +257,14 @@ async function inspectSession(jobId: string, page: Page): Promise<InspectTaskRes
     return {
       status: 'inspected',
       jobId,
-      mode: job.status === 'filled' ? 'edit' : 'fill',
+      mode,
       fields,
+      buttons,
       storedDocuments,
       message:
-        job.status === 'filled'
-          ? 'Use edit_application with fieldId/value pairs from this result. Labels are context only. Attachments cannot be changed while editing.'
-          : 'Use fill_application with fieldId/value pairs from this result. Labels are context only. For a file field, use resume or cover_letter only when that stored document is listed.'
+        mode === 'edit'
+          ? 'Use edit_application with fieldId/value pairs from this visible step. If the field to edit is on an earlier step, click a listed Back or Previous button with click_application_button, then inspect again; repeat until the field is visible. Submit controls are never listed. Labels are context only. Attachments cannot be changed while editing.'
+          : 'Use fill_application with fieldId/value pairs from this visible step. Leave finalStep false while more application pages remain; set it true only when every page is complete and the form is ready for user review. Use click_application_button with a buttonId to navigate, then inspect again. Submit controls are never listed. Labels are context only. For a file field, use resume or cover_letter only when that stored document is listed.'
     }
   } catch (error) {
     return { status: 'failed', jobId, reasonTag: 'other', message: `Could not inspect the open application form: ${String(error)}` }
@@ -252,6 +336,92 @@ export async function runInspectTask(jobId: string): Promise<InspectTaskResult> 
   return inspectSession(jobId, page)
 }
 
+/** Clicks an inspected intermediate-navigation button in the retained application window. */
+export async function runClickButtonTask(jobId: string, buttonId: string): Promise<ClickButtonTaskResult> {
+  const job = getJob(jobId)
+  if (!job) return { status: 'failed', jobId, reasonTag: 'other', message: 'Job not found.' }
+  if (job.status !== 'queued' && job.status !== 'filled') {
+    return {
+      status: 'failed',
+      jobId,
+      reasonTag: 'other',
+      message: `A ${job.status} job cannot be navigated.`
+    }
+  }
+
+  const session = getActiveSession(jobId)
+  if (!session) {
+    return {
+      status: 'no_active_session',
+      jobId,
+      message: 'No inspected application window is open. Call inspect_application first.'
+    }
+  }
+
+  try {
+    await session.page.bringToFront()
+    if ((await detectCaptcha(session.page)).blocked) {
+      return {
+        status: 'failed',
+        jobId,
+        reasonTag: 'captcha_verification',
+        message: 'Resolve the verification challenge in the open application window, then inspect it again.'
+      }
+    }
+    let permissionDenied = false
+    const button = await clickApplicationButton(
+      session.page,
+      buttonId,
+      async () => {
+        if (getAgentPermissions().autoPressButtons) return true
+        const decision = await requestAgentPermissions({
+          jobId,
+          jobTitle: job.title,
+          company: job.company,
+          permissions: ['autoPressButtons']
+        })
+        permissionDenied = decision === 'deny'
+        return !permissionDenied
+      },
+      async () => {
+        await withStorageWriteLock(() => captureScreenshot(session.page, jobId, session))
+      }
+    ).catch((error) => {
+      if (permissionDenied) return null
+      throw error
+    })
+    if (!button) {
+      return {
+        status: 'permission_denied',
+        jobId,
+        requiredPermissions: ['autoPressButtons'],
+        message: 'The user denied permission to press application buttons or the request timed out. The button was not clicked; inspect again before retrying.'
+      }
+    }
+    await session.page.waitForTimeout(250)
+    const fromFingerprint = session.stepFingerprints[session.currentStepIndex]
+    if (fromFingerprint) {
+      session.pendingNavigation = {
+        direction: /^(?:back|go back|previous)\b/i.test(button.label.trim()) ? 'back' : 'forward',
+        fromFingerprint
+      }
+    }
+    return {
+      status: 'clicked',
+      jobId,
+      button,
+      message: 'The navigation button was clicked. Call inspect_application again before filling or clicking anything else.'
+    }
+  } catch (error) {
+    return {
+      status: 'failed',
+      jobId,
+      reasonTag: 'form_not_supported',
+      message: `The button was not clicked: ${String(error)}`
+    }
+  }
+}
+
 async function authorizeAnswers(
   jobId: string,
   jobTitle: string,
@@ -279,7 +449,8 @@ async function applyAnswers(
   page: Page,
   answers: ApplicationFieldAnswer[],
   permissions: AgentPermissions,
-  edit: boolean
+  edit: boolean,
+  finalStep: boolean
 ): Promise<FillTaskResult | EditTaskResult> {
   let resumePath: string | undefined
   let coverLetterPath: string | undefined
@@ -288,13 +459,15 @@ async function applyAnswers(
       resumePath = materializeDocument('resume')
       coverLetterPath = materializeDocument('cover_letter')
     }
-    const result = await fillForm(page, answers, {
-      allowFieldCompletion: permissions.autoCompleteFields,
-      allowDocumentUploads: !edit && permissions.autoUploadDocuments,
-      updateDocuments: !edit,
-      resumeFilePath: resumePath,
-      coverLetterFilePath: coverLetterPath
-    })
+    const result = answers.length > 0
+      ? await fillForm(page, answers, {
+          allowFieldCompletion: permissions.autoCompleteFields,
+          allowDocumentUploads: !edit && permissions.autoUploadDocuments,
+          updateDocuments: !edit,
+          resumeFilePath: resumePath,
+          coverLetterFilePath: coverLetterPath
+        })
+      : { filledFields: [], skippedFields: [], requiredPermissions: [] }
     if (result.requiredPermissions.length > 0) {
       return {
         status: 'permission_denied',
@@ -303,26 +476,58 @@ async function applyAnswers(
         message: 'The live form changed after permission approval. Inspect it again before retrying.'
       }
     }
-    if (result.filledFields.length === 0) {
+    if (result.filledFields.length === 0 && !(finalStep && answers.length === 0)) {
       return {
         status: 'failed',
         jobId,
         reasonTag: 'form_not_supported',
-        message: 'No supplied field was changed. Inspect the live form again and use its current field IDs and option values.'
+        message: 'No supplied field was changed. Inspect the live form again and use its current field IDs and option values. If the target is on an earlier step, click a currently listed Back or Previous button, then re-inspect.'
       }
     }
-    const { screenshotPath, job } = await withStorageWriteLock(async () => {
-      const capturedPath = await captureScreenshot(page, jobId)
+    const completedFinalStep = !edit && finalStep && result.skippedFields.length === 0 &&
+      result.filledFields.length === answers.length
+    const { screenshotPath, screenshotPaths, job } = await withStorageWriteLock(async () => {
+      const session = activeApplicationSessions.get(jobId)
+      if (!session || session.page !== page) throw new Error('The retained application session was lost.')
+      const capturedPath = await captureScreenshot(page, jobId, session)
+      const capturedPaths = session.screenshotPaths.filter((path): path is string => !!path)
       const updated = edit
-        ? refreshFilled(jobId, { screenshotPath: capturedPath })
-        : setFilled(jobId, { screenshotPath: capturedPath })
-      return { screenshotPath: capturedPath, job: updated }
+        ? refreshFilled(jobId, { screenshotPath: capturedPath, screenshotPaths: capturedPaths })
+        : completedFinalStep
+          ? setFilled(jobId, { screenshotPath: capturedPath, screenshotPaths: capturedPaths })
+          : getJob(jobId)
+      if (!updated) throw new Error(`Job not found: ${jobId}`)
+      if (edit || completedFinalStep) {
+        for (const obsoletePath of session.obsoleteScreenshotPaths) {
+          if (!capturedPaths.includes(obsoletePath)) safeUnlink(obsoletePath)
+        }
+        session.obsoleteScreenshotPaths = []
+      }
+      return { screenshotPath: capturedPath, screenshotPaths: capturedPaths, job: updated }
     })
+    if (edit || completedFinalStep) {
+      const session = activeApplicationSessions.get(jobId)
+      if (session?.page === page) session.phase = 'edit'
+    }
     broadcastJobUpdate(job)
+    if (!edit && !completedFinalStep) {
+      return {
+        status: 'partially_filled',
+        jobId,
+        screenshotPath,
+        screenshotPaths,
+        filledFields: result.filledFields,
+        skippedFields: result.skippedFields,
+        message: finalStep
+          ? 'The job remains Queued because at least one requested final answer was skipped. Inspect the form again and retry every skipped answer before setting finalStep to true.'
+          : 'This page was filled and the job remains Queued. Navigate and inspect again, or set finalStep to true only when every application page is complete and the form is ready for user review.'
+      }
+    }
     return {
       status: edit ? 'edited' : 'filled',
       jobId,
       screenshotPath,
+      screenshotPaths,
       filledFields: result.filledFields,
       skippedFields: result.skippedFields
     }
@@ -339,14 +544,19 @@ async function applyAnswers(
   }
 }
 
-async function runAnswerTask(jobId: string, answers: ApplicationFieldAnswer[], edit: boolean): Promise<FillTaskResult | EditTaskResult> {
+async function runAnswerTask(
+  jobId: string,
+  answers: ApplicationFieldAnswer[],
+  edit: boolean,
+  finalStep = false
+): Promise<FillTaskResult | EditTaskResult> {
   const job = getJob(jobId)
   if (!job) return { status: 'failed', jobId, reasonTag: 'other', message: 'Job not found.' }
+  const session = getActiveSession(jobId)
   const expected = edit ? 'filled' : 'queued'
   if (job.status !== expected) {
     return { status: 'failed', jobId, reasonTag: 'other', message: `Job is not in the ${edit ? 'Filled' : 'Queued'} state (currently: ${job.status}).` }
   }
-  const session = getActiveSession(jobId)
   if (!session) {
     return {
       status: 'no_active_session',
@@ -354,6 +564,14 @@ async function runAnswerTask(jobId: string, answers: ApplicationFieldAnswer[], e
       message: edit
         ? 'The original application window is no longer open. Open the job yourself and make changes there.'
         : 'No inspected application window is open. Call inspect_application first.'
+    }
+  }
+  if (!edit && answers.length === 0 && !finalStep) {
+    return {
+      status: 'failed',
+      jobId,
+      reasonTag: 'form_not_supported',
+      message: 'No answers were supplied. Use an empty answers list only with finalStep true on a fieldless final review page.'
     }
   }
   try {
@@ -375,14 +593,18 @@ async function runAnswerTask(jobId: string, answers: ApplicationFieldAnswer[], e
         message: `The user denied this permission request or it timed out. The open form was not changed and the job remains ${edit ? 'Filled' : 'Queued'}.`
       }
     }
-    return applyAnswers(jobId, session.page, answers, authorization.permissions, edit)
+    return applyAnswers(jobId, session.page, answers, authorization.permissions, edit, finalStep)
   } catch (error) {
     return { status: 'failed', jobId, reasonTag: 'other', message: `Could not access the open application form: ${String(error)}` }
   }
 }
 
-export async function runFillTask(jobId: string, answers: ApplicationFieldAnswer[]): Promise<FillTaskResult> {
-  return runAnswerTask(jobId, answers, false) as Promise<FillTaskResult>
+export async function runFillTask(
+  jobId: string,
+  answers: ApplicationFieldAnswer[],
+  finalStep = false
+): Promise<FillTaskResult> {
+  return runAnswerTask(jobId, answers, false, finalStep) as Promise<FillTaskResult>
 }
 
 /** Updates only supplied field IDs in the original visible form and never uploads documents. */

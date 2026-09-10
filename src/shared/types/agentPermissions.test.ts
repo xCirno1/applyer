@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  isAgentPermissions,
   isAgentPermissionDecision,
   isAgentPermissionRequest
 } from './agentPermissions'
@@ -15,6 +16,16 @@ const VALID_REQUEST = {
 describe('agent permission boundary guards', () => {
   it('accepts a complete permission request', () => {
     expect(isAgentPermissionRequest(VALID_REQUEST)).toBe(true)
+  })
+
+  it('accepts the button permission and requires it in persisted settings', () => {
+    expect(isAgentPermissionRequest({ ...VALID_REQUEST, permissions: ['autoPressButtons'] })).toBe(true)
+    expect(isAgentPermissions({
+      autoCompleteFields: true,
+      autoUploadDocuments: false,
+      autoPressButtons: false
+    })).toBe(true)
+    expect(isAgentPermissions({ autoCompleteFields: true, autoUploadDocuments: false })).toBe(false)
   })
 
   it.each([

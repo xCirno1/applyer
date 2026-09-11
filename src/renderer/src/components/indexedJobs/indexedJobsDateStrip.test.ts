@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { utcDateString, dateStripLabel, fillDateStripDays } from './indexedJobsDateStrip'
+import { utcDateString, dateStripLabel, fillDateStripDays } from './indexedJobsDateStripLogic'
 
 const t = ((key: string) => (key === 'dateStrip.today' ? 'Today' : 'Yesterday')) as Parameters<
   typeof dateStripLabel

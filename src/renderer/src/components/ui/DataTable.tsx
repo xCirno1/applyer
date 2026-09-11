@@ -2,8 +2,8 @@ import type { ReactElement, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import Tooltip from './Tooltip'
 import { isMacPlatform } from '../../shortcuts/keyCombo'
-import { isNarrowedEmpty } from './dataTable'
-import type { SortDir } from './dataTable'
+import { isNarrowedEmpty } from './dataTableLogic'
+import type { SortDir } from './dataTableLogic'
 import type { SelectionModifiers } from './rowSelection'
 
 // Shared table shell for every data grid in the app (company boards, indexed
@@ -45,7 +45,7 @@ import type { SelectionModifiers } from './rowSelection'
 // renderer with no router, so a sort header is always a button, never a link.
 //
 // `useSortableTable(rows, { values, searchKeys })` is the client-side half,
-// holding the sort and filter-box state and applying them; `dataTable.ts` is
+// holding the sort and filter-box state and applying them; `dataTableLogic.ts` is
 // the plain-module half (same split as `workspace/workspaceLayout.ts`)
 // holding the rules worth testing on their own.
 

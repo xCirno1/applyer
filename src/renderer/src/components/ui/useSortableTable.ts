@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { filterAndSort, nextSortDir, type CellAccessors, type SortDir } from './dataTable'
+import { filterAndSort, nextSortDir, type CellAccessors, type SortDir } from './dataTableLogic'
 
 /**
  * The client-side half of `DataTable`: holds the sort and filter-box state
@@ -11,7 +11,7 @@ import { filterAndSort, nextSortDir, type CellAccessors, type SortDir } from './
  * same controls without this hook in the way.
  *
  * Same plain-module/React split as `workspace/workspaceLayout.ts` vs
- * `useWorkspaceLayout.ts`: the rules live in `dataTable.ts` and are tested
+ * `useWorkspaceLayout.ts`: the rules live in `dataTableLogic.ts` and are tested
  * there, this is only the state around them.
  */
 export interface SortableTableConfig<T> {

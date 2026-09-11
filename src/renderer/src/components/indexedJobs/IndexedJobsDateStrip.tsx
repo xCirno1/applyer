@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useIndexedJobsStore } from '../../state/indexedJobsStore'
 import Tooltip from '../ui/Tooltip'
 import Skeleton from '../ui/Skeleton'
-import { dateStripLabel, fillDateStripDays, type DateStripDay } from './indexedJobsDateStrip'
+import { dateStripLabel, fillDateStripDays, type DateStripDay } from './indexedJobsDateStripLogic'
 
 const SCROLL_STEP_PX = 200
 

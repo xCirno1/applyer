@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'fs'
-import { resolve } from 'path'
+import { join, relative, resolve } from 'path'
 import { createRequire } from 'node:module'
 import { APP_VERSION } from '../shared/version'
 
@@ -38,9 +38,34 @@ const targetNames = (targets: TargetList | undefined): string[] =>
 /** The translation catalogs the app actually ships, e.g. ['en', 'id']. */
 const catalogs = readdirSync(resolve(__dirname, '../renderer/src/i18n/locales'))
 
+function listFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name)
+    return entry.isDirectory() ? listFiles(path) : [path]
+  })
+}
+
 describe('packaging config', () => {
   it('keeps the application and MCP protocol versions aligned', () => {
     expect(APP_VERSION).toBe(pkg.version)
+  })
+
+  it('has no module names that collide on case-insensitive Windows or macOS filesystems', () => {
+    const sourceRoot = resolve(__dirname, '..')
+    const modulePaths = listFiles(sourceRoot)
+      .filter((path) => /\.[cm]?[jt]sx?$/.test(path))
+      .map((path) => relative(sourceRoot, path).replace(/\.[cm]?[jt]sx?$/, ''))
+    const seen = new Map<string, string>()
+    const collisions: string[][] = []
+
+    for (const modulePath of modulePaths) {
+      const key = modulePath.toLowerCase()
+      const existing = seen.get(key)
+      if (existing && existing !== modulePath) collisions.push([existing, modulePath])
+      else seen.set(key, modulePath)
+    }
+
+    expect(collisions).toEqual([])
   })
 
   it('round-trips macOS application metadata through the packaging plist parser', () => {

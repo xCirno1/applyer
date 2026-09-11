@@ -1,6 +1,6 @@
 /**
  * Multi-select rules for a list of rows, as plain functions — the same
- * plain-module/component split as `dataTable.ts` beside it, for the same
+ * plain-module/component split as `dataTableLogic.ts` beside it, for the same
  * reason: what a modifier-click does to a selection is the part worth
  * pinning down in a test, and it needs no DOM to exercise.
  *

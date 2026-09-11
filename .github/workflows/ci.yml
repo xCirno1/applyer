@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, release-test]
   pull_request:
 
 # Cancel superseded runs on the same branch/PR so pushes don't queue up stale jobs.
@@ -11,6 +11,17 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm audit --audit-level=high
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

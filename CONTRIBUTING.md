@@ -25,8 +25,8 @@ npm run test:site   # local job forms for manual fill/CAPTCHA/failure testing
 All four should pass clean. `npm run test` covers logic and data (job-source parsing,
 MCP schemas/tools, database repositories, encryption, config/CLI adapters, renderer
 preference logic and state stores) — it does not cover rendered React components yet, so
-UI changes still need manual verification through the app (see the README's "Is it ready
-to use?" section for the current coverage bar).
+UI changes still need manual verification through the app (see the README's development
+section for the complete quality-check commands).
 
 For browser-automation and notification changes, `npm run test:site` starts a loopback-only
 fixture site at `http://127.0.0.1:8765`. Its index links to fillable, partially supported,

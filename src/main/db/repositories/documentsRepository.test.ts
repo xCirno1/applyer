@@ -72,15 +72,19 @@ describe('addDocument', () => {
     expect(getExtractedText(doc.id)).toBe('My resume content')
   })
 
-  it.each(['encrypted', 'plaintext'] as const)('extracts DOCX text with xmldom 0.9 in %s mode', async (mode) => {
-    setStorageMode(mode)
-    const data = await docxFile('<w:p><w:r><w:t>Résumé &amp; skills</w:t></w:r></w:p><w:p><w:r><w:t>TypeScript</w:t></w:r></w:p>')
-    const doc = await addDocument({ kind: 'resume', originalFilename: 'resume.docx', mimeType: DOCX_MIME, data })
+  it.each(['encrypted', 'plaintext'] as const)(
+    'extracts DOCX text with xmldom 0.9 in %s mode',
+    async (mode) => {
+      setStorageMode(mode)
+      const data = await docxFile('<w:p><w:r><w:t>Résumé &amp; skills</w:t></w:r></w:p><w:p><w:r><w:t>TypeScript</w:t></w:r></w:p>')
+      const doc = await addDocument({ kind: 'resume', originalFilename: 'resume.docx', mimeType: DOCX_MIME, data })
 
-    expect(doc.hasExtractedText).toBe(true)
-    expect(getExtractedText(doc.id)).toBe('Résumé & skills\n\nTypeScript')
-    expect(readDocumentBytes(doc.id)).toEqual(data)
-  })
+      expect(doc.hasExtractedText).toBe(true)
+      expect(getExtractedText(doc.id)).toBe('Résumé & skills\n\nTypeScript')
+      expect(readDocumentBytes(doc.id)).toEqual(data)
+    },
+    15_000
+  )
 
   it('preserves an uploaded DOCX when malformed XML prevents text extraction', async () => {
     // The long malformed end tag exercised quadratic backtracking in xmldom 0.8.

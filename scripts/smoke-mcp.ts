@@ -12,6 +12,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { resolve } from 'path'
 import { homedir } from 'os'
 import { join } from 'path'
+import { APP_VERSION } from '../src/shared/version'
 
 function resolveDefaultSocketPath(): string {
   const appName = 'applyer'
@@ -50,7 +51,7 @@ async function main(): Promise<void> {
 
   console.log(`Connecting via bridge (socket: ${socketPath})...`)
   const transport = new StdioClientTransport({ command: 'node', args: [bridgeScript, socketPath] })
-  const client = new Client({ name: 'applyer-smoke-test', version: '0.1.0' })
+  const client = new Client({ name: 'applyer-smoke-test', version: APP_VERSION })
 
   try {
     await client.connect(transport)

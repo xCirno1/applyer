@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync, readdirSync } from 'fs'
 import { resolve } from 'path'
 import { createRequire } from 'node:module'
+import { APP_VERSION } from '../shared/version'
 
 const require = createRequire(import.meta.url)
 const builderRequire = createRequire(require.resolve('app-builder-lib'))
@@ -13,6 +14,7 @@ const plist = builderRequire('plist') as {
 type TargetList = (string | { target: string })[]
 
 const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf-8')) as {
+  version: string
   scripts: Record<string, string>
   build: {
     electronLanguages?: string[]
@@ -37,6 +39,10 @@ const targetNames = (targets: TargetList | undefined): string[] =>
 const catalogs = readdirSync(resolve(__dirname, '../renderer/src/i18n/locales'))
 
 describe('packaging config', () => {
+  it('keeps the application and MCP protocol versions aligned', () => {
+    expect(APP_VERSION).toBe(pkg.version)
+  })
+
   it('round-trips macOS application metadata through the packaging plist parser', () => {
     const info = {
       CFBundleIdentifier: 'com.applyer.app',

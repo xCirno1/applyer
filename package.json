@@ -1,17 +1,27 @@
 {
   "name": "applyer",
-  "version": "0.1.0",
-  "description": "Local Electron app for autonomous job hunting via CLI agents (Claude Code, Codex, etc.)",
+  "version": "1.0.0",
+  "description": "Local-first desktop workspace for agent-assisted job search and application drafting",
   "main": "./out/main/index.js",
   "desktopName": "com.applyer.app.desktop",
-  "author": "xCirno1",
+  "author": {
+    "name": "xCirno1",
+    "email": "support@mail.xcirno.dev"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xCirno1/applyer.git"
   },
+  "homepage": "https://github.com/xCirno1/applyer#readme",
+  "bugs": {
+    "url": "https://github.com/xCirno1/applyer/issues"
+  },
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "postinstall": "patch-package --error-on-fail && electron-rebuild -f -w better-sqlite3,node-pty && cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium",
     "dev": "electron-vite dev",

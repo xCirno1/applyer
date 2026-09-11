@@ -43,6 +43,10 @@ jobs:
           node-version: 24
           cache: npm
 
+      - name: Verify tag matches package version
+        if: github.ref_type == 'tag'
+        run: node -e "const expected = 'v' + require('./package.json').version; if (process.env.GITHUB_REF_NAME !== expected) { console.error('Expected tag ' + expected + ', got ' + process.env.GITHUB_REF_NAME); process.exit(1) }"
+
       # The deb target is handled by electron-builder's bundled fpm, but the
       # rpm one shells out to a real rpmbuild, which Ubuntu runners lack.
       - name: Install rpm tooling
@@ -111,3 +115,21 @@ jobs:
           # Real releases keep the full 90 days; test-lane runs expire in a week.
           retention-days: ${{ github.ref_type == 'tag' && 90 || 7 }}
           path: downloads
+
+  publish:
+    name: Publish GitHub release
+    if: github.ref_type == 'tag'
+    needs: collect
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: applyer-all-platforms
+          path: downloads
+
+      - name: Publish GitHub release and checksummed artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" downloads/* --verify-tag --generate-notes --title "Applyer $GITHUB_REF_NAME"

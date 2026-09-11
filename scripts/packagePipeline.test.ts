@@ -222,12 +222,12 @@ describe('needsShell', () => {
 describe('isDistributable', () => {
   it('keeps the files a download page serves', () => {
     for (const name of [
-      'Applyer-0.1.0-linux-x86_64.AppImage',
-      'applyer_0.1.0_amd64.deb',
-      'applyer-0.1.0.x86_64.rpm',
-      'Applyer-0.1.0-mac-arm64.dmg',
-      'Applyer-0.1.0-mac-arm64.zip',
-      'Applyer-0.1.0-win-x64-setup.exe'
+      'Applyer-1.0.0-linux-x86_64.AppImage',
+      'applyer_1.0.0_amd64.deb',
+      'applyer-1.0.0.x86_64.rpm',
+      'Applyer-1.0.0-mac-arm64.dmg',
+      'Applyer-1.0.0-mac-arm64.zip',
+      'Applyer-1.0.0-win-x64-setup.exe'
     ]) {
       expect(isDistributable(name), name).toBe(true)
     }
@@ -238,7 +238,7 @@ describe('isDistributable', () => {
       'latest-linux.yml',
       'latest-mac.yml',
       'builder-debug.yml',
-      'Applyer-0.1.0-mac-arm64.zip.blockmap',
+      'Applyer-1.0.0-mac-arm64.zip.blockmap',
       'linux-unpacked'
     ]) {
       expect(isDistributable(name), name).toBe(false)

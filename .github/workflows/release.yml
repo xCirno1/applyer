@@ -119,6 +119,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      # gh release create --generate-notes needs a git history to walk to
+      # build the notes; this job otherwise only downloads artifacts.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           name: applyer-all-platforms

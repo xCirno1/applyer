@@ -4,8 +4,17 @@ import type { ExportCompanyBoard, ExportIndexedJob } from '@shared/types/dataTra
 
 type CsvValue = string | number | null | undefined
 
+/**
+ * Spreadsheet applications may interpret a CSV string beginning with one of
+ * these characters as a formula. The apostrophe forces the cell to remain
+ * text when an exported file is opened, while leaving genuine numeric values
+ * (including negative numbers) untouched.
+ */
+const SPREADSHEET_FORMULA_PREFIX = /^[=+\-@\t\r\n]/
+
 function escapeCsvField(value: CsvValue): string {
-  const str = value === null || value === undefined ? '' : String(value)
+  const raw = value === null || value === undefined ? '' : String(value)
+  const str = typeof value === 'string' && SPREADSHEET_FORMULA_PREFIX.test(raw) ? `'${raw}` : raw
   if (/[",\r\n]/.test(str)) {
     return `"${str.replace(/"/g, '""')}"`
   }

@@ -6,7 +6,7 @@ import Tooltip from '../ui/Tooltip'
 import { useFormatters } from '../../i18n/format'
 import { boardAddress, boardStatus, boardStatusRank, type BoardStatus } from './boardStatus'
 import type { DataTableColumn } from '../ui/DataTable'
-import type { CellAccessors } from '../ui/dataTable'
+import type { CellAccessors } from '../ui/dataTableLogic'
 import type { CompanyBoardRecord } from '@shared/types/companyBoard'
 
 /** Provider names are proper nouns and stay untranslated. */

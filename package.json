@@ -1,17 +1,27 @@
 {
   "name": "applyer",
-  "version": "0.1.0",
-  "description": "Local Electron app for autonomous job hunting via CLI agents (Claude Code, Codex, etc.)",
+  "version": "1.0.0",
+  "description": "Local-first desktop workspace for agent-assisted job search and application drafting",
   "main": "./out/main/index.js",
   "desktopName": "com.applyer.app.desktop",
-  "author": "xCirno1",
+  "author": {
+    "name": "xCirno1",
+    "email": "support@mail.xcirno.dev"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xCirno1/applyer.git"
   },
+  "homepage": "https://github.com/xCirno1/applyer#readme",
+  "bugs": {
+    "url": "https://github.com/xCirno1/applyer/issues"
+  },
   "private": true,
   "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "scripts": {
     "postinstall": "patch-package --error-on-fail && electron-rebuild -f -w better-sqlite3,node-pty && cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium",
     "dev": "electron-vite dev",
@@ -29,7 +39,11 @@
     "test": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest run",
     "test:watch": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest",
     "test:site": "tsx scripts/test-site.ts",
-    "package": "npm run build && electron-builder"
+    "package": "tsx scripts/package.ts",
+    "package:linux": "tsx scripts/package.ts --linux",
+    "package:win": "tsx scripts/package.ts --win",
+    "package:mac": "tsx scripts/package.ts --mac",
+    "package:all": "tsx scripts/package.ts --all"
   },
   "dependencies": {
     "@codemirror/lang-css": "^6.3.1",
@@ -128,23 +142,49 @@
         "to": "icon.png"
       }
     ],
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "linux": {
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb",
+        "rpm"
       ],
       "category": "Office",
-      "syncDesktopName": true
+      "syncDesktopName": true,
+      "executableName": "applyer",
+      "maintainer": "xCirno1 <support@mail.xcirno.dev>",
+      "synopsis": "Autonomous job hunting with your CLI coding agent"
+    },
+    "deb": {
+      "artifactName": "${name}_${version}_${arch}.${ext}"
+    },
+    "rpm": {
+      "artifactName": "${name}-${version}.${arch}.${ext}"
     },
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "category": "public.app-category.productivity"
     },
     "win": {
       "target": [
-        "nsis"
+        "nsis",
+        "portable"
       ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Applyer",
+      "artifactName": "${productName}-${version}-win-${arch}-setup.${ext}",
+      "include": "build/installer.nsh"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-win-${arch}-portable.${ext}"
     }
   }
 }

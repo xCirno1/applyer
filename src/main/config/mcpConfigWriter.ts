@@ -13,6 +13,7 @@ import type {
   McpScope,
   McpVerifyResult
 } from '@shared/types/ipcEvents'
+import { APP_VERSION } from '@shared/version'
 
 const SERVER_NAME = 'applyer'
 
@@ -77,7 +78,7 @@ export async function verifyMcpConnection(): Promise<McpVerifyResult> {
     args: invocation.args,
     env: invocation.env ? { ...getDefaultEnvironment(), ...invocation.env } : undefined
   })
-  const client = new Client({ name: 'applyer-onboarding-check', version: '0.1.0' })
+  const client = new Client({ name: 'applyer-onboarding-check', version: APP_VERSION })
 
   try {
     await client.connect(transport)

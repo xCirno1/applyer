@@ -8,7 +8,7 @@ import {
   readValue,
   sortRows,
   type CellAccessors
-} from './dataTable'
+} from './dataTableLogic'
 
 interface Row {
   id: string

@@ -1,308 +1,160 @@
 <div align="center">
-  <img src="src/renderer/src/assets/logo.png" width="72" height="72" alt="Applyer logo" />
+  <img src="src/renderer/src/assets/logo.png" width="76" height="76" alt="Applyer logo" />
 
   # Applyer
 
-  **Turn a coding agent into your job-search assistant.**
+  **Turn the coding agent you already use into a focused job-search copilot.**
 
-  A local Electron app that puts Claude Code, Codex CLI, or any other MCP-capable
-  agent to work searching, matching, and drafting job applications, while you stay
-  in full control of what actually gets submitted.
+  Search, compare, queue, and draft applications in one local desktop workspace.
+  The agent handles repetition; you control every consequential action.
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-  [![Node](https://img.shields.io/badge/node-20.19%2B-339933?logo=node.js&logoColor=white)](package.json)
-  [![Electron](https://img.shields.io/badge/Electron-43-47848F?logo=electron&logoColor=white)](package.json)
-  [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](package.json)
-  [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+  [![CI](https://github.com/xCirno1/applyer/actions/workflows/ci.yml/badge.svg)](https://github.com/xCirno1/applyer/actions/workflows/ci.yml)
+  [![Release](https://img.shields.io/github/v/release/xCirno1/applyer?display_name=tag)](https://github.com/xCirno1/applyer/releases/latest)
+  [![License: MIT](https://img.shields.io/badge/license-MIT-2563eb.svg)](LICENSE)
+  [![Electron 43](https://img.shields.io/badge/Electron-43-47848f?logo=electron&logoColor=white)](package.json)
+  [![Security policy](https://img.shields.io/badge/security-policy-16a34a.svg)](SECURITY.md)
+
+  [Download v1.0](https://github.com/xCirno1/applyer/releases/latest) ·
+  [Security](SECURITY.md) ·
+  [Contributing](CONTRIBUTING.md)
 </div>
 
----
+<br />
 
-Applyer runs an embedded terminal alongside a live job board. You describe what you're
-looking for, the agent in the terminal searches the web, scores matches against your
-profile, queues them, and can even draft a filled-out application. What it never does is
-click submit. Every application gets a human review before it goes out.
+https://github.com/user-attachments/assets/c18e05b0-cf45-47c5-b748-ee69cec799bb
 
-<div align="center">
-  <img src="docs/screenshots/board.png" alt="Applyer board and terminal, mid job search" width="900" />
-</div>
+## One workspace, from search to review
 
-## Table of contents
+Applyer pairs an embedded terminal with a live application board. Connect an
+[MCP](https://modelcontextprotocol.io/)-capable CLI such as
+[Claude Code](https://claude.com/product/claude-code) or
+[Codex](https://github.com/openai/codex), describe the roles you want, and let the agent
+research job sites, score matches, organize the pipeline, and prepare forms in a visible
+browser. Final submission stays with you.
 
-- [Why](#why)
-- [How it works](#how-it-works)
-- [Inside the app](#inside-the-app)
-- [What the agent can do](#what-the-agent-can-do-mcp-tools)
-- [Where your data lives](#where-your-data-lives)
-- [Prerequisites](#prerequisites)
-- [Setup](#setup)
-- [Using it day to day](#using-it-day-to-day)
-- [Scripts](#scripts)
-- [Project layout](#project-layout)
-- [Project status](#is-it-ready-to-use)
-- [Contributing](#contributing)
-- [License](#license)
+- **Search with context** across LinkedIn and Indeed, plus public Greenhouse, Lever,
+  Ashby, and Workday boards.
+- **Work from a real pipeline** with queued, filled, submitted, and failed states,
+  exclusions, filters, bulk actions, notifications, and a searchable audit trail.
+- **Draft multi-page applications** through inspected fields and permission-gated
+  navigation. The agent cannot access a final-submit action.
+- **Keep your workflow yours** with movable local storage, JSON/CSV import and export,
+  custom appearance, keyboard shortcuts, and English or Indonesian UI.
 
-## Why
+## What changed in v1.0
 
-Job hunting is mostly repetitive research: reading postings, checking if they're a real
-fit, and filling in the same contact and experience fields over and over. Applyer hands
-that repetitive part to a coding agent you already trust to work autonomously in a
-terminal, and keeps the parts that actually matter, deciding what to apply to and hitting
-submit, in your hands.
+The first public release brings cross-platform packages, complete optional data
+encryption, company-board discovery, multi-step application inspection and editing,
+explicit agent permissions, hardened import/export and IPC boundaries, and a release
+pipeline that publishes SHA-256 checksums with every build. See the
+[changelog](CHANGELOG.md) for the concise release record.
 
-- **You own your data.** Profile, documents, and job history live on your machine,
-  encrypted with your OS keychain or stored as plain files, your choice. Nothing is sent
-  anywhere except to the agent you connect.
-- **The agent is sandboxed to a small toolset.** It gets exactly the MCP tools listed
-  [below](#what-the-agent-can-do-mcp-tools). It cannot browse your filesystem, run
-  arbitrary commands outside its own terminal, or touch anything else on your machine.
-- **Button presses require your approval.** `inspect_application` opens a real,
-  visible browser window and `fill_application` fills only the answers the agent
-  selected. Direct submit controls remain unavailable. Pressing a navigation-like
-  button is disabled by default because site scripts can attach irreversible actions
-  to any button; enable it once or persistently only when you accept that risk.
+## Security and control
 
-## How it works
+Trust is a product boundary, not a slogan:
 
-1. **Tell it about yourself.** Onboarding walks you through a profile (contact info,
-   desired roles, skills, salary expectations) and your resume or cover letter documents.
-   You choose whether this is stored encrypted (OS keychain-backed) or as plain files.
-2. **Connect an agent.** Onboarding detects installed MCP-capable CLIs (currently Claude
-   Code and Codex CLI) and can auto-configure the connection for you, or hand you a config
-   snippet to add manually. A connection can be scoped to the CLI's global config or just
-   to Applyer's own workspace directory, so it does not leak into your other projects.
-3. **Ask the agent to job hunt** from the terminal built into the app. It calls back into
-   Applyer over MCP to search, inspect postings, and manage your board.
-4. **Review on the board.** Matches land in a Kanban board (Queued, Filled, Submitted,
-   plus Failed) that updates live as the agent works.
+- **Local-first data.** Applyer has no hosted account or application-data backend.
+  Profiles, documents, job history, screenshots, and logs stay in the storage location
+  you choose. Network traffic goes to job sites and to the provider used by your agent CLI.
+- **Encryption you control.** Encrypted mode covers the SQLite database and files, with
+  keys protected by the operating-system keychain. Plaintext mode remains an explicit
+  choice. The recovery model is documented in [Encryption and local data](docs/encryption.md).
+- **Bounded automation.** The MCP bridge exposes a small, validated tool surface. Form
+  fields are inspected before editing, browser navigation requires permission, and no
+  tool can submit an application. Your CLI's own filesystem and shell permissions remain
+  governed by that CLI.
+- **Auditable releases.** CI runs lint, type checks, tests, builds, and a high-severity
+  dependency audit. Release artifacts are produced on native OS runners and published
+  with `SHA256SUMS.txt`.
+- **Responsible disclosure.** Please report security issues privately using the process
+  in [SECURITY.md](SECURITY.md), not in a public issue.
 
-## Inside the app
+## Install
 
-The main screen is one workspace, not a set of pages you navigate between. Three resizable
-regions stay live at the same time:
+Download the artifact for your operating system from
+[GitHub Releases](https://github.com/xCirno1/applyer/releases/latest):
 
-- **Pipeline overview** (left): a donut breakdown of jobs per status, plus a "needs
-  verification" list of anything the agent is currently blocked on.
-- **The board** (center): four columns with search, source, and sort filters, multi-select
-  with a bulk action bar, right-click actions per card, and a detail view for each job
-  showing its description, match reasons, and a screenshot of any drafted application.
-- **The dock** (bottom): the terminal and the activity log as two tabs of one region. The
-  terminal runs several concurrent sessions as renameable, reorderable sub-tabs, and can
-  auto-run a command (your agent CLI, for instance) in every new session.
-
-A second screen, **Indexed Jobs**, is the audit trail behind the board. Its "Indexed" tab
-lists every posting a search has surfaced, matched or not, with filters, pagination, a
-compact row mode, and a retention window. Its "Excluded" tab is the blacklist of URLs that
-will never be surfaced or queued again, by you or by the agent.
-
-Other things worth knowing:
-
-- **Verification challenges** pause a fill instead of failing it. A banner appears in the
-  app with Resume and Cancel per blocked job, and Resume re-checks that the challenge is
-  actually cleared before continuing.
-- **Keyboard shortcuts and a menu bar** cover terminal, board, and panel actions. Every
-  shortcut is rebindable in Settings, and all of them require a modifier key, so plain
-  typing in the terminal is never intercepted.
-- **Appearance** offers light, dark, or system themes, a custom accent color, and an
-  optional custom CSS editor with a panic shortcut (Ctrl/Cmd + Shift + Backspace) that
-  clears it instantly.
-- **Languages**: English and Indonesian, or match your system. Translations are catalog
-  files under `src/renderer/src/i18n/locales/`, so adding a language is a pull request, not
-  a code change.
-
-## What the agent can do (MCP tools)
-
-| Tool | Purpose |
+| Platform | Packages |
 |---|---|
-| `get_profile` | Reads your profile and document list, to judge fit and fill forms. |
-| `update_profile` | Writes fields back to your profile. Only the fields it passes are written, so an agent updating your skills from a resume cannot blank out the salary expectations you typed in. It refuses to clear your name or email, and every write is recorded in the Activity Log. |
-| `search_jobs` | Keyword search across LinkedIn and Indeed, the two sources with cross-company search. Everything it surfaces is recorded on the Indexed Jobs page, matched or not. |
-| `get_job_details` | Full posting details for a specific URL. Greenhouse, Lever, and Ashby go through their public APIs; LinkedIn, Indeed, Workday, and generic sites are read with a headless browser. |
-| `queue_job` | Adds a posting to your board, deduplicated by URL. |
-| `list_jobs` | Lists what's already on the board, optionally by status, to avoid re-queuing. |
-| `flag_failure` | Marks a job Failed with a reason tag (login required, expired listing, and so on; unrecognized tags register themselves). |
-| `inspect_application` | Opens and retains a visible application form, returning opaque field and recognized navigation-button IDs for the current visible step with semantic labels, browser hints, types, current values, and choices without changing anything. Password, hidden-step, arbitrary action, and final-action controls are omitted. Re-inspection uses only the original live window. |
-| `click_application_button` | With explicit button-press permission, clicks an inspected Next, Continue, Proceed, Back, or Previous button, consumes every button ID from that inspection, then requires a fresh inspection. Native form submission is suppressed, but website scripts may still perform arbitrary or irreversible actions. |
-| `fill_application` | Fills only explicit fieldId/value pairs chosen by the agent from an inspection. Partial pages remain Queued so later steps and stored-document uploads stay available; an explicit `finalStep` flag moves the completed form to Filled for review. It never clicks a button, advances a page, or submits. |
-| `edit_application` | Updates only explicit fieldId/value pairs in that original live form. It leaves attachments untouched and never opens a replacement, clicks a button, or submits. |
-| `exclude_job` | Blacklists a posting URL permanently, at your explicit request only. The tool description tells the agent not to use it as its own quality filter. |
+| Linux | AppImage, `.deb`, `.rpm` |
+| macOS | `.dmg`, zipped `.app` |
+| Windows | per-user NSIS installer, portable `.exe` |
 
-That is the entire surface area the agent has. Nothing else in the app or on your machine
-is exposed to it.
+You also need an installed and authenticated MCP-capable agent CLI. The first launch
+guides you through your profile, documents, storage mode, and agent connection.
 
-## Where your data lives
+> **Release integrity:** v1.0 packages are not yet code-signed or notarized, so macOS and
+> Windows may show an identity warning and Windows may scan the app on first launch.
+> Verify your download against the release's `SHA256SUMS.txt`. Never install an Applyer
+> binary obtained from an unofficial mirror.
 
-Everything stays on your computer. Settings gives you control over the details:
+### Run from source
 
-- **Storage mode**: encrypted through your OS keychain, or plain readable files. Encrypted
-  mode covers the complete SQLite database, documents and their metadata, screenshots, and
-  file logs. You can switch either way after onboarding; see
-  [`docs/encryption.md`](docs/encryption.md) for recovery and verification details.
-- **Storage location**: keep the default app-data directory, move everything (database,
-  documents, screenshots, logs) to a folder of your choosing while the app keeps running,
-  or connect to an existing Applyer dataset somewhere else. If a custom location is missing
-  at startup, say an external drive that is not plugged in, the app opens a recovery screen
-  instead of failing: reconnect and retry, or fall back to the default location and switch
-  back later.
-- **Export and import**: write a JSON bundle (jobs, exclusions, profile, settings, picked
-  per domain) or a CSV table for spreadsheets. Importing adds jobs and exclusions alongside
-  what you already have, and only overwrites profile and settings if you ask it to.
-- **Browser**: by default Applyer looks for your installed Chrome, then Edge, and only
-  downloads its own Chromium if neither is there. You can pin a specific choice instead. In
-  a packaged build, a first-time download is confirmed by you and shows live progress.
-
-### Advanced JSON settings
-
-Operational defaults live in one file, [`src/shared/settings.json`](src/shared/settings.json).
-On first launch Applyer also creates `settings.json` in its user-data directory. That user
-file is a partial override: add only the values you want to change, then restart Applyer.
-The development build uses its separate `applyer-dev` user-data directory. The exact active
-directory is shown in Help > About.
-
-The same overrides can be edited without opening the file manually. Open **Settings >
-Developer**, enable **Developer mode**, then expand a subsystem and its nested group. The
-editor chooses a control from each value's data type, validates before saving, shows which
-values are overridden, and lets each override be reset independently. Dangerous values ask
-for confirmation. Developer mode only reveals these controls; enabling it does not alter any
-runtime limit by itself.
-
-For example:
-
-```json
-{
-  "listJobsDefaultLimit": 30,
-  "atsFetchTimeoutMs": 20000
-}
-```
-
-Unknown or invalid entries are ignored and logged. Keys beginning with `dangerous` control
-resource ceilings, network concurrency, upload limits, or cache compatibility. They can be
-overridden, but the prefix is intentional: raising or otherwise changing them may increase
-memory/network usage, weaken safety limits, or invalidate stored data.
-
-## Prerequisites
-
-- Node.js 20.19+ or 22.12+ (CI runs on 24) and npm
-- Linux, macOS, or Windows (Linux is what this has actually been built and tested on so
-  far)
-- At least one MCP-capable CLI installed and authenticated, for example
-  [Claude Code](https://claude.com/claude-code) (`npm install -g @anthropic-ai/claude-code`)
-  or Codex CLI
-- On Linux, a display server (X11 or Wayland). This is a normal Electron GUI app, not a
-  headless one.
-
-## Setup
+Requires Node.js 20.19+ or 22.12+ and npm.
 
 ```bash
 git clone https://github.com/xCirno1/applyer.git
 cd applyer
-npm install   # also rebuilds native modules (better-sqlite3, node-pty) for Electron
-              # and downloads a bundled Chromium for the agent's browser automation
-npm run dev   # launches the app in development mode
+npm install
+npm run dev
 ```
 
-First launch takes you through onboarding: profile, documents, storage mode, then
-connecting a CLI. This only happens once. Later launches go straight to the workspace.
+`npm install` rebuilds the native Electron modules and installs Chromium for browser
+automation. Development builds use a separate `applyer-dev` data directory, so they do
+not touch an installed copy's data.
 
-A development run keeps its data in its own directory (`applyer-dev` next to the
-installed build's `applyer` — e.g. `~/.config/applyer-dev` on Linux), so `npm run dev`
-never touches the database, settings, or documents of an installed copy. Dev windows are
-marked **Development Build** in the top bar; hover the marker (or open Help > About) for
-the exact directory.
+## How the agent connects
 
-## Using it day to day
+Applyer can configure Claude Code and Codex during onboarding, globally or only for
+Applyer's workspace. Other MCP clients can use the generated configuration. The bridge
+offers these capabilities:
 
-1. Open the app.
-2. In the dock's **Terminal** tab, start your agent, for example type `claude` and hit
-   enter. Set an auto-start command in Settings > Agent and that happens for you.
-3. Ask it something like: *"Search for remote backend engineer roles and queue anything
-   that's a good match for my profile."*
-4. Watch matches show up on the board, open a job for full details, and once the agent has
-   drafted a fill, review and submit the application yourself in the browser window it
-   opened.
-5. Check **Indexed Jobs** to see everything the search actually saw, and exclude anything
-   you never want shown again.
+| Area | MCP tools |
+|---|---|
+| Profile | `get_profile`, `update_profile` |
+| Discovery | `search_jobs`, `get_job_details`, `add_company_board`, `list_company_boards` |
+| Pipeline | `queue_job`, `list_jobs`, `flag_failure`, `exclude_job` |
+| Application | `inspect_application`, `fill_application`, `edit_application`, `click_application_button` |
 
-## Scripts
+Every profile write and application action is visible in the Activity Log. Verification
+challenges pause the workflow for you instead of being bypassed.
+
+## Development
 
 ```bash
-npm run dev          # development mode
-npm run build        # production build (out/)
-npm run start        # preview a production build
-npm run package      # build and package a distributable (release/) via electron-builder
-npm run typecheck    # tsc, no emit (main and renderer projects)
-npm run lint         # eslint
-npm run test         # unit test suite (Vitest)
-npm run test:watch   # unit test suite in watch mode
-npm run test:site    # reusable local job forms for browser/notification testing
-npm run smoke:mcp    # exercises the MCP server end to end against a running dev instance
-npm run db:generate  # generate a Drizzle migration from schema changes
-npm run db:migrate   # apply migrations to the local database
+npm run typecheck           # main, preload, and renderer TypeScript
+npm run lint                # ESLint
+npm test                    # Vitest suite
+npm run build               # production bundle
+npm run smoke:mcp           # live MCP protocol smoke test
+npm run test:site           # local browser-automation fixtures
+npm run package             # package for this OS
+npm run package:linux       # AppImage + deb + rpm
+npm run package:mac         # dmg + zip (macOS host)
+npm run package:win         # installer + portable exe
+npm run package:all -- --dry-run
 ```
 
-## Project layout
+The `release-test` branch runs the complete Linux/macOS/Windows packaging matrix without
+publishing. A version-matching tag such as `v1.0.0` publishes the checksummed artifacts as
+a GitHub Release.
 
-```
-src/main/          Electron main process
-  browser/           Playwright automation: search, detail scraping, form filling, captcha detection
-  config/            MCP CLI adapters (Claude Code, Codex), config writing, paths, storage location
-  db/                SQLite via Drizzle: schema, migrations, repositories, encryption
-  dataTransfer/      Export bundles, CSV, import validation and application
-  ipc/               One module per IPC surface (jobs, profile, settings, terminal, and so on)
-  mcp-server/        The MCP server the agent talks to: schemas, tools, transport
-  storageLocation/   Moving, connecting, and recovering the storage root
-  terminal/          node-pty session management
-src/preload/       Context-isolated bridge exposed to the renderer as window.api
-src/renderer/      React 19 and Tailwind UI: components, pages, state, i18n, theme, shortcuts
-src/shared/        Types and constants shared across processes
-scripts/           Migration runner and the MCP smoke test
-test/              Shared test mocks
+### Repository map
+
+```text
+src/main/       Electron lifecycle, storage, browser automation, MCP, IPC
+src/preload/    context-isolated renderer bridge
+src/renderer/   React 19 interface, state, themes, and localization
+src/shared/     validated types, settings, and cross-process contracts
+scripts/        migrations, smoke tests, and packaging pipeline
+test/           shared mocks and local job-site fixtures
 ```
 
-`CLAUDE.md` at the root and `src/renderer/src/components/CLAUDE.md` document the code and
-design conventions this project follows, including where new components belong.
-
-## Is it ready to use?
-
-Yes, for personal, single-user use on Linux. Concretely, what has been verified:
-
-- Onboarding through profile, documents, storage mode (encrypted or plaintext, switchable
-  later from Settings), and MCP connection, working end to end.
-- The read, search, queue, and failure tools pass a scripted protocol smoke test
-  (`npm run smoke:mcp`), including validation and error paths, against both dev mode and a
-  packaged build. `update_profile` is only exercised there through its rejection paths, on
-  purpose: a valid call would rewrite the real profile of whoever runs the script. `fill_application` and `exclude_job` are covered by unit tests and manual
-  runs rather than by that script, since one drives a real browser and the other is
-  permanent by design.
-- A [Vitest](https://vitest.dev) suite of roughly 570 unit tests (`npm run test`) covers
-  the pure and business logic across the app: job-source parsing, MCP schema validation and
-  tool handlers, database repositories (against a real SQLite instance with real
-  migrations, not a mock), encryption, storage-location migration and recovery, export and
-  import, MCP CLI adapters, i18n catalogs, and the renderer's localStorage-backed
-  preference logic (theme, shortcuts, workspace layout) plus its state stores. Rendered
-  React components are not covered yet, so UI changes still need a manual pass.
-- The **packaged app** (`npm run package`) was built, launched standalone, and driven
-  through the real MCP bridge exactly as an installed CLI would, including a live
-  `search_jobs` call that launched a browser and returned real Indeed results. Two
-  packaging-specific bugs (a display-server crash in the MCP bridge process, and an asar
-  and Playwright incompatibility) were found and fixed this way rather than inferred from
-  config.
-- Lint, typecheck, and the test suite run on every push and pull request in CI.
-
-For getting a coding agent to help you look for jobs on your own machine, it is in good
-enough shape to start using today. Treat a packaged build on macOS or Windows as unverified
-until someone actually builds and runs one there.
-
-## Contributing
-
-Bug reports, feature ideas, translations, and pull requests are all welcome. See
-[CONTRIBUTING.md](CONTRIBUTING.md) for how to get set up and what to check before opening a
-PR, and please read the [Code of Conduct](CODE_OF_CONDUCT.md).
+Contributions are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md), follow the
+[Code of Conduct](CODE_OF_CONDUCT.md), and use the issue templates for reproducible bug
+reports or focused feature requests.
 
 ## License
 
-Applyer is released under the [MIT License](LICENSE), copyright (c) 2026 xCirno1. You are
-free to use, copy, modify, and distribute it, including commercially, as long as the
-copyright notice and the license text travel with any substantial portion of the code. The
-software comes with no warranty of any kind.
+[MIT](LICENSE) © 2026 xCirno1. Use, study, modify, and distribute Applyer with the license
+notice included. The software is provided without warranty.

@@ -1,4 +1,5 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import { APP_VERSION } from '@shared/version'
 import {
   searchJobsShape,
   getJobDetailsShape,
@@ -31,7 +32,7 @@ import { addCompanyBoardTool } from './tools/addCompanyBoard'
 import { listCompanyBoardsTool } from './tools/listCompanyBoards'
 
 export function createApplyerMcpServer(): McpServer {
-  const server = new McpServer({ name: 'applyer', version: '0.1.0' })
+  const server = new McpServer({ name: 'applyer', version: APP_VERSION })
 
   server.registerTool(
     'get_profile',

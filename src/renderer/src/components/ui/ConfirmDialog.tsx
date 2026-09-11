@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import Modal from './Modal'
 import Button from './Button'
 
+// Built on Modal — the only way to ask "are you sure?"; never use native confirm().
+
 interface ConfirmDialogProps {
   open: boolean
   title: string

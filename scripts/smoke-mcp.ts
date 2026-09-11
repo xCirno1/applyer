@@ -64,9 +64,11 @@ async function main(): Promise<void> {
   const toolNames = tools.map((t) => t.name).sort()
   console.log(`  found: ${toolNames.join(', ')}`)
   const expected = [
+    'add_company_board',
     'flag_failure',
     'get_job_details',
     'get_profile',
+    'list_company_boards',
     'list_jobs',
     'queue_job',
     'search_jobs',
@@ -184,6 +186,33 @@ async function main(): Promise<void> {
 
     const invalid = await client.callTool({ name: 'get_job_details', arguments: { url: 'not-a-url' } })
     check('invalid url rejected cleanly', invalid.isError === true)
+  }
+
+  console.log('\n== add_company_board / list_company_boards ==')
+  {
+    // Only the rejections are exercised: a valid add probes live board APIs
+    // and then writes to the user's real watchlist, which a smoke run has no
+    // business doing.
+    const noProvider = await client.callTool({
+      name: 'add_company_board',
+      arguments: { company: 'Smoke Test Co', token: 'smoke-test' }
+    })
+    check('token without provider rejected cleanly', noProvider.isError === true)
+
+    const badProvider = await client.callTool({
+      name: 'add_company_board',
+      arguments: { company: 'Smoke Test Co', provider: 'smartrecruiters', token: 'smoke-test' }
+    })
+    check('unknown provider rejected cleanly', badProvider.isError === true)
+
+    const empty = await client.callTool({ name: 'add_company_board', arguments: { company: '' } })
+    check('empty company rejected cleanly', empty.isError === true)
+
+    const list = await client.callTool({ name: 'list_company_boards', arguments: { limit: 5 } })
+    check('valid list call does not error', !list.isError, JSON.stringify(list.content))
+
+    const badLimit = await client.callTool({ name: 'list_company_boards', arguments: { limit: 9999 } })
+    check('limit above max rejected cleanly', badLimit.isError === true)
   }
 
   await client.close()

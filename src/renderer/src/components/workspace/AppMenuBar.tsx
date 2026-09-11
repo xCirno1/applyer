@@ -4,6 +4,7 @@ import Menu, { MenuBar, type MenuEntry } from '../ui/Menu'
 import Modal from '../ui/Modal'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { useToast } from '../ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useShortcuts } from '../../providers/ShortcutsContext'
 import { comboIdToLabel } from '../../shortcuts/keyCombo'
 import type { CommandId } from '../../shortcuts/commands'
@@ -11,14 +12,19 @@ import { useJobsStore } from '../../state/jobsStore'
 import { useAppInfo } from '../../state/useAppInfo'
 import type { SectionId } from '../../pages/Settings/SettingsPage'
 
-/**
- * The app's VS Code-style menu row (File/Terminal/Jobs/View/Help), replacing
- * what used to be a single standalone `ViewMenu`. Each top-level entry is a
- * `Menu` dropdown; behavior for commands owned by other mounted components
- * (the terminal tab actions) goes through `runCommand` rather than
- * duplicating that logic here, so the menu item and the keyboard shortcut
- * always do exactly the same thing.
- */
+// The app's VS Code-style menu row (File/Terminal/Jobs/View/Help), replacing
+// what used to be a single standalone `ViewMenu`. Each top-level entry is a
+// `Menu` dropdown; behavior for commands owned by other mounted components
+// (the terminal tab actions) goes through `ShortcutsContext`'s `runCommand`
+// rather than duplicating that logic here, so a menu click fires the exact
+// same handler as the keyboard shortcut (and reveals the dock's Terminal tab
+// first, in case it's hidden). Rendered by `App.tsx`'s `MainShell` (not
+// `WorkspacePage`) so the top bar spans the full window width above the icon
+// rail. Jobs > Retry All Failed hits the `jobs:retryAll` bulk IPC behind a
+// `ConfirmDialog`. Help > About renders the app version and user-data
+// directory (where the advanced `settings.json` override lives) from
+// `state/useAppInfo.ts`; Help > Keyboard Shortcuts deep-links Settings to its
+// `shortcuts` section via `onOpenSettings(section)`.
 export default function AppMenuBar({
   onOpenSettings,
   onOpenExport,
@@ -64,7 +70,10 @@ export default function AppMenuBar({
   const handleRetryAll = async (): Promise<void> => {
     setConfirmRetryAllOpen(false)
     setRetryingAll(true)
-    const result = await window.api.jobs.retryAll()
+    const result = await callIpc('jobs.retryAll', () => window.api.jobs.retryAll(), {
+      ok: false,
+      jobs: []
+    })
     setRetryingAll(false)
     if (!result.ok) {
       toast.error(t('retryAll.failed'))
@@ -106,6 +115,14 @@ export default function AppMenuBar({
       label: t('menu.renameTerminal'),
       shortcut: shortcutLabel('terminal.rename'),
       onSelect: () => runTerminalCommand('terminal.rename')
+    },
+    { type: 'separator', key: 'sep-rename' },
+    {
+      type: 'action',
+      key: 'search',
+      label: t('menu.findInTerminal'),
+      shortcut: shortcutLabel('terminal.search'),
+      onSelect: () => runTerminalCommand('terminal.search')
     },
     { type: 'separator', key: 'sep' },
     {
@@ -185,11 +202,11 @@ export default function AppMenuBar({
         <div className="flex flex-col gap-1">
           <span className="text-[13px] font-medium text-text">{t('about.name')}</span>
           <span className="text-[12px] text-text-muted">
-            {t('about.version', { version: appInfo?.version ?? '—' })}
+            {t('about.version', { version: appInfo?.version ?? t('states.loading', { ns: 'common' }) })}
           </span>
-          {appInfo?.isDevBuild === true && (
+          {appInfo && (
             <span className="mt-1 text-[12px] text-text-muted">
-              {t('about.developmentBuildDataDirectory')}{' '}
+              {t('about.dataDirectory')}{' '}
               <span className="break-all text-text">{appInfo.userDataDir}</span>
             </span>
           )}

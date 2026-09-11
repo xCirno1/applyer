@@ -34,7 +34,7 @@ export function useErrorMessage(): (error: unknown) => string {
         // (or from a future main-process version); show it as-is rather than
         // swallowing the only diagnostic the user has.
         const message = typeof error === 'string' ? error : String(error ?? '')
-        return message ? t('unexpected', { message }) : t('unexpected', { message: '—' })
+        return message ? t('unexpected', { message }) : t('unexpectedNoDetail')
       }
 
       if (!KNOWN_CODES.has(error.code)) {

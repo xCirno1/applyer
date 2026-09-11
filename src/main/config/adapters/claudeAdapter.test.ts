@@ -44,13 +44,16 @@ describe('claudeAdapter', () => {
     expect(opts.cwd).toContain('workspace')
   })
 
-  it('configure builds a `claude mcp add --scope user` command with env flags', async () => {
+  it('configure builds a `claude mcp add --scope user` command with env flags after the server name', async () => {
     runCommand.mockResolvedValue({ code: 0, stdout: '', stderr: '' })
     const result = await claudeAdapter.configure('applyer', { ...invocation, env: { FOO: 'bar' } }, 'user')
     expect(result).toEqual({ success: true })
+    // The server name must precede `-e`/`--env`: it's a variadic option, so
+    // placing it before the positional <name> makes the CLI swallow <name>
+    // as another env pair ("Invalid environment variable format: <name>").
     expect(runCommand).toHaveBeenCalledWith(
       'claude',
-      ['mcp', 'add', '--scope', 'user', '-e', 'FOO=bar', 'applyer', '--', 'node', '/path/to/bridge.mjs', '/tmp/mcp.sock'],
+      ['mcp', 'add', '--scope', 'user', 'applyer', '-e', 'FOO=bar', '--', 'node', '/path/to/bridge.mjs', '/tmp/mcp.sock'],
       { cwd: undefined }
     )
   })

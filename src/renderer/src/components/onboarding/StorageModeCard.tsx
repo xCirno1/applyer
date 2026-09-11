@@ -1,6 +1,10 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 
+// Selectable card for the plain-language encrypted-vs-plaintext storage
+// choice; supports a disabled state with reason (e.g. no OS keychain
+// available).
+
 interface StorageModeCardProps {
   title: string
   description: string

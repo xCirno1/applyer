@@ -1,6 +1,10 @@
 import { createContext, useContext } from 'react'
 import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
 
+// Context split into its own file so CaptchaAlertProvider.tsx stays a
+// component-only export (required for Fast Refresh) — see that file's doc
+// comment for what actually populates this value.
+
 export interface CaptchaAlertContextValue {
   blockedJobIds: Set<string>
   pending: CaptchaDetectedPayload[]

@@ -10,7 +10,7 @@ beforeEach(() => {
   testDb = createTestDb().db
 })
 
-import { jobs, indexedJobs, jobExclusions, activityLog } from '../schema'
+import { jobs, indexedJobs, jobExclusions, companyBoards, activityLog } from '../schema'
 import { getStorageRowCounts } from './storageStatsRepository'
 
 describe('getStorageRowCounts', () => {
@@ -19,6 +19,7 @@ describe('getStorageRowCounts', () => {
       jobs: 0,
       indexedJobs: 0,
       exclusions: 0,
+      companyBoards: 0,
       documents: 0,
       activityLogEntries: 0
     })
@@ -32,12 +33,24 @@ describe('getStorageRowCounts', () => {
       .values({ id: 'i1', url: 'https://acme.com/3', title: 'PM', company: 'Acme', searchQuery: 'pm' })
       .run()
     testDb.insert(jobExclusions).values({ id: 'e1', url: 'https://bad.com/1', excludedBy: 'user' }).run()
+    testDb
+      .insert(companyBoards)
+      .values({
+        id: 'b1',
+        boardKey: 'greenhouse:acme',
+        provider: 'greenhouse',
+        token: 'acme',
+        companyName: 'Acme',
+        addedBy: 'user'
+      })
+      .run()
     testDb.insert(activityLog).values({ message: 'started' }).run()
 
     expect(getStorageRowCounts()).toEqual({
       jobs: 2,
       indexedJobs: 1,
       exclusions: 1,
+      companyBoards: 1,
       documents: 0,
       activityLogEntries: 1
     })

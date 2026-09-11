@@ -36,9 +36,15 @@ function normalizeList(values: string[]): string[] {
   return result
 }
 
-function isEqual(a: ProfileFields[keyof ProfileFields], b: ProfileFields[keyof ProfileFields]): boolean {
+function isEqual(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && a.every((item, i) => item === b[i])
+    return a.length === b.length && a.every((item, i) => isEqual(item, b[i]))
+  }
+  if (a !== null && b !== null && typeof a === 'object' && typeof b === 'object') {
+    const aRecord = a as Record<string, unknown>
+    const bRecord = b as Record<string, unknown>
+    const keys = Object.keys(aRecord)
+    return keys.length === Object.keys(bRecord).length && keys.every((key) => isEqual(aRecord[key], bRecord[key]))
   }
   return a === b
 }

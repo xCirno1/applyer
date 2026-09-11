@@ -1,7 +1,8 @@
-import { protocol, net } from 'electron'
-import { pathToFileURL } from 'url'
+import { protocol } from 'electron'
 import { join } from 'path'
+import { readFileSync } from 'fs'
 import { screenshotsDir } from './config/paths'
+import { readSecureFileBuffer } from './db/encryption'
 
 // Must run before app.whenReady() — Electron requires privileged schemes to
 // be registered at module load time.
@@ -11,7 +12,8 @@ protocol.registerSchemesAsPrivileged([
 
 /**
  * Serves screenshots to the renderer without exposing raw file:// access.
- * URLs look like applyer-file://screenshots/<filename> — the filename is
+ * URLs look like applyer-file://screenshots/<filename> — each retained form
+ * step has its own filename, and the filename is
  * validated to be a bare name (no path traversal) before joining it against
  * the one directory this protocol is allowed to read from.
  */
@@ -28,6 +30,11 @@ export function registerApplyerFileProtocol(): void {
     }
 
     const filePath = join(screenshotsDir(), filename)
-    return net.fetch(pathToFileURL(filePath).toString())
+    try {
+      const image = readSecureFileBuffer(readFileSync(filePath))
+      return new Response(new Uint8Array(image), { headers: { 'Content-Type': 'image/png' } })
+    } catch {
+      return new Response('Not found', { status: 404 })
+    }
   })
 }

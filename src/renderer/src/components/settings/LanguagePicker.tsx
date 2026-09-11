@@ -16,20 +16,18 @@ interface LanguagePickerProps {
   id?: string
 }
 
-/**
- * The language picker itself, shared by Settings > Language and the
- * onboarding welcome step — someone whose system language guessed wrong
- * needs to switch before working through a flow they can't read.
- *
- * Deliberately lists each language in its own script ("Bahasa Indonesia",
- * not "Indonesian"): a user who has landed in a language they can't read
- * has to be able to recognise their own to get out.
- *
- * The option list comes from the `settings` namespace at both call sites so
- * the two pickers can never drift apart in wording; only the field label is
- * per-call-site, since onboarding asks ("Please select your language")
- * where Settings just labels a row.
- */
+// The display-language Select (preference via `useLocale`), listing each
+// language in its own script ("Bahasa Indonesia", not "Indonesian") so
+// someone stuck in a language they can't read can still recognise their own.
+// Rendered by Settings > Language and by the onboarding Welcome step (below
+// the three steps) — offered during onboarding rather than only in Settings
+// so a wrong system-language guess can be fixed without finishing a flow the
+// user can't read.
+//
+// The option list comes from the `settings` namespace at both call sites so
+// the wording can't drift; only the field `label` is per-call-site, since
+// onboarding asks ("Please select your language") where Settings just labels
+// a row.
 export default function LanguagePicker({ label, id }: LanguagePickerProps): ReactElement {
   const { t } = useTranslation('settings')
   const { preference, setPreference } = useLocale()

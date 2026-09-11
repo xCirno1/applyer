@@ -4,12 +4,29 @@ import Modal from '../ui/Modal'
 import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Tag from '../ui/Tag'
+import MetaList from '../ui/MetaList'
 import { useToast } from '../ui/useToast'
 import { useJobsStore } from '../../state/jobsStore'
 import { useErrorMessage } from '../../i18n/formatError'
+import { callIpc } from '../../lib/ipcCall'
 import { useFormatters } from '../../i18n/format'
 import type { JobRecord } from '@shared/types/job'
 import type { ActivityLogEntry } from '@shared/types/activity'
+import { failureLabelKey, failureMessageDisplay, humanizeFailureTag } from './failureDisplay'
+
+// Full job detail: description rendered as sanitized HTML, match reasons, a
+// screenshot preview for Filled jobs served via the `applyer-file://`
+// protocol, and status-contextual actions — Unqueue for Queued, Retry for
+// Failed, Mark Submitted for Filled, Exclude for anything not yet Submitted,
+// and Remove for Filled/Submitted — all behind spinner+disable /
+// `ConfirmDialog`, never a bare click. Excluding
+// removes the job from the board and blacklists its URL (see
+// `indexedJobs/ExclusionsPanel.tsx`); Unqueue removes it from the board
+// without blacklisting, so the agent can still re-discover and re-queue it
+// later. Mounted once at `App.tsx`'s `MainShell` level (global `jobsStore`
+// state), not owned by `KanbanBoard` — see that store's `openJobId`/
+// `activeJob` for why: multiple panels across multiple screens (the board,
+// `PipelineOverview`'s verification list, Indexed Jobs rows) all open it.
 
 export default function JobDetailModal({ job, onClose }: { job: JobRecord | null; onClose: () => void }): ReactElement | null {
   const { t } = useTranslation('board')
@@ -22,15 +39,20 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   const [retrying, setRetrying] = useState(false)
   const [excluding, setExcluding] = useState(false)
   const [unqueueing, setUnqueueing] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false)
   const [confirmExcludeOpen, setConfirmExcludeOpen] = useState(false)
   const [confirmUnqueueOpen, setConfirmUnqueueOpen] = useState(false)
+  const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
   const [activity, setActivity] = useState<ActivityLogEntry[]>([])
 
   useEffect(() => {
     if (!job) return
     let cancelled = false
-    window.api.logs.list({ jobId: job.id, limit: 20 }).then((result) => {
+    void callIpc('logs.list(job)', () => window.api.logs.list({ jobId: job.id, limit: 20 }), {
+      entries: [],
+      total: 0
+    }).then((result) => {
       if (!cancelled) setActivity(result.entries)
     })
     return () => {
@@ -44,10 +66,27 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
 
   if (!job) return null
 
+  const failureTagKey = job.failureTag ? failureLabelKey(job.failureTag) : null
+  const failureLabel = job.failureTag
+    ? failureTagKey
+      ? t(failureTagKey)
+      : humanizeFailureTag(job.failureTag)
+    : null
+  const displayedFailureMessage = job.failureTag
+    ? failureMessageDisplay(job.failureTag, job.failureMessage)
+    : null
+  const failureMessage = displayedFailureMessage?.key
+    ? t(displayedFailureMessage.key, displayedFailureMessage.params)
+    : displayedFailureMessage?.raw
+
   const handleMarkSubmitted = async (): Promise<void> => {
     setConfirmSubmitOpen(false)
     setSubmitting(true)
-    const result = await window.api.jobs.markSubmitted(job.id)
+    const result = await callIpc(
+      'jobs.markSubmitted',
+      () => window.api.jobs.markSubmitted(job.id),
+      { ok: false }
+    )
     setSubmitting(false)
     if (result.ok && result.job) {
       applyUpdate(result.job)
@@ -60,7 +99,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
 
   const handleRetry = async (): Promise<void> => {
     setRetrying(true)
-    const result = await window.api.jobs.retry(job.id)
+    const result = await callIpc(
+      'jobs.retry',
+      () => window.api.jobs.retry(job.id),
+      { ok: false }
+    )
     setRetrying(false)
     if (result.ok && result.job) {
       applyUpdate(result.job)
@@ -74,7 +117,7 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   const handleExclude = async (): Promise<void> => {
     setConfirmExcludeOpen(false)
     setExcluding(true)
-    const result = await window.api.jobs.exclude(job.id)
+    const result = await callIpc('jobs.exclude', () => window.api.jobs.exclude(job.id), { ok: false })
     setExcluding(false)
     if (result.ok) {
       removeJobLocal(job.id)
@@ -88,7 +131,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   const handleUnqueue = async (): Promise<void> => {
     setConfirmUnqueueOpen(false)
     setUnqueueing(true)
-    const result = await window.api.jobs.unqueue(job.id)
+    const result = await callIpc(
+      'jobs.unqueue',
+      () => window.api.jobs.unqueue(job.id),
+      { ok: false }
+    )
     setUnqueueing(false)
     if (result.ok) {
       removeJobLocal(job.id)
@@ -99,20 +146,37 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
     }
   }
 
+  const handleRemove = async (): Promise<void> => {
+    setConfirmRemoveOpen(false)
+    setRemoving(true)
+    const result = await callIpc('jobs.remove', () => window.api.jobs.remove(job.id), { ok: false })
+    setRemoving(false)
+    if (result.ok) {
+      removeJobLocal(job.id)
+      toast.success(t('toast.removedSingle'))
+      onClose()
+    } else {
+      toast.error(result.error ? errorMessage(result.error) : t('toast.removeSingleFailed'))
+    }
+  }
+
   return (
     <Modal open={!!job} onClose={onClose} title={job.title} width="max-w-xl">
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-center gap-2 text-[12px] text-text-muted">
-          <span className="font-medium text-text">{job.company}</span>
-          {job.location && <span>· {job.location}</span>}
-          {job.salaryRange && <span>· {job.salaryRange}</span>}
-          {job.matchScore !== null && <span>· {t('detail.match', { score: job.matchScore })}</span>}
-        </div>
+        <MetaList
+          className="text-[12px] text-text-muted"
+          items={[
+            { key: 'company', value: job.company, className: 'font-medium text-text' },
+            job.location && { key: 'location', value: job.location },
+            job.salaryRange && { key: 'salary', value: job.salaryRange },
+            job.matchScore !== null && { key: 'match', value: t('detail.match', { score: job.matchScore }) }
+          ]}
+        />
 
         {job.failureTag && (
-          <div className="flex items-center gap-2">
-            <Tag label={job.failureTag.replace(/_/g, ' ')} tone="danger" />
-            {job.failureMessage && <span className="text-[12px] text-text-muted">{job.failureMessage}</span>}
+          <div className="flex min-w-0 items-start gap-2">
+            <Tag label={failureLabel ?? humanizeFailureTag(job.failureTag)} tone="danger" />
+            {failureMessage && <span className="min-w-0 flex-1 text-[12px] leading-5 text-text-muted">{failureMessage}</span>}
           </div>
         )}
 
@@ -127,14 +191,22 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
           </div>
         )}
 
-        {job.screenshotPath && (
+        {(job.screenshotPaths.length > 0 || job.screenshotPath) && (
           <div>
             <p className="text-[12px] font-medium text-text-muted">{t('detail.screenshot')}</p>
-            <img
-              src={`applyer-file://screenshots/${job.id}.png`}
-              alt={t('detail.screenshotAlt')}
-              className="mt-1 max-h-64 w-full border border-border-soft object-contain object-top"
-            />
+            <div className="mt-1 grid gap-2 sm:grid-cols-2">
+              {(job.screenshotPaths.length > 0 ? job.screenshotPaths : [job.screenshotPath as string]).map((path, index) => {
+                const filename = path.split(/[\\/]/).pop() ?? ''
+                return (
+                  <img
+                    key={path}
+                    src={`applyer-file://screenshots/${encodeURIComponent(filename)}`}
+                    alt={t('detail.screenshotAlt', { page: index + 1 })}
+                    className="max-h-64 w-full border border-border-soft object-contain object-top"
+                  />
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -176,6 +248,11 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
                 {t('actions.unqueue')}
               </Button>
             )}
+            {(job.status === 'filled' || job.status === 'submitted') && (
+              <Button size="sm" variant="secondary" onClick={() => setConfirmRemoveOpen(true)} loading={removing}>
+                {t('actions.remove')}
+              </Button>
+            )}
             {job.status !== 'submitted' && (
               <Button size="sm" variant="danger" onClick={() => setConfirmExcludeOpen(true)} loading={excluding}>
                 {t('actions.exclude')}
@@ -212,6 +289,16 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
         danger
         onConfirm={handleExclude}
         onCancel={() => setConfirmExcludeOpen(false)}
+      />
+
+      <ConfirmDialog
+        open={confirmRemoveOpen}
+        title={t('confirm.removeTitle', { count: 1 })}
+        message={t('confirm.removeMessage', { count: 1 })}
+        confirmLabel={t('actions.remove')}
+        danger
+        onConfirm={handleRemove}
+        onCancel={() => setConfirmRemoveOpen(false)}
       />
 
       <ConfirmDialog

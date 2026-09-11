@@ -11,10 +11,12 @@
     "loadMore": "Load more",
     "copy": "Copy",
     "copied": "Copied",
+    "copyFailed": "Copy failed",
     "back": "Back",
     "next": "Next",
     "skip": "Skip",
-    "browse": "Browse…"
+    "browse": "Browse…",
+    "done": "Done"
   },
   "dropdown": {
     "placeholder": "Select…"
@@ -23,6 +25,10 @@
     "label": "Pagination",
     "previous": "Previous page",
     "next": "Next page"
+  },
+  "table": {
+    "filter": "Filter this table",
+    "sortBy": "Sort by this column"
   },
   "fileDrop": {
     "hint": "Click or drag a file here"
@@ -58,9 +64,28 @@
     "skills": "Skills",
     "commaSeparated": "comma-separated",
     "summary": "Summary",
+    "additionalInformation": "Additional information",
+    "additionalInformationHint": "Save answers to application questions, such as \"What's your hobby?\", so Applyer can fill them when the question appears.",
+    "addAdditionalInformation": "Add answer",
+    "question": "Question",
+    "answer": "Answer",
+    "notSet": "Not set",
+    "editField": "Edit {{field}}",
+    "editAdditionalInformation": "Edit answer for {{question}}",
     "nameEmailRequired": "Full name and email are required.",
     "saved": "Profile saved.",
     "saveFailed": "Failed to save profile.",
     "changedElsewhere": "Profile was updated elsewhere. Your unsaved edits here were kept, so saving now will overwrite that update."
+  },
+  "errorBoundary": {
+    "title": "Something went wrong here",
+    "body": "This part of Applyer stopped rendering. Everything else is still running - try again, and if it keeps happening, restart the app.",
+    "tryAgain": "Try again",
+    "details": "Technical details"
+  },
+  "boot": {
+    "failedTitle": "Applyer could not start",
+    "failedBody": "The app could not read its own storage state. This usually means the storage folder is unavailable: a disconnected drive, or a folder that has been moved or made read-only.",
+    "failedRetry": "Try again"
   }
 }

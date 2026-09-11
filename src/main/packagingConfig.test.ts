@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
+import { readFileSync, readdirSync } from 'fs'
 import { resolve } from 'path'
+import { createRequire } from 'node:module'
+
+const require = createRequire(import.meta.url)
+const builderRequire = createRequire(require.resolve('app-builder-lib'))
+const plist = builderRequire('plist') as {
+  build(value: Record<string, unknown>): string
+  parse(xml: string): Record<string, unknown>
+}
 
 type TargetList = (string | { target: string })[]
 
@@ -25,9 +33,36 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'u
 const targetNames = (targets: TargetList | undefined): string[] =>
   (targets ?? []).map((t) => (typeof t === 'string' ? t : t.target))
 
+/** The translation catalogs the app actually ships, e.g. ['en', 'id']. */
+const catalogs = readdirSync(resolve(__dirname, '../renderer/src/i18n/locales'))
+
 describe('packaging config', () => {
-  it('restricts Electron locales to en-US', () => {
-    expect(pkg.build.electronLanguages).toEqual(['en-US'])
+  it('round-trips macOS application metadata through the packaging plist parser', () => {
+    const info = {
+      CFBundleIdentifier: 'com.applyer.app',
+      CFBundleDisplayName: 'Applyer & Résumé',
+      LSUIElement: false,
+      CFBundleDocumentTypes: [{ CFBundleTypeExtensions: ['docx', 'pdf'] }]
+    }
+    expect(plist.parse(plist.build(info))).toEqual(info)
+  })
+
+  // `electronLanguages` prunes Electron's *own* locale resources, which is
+  // what the native surfaces read: file dialogs, the context menu, the
+  // application menu. Asserted against the catalog directory rather than a
+  // hardcoded list so adding a third language cannot leave those surfaces
+  // pinned to English without this failing.
+  it('packages an Electron locale for every catalog the app ships', () => {
+    const packaged = pkg.build.electronLanguages ?? []
+    for (const catalog of catalogs) {
+      expect(packaged.some((locale) => locale === catalog || locale.startsWith(`${catalog}-`))).toBe(true)
+    }
+  })
+
+  // The other half of the rule: Electron carries a resource file per language,
+  // and this app has no reason to ship the ~50 it does not translate.
+  it('packages no locales beyond those', () => {
+    expect(pkg.build.electronLanguages).toHaveLength(catalogs.length)
   })
 
   it('excludes the whole .local-browsers directory — packaged builds resolve browsers at runtime instead (browserController.ts)', () => {

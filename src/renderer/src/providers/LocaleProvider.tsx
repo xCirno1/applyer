@@ -12,8 +12,8 @@ import {
 import { LocaleContext } from './LocaleContext'
 
 /**
- * Owns the language preference and keeps i18next, `<html lang>`, and
- * localStorage in agreement.
+ * Owns the language preference and keeps i18next, `<html lang>`, localStorage,
+ * and main-process native notifications in agreement.
  *
  * Same shape as ThemeProvider: the preference itself is a plain localStorage
  * value (i18n/locale.ts), and this only wires it to React. Unlike the theme
@@ -49,6 +49,16 @@ export default function LocaleProvider({ children }: { children: ReactNode }): R
     // right language. LTR-only for now — see CONTRIBUTING.md before adding
     // an RTL locale, the layout uses physical direction classes.
     document.documentElement.setAttribute('lang', resolved)
+
+    // Native notifications are created by Electron's main process, outside
+    // i18next's renderer context. Keep a persisted resolved locale there so
+    // both real job events and Settings' test actions use the same language.
+    void window.api.settings
+      .setNotificationLocale(resolved)
+      .then((result) => {
+        if (!result.ok) console.error('Could not synchronize notification locale', result.error)
+      })
+      .catch((error: unknown) => console.error('Could not synchronize notification locale', error))
   }, [resolved])
 
   const setPreference = useCallback((next: LocalePreference) => {

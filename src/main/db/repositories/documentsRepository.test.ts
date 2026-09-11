@@ -22,6 +22,35 @@ import {
 } from './documentsRepository'
 import { setStorageMode } from './settingsRepository'
 import { MAX_DOCUMENT_SIZE_BYTES } from '@shared/constants'
+import { statSync, chmodSync } from 'fs'
+import { getDb } from '../index'
+import { documents } from '../schema'
+import { eq } from 'drizzle-orm'
+import JSZip from 'jszip'
+
+async function docxFile(body: string): Promise<Buffer> {
+  const zip = new JSZip()
+  zip.file('[Content_Types].xml', `<?xml version="1.0"?>
+    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+    </Types>`)
+  zip.file('word/document.xml', `<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body}</w:body></w:document>`)
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
+}
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+
+/** Permission bits, or null on Windows, where the mode is not meaningful. */
+function fileMode(path: string): number | null {
+  if (process.platform === 'win32') return null
+  return statSync(path).mode & 0o777
+}
+
+function storedPathOf(id: string): string {
+  const row = getDb().select().from(documents).where(eq(documents.id, id)).get()
+  if (!row) throw new Error(`No document row for ${id}`)
+  return row.storedPath
+}
 
 function textFile(content: string): { kind: 'resume'; originalFilename: string; mimeType: string; data: Buffer } {
   return { kind: 'resume' as const, originalFilename: 'resume.txt', mimeType: 'text/plain', data: Buffer.from(content, 'utf-8') }
@@ -41,6 +70,37 @@ describe('addDocument', () => {
     const doc = await addDocument(textFile('  My resume content  '))
     expect(doc.hasExtractedText).toBe(true)
     expect(getExtractedText(doc.id)).toBe('My resume content')
+  })
+
+  it.each(['encrypted', 'plaintext'] as const)('extracts DOCX text with xmldom 0.9 in %s mode', async (mode) => {
+    setStorageMode(mode)
+    const data = await docxFile('<w:p><w:r><w:t>Résumé &amp; skills</w:t></w:r></w:p><w:p><w:r><w:t>TypeScript</w:t></w:r></w:p>')
+    const doc = await addDocument({ kind: 'resume', originalFilename: 'resume.docx', mimeType: DOCX_MIME, data })
+
+    expect(doc.hasExtractedText).toBe(true)
+    expect(getExtractedText(doc.id)).toBe('Résumé & skills\n\nTypeScript')
+    expect(readDocumentBytes(doc.id)).toEqual(data)
+  })
+
+  it('preserves an uploaded DOCX when malformed XML prevents text extraction', async () => {
+    // The long malformed end tag exercised quadratic backtracking in xmldom 0.8.
+    const data = await docxFile(`<w:p><w:r><w:t>Invalid</w:t${' '.repeat(65536)}x></w:r></w:p>`)
+    const doc = await addDocument({ kind: 'resume', originalFilename: 'malformed.docx', mimeType: DOCX_MIME, data })
+
+    expect(doc.hasExtractedText).toBe(false)
+    expect(getExtractedText(doc.id)).toBeNull()
+    expect(readDocumentBytes(doc.id)).toEqual(data)
+  })
+
+  it('encrypts document content, extracted text, filename, and MIME type in encrypted mode', async () => {
+    setStorageMode('encrypted')
+    const doc = await addDocument(textFile('private resume body'))
+    const row = getDb().select().from(documents).where(eq(documents.id, doc.id)).get()!
+    expect(row.originalFilename).toMatch(/^enc:v1:/)
+    expect(row.mimeType).toMatch(/^enc:v1:/)
+    expect(row.extractedText).toMatch(/^enc:v1:/)
+    expect(doc.originalFilename).toBe('resume.txt')
+    expect(readDocumentBytes(doc.id)?.toString()).toBe('private resume body')
   })
 
   it('returns no extracted text for an unrecognized mime type, without throwing', async () => {
@@ -67,6 +127,14 @@ describe('addDocument', () => {
 })
 
 describe('listDocuments', () => {
+  // The stored file is the resume itself in plaintext mode, and lives under a
+  // storage root the user may have pointed at a shared or synced folder.
+  it('writes the stored file owner-only', async () => {
+    const doc = await addDocument(textFile('My resume content'))
+    const mode = fileMode(storedPathOf(doc.id))
+    if (mode !== null) expect(mode).toBe(0o600)
+  })
+
   it('lists everything uploaded, most recent included', async () => {
     await addDocument(textFile('a'))
     await addDocument({ ...textFile('b'), kind: 'cover_letter', originalFilename: 'cover.txt' })
@@ -116,6 +184,19 @@ describe('rewriteDocumentStorageMode', () => {
     await rewriteDocumentStorageMode(doc.id, 'plaintext')
 
     expect(readDocumentBytes(doc.id)?.toString('utf-8')).toBe('sensitive content')
+  })
+
+  // A document written before 0600 became the default keeps its old, laxer
+  // permissions; this path already rewrites every file, so it fixes them too.
+  it('tightens the permissions of a document written before that was the default', async () => {
+    const doc = await addDocument(textFile('My resume content'))
+    const path = storedPathOf(doc.id)
+    if (process.platform === 'win32') return
+
+    chmodSync(path, 0o644)
+    await rewriteDocumentStorageMode(doc.id, 'encrypted')
+
+    expect(fileMode(path)).toBe(0o600)
   })
 
   it('is a no-op for an unknown id', async () => {

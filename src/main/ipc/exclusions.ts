@@ -4,14 +4,15 @@ import { appError } from '@shared/types/errorCodes'
 import { listExclusions, removeExclusion } from '../db/repositories/jobExclusionsRepository'
 import { excludeJob } from '../jobActions'
 import { broadcastExclusionsChanged } from './jobsBroadcast'
-import type { ListExclusionsQuery } from '@shared/types/exclusion'
+import { exclusionIdPayload, listExclusionsQuerySchema, readListQuery } from './payloadSchemas'
 
 export function registerExclusionsIpc(): void {
-  ipcMain.handle(IPC.exclusions.list, (_event, query: ListExclusionsQuery) => {
-    return listExclusions(query ?? {})
+  ipcMain.handle(IPC.exclusions.list, (_event, query: unknown) => {
+    return listExclusions(readListQuery(listExclusionsQuerySchema, query, IPC.exclusions.list))
   })
 
-  ipcMain.handle(IPC.exclusions.add, (_event, { url, reason }: { url: unknown; reason?: unknown }) => {
+  ipcMain.handle(IPC.exclusions.add, (_event, payload: unknown) => {
+    const { url, reason } = (payload ?? {}) as { url?: unknown; reason?: unknown }
     if (typeof url !== 'string') {
       return { ok: false, error: appError('urlRequired') }
     }
@@ -29,8 +30,10 @@ export function registerExclusionsIpc(): void {
     return { ok: true, exclusion }
   })
 
-  ipcMain.handle(IPC.exclusions.remove, (_event, { id }: { id: string }) => {
-    removeExclusion(id)
+  ipcMain.handle(IPC.exclusions.remove, (_event, payload: unknown) => {
+    const parsed = exclusionIdPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false }
+    removeExclusion(parsed.data.id)
     broadcastExclusionsChanged()
     return { ok: true }
   })

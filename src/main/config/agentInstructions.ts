@@ -14,27 +14,74 @@ app's local job-tracking database and a real browser:
 
 - \`get_profile\` — the candidate's profile (contact info, desired roles,
   skills, salary expectations) and uploaded documents. Call this first so you
-  know who you're searching for and how to judge a match.
+  know who you're searching for and how to judge a match. Pass
+  \`includeDocumentText: true\` to also get the text of those documents,
+  which is how you read the resume the user uploaded to the app without
+  needing a path to it; leave it off the rest of the time, since it is a lot
+  of text that matching and form-filling never need.
 - \`update_profile\` — write fields back to that profile. Every field is
   optional and only what you pass is written, so it is safe to send just the
   parts you know; list fields (skills, desired roles, desired locations)
   replace the stored list rather than appending. Use it when the user asks
-  you to change their profile or to fill it in from a resume — read the file
-  yourself (\`~/resume.pdf\` and friends are ordinary files), then send the
-  fields. Never invent a skill, salary, or location to fill a gap: leave the
-  field out instead.
-- \`search_jobs\` — search job postings by keyword (LinkedIn/Indeed keyword
-  search; other sources are per-company boards with no search endpoint — use
-  \`get_job_details\` with a specific career-page URL for those instead).
+  you to change their profile or to fill it in from a resume: read the
+  resume with \`get_profile\`'s \`includeDocumentText\` if they uploaded
+  one to Applyer, or open the file yourself if they point you at one
+  (\`~/resume.pdf\` and friends are ordinary files), then send the fields.
+  A user who skipped the profile during setup and uploaded only a resume is
+  exactly the case this exists for. Never invent a skill, salary, or
+  location to fill a gap: leave the field out instead.
+- \`search_jobs\` — search job postings by keyword. LinkedIn and Indeed search
+  across every company; \`greenhouse\`/\`lever\`/\`ashby\`/\`workday\` instead
+  search the company boards the user tracks, since those providers have no
+  cross-company search endpoint of their own.
+- \`add_company_board\` — track one company's own ATS board so its postings
+  become searchable. Worth doing for companies that run a Greenhouse/Lever/
+  Ashby/Workday board and never post to LinkedIn or Indeed, which is common
+  below a certain size and is exactly where the competition is thinnest. Give
+  it a company name, a domain, or a board URL; if you know which ATS the
+  company uses but not its slug, pass \`provider\` on its own as a hint. Add
+  companies the user has actually asked to watch — every tracked board is a
+  request on every search.
+- \`list_company_boards\` — what is currently tracked, and how each board's
+  last fetch went. Check before adding, and use it to explain an empty
+  greenhouse/lever/ashby/workday result.
 - \`get_job_details\` — fetch the full description, location, and application
   info for a single job posting URL.
 - \`list_jobs\` — check what's already tracked (optionally by status) before
   searching again.
 - \`queue_job\` — add a matching job to the user's task board once you've
   judged it a good fit. Deduplicated by URL, safe to call again.
-- \`fill_application\` — open a visible browser and fill in a queued job's
-  application form from the candidate's profile. Never submits — the user
-  reviews and submits it themselves.
+- \`inspect_application\` — open and retain a queued job's application in a
+  visible browser, or re-inspect the same still-open form after filling. It
+  returns opaque field IDs with semantic labels, raw browser hints, control
+  types, current values, and option values, plus opaque IDs for recognized
+  intermediate-navigation buttons.
+  Decide each field or button's meaning from that context, but pass its opaque
+  ID as the identifier. Only the current visible step is returned. Inspection
+  never changes the page. Password, arbitrary action, and final-action controls
+  are never returned. A retained multi-step application stays Queued and in
+  fill mode after each partial page.
+- \`fill_application\` — after inspection, fill only the fieldId/value pairs
+  you choose in that retained form. If access is disabled, Applyer asks
+  the user to allow it once, always allow it, or deny it. It never clicks a
+  button, advances the form, or submits it. Leave finalStep false while more
+  pages remain. Set finalStep true only when every page is complete and the
+  form is ready for user review; this moves the job from Queued to Filled but
+  still does not submit. On a fieldless final review page, pass an empty answers
+  list with finalStep true.
+- \`click_application_button\` — click one visible, enabled navigation button
+  by the buttonId from the latest inspection. Only recognized Next, Continue,
+  Proceed, Back, and Previous labels are exposed, but labels cannot prove what
+  a site's script will do. Applyer therefore requires the user's Press
+  application buttons permission, which is disabled by default. Every click
+  consumes all button IDs from that inspection, so inspect again. When asked to edit a
+  field that is not on the current step, navigate backward with a listed Back
+  or Previous button and re-inspect after each click until the field appears.
+  Native form submission is blocked while the click runs, but approved button
+  presses may invoke arbitrary site scripts or irreversible actions.
+- \`edit_application\` — re-inspect, then update only fieldId/value pairs
+  in the original still-open form from a Filled job. It never opens a
+  replacement form, changes attachments, clicks a button, or submits it.
 - \`flag_failure\` — mark a job Failed with a reason when you can't proceed
   with it (e.g. a login wall or an expired listing).
 - \`exclude_job\` — permanently blacklist a job posting URL: removed from the
@@ -50,7 +97,10 @@ When the user asks you to find, search for, track, or apply to jobs, use
 these tools instead of browsing job sites manually — they operate on the
 same job board the user sees in the app. Typical flow: \`get_profile\` →
 \`search_jobs\` → \`get_job_details\` on promising results → \`queue_job\` for
-good matches → \`fill_application\` when asked to start applying.
+good matches → \`inspect_application\` → choose answers from \`get_profile\` →
+\`fill_application\` with finalStep false → \`click_application_button\` for
+intermediate steps → inspect and fill again → set finalStep true only after the
+last page is complete, stopping before submission.
 
 This file is regenerated by Applyer on every launch — edits here won't persist.
 `

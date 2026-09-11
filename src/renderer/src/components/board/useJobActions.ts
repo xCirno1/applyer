@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useJobsStore } from '../../state/jobsStore'
 import { useToast } from '../ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 
 /**
  * The two bulk job mutations shared by the board's `BulkActionBar` and each
@@ -14,6 +15,7 @@ export function useJobActions(): {
   retryMany: (ids: string[]) => Promise<void>
   excludeMany: (ids: string[]) => Promise<void>
   unqueueMany: (ids: string[]) => Promise<void>
+  removeCompletedMany: (ids: string[]) => Promise<void>
 } {
   const { t } = useTranslation('board')
   const applyUpdate = useJobsStore((s) => s.applyUpdate)
@@ -22,7 +24,12 @@ export function useJobActions(): {
 
   const retryMany = async (ids: string[]): Promise<void> => {
     if (ids.length === 0) return
-    const result = await window.api.jobs.retryMany(ids)
+    // Each falls back to that call's own failure shape, so a bridge
+    // failure produces the same toast a refused request does.
+    const result = await callIpc('jobs.retryMany', () => window.api.jobs.retryMany(ids), {
+      ok: false,
+      jobs: []
+    })
     if (!result.ok) {
       toast.error(t('toast.retryFailed'))
       return
@@ -33,7 +40,10 @@ export function useJobActions(): {
 
   const excludeMany = async (ids: string[]): Promise<void> => {
     if (ids.length === 0) return
-    const result = await window.api.jobs.excludeMany(ids)
+    const result = await callIpc('jobs.excludeMany', () => window.api.jobs.excludeMany(ids), {
+      ok: false,
+      excludedIds: []
+    })
     if (!result.ok) {
       toast.error(t('toast.excludeFailed'))
       return
@@ -44,7 +54,10 @@ export function useJobActions(): {
 
   const unqueueMany = async (ids: string[]): Promise<void> => {
     if (ids.length === 0) return
-    const result = await window.api.jobs.unqueueMany(ids)
+    const result = await callIpc('jobs.unqueueMany', () => window.api.jobs.unqueueMany(ids), {
+      ok: false,
+      unqueuedIds: []
+    })
     if (!result.ok) {
       toast.error(t('toast.unqueueFailed'))
       return
@@ -53,5 +66,19 @@ export function useJobActions(): {
     toast.success(t('toast.unqueued', { count: result.unqueuedIds.length }))
   }
 
-  return { retryMany, excludeMany, unqueueMany }
+  const removeCompletedMany = async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return
+    const result = await callIpc('jobs.removeMany', () => window.api.jobs.removeMany(ids), {
+      ok: false,
+      removedIds: []
+    })
+    if (!result.ok) {
+      toast.error(t('toast.removeFailed'))
+      return
+    }
+    for (const id of result.removedIds) removeJobLocal(id)
+    toast.success(t('toast.removed', { count: result.removedIds.length }))
+  }
+
+  return { retryMany, excludeMany, unqueueMany, removeCompletedMany }
 }

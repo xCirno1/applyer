@@ -21,9 +21,18 @@ import {
   getIndexedJobsRetentionDays,
   setIndexedJobsRetentionDays,
   getBrowserPreference,
-  setBrowserPreference
+  setBrowserPreference,
+  getAgentPermissions,
+  setAgentPermissions,
+  getAllowLocalAddresses,
+  setAllowLocalAddresses,
+  getNotificationPreferences,
+  setNotificationPreferences,
+  getNotificationLocale,
+  setNotificationLocale
 } from './settingsRepository'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
+import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 
 describe('storage mode', () => {
   it('defaults to null (unset)', () => {
@@ -96,6 +105,122 @@ describe('browser preference', () => {
     // Simulates a value from a future/older app version rather than one this app wrote itself.
     testDb.insert(appSettings).values({ key: 'browser_preference', value: 'firefox' }).run()
     expect(getBrowserPreference()).toBe('auto')
+  })
+})
+
+describe('agent permissions', () => {
+  it('allows field completion but denies document uploads by default', () => {
+    expect(getAgentPermissions()).toEqual({
+      autoCompleteFields: true,
+      autoUploadDocuments: false,
+      autoPressButtons: false
+    })
+  })
+
+  it('round-trips each permission independently', () => {
+    setAgentPermissions({ autoCompleteFields: true, autoUploadDocuments: false, autoPressButtons: true })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: true, autoUploadDocuments: false, autoPressButtons: true })
+    setAgentPermissions({ autoCompleteFields: false, autoUploadDocuments: true, autoPressButtons: false })
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: true, autoPressButtons: false })
+  })
+
+  it('fails closed for malformed stored permissions', () => {
+    testDb.insert(appSettings).values({ key: 'agent_permissions', value: '{broken' }).run()
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false, autoPressButtons: false })
+  })
+
+  it('fails closed for incomplete stored permissions', () => {
+    testDb
+      .insert(appSettings)
+      .values({ key: 'agent_permissions', value: JSON.stringify({ autoCompleteFields: true }) })
+      .run()
+    expect(getAgentPermissions()).toEqual({ autoCompleteFields: false, autoUploadDocuments: false, autoPressButtons: false })
+  })
+
+  it('upgrades permissions saved before button pressing was introduced', () => {
+    testDb
+      .insert(appSettings)
+      .values({
+        key: 'agent_permissions',
+        value: JSON.stringify({ autoCompleteFields: true, autoUploadDocuments: false })
+      })
+      .run()
+    expect(getAgentPermissions()).toEqual({
+      autoCompleteFields: true,
+      autoUploadDocuments: false,
+      autoPressButtons: false
+    })
+  })
+})
+
+describe('local address permission', () => {
+  it('defaults to denied and round-trips explicit permission', () => {
+    expect(getAllowLocalAddresses()).toBe(false)
+    setAllowLocalAddresses(true)
+    expect(getAllowLocalAddresses()).toBe(true)
+    setAllowLocalAddresses(false)
+    expect(getAllowLocalAddresses()).toBe(false)
+  })
+})
+
+describe('notification preferences', () => {
+  it('defaults every notification category to enabled', () => {
+    expect(getNotificationPreferences()).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
+  })
+
+  it('round-trips independent notification categories', () => {
+    const preferences = {
+      enabled: true,
+      verificationRequired: false,
+      permissionRequired: true,
+      jobFilled: true,
+      jobFailed: false
+    }
+    setNotificationPreferences(preferences)
+    expect(getNotificationPreferences()).toEqual(preferences)
+  })
+
+  it('adds the permission category without resetting legacy choices', () => {
+    const legacy = {
+      enabled: false,
+      verificationRequired: false,
+      jobFilled: true,
+      jobFailed: false
+    }
+    testDb
+      .insert(appSettings)
+      .values({ key: 'notification_preferences', value: JSON.stringify(legacy) })
+      .run()
+
+    expect(getNotificationPreferences()).toEqual({
+      ...legacy,
+      permissionRequired: DEFAULT_NOTIFICATION_PREFERENCES.permissionRequired
+    })
+  })
+
+  it('falls back safely when the stored JSON is malformed or incomplete', () => {
+    testDb.insert(appSettings).values({ key: 'notification_preferences', value: '{broken' }).run()
+    expect(getNotificationPreferences()).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
+
+    testDb
+      .insert(appSettings)
+      .values({ key: 'notification_preferences', value: JSON.stringify({ enabled: false }) })
+      .onConflictDoUpdate({ target: appSettings.key, set: { value: JSON.stringify({ enabled: false }) } })
+      .run()
+    expect(getNotificationPreferences()).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
+  })
+})
+
+describe('notification locale', () => {
+  it('defaults to English and round-trips a renderer-synchronized locale', () => {
+    expect(getNotificationLocale()).toBe('en')
+    setNotificationLocale('id')
+    expect(getNotificationLocale()).toBe('id')
+  })
+
+  it('falls back to English for an unrecognized cached locale', () => {
+    testDb.insert(appSettings).values({ key: 'notification_locale', value: 'xx' }).run()
+    expect(getNotificationLocale()).toBe('en')
   })
 })
 

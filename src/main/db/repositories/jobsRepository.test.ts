@@ -16,6 +16,7 @@ import {
   getJobByUrl,
   listJobs,
   setFilled,
+  refreshFilled,
   setSubmitted,
   setFailed,
   retry,
@@ -169,6 +170,26 @@ describe('job status transitions', () => {
     expect(submitted.submittedAt).toBeTruthy()
   })
 
+  it('refreshes a filled job’s screenshot without changing its status', () => {
+    const { job } = queueJob(baseInput())
+    const filled = setFilled(job.id, { screenshotPath: '/tmp/first-shot.png' })
+
+    const refreshed = refreshFilled(job.id, { screenshotPath: '/tmp/corrected-shot.png' })
+    expect(refreshed.status).toBe('filled')
+    expect(refreshed.screenshotPath).toBe('/tmp/corrected-shot.png')
+    expect(refreshed.filledAt).toBe(filled.filledAt)
+  })
+
+  it('stores an ordered screenshot for every application page', () => {
+    const { job } = queueJob(baseInput())
+    const paths = ['/tmp/page-1.png', '/tmp/page-2.png', '/tmp/page-3.png']
+
+    const filled = setFilled(job.id, { screenshotPaths: paths })
+
+    expect(filled.screenshotPaths).toEqual(paths)
+    expect(filled.screenshotPath).toBe(paths[2])
+  })
+
   it('allows queued -> failed -> queued (retry)', () => {
     const { job } = queueJob(baseInput())
     const failed = setFailed(job.id, 'login_required', 'needs sign-in')
@@ -293,6 +314,7 @@ describe('importJobs', () => {
       applicationUrl: null,
       applyMethod: null,
       screenshotPath: '/some/other/machine/path.png',
+      screenshotPaths: ['/some/other/machine/path.png'],
       failureTag: null,
       failureMessage: null,
       blockingReason: 'stale',
@@ -316,6 +338,7 @@ describe('importJobs', () => {
     expect(job!.status).toBe('submitted')
     expect(job!.queuedAt).toBe('2020-01-01T00:00:00.000Z')
     expect(job!.screenshotPath).toBeNull()
+    expect(job!.screenshotPaths).toEqual([])
     expect(job!.blockingReason).toBeNull()
     expect(job!.blockingTaskId).toBeNull()
   })

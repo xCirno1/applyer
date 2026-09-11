@@ -16,6 +16,7 @@ export const IPC = {
     retryAll: 'jobs:retryAll',
     retryMany: 'jobs:retryMany',
     remove: 'jobs:remove',
+    removeMany: 'jobs:removeMany',
     exclude: 'jobs:exclude',
     excludeMany: 'jobs:excludeMany',
     unqueue: 'jobs:unqueue',
@@ -25,9 +26,29 @@ export const IPC = {
   },
   indexedJobs: {
     list: 'indexedJobs:list',
+    listDates: 'indexedJobs:listDates',
     getRetention: 'indexedJobs:getRetention',
     setRetention: 'indexedJobs:setRetention',
     onChanged: 'indexedJobs:changed'
+  },
+  companyBoards: {
+    list: 'companyBoards:list',
+    add: 'companyBoards:add',
+    remove: 'companyBoards:remove',
+    setEnabled: 'companyBoards:setEnabled',
+    // Bulk forms of the row actions, for a multi-row selection.
+    setEnabledMany: 'companyBoards:setEnabledMany',
+    removeMany: 'companyBoards:removeMany',
+    /** Fetch tracked boards on demand, outside a search, to fill in their last result. */
+    fetch: 'companyBoards:fetch',
+    /** One board's fetch landing, pushed as it happens rather than with the batch it belongs to. */
+    onFetched: 'companyBoards:fetched',
+    // Bulk import: pick and parse a CSV, plan what a column mapping would add, then write it.
+    pickCsv: 'companyBoards:pickCsv',
+    planCsv: 'companyBoards:planCsv',
+    importCsv: 'companyBoards:importCsv',
+    releaseCsv: 'companyBoards:releaseCsv',
+    onChanged: 'companyBoards:changed'
   },
   exclusions: {
     list: 'exclusions:list',
@@ -57,11 +78,19 @@ export const IPC = {
     onCaptchaDetected: 'browser:captchaDetected',
     onCaptchaResolved: 'browser:captchaResolved'
   },
+  agentPermissions: {
+    listPending: 'agentPermissions:listPending',
+    respond: 'agentPermissions:respond',
+    onRequested: 'agentPermissions:requested',
+    onResolved: 'agentPermissions:resolved'
+  },
   browserSetup: {
     retryDownload: 'browserSetup:retryDownload',
     respondInstall: 'browserSetup:respondInstall',
     getPreference: 'browserSetup:getPreference',
     setPreference: 'browserSetup:setPreference',
+    getAllowLocalAddresses: 'browserSetup:getAllowLocalAddresses',
+    setAllowLocalAddresses: 'browserSetup:setAllowLocalAddresses',
     getStatus: 'browserSetup:getStatus',
     onProgress: 'browserSetup:progress',
     onStatus: 'browserSetup:status'
@@ -70,7 +99,17 @@ export const IPC = {
     changeStorageMode: 'settings:changeStorageMode',
     getAutoStartCommand: 'settings:getAutoStartCommand',
     setAutoStartCommand: 'settings:setAutoStartCommand',
-    getStorageStats: 'settings:getStorageStats'
+    getAgentPermissions: 'settings:getAgentPermissions',
+    setAgentPermissions: 'settings:setAgentPermissions',
+    onAgentPermissionsChanged: 'settings:agentPermissionsChanged',
+    getStorageStats: 'settings:getStorageStats',
+    getAdvanced: 'settings:getAdvanced',
+    updateAdvanced: 'settings:updateAdvanced',
+    resetAdvanced: 'settings:resetAdvanced',
+    getNotificationPreferences: 'settings:getNotificationPreferences',
+    setNotificationPreferences: 'settings:setNotificationPreferences',
+    setNotificationLocale: 'settings:setNotificationLocale',
+    testNotification: 'settings:testNotification'
   },
   storageLocation: {
     getStatus: 'storageLocation:getStatus',

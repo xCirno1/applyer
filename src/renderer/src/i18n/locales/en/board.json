@@ -22,6 +22,31 @@
     "deselect": "Deselect job",
     "needsVerification": "needs verification"
   },
+  "failure": {
+    "tags": {
+      "captchaVerification": "CAPTCHA verification",
+      "loginRequired": "Login required",
+      "formNotSupported": "Form not supported",
+      "expiredListing": "Expired listing",
+      "duplicate": "Duplicate",
+      "interrupted": "Interrupted",
+      "browserUnavailable": "Browser unavailable",
+      "other": "Other"
+    },
+    "messages": {
+      "captchaVerification": "The verification challenge was not resolved in time or was cancelled.",
+      "loginRequired": "This application requires you to sign in.",
+      "formNotSupported": "Applyer couldn't identify recognizable fields on this application form. It may need to be filled manually.",
+      "expiredListing": "This job posting is no longer available.",
+      "duplicate": "This job was already queued from another search.",
+      "interrupted": "Applyer was closed or restarted while this job was waiting for verification. Retry it to try again.",
+      "browserUnavailable": "Applyer couldn't prepare a browser for this application.",
+      "browserUnavailableDetail": "Applyer couldn't prepare a browser: {{detail}}",
+      "formOpenFailedDetail": "Applyer couldn't open the application page: {{detail}}",
+      "formFillFailedDetail": "Applyer failed while filling the form: {{detail}}",
+      "jobNotFound": "The job could not be found."
+    }
+  },
   "selection": {
     "count": "{{count}} selected",
     "clear": "Clear"
@@ -32,6 +57,8 @@
     "retryAll": "Retry all",
     "unqueue": "Unqueue",
     "unqueueCount": "Unqueue ({{count}})",
+    "remove": "Remove",
+    "removeCount": "Remove ({{count}})",
     "exclude": "Exclude",
     "excludeCount": "Exclude ({{count}})",
     "open": "Open",
@@ -46,12 +73,16 @@
     "retryMessage_other": "This moves {{count}} failed jobs back to Queued so they're attempted again.",
     "excludeTitle_one": "Exclude this job posting",
     "excludeTitle_other": "Exclude these job postings",
-    "excludeMessage_one": "This removes {{count}} job from the board and permanently blacklists its URL. It will never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Indexed Jobs > Excluded.",
-    "excludeMessage_other": "This removes {{count}} jobs from the board and permanently blacklists their URLs. They'll never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Indexed Jobs > Excluded.",
+    "excludeMessage_one": "This removes {{count}} job from the board and permanently blacklists its URL. It will never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Job Discovery > Excluded.",
+    "excludeMessage_other": "This removes {{count}} jobs from the board and permanently blacklists their URLs. They'll never be returned by a search or be re-queueable again, by you or the agent. You can undo this later from Job Discovery > Excluded.",
     "unqueueTitle_one": "Unqueue this job?",
     "unqueueTitle_other": "Unqueue selected jobs?",
     "unqueueMessage_one": "This removes {{count}} job from the board, but its URL isn't blacklisted, so the agent can still find and re-queue it again later.",
     "unqueueMessage_other": "This removes {{count}} jobs from the board, but their URLs aren't blacklisted, so the agent can still find and re-queue them again later.",
+    "removeTitle_one": "Remove this completed job?",
+    "removeTitle_other": "Remove completed jobs?",
+    "removeMessage_one": "This permanently removes {{count}} filled or submitted job from the board. Its URL isn't blacklisted, so it can be found and queued again later.",
+    "removeMessage_other": "This permanently removes {{count}} filled or submitted jobs from the board. Their URLs aren't blacklisted, so they can be found and queued again later.",
     "markSubmittedTitle": "Mark as submitted",
     "markSubmittedMessage": "Confirm you've actually submitted this application yourself. This action doesn't submit anything on your behalf, it just records that you did.",
     "markSubmittedConfirm": "Mark submitted"
@@ -66,6 +97,9 @@
     "unqueued_one": "Unqueued {{count}} job.",
     "unqueued_other": "Unqueued {{count}} jobs.",
     "unqueueFailed": "Failed to unqueue the selected jobs.",
+    "removed_one": "Removed {{count}} completed job.",
+    "removed_other": "Removed {{count}} completed jobs.",
+    "removeFailed": "Failed to remove the selected jobs.",
     "markedSubmitted": "Marked as submitted.",
     "markSubmittedFailed": "Failed to mark as submitted.",
     "movedToQueued": "Moved back to Queued.",
@@ -73,13 +107,15 @@
     "excludedSingle": "Excluded. It won't be shown again or resurfaced by search.",
     "excludeSingleFailed": "Failed to exclude this job.",
     "unqueuedSingle": "Removed from the queue.",
-    "unqueueSingleFailed": "Failed to unqueue this job."
+    "unqueueSingleFailed": "Failed to unqueue this job.",
+    "removedSingle": "Removed from the board.",
+    "removeSingleFailed": "Failed to remove this job."
   },
   "detail": {
     "match": "{{score}}% match",
     "whyMatched": "Why it matched",
-    "screenshot": "Filled application (screenshot)",
-    "screenshotAlt": "Screenshot of the filled application form",
+    "screenshot": "Filled application (screenshots)",
+    "screenshotAlt": "Screenshot of filled application page {{page}}",
     "activity": "Activity",
     "openListing": "Open original listing ↗"
   },

@@ -23,8 +23,10 @@ vi.mock('fs', async (importOriginal) => {
 })
 
 const getBrowserPreferenceMock = vi.fn()
+const getAllowLocalAddressesMock = vi.fn()
 vi.mock('../db/repositories/settingsRepository', () => ({
-  getBrowserPreference: (...args: unknown[]) => getBrowserPreferenceMock(...args)
+  getBrowserPreference: (...args: unknown[]) => getBrowserPreferenceMock(...args),
+  getAllowLocalAddresses: (...args: unknown[]) => getAllowLocalAddressesMock(...args)
 }))
 
 import {
@@ -49,7 +51,7 @@ async function answerInstallPrompt(accept: boolean): Promise<void> {
 function createFakeBrowser(): { isConnected: () => boolean; newContext: () => Promise<object>; close: () => Promise<void> } {
   return {
     isConnected: () => true,
-    newContext: async () => ({}),
+    newContext: async () => ({ route: vi.fn() }),
     close: async () => {}
   }
 }
@@ -62,6 +64,7 @@ beforeEach(() => {
   runCommandMock.mockReset()
   existsSyncMock.mockReset()
   getBrowserPreferenceMock.mockReset().mockReturnValue('auto')
+  getAllowLocalAddressesMock.mockReset().mockReturnValue(false)
 })
 
 describe('browserController — launch resolution', () => {

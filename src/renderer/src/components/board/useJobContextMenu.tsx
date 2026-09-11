@@ -22,9 +22,9 @@ interface BulkConfirmState {
  * Retry/Unqueue/Exclude to the whole selection instead of just the one
  * card. Retry only confirms when it would touch more than one job
  * (single-job retry matches `JobDetailModal`'s immediate behavior);
- * Unqueue and Exclude always confirm, matching their existing single-job
- * dialogs — both remove the job from the board (Exclude also permanently
- * blacklists its URL; Unqueue does not).
+ * Unqueue, Remove, and Exclude always confirm, matching their single-job
+ * dialogs. Remove is available for Filled/Submitted jobs and keeps their
+ * URLs discoverable; Exclude permanently blacklists a URL.
  */
 export function useJobContextMenu(): {
   openContextMenu: (e: MouseEvent, job: JobRecord, onOpen: () => void) => void
@@ -35,10 +35,12 @@ export function useJobContextMenu(): {
   const [confirmRetry, setConfirmRetry] = useState<BulkConfirmState | null>(null)
   const [confirmExclude, setConfirmExclude] = useState<BulkConfirmState | null>(null)
   const [confirmUnqueue, setConfirmUnqueue] = useState<BulkConfirmState | null>(null)
+  const [confirmRemove, setConfirmRemove] = useState<BulkConfirmState | null>(null)
   const [retrying, setRetrying] = useState(false)
   const [excluding, setExcluding] = useState(false)
   const [unqueueing, setUnqueueing] = useState(false)
-  const { retryMany, excludeMany, unqueueMany } = useJobActions()
+  const [removing, setRemoving] = useState(false)
+  const { retryMany, excludeMany, unqueueMany, removeCompletedMany } = useJobActions()
 
   const openContextMenu = (e: MouseEvent, job: JobRecord, onOpen: () => void): void => {
     e.preventDefault()
@@ -58,6 +60,9 @@ export function useJobContextMenu(): {
     const retryableIds = targetJobs.filter((j) => j.status === 'failed').map((j) => j.id)
     const excludableIds = targetJobs.filter((j) => j.status !== 'submitted').map((j) => j.id)
     const unqueueableIds = targetJobs.filter((j) => j.status === 'queued').map((j) => j.id)
+    const removableIds = targetJobs
+      .filter((j) => j.status === 'filled' || j.status === 'submitted')
+      .map((j) => j.id)
 
     const items: MenuEntry[] = []
     if (!isBulk) {
@@ -80,6 +85,14 @@ export function useJobContextMenu(): {
         key: 'unqueue',
         label: isBulk ? t('actions.unqueueCount', { count: unqueueableIds.length }) : t('actions.unqueue'),
         onSelect: () => setConfirmUnqueue({ ids: unqueueableIds })
+      })
+    }
+    if (removableIds.length > 0) {
+      items.push({
+        type: 'action',
+        key: 'remove',
+        label: isBulk ? t('actions.removeCount', { count: removableIds.length }) : t('actions.remove'),
+        onSelect: () => setConfirmRemove({ ids: removableIds })
       })
     }
     if (excludableIds.length > 0) {
@@ -135,6 +148,23 @@ export function useJobContextMenu(): {
           setConfirmExclude(null)
         }}
         onCancel={() => setConfirmExclude(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmRemove !== null}
+        title={t('confirm.removeTitle', { count: confirmRemove?.ids.length ?? 0 })}
+        message={t('confirm.removeMessage', { count: confirmRemove?.ids.length ?? 0 })}
+        confirmLabel={t('actions.remove')}
+        danger
+        loading={removing}
+        onConfirm={async () => {
+          if (!confirmRemove) return
+          setRemoving(true)
+          await removeCompletedMany(confirmRemove.ids)
+          setRemoving(false)
+          setConfirmRemove(null)
+        }}
+        onCancel={() => setConfirmRemove(null)}
       />
 
       <ConfirmDialog

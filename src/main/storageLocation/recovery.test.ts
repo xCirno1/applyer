@@ -15,7 +15,7 @@ import {
 } from '../config/storageLocation'
 import * as dbModule from '../db'
 import { eq } from 'drizzle-orm'
-import { jobs, profile } from '../db/schema'
+import { documents, jobs, profile } from '../db/schema'
 import * as activityLogModule from '../db/repositories/activityLogRepository'
 import * as storageConfigModule from '../config/storageLocation'
 import { connectToExistingLocation, resolveCustomStorageRoot, useDefaultStorageLocation } from './recovery'
@@ -95,6 +95,45 @@ describe('resolveCustomStorageRoot', () => {
       blockingReason: null,
       blockingTaskId: null
     })
+
+    rmSync(customRoot, { recursive: true, force: true })
+  })
+
+  // `documents.stored_path` and `jobs.screenshot_path` are absolute, so a root
+  // that was written on another machine (or moved by hand — the reason to point
+  // Applyer at a folder it did not create) carries paths into the old location.
+  // Left alone, every document reads back as null, silently.
+  it('rebases absolute document and screenshot paths onto the reconnected root', async () => {
+    const customRoot = join(tmpdir(), `applyer-recovery-rebase-${process.pid}-${Date.now()}`)
+    bootIntoFallback(customRoot)
+
+    mkdirSync(customRoot, { recursive: true })
+    createMigratedDbFile(join(customRoot, 'applyer.db'))
+    const customSqlite = new Database(join(customRoot, 'applyer.db'))
+    customSqlite
+      .prepare(`INSERT INTO profile (id, remote_preference) VALUES (1, 'no_preference')`)
+      .run()
+    customSqlite
+      .prepare(
+        `INSERT INTO documents (id, profile_id, kind, original_filename, stored_path, mime_type, size_bytes)
+         VALUES (?, 1, 'resume', 'resume.pdf', ?, 'application/pdf', 10)`
+      )
+      .run('doc-1', join('/previous', 'machine', 'documents', 'doc-1'))
+    customSqlite
+      .prepare(
+        `INSERT INTO jobs (id, title, company, url, status, screenshot_path)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .run('job-1', 'Engineer', 'Acme', 'https://acme.example/1', 'filled', join('/previous', 'machine', 'screenshots', 'job-1.png'))
+    customSqlite.close()
+
+    const result = await resolveCustomStorageRoot()
+
+    expect(result).toEqual({ ok: true })
+    const document = dbModule.getDb().select().from(documents).all()[0]
+    expect(document?.storedPath).toBe(join(customRoot, 'documents', 'doc-1'))
+    const job = dbModule.getDb().select().from(jobs).where(eq(jobs.id, 'job-1')).get()
+    expect(job?.screenshotPath).toBe(join(customRoot, 'screenshots', 'job-1.png'))
 
     rmSync(customRoot, { recursive: true, force: true })
   })

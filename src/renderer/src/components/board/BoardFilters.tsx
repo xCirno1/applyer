@@ -4,6 +4,10 @@ import { useJobsStore } from '../../state/jobsStore'
 import Dropdown from '../ui/Dropdown'
 import type { JobSortOrder } from '@shared/types/job'
 
+// Search (debounced)/source/sort controls above the board, backed by
+// `jobsStore`'s `filters` state — changing any of them refetches all four
+// columns from the server (filtering isn't done client-side).
+//
 // Job-board brand names are proper nouns and stay untranslated; only the
 // two synthetic entries ("All sources", "Other") get a string.
 const SOURCE_BRANDS = ['greenhouse', 'lever', 'ashby', 'workday', 'linkedin', 'indeed'] as const

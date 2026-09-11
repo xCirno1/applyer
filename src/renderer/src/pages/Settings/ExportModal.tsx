@@ -6,24 +6,38 @@ import Checkbox from '../../components/ui/Checkbox'
 import Select from '../../components/ui/Select'
 import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { formatBytes } from '../../lib/formatBytes'
+import { useTheme } from '../../providers/ThemeContext'
 import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
 import type { ExportSelection, ExportDomain, ExportSizes, CsvTable } from '@shared/types/dataTransfer'
 
 const DOMAIN_KEYS = {
   jobs: { label: 'data.domainJobs', hint: 'data.domainJobsHint' },
+  indexedJobs: { label: 'data.domainIndexedJobs', hint: 'data.domainIndexedJobsHint' },
   exclusions: { label: 'data.domainExclusions', hint: 'data.domainExclusionsHint' },
+  companyBoards: { label: 'data.domainCompanyBoards', hint: 'data.domainCompanyBoardsHint' },
   profile: { label: 'data.domainProfile', hint: 'data.domainProfileHint' },
-  settings: { label: 'data.domainSettings', hint: 'data.domainSettingsHint' }
+  settings: { label: 'data.domainSettings', hint: 'data.domainSettingsHint' },
+  theme: { label: 'data.domainTheme', hint: 'data.domainThemeHint' }
 } as const satisfies Record<ExportDomain, { label: string; hint: string }>
 
-const DOMAIN_ORDER: ExportDomain[] = ['jobs', 'exclusions', 'profile', 'settings']
+const DOMAIN_ORDER: ExportDomain[] = [
+  'jobs',
+  'indexedJobs',
+  'exclusions',
+  'companyBoards',
+  'profile',
+  'settings',
+  'theme'
+]
 
 export default function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }): ReactElement | null {
   const { t } = useTranslation('settings')
   const toast = useToast()
   const errorMessage = useErrorMessage()
+  const { state: themeState } = useTheme()
   const [format, setFormat] = useState<'json' | 'csv'>('json')
   const [selection, setSelection] = useState<ExportSelection>(allDomainsSelected())
   const [csvTable, setCsvTable] = useState<CsvTable>('jobs')
@@ -36,17 +50,23 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
   // Stale sizes from a previous open are left showing (rather than cleared
   // to a skeleton) while the refetch is in flight, to avoid a layout flicker
   // on every reopen — only the very first open in a session shows a loading
-  // state.
+  // state. `theme` is the one domain the main process can't read for itself
+  // (see exportBundle.ts), so it rides along on this call, and a re-open
+  // after editing Appearance elsewhere naturally picks up the latest state.
   useEffect(() => {
     if (!open) return
     let cancelled = false
-    window.api.data.getExportSizes().then((result) => {
-      if (!cancelled) setSizes(result)
-    })
+    void callIpc('data.getExportSizes', () => window.api.data.getExportSizes(themeState), null).then(
+      (result) => {
+        // Null leaves the sizes as they were (or unknown on a first
+        // open), which the totals below already render as 0.
+        if (!cancelled && result) setSizes(result)
+      }
+    )
     return () => {
       cancelled = true
     }
-  }, [open])
+  }, [open, themeState])
 
   if (!open) return null
 
@@ -58,16 +78,24 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
 
   const handleExport = async (): Promise<void> => {
     setExporting(true)
-    const result =
-      format === 'json'
-        ? await window.api.data.exportJson(selection, {
-            title: t('data.exportDialogTitle'),
-            filterName: 'JSON'
-          })
-        : await window.api.data.exportCsv(csvTable, {
-            title: t('data.exportCsvDialogTitle'),
-            filterName: 'CSV'
-          })
+    const result = await callIpc(
+      `data.export(${format})`,
+      () =>
+        format === 'json'
+          ? window.api.data.exportJson(
+              selection,
+              {
+                title: t('data.exportDialogTitle'),
+                filterName: 'JSON'
+              },
+              themeState
+            )
+          : window.api.data.exportCsv(csvTable, {
+              title: t('data.exportCsvDialogTitle'),
+              filterName: 'CSV'
+            }),
+      { ok: false as const }
+    )
     setExporting(false)
     if (result.canceled) return
     if (!result.ok) {
@@ -118,7 +146,9 @@ export default function ExportModal({ open, onClose }: { open: boolean; onClose:
               label={t('data.tableToExport')}
               options={[
                 { value: 'jobs', label: t('data.domainJobs') },
-                { value: 'exclusions', label: t('data.domainExclusions') }
+                { value: 'indexedJobs', label: t('data.domainIndexedJobs') },
+                { value: 'exclusions', label: t('data.domainExclusions') },
+                { value: 'companyBoards', label: t('data.domainCompanyBoards') }
               ]}
               value={csvTable}
               onChange={(v) => setCsvTable(v as CsvTable)}

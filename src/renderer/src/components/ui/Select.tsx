@@ -1,6 +1,8 @@
 import type { ReactElement } from 'react'
 import Dropdown, { type DropdownOption } from './Dropdown'
 
+// Labeled field wrapper around Dropdown, dense (h-7).
+
 interface SelectProps {
   label: string
   options: DropdownOption[]

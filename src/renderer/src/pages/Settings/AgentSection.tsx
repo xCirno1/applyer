@@ -4,6 +4,7 @@ import Select from '../../components/ui/Select'
 import TextField from '../../components/ui/TextField'
 import Button from '../../components/ui/Button'
 import { useToast } from '../../components/ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { CLI_LABELS } from '../../components/settings/mcpCliLabels'
 import McpCliCard from '../../components/settings/McpCliCard'
@@ -29,18 +30,26 @@ export default function AgentSection(): ReactElement {
   const errorMessage = useErrorMessage()
 
   useEffect(() => {
-    window.api.settings.getAutoStartCommand().then((command) => {
-      setSavedCommand(command)
-      const derived = presetForCommand(command)
-      setPreset(derived)
-      if (derived === 'custom') setCustomCommand(command)
-    })
-    window.api.onboarding.detectMcpConfigs().then(setDetections)
+    void callIpc('settings.getAutoStartCommand', () => window.api.settings.getAutoStartCommand(), '').then(
+      (command) => {
+        setSavedCommand(command)
+        const derived = presetForCommand(command)
+        setPreset(derived)
+        if (derived === 'custom') setCustomCommand(command)
+      }
+    )
+    void callIpc('onboarding.detectMcpConfigs', () => window.api.onboarding.detectMcpConfigs(), []).then(
+      setDetections
+    )
   }, [])
 
   const save = async (command: string): Promise<void> => {
     setSaving(true)
-    const result = await window.api.settings.setAutoStartCommand(command)
+    const result = await callIpc(
+      'settings.setAutoStartCommand',
+      () => window.api.settings.setAutoStartCommand(command),
+      { ok: false }
+    )
     setSaving(false)
     if (result.ok) {
       const finalCommand = result.command ?? command

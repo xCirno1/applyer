@@ -8,6 +8,14 @@ import type {
   BrowserSetupStatusPayload
 } from '@shared/types/ipcEvents'
 import type { StorageLocationProgressPayload } from '@shared/types/storageLocation'
+import type { BoardFetchedPayload } from '@shared/types/companyBoard'
+import type { AgentPermissionRequest, AgentPermissions } from '@shared/types/agentPermissions'
+import {
+  clearPermissionRequestNotification,
+  notifyForJobUpdate,
+  notifyForPermissionRequest,
+  notifyForVerification
+} from '../notificationService'
 
 let webContentsRef: WebContents | null = null
 
@@ -16,6 +24,7 @@ export function registerJobsBroadcastTarget(webContents: WebContents): void {
 }
 
 export function broadcastJobUpdate(job: JobRecord): void {
+  notifyForJobUpdate(job)
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.jobs.onUpdated, job)
   }
@@ -49,6 +58,34 @@ export function broadcastExclusionsChanged(): void {
 }
 
 /**
+ * Payload-less, same reasoning as `broadcastExclusionsChanged` — the tracked
+ * boards are written from the Company Boards panel *and* by the agent's
+ * `add_company_board` tool, and the panel stays mounted-but-hidden while
+ * another screen is showing.
+ */
+export function broadcastCompanyBoardsChanged(): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.companyBoards.onChanged)
+  }
+}
+
+/**
+ * One board's fetch result, unlike the payload-less signal above.
+ *
+ * A manual fetch of a selection runs several boards at a time and can take a
+ * while for the slow ones, so each result is pushed as it lands: the row
+ * stops spinning and shows its new count the moment *that* board answers,
+ * instead of the whole selection waiting on the slowest member. It carries
+ * the row so the panel can replace one entry rather than re-reading the
+ * watchlist once per board.
+ */
+export function broadcastCompanyBoardFetched(payload: BoardFetchedPayload): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.companyBoards.onFetched, payload)
+  }
+}
+
+/**
  * Payload-less, same reasoning as `broadcastExclusionsChanged`. Needed
  * because the profile can now be written from two places at once: the
  * Settings form and the agent's `update_profile` tool. Settings is a
@@ -64,6 +101,7 @@ export function broadcastProfileChanged(): void {
 }
 
 export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void {
+  notifyForVerification(payload)
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaDetected, payload)
   }
@@ -72,6 +110,26 @@ export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void 
 export function broadcastCaptchaResolved(payload: CaptchaResolvedPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaResolved, payload)
+  }
+}
+
+export function broadcastAgentPermissionRequested(payload: AgentPermissionRequest): void {
+  notifyForPermissionRequest(payload)
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.agentPermissions.onRequested, payload)
+  }
+}
+
+export function broadcastAgentPermissionResolved(requestId: string): void {
+  clearPermissionRequestNotification()
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.agentPermissions.onResolved, { requestId })
+  }
+}
+
+export function broadcastAgentPermissionsChanged(permissions: AgentPermissions): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.settings.onAgentPermissionsChanged, permissions)
   }
 }
 

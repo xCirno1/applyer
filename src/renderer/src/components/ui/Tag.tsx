@@ -1,5 +1,7 @@
 import type { ReactElement } from 'react'
 
+// Used for job failure-reason tags, tones: neutral/danger/warning/success.
+
 type Tone = 'neutral' | 'danger' | 'warning' | 'success'
 
 const TONE_CLASSES: Record<Tone, string> = {
@@ -12,7 +14,9 @@ const TONE_CLASSES: Record<Tone, string> = {
 /** Plain bordered rectangle with text — never a pill, never a dot-chip. */
 export default function Tag({ label, tone = 'neutral' }: { label: string; tone?: Tone }): ReactElement {
   return (
-    <span className={`inline-flex h-5 items-center border px-1.5 text-[11px] font-medium ${TONE_CLASSES[tone]}`}>
+    <span
+      className={`inline-flex h-5 shrink-0 items-center whitespace-nowrap border px-1.5 text-[11px] font-medium leading-none ${TONE_CLASSES[tone]}`}
+    >
       {label}
     </span>
   )

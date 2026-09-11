@@ -6,6 +6,7 @@ interface CollapsibleProps {
   children: ReactNode
 }
 
+// Used by pages/Settings/AppearanceSection.tsx to tuck the custom CSS editor behind an "Advanced" toggle.
 /** Bordered disclosure section — header toggles a bottom-bordered content panel. */
 export default function Collapsible({ label, defaultOpen = false, children }: CollapsibleProps): ReactElement {
   const [open, setOpen] = useState(defaultOpen)

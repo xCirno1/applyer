@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron'
 import { IPC } from '@shared/types/ipcEvents'
 import { listActivity } from '../db/repositories/activityLogRepository'
-import type { ListActivityQuery } from '@shared/types/activity'
+import { listActivityQuerySchema, readListQuery } from './payloadSchemas'
 
 export function registerLogsIpc(): void {
-  ipcMain.handle(IPC.logs.list, (_event, query: ListActivityQuery) => {
-    return listActivity(query ?? {})
+  ipcMain.handle(IPC.logs.list, (_event, query: unknown) => {
+    return listActivity(readListQuery(listActivityQuerySchema, query, IPC.logs.list))
   })
 }

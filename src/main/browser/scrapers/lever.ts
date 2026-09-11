@@ -42,7 +42,7 @@ export async function fetchLeverJobDetails(url: string): Promise<JobDetailsOutco
   }
 
   if (response.status === 404) {
-    return { status: 'not_found', message: 'This Lever posting no longer exists (404) — it may have closed.' }
+    return { status: 'not_found', message: 'This Lever posting no longer exists (404); it may have closed.' }
   }
   if (!response.ok) {
     return { status: 'not_found', message: `Lever API returned HTTP ${response.status}.` }

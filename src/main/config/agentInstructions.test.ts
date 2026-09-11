@@ -27,12 +27,16 @@ describe('writeAgentInstructions', () => {
       'get_job_details',
       'list_jobs',
       'queue_job',
+      'inspect_application',
+      'click_application_button',
       'fill_application',
+      'edit_application',
       'flag_failure',
       'exclude_job'
     ]) {
       expect(content).toContain(tool)
     }
+    expect(content).toContain('navigate backward')
   })
 
   it('overwrites stale content on a second call', () => {

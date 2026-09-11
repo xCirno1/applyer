@@ -7,6 +7,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import ProgressBar from '../../components/ui/ProgressBar'
 import Tag from '../../components/ui/Tag'
 import { useToast } from '../../components/ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { formatBytes } from '../../lib/formatBytes'
 import { useStorageLocation } from './useStorageLocation'
@@ -39,17 +40,25 @@ export default function StorageSection(): ReactElement {
   const locationBusy = locationMigrating || locationConnecting
 
   const refresh = (): void => {
-    window.api.onboarding.getStatus().then((status) => {
+    void callIpc('onboarding.getStatus', () => window.api.onboarding.getStatus(), {
+      completed: true,
+      storageMode: null,
+      encryptionAvailable: false
+    }).then((status) => {
       setCurrentMode(status.storageMode)
       setEncryptionAvailable(status.encryptionAvailable)
     })
   }
 
   const loadStats = useCallback((): void => {
-    window.api.settings.getStorageStats().then((result) => {
-      setStats(result)
-      setStatsLoading(false)
-    })
+    void callIpc('settings.getStorageStats', () => window.api.settings.getStorageStats(), null).then(
+      (result) => {
+        setStats(result)
+        // Cleared either way, so a failed read shows the empty state
+        // rather than a permanent skeleton.
+        setStatsLoading(false)
+      }
+    )
   }, [])
 
   const handleRefreshStats = (): void => {
@@ -63,7 +72,11 @@ export default function StorageSection(): ReactElement {
   const handleConfirm = async (): Promise<void> => {
     if (!pendingMode) return
     setChanging(true)
-    const result = await window.api.settings.changeStorageMode(pendingMode)
+    const result = await callIpc(
+      'settings.changeStorageMode',
+      () => window.api.settings.changeStorageMode(pendingMode),
+      { ok: false }
+    )
     setChanging(false)
     setPendingMode(null)
     if (result.ok) {
@@ -115,7 +128,7 @@ export default function StorageSection(): ReactElement {
             }
           />
           <span className="min-w-0 flex-1 truncate text-[12px] text-text" title={location.status?.activeRoot}>
-            {location.status?.activeRoot ?? '—'}
+            {location.status?.activeRoot ?? t('states.loading', { ns: 'common' })}
           </span>
           <Button
             size="sm"
@@ -187,11 +200,21 @@ export default function StorageSection(): ReactElement {
             </div>
 
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 pt-1 text-[12px] text-text-muted sm:grid-cols-3">
-              <span>{t('storage.countJobs', { count: stats.counts.jobs })}</span>
-              <span>{t('storage.countIndexedJobs', { count: stats.counts.indexedJobs })}</span>
-              <span>{t('storage.countExclusions', { count: stats.counts.exclusions })}</span>
-              <span>{t('storage.countDocuments', { count: stats.counts.documents })}</span>
-              <span>{t('storage.countActivityLog', { count: stats.counts.activityLogEntries })}</span>
+              {(
+                [
+                  ['countJobs', stats.counts.jobs],
+                  ['countIndexedJobs', stats.counts.indexedJobs],
+                  ['countExclusions', stats.counts.exclusions],
+                  ['countCompanyBoards', stats.counts.companyBoards],
+                  ['countDocuments', stats.counts.documents],
+                  ['countActivityLog', stats.counts.activityLogEntries]
+                ] as const
+              ).map(([key, count]) => (
+                <div key={key} className="flex min-w-0 items-center justify-between gap-2">
+                  <span className="truncate">{t(`storage.${key}`)}</span>
+                  <span className="shrink-0 tabular-nums text-text">{count}</span>
+                </div>
+              ))}
             </div>
           </>
         )}

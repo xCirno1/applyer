@@ -5,7 +5,12 @@ import {
   getStorageMode,
   setStorageMode,
   getAutoStartCommand,
-  setAutoStartCommand
+  setAutoStartCommand,
+  getNotificationPreferences,
+  setNotificationPreferences,
+  setNotificationLocale,
+  getAgentPermissions,
+  setAgentPermissions
 } from '../db/repositories/settingsRepository'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
@@ -15,8 +20,22 @@ import { computeStorageStats } from '../storageStats'
 import type { StorageMode } from '@shared/types/profile'
 import type { AutoStartCommand } from '@shared/types/ipcEvents'
 import type { StorageStats } from '@shared/types/storage'
+import { getSettings, isSettingKey } from '@shared/settings'
+import { getAdvancedSettingsSnapshot, resetUserSetting, updateUserSetting } from '../config/settings'
+import {
+  isNotificationPreferences,
+  isNotificationLocale,
+  isNotificationTestKind,
+  type NotificationPreferences
+} from '@shared/types/notification'
+import { sendTestNotification } from '../notificationService'
+import { setDatabaseEncryptionMode } from '../db'
+import { setLogStorageMode } from '../logger'
+import { rewriteScreenshotStorageMode } from '../secureFiles'
+import { isAgentPermissions, type AgentPermissions } from '@shared/types/agentPermissions'
+import { broadcastAgentPermissionsChanged } from './jobsBroadcast'
 
-const AUTO_START_COMMAND_MAX_LENGTH = 500
+const AUTO_START_COMMAND_MAX_LENGTH = getSettings().dangerousAutoStartCommandMaxLength
 
 export function registerSettingsIpc(): void {
   ipcMain.handle(IPC.settings.changeStorageMode, async (_event, { mode }: { mode: StorageMode }) => {
@@ -43,6 +62,12 @@ export function registerSettingsIpc(): void {
       for (const doc of listDocuments()) {
         await rewriteDocumentStorageMode(doc.id, mode)
       }
+      rewriteScreenshotStorageMode(mode)
+      setLogStorageMode(mode)
+
+      // Whole-database encryption covers jobs, search history, exclusions,
+      // boards, settings, caches and activity logs without weakening queries.
+      setDatabaseEncryptionMode(mode)
 
       logActivity('info', `Storage mode changed to ${mode}`)
       return { ok: true }
@@ -57,6 +82,24 @@ export function registerSettingsIpc(): void {
   })
 
   ipcMain.handle(IPC.settings.getAutoStartCommand, (): AutoStartCommand => getAutoStartCommand())
+
+  ipcMain.handle(IPC.settings.getAgentPermissions, (): AgentPermissions => getAgentPermissions())
+
+  ipcMain.handle(IPC.settings.setAgentPermissions, (_event, payload: unknown) => {
+    const permissions =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { permissions?: unknown }).permissions
+        : undefined
+    if (!isAgentPermissions(permissions)) return { ok: false, error: appError('invalidAgentPermissions') }
+    try {
+      setAgentPermissions(permissions)
+      broadcastAgentPermissionsChanged(permissions)
+      logActivity('info', 'Agent permissions updated', { ...permissions })
+      return { ok: true, permissions }
+    } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
+  })
 
   ipcMain.handle(IPC.settings.setAutoStartCommand, (_event, { command }: { command: unknown }) => {
     if (typeof command !== 'string') {
@@ -76,4 +119,78 @@ export function registerSettingsIpc(): void {
   })
 
   ipcMain.handle(IPC.settings.getStorageStats, (): StorageStats => computeStorageStats())
+
+  ipcMain.handle(IPC.settings.getAdvanced, () => getAdvancedSettingsSnapshot())
+
+  ipcMain.handle(IPC.settings.updateAdvanced, (_event, payload: { key?: unknown; value?: unknown }) => {
+    if (!isSettingKey(payload?.key)) {
+      return { ok: false, error: appError('invalidAdvancedSetting') }
+    }
+    try {
+      const snapshot = updateUserSetting(payload.key, payload.value)
+      logActivity('info', `Advanced setting updated: ${payload.key}`)
+      return { ok: true, snapshot }
+    } catch (error) {
+      logActivity('error', `Advanced setting update failed: ${payload.key}`, { error: String(error) })
+      return { ok: false, error: appError('invalidAdvancedSetting', { message: String(error) }) }
+    }
+  })
+
+  ipcMain.handle(IPC.settings.resetAdvanced, (_event, payload: { key?: unknown }) => {
+    if (!isSettingKey(payload?.key)) {
+      return { ok: false, error: appError('invalidAdvancedSetting') }
+    }
+    try {
+      const snapshot = resetUserSetting(payload.key)
+      logActivity('info', `Advanced setting reset: ${payload.key}`)
+      return { ok: true, snapshot }
+    } catch (error) {
+      logActivity('error', `Advanced setting reset failed: ${payload.key}`, { error: String(error) })
+      return { ok: false, error: unexpectedError(error) }
+    }
+  })
+
+  ipcMain.handle(IPC.settings.getNotificationPreferences, (): NotificationPreferences => getNotificationPreferences())
+
+  ipcMain.handle(IPC.settings.setNotificationPreferences, (_event, payload: unknown) => {
+    const preferences =
+      typeof payload === 'object' && payload !== null
+        ? (payload as { preferences?: unknown }).preferences
+        : undefined
+    if (!isNotificationPreferences(preferences)) {
+      return { ok: false, error: appError('invalidNotificationPreferences') }
+    }
+    try {
+      setNotificationPreferences(preferences)
+      logActivity('info', 'Desktop notification preferences updated', { ...preferences })
+      return { ok: true, preferences }
+    } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
+  })
+
+  ipcMain.handle(IPC.settings.testNotification, (_event, payload: unknown) => {
+    const kind =
+      typeof payload === 'object' && payload !== null ? (payload as { kind?: unknown }).kind : undefined
+    if (!isNotificationTestKind(kind)) {
+      return { ok: false, error: appError('invalidNotificationPreferences') }
+    }
+    return sendTestNotification(kind)
+      ? { ok: true }
+      : { ok: false, error: appError('notificationsUnsupported') }
+  })
+
+  ipcMain.handle(IPC.settings.setNotificationLocale, (_event, payload: unknown) => {
+    const locale =
+      typeof payload === 'object' && payload !== null ? (payload as { locale?: unknown }).locale : undefined
+    if (!isNotificationLocale(locale)) {
+      return { ok: false, error: appError('invalidLocale') }
+    }
+    try {
+      setNotificationLocale(locale)
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
+  })
 }

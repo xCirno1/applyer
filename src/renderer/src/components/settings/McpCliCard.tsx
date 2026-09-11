@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Dropdown from '../ui/Dropdown'
-import McpConfigSnippet from '../onboarding/McpConfigSnippet'
+import CopyBlock from '../ui/CopyBlock'
 import { useToast } from '../ui/useToast'
+import { callIpc } from '../../lib/ipcCall'
 import { useErrorMessage } from '../../i18n/formatError'
 import { CLI_LABELS } from './mcpCliLabels'
 import type { McpConfigDetection, McpScope } from '@shared/types/ipcEvents'
@@ -21,7 +22,14 @@ const SCOPE_INLINE_KEYS = {
   workspace: 'mcp.scopeWorkspaceInline'
 } as const satisfies Record<McpScope, string>
 
-/** Used by both onboarding's McpSetup step and the Settings > Agent section's Connections subsection. */
+// One CLI's connection status + a scope Dropdown (`user` = the CLI's global config,
+// `workspace` = scoped to Applyer's dedicated terminal cwd via `agentWorkspaceDir()` so it
+// doesn't leak into the user's other projects — hidden for CLIs like Codex that have no
+// per-project MCP scope, see `McpAdapter.supportsWorkspaceScope`) + copyable snippet +
+// Auto-configure (behind `ConfirmDialog`) + Verify connection, all scoped to whichever
+// option is selected. Used by both onboarding's `McpSetup` and Settings > Agent's
+// Connections subsection — the only difference between those two call sites is
+// surrounding page chrome.
 export default function McpCliCard({ detection }: { detection: McpConfigDetection }): ReactElement {
   const { t } = useTranslation('settings')
   const toast = useToast()
@@ -37,13 +45,21 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
   const configured = configuredScopes.includes(scope)
 
   useEffect(() => {
-    window.api.onboarding.getMcpSnippet(detection.cli, scope).then(setSnippet)
+    void callIpc(
+      'onboarding.getMcpSnippet',
+      () => window.api.onboarding.getMcpSnippet(detection.cli, scope),
+      ''
+    ).then(setSnippet)
   }, [detection.cli, scope])
 
   const handleAutoConfigure = async (): Promise<void> => {
     setConfirmOpen(false)
     setConfiguring(true)
-    const result = await window.api.onboarding.autoConfigureMcp(detection.cli, scope)
+    const result = await callIpc(
+      'onboarding.autoConfigureMcp',
+      () => window.api.onboarding.autoConfigureMcp(detection.cli, scope),
+      { success: false }
+    )
     setConfiguring(false)
     if (result.success) {
       setConfiguredScopes((prev) => (prev.includes(scope) ? prev : [...prev, scope]))
@@ -64,7 +80,11 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
 
     // Re-check the CLI's own config fresh rather than trusting local state — it may have
     // been configured manually (via the snippet) or in a previous app session.
-    const freshDetections = await window.api.onboarding.detectMcpConfigs()
+    const freshDetections = await callIpc(
+      'onboarding.detectMcpConfigs',
+      () => window.api.onboarding.detectMcpConfigs(),
+      []
+    )
     const freshScopes = freshDetections.find((d) => d.cli === detection.cli)?.configuredScopes ?? []
     setConfiguredScopes(freshScopes)
 
@@ -79,7 +99,11 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
       return
     }
 
-    const result = await window.api.onboarding.verifyMcpConnection()
+    const result = await callIpc(
+      'onboarding.verifyMcpConnection',
+      () => window.api.onboarding.verifyMcpConnection(),
+      { success: false }
+    )
     setVerifying(false)
     setVerifyResult(
       result.success
@@ -114,7 +138,7 @@ export default function McpCliCard({ detection }: { detection: McpConfigDetectio
         </span>
       )}
 
-      <McpConfigSnippet snippet={snippet} />
+      <CopyBlock text={snippet} />
 
       <div className="flex items-center gap-2">
         <Button size="sm" onClick={() => setConfirmOpen(true)} loading={configuring} disabled={!detection.exists}>

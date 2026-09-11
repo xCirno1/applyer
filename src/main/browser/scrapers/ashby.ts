@@ -43,7 +43,7 @@ export async function fetchAshbyJobDetails(url: string): Promise<JobDetailsOutco
   const board = (await response.json()) as AshbyBoard
   const posting = board.jobs.find((j) => j.id === parsed.postingId)
   if (!posting) {
-    return { status: 'not_found', message: 'This Ashby posting is no longer listed on the board — it may have closed.' }
+    return { status: 'not_found', message: 'This Ashby posting is no longer listed on the board; it may have closed.' }
   }
 
   const html = sanitizeDescriptionHtml(posting.descriptionHtml ?? '')

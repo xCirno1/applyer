@@ -1,6 +1,8 @@
 import { useRef, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 
+// Click-or-drag file upload zone, used for onboarding documents.
+
 interface FileDropProps {
   label: string
   accept: string

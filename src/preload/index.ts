@@ -24,8 +24,50 @@ import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
 import type { ListActivityQuery, ListActivityResult } from '@shared/types/activity'
 import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
-import type { IndexedJobsRetention, ListIndexedJobsQuery, ListIndexedJobsResult } from '@shared/types/indexedJob'
+import type {
+  BoardCsvImportOptions,
+  BoardCsvImportResult,
+  BoardCsvMapping,
+  BoardCsvPickResult,
+  BoardCsvPlanResult,
+  BoardFetchedPayload,
+  BoardProbeCandidate,
+  CompanyBoardRecord,
+  FetchCompanyBoardsResult,
+  ListCompanyBoardsQuery,
+  ListCompanyBoardsResult
+} from '@shared/types/companyBoard'
+import type { AppError } from '@shared/types/errorCodes'
+
+/**
+ * A successful add reports more than "it worked": whether the board was
+ * already tracked, how many postings it holds right now (0 is a real answer),
+ * whether it could be reached at all, and whether the company answered on
+ * more than one ATS — which is what an in-progress migration looks like.
+ */
+type AddCompanyBoardResponse =
+  | {
+      ok: true
+      status: 'added' | 'already_tracked'
+      board: CompanyBoardRecord
+      jobCount: number
+      verified: boolean
+      ambiguous: boolean
+      candidates: BoardProbeCandidate[]
+    }
+  | { ok: false; error: AppError }
+import type {
+  IndexedJobDateBucket,
+  IndexedJobsRetention,
+  ListIndexedJobsQuery,
+  ListIndexedJobsResult
+} from '@shared/types/indexedJob'
 import type { StorageStats } from '@shared/types/storage'
+import type {
+  NotificationLocale,
+  NotificationPreferences,
+  NotificationTestKind
+} from '@shared/types/notification'
 import type {
   StorageLocationStatus,
   StorageLocationValidation,
@@ -42,6 +84,31 @@ import type {
   ImportApplyResult,
   ExportBundle
 } from '@shared/types/dataTransfer'
+import type { ThemeState } from '@shared/types/theme'
+import type {
+  AdvancedSettingsSnapshot,
+  ApplyerSettingKey,
+  ApplyerSettings
+} from '@shared/settings'
+import type {
+  AgentPermissionDecision,
+  AgentPermissionRequest,
+  AgentPermissions
+} from '@shared/types/agentPermissions'
+
+function settingsFromArguments(argv: readonly string[]): ApplyerSettings | undefined {
+  const prefix = '--applyer-settings='
+  const argument = argv.find((item) => item.startsWith(prefix))
+  if (!argument) return undefined
+  try {
+    return JSON.parse(decodeURIComponent(argument.slice(prefix.length))) as ApplyerSettings
+  } catch {
+    return undefined
+  }
+}
+
+const runtimeSettings = settingsFromArguments(process.argv)
+if (runtimeSettings) contextBridge.exposeInMainWorld('applyerSettings', runtimeSettings)
 
 const terminalApi = {
   create: (options: TerminalCreateOptions): Promise<TerminalCreateResult> =>
@@ -76,7 +143,10 @@ const jobsApi = {
   retryAll: (): Promise<{ ok: boolean; jobs: JobRecord[] }> => ipcRenderer.invoke(IPC.jobs.retryAll),
   retryMany: (jobIds: string[]): Promise<{ ok: boolean; jobs: JobRecord[] }> =>
     ipcRenderer.invoke(IPC.jobs.retryMany, { jobIds }),
-  remove: (jobId: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.jobs.remove, { jobId }),
+  remove: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.jobs.remove, { jobId }),
+  removeMany: (jobIds: string[]): Promise<{ ok: boolean; removedIds: string[] }> =>
+    ipcRenderer.invoke(IPC.jobs.removeMany, { jobIds }),
   exclude: (
     jobId: string,
     reason?: string
@@ -103,6 +173,7 @@ const jobsApi = {
 const indexedJobsApi = {
   list: (query: ListIndexedJobsQuery): Promise<ListIndexedJobsResult> =>
     ipcRenderer.invoke(IPC.indexedJobs.list, query),
+  listDates: (): Promise<IndexedJobDateBucket[]> => ipcRenderer.invoke(IPC.indexedJobs.listDates),
   getRetention: (): Promise<IndexedJobsRetention> => ipcRenderer.invoke(IPC.indexedJobs.getRetention),
   setRetention: (value: IndexedJobsRetention): Promise<{ ok: boolean; deletedCount?: number; error?: string }> =>
     ipcRenderer.invoke(IPC.indexedJobs.setRetention, { value }),
@@ -110,6 +181,44 @@ const indexedJobsApi = {
     const listener = (): void => callback()
     ipcRenderer.on(IPC.indexedJobs.onChanged, listener)
     return () => ipcRenderer.removeListener(IPC.indexedJobs.onChanged, listener)
+  }
+}
+
+const companyBoardsApi = {
+  list: (query: ListCompanyBoardsQuery): Promise<ListCompanyBoardsResult> =>
+    ipcRenderer.invoke(IPC.companyBoards.list, query),
+  add: (query: string, companyName?: string): Promise<AddCompanyBoardResponse> =>
+    ipcRenderer.invoke(IPC.companyBoards.add, { query, companyName }),
+  remove: (id: string): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.companyBoards.remove, { id }),
+  setEnabled: (id: string, enabled: boolean): Promise<{ ok: boolean; board?: CompanyBoardRecord; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.companyBoards.setEnabled, { id, enabled }),
+  setEnabledMany: (ids: string[], enabled: boolean): Promise<{ ok: boolean; updated?: number; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.companyBoards.setEnabledMany, { ids, enabled }),
+  removeMany: (ids: string[]): Promise<{ ok: boolean; removed?: number; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.companyBoards.removeMany, { ids }),
+  /** Fetches these boards now, outside a search, and writes back what each answered. */
+  fetch: (ids: string[]): Promise<FetchCompanyBoardsResult> => ipcRenderer.invoke(IPC.companyBoards.fetch, { ids }),
+  pickCsv: (labels: DialogLabels): Promise<BoardCsvPickResult> =>
+    ipcRenderer.invoke(IPC.companyBoards.pickCsv, { labels }),
+  planCsv: (filePath: string, mapping: BoardCsvMapping, options: BoardCsvImportOptions): Promise<BoardCsvPlanResult> =>
+    ipcRenderer.invoke(IPC.companyBoards.planCsv, { filePath, mapping, options }),
+  importCsv: (
+    filePath: string,
+    mapping: BoardCsvMapping,
+    options: BoardCsvImportOptions
+  ): Promise<BoardCsvImportResult> => ipcRenderer.invoke(IPC.companyBoards.importCsv, { filePath, mapping, options }),
+  /** Drops the picked file from the main process; sent when the import dialog closes. */
+  releaseCsv: (): void => ipcRenderer.send(IPC.companyBoards.releaseCsv),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.companyBoards.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.companyBoards.onChanged, listener)
+  },
+  /** Fires per board during a fetch, as each one lands, rather than once for the batch. */
+  onFetched: (callback: (payload: BoardFetchedPayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: BoardFetchedPayload): void => callback(payload)
+    ipcRenderer.on(IPC.companyBoards.onFetched, listener)
+    return () => ipcRenderer.removeListener(IPC.companyBoards.onFetched, listener)
   }
 }
 
@@ -172,6 +281,25 @@ const browserControlApi = {
   }
 }
 
+const agentPermissionsApi = {
+  listPending: (): Promise<AgentPermissionRequest[]> => ipcRenderer.invoke(IPC.agentPermissions.listPending),
+  respond: (
+    requestId: string,
+    decision: AgentPermissionDecision
+  ): Promise<{ ok: boolean; permissions?: AgentPermissions; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.agentPermissions.respond, { requestId, decision }),
+  onRequested: (callback: (payload: AgentPermissionRequest) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: AgentPermissionRequest): void => callback(payload)
+    ipcRenderer.on(IPC.agentPermissions.onRequested, listener)
+    return () => ipcRenderer.removeListener(IPC.agentPermissions.onRequested, listener)
+  },
+  onResolved: (callback: (payload: { requestId: string }) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: { requestId: string }): void => callback(payload)
+    ipcRenderer.on(IPC.agentPermissions.onResolved, listener)
+    return () => ipcRenderer.removeListener(IPC.agentPermissions.onResolved, listener)
+  }
+}
+
 const browserSetupApi = {
   retryDownload: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke(IPC.browserSetup.retryDownload),
   respondInstall: (accept: boolean): Promise<{ ok: boolean }> =>
@@ -179,6 +307,9 @@ const browserSetupApi = {
   getPreference: (): Promise<BrowserPreference> => ipcRenderer.invoke(IPC.browserSetup.getPreference),
   setPreference: (preference: BrowserPreference): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke(IPC.browserSetup.setPreference, { preference }),
+  getAllowLocalAddresses: (): Promise<boolean> => ipcRenderer.invoke(IPC.browserSetup.getAllowLocalAddresses),
+  setAllowLocalAddresses: (allowed: boolean): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke(IPC.browserSetup.setAllowLocalAddresses, { allowed }),
   getStatus: (): Promise<ResolvedBrowserStatus> => ipcRenderer.invoke(IPC.browserSetup.getStatus),
   onProgress: (callback: (payload: BrowserDownloadProgressPayload) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, payload: BrowserDownloadProgressPayload): void =>
@@ -202,7 +333,37 @@ const settingsApi = {
     command: AutoStartCommand
   ): Promise<{ ok: boolean; command?: AutoStartCommand; error?: string }> =>
     ipcRenderer.invoke(IPC.settings.setAutoStartCommand, { command }),
-  getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats)
+  getAgentPermissions: (): Promise<AgentPermissions> => ipcRenderer.invoke(IPC.settings.getAgentPermissions),
+  setAgentPermissions: (
+    permissions: AgentPermissions
+  ): Promise<{ ok: boolean; permissions?: AgentPermissions; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setAgentPermissions, { permissions }),
+  onAgentPermissionsChanged: (callback: (permissions: AgentPermissions) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, permissions: AgentPermissions): void => callback(permissions)
+    ipcRenderer.on(IPC.settings.onAgentPermissionsChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.settings.onAgentPermissionsChanged, listener)
+  },
+  getStorageStats: (): Promise<StorageStats> => ipcRenderer.invoke(IPC.settings.getStorageStats),
+  getAdvanced: (): Promise<AdvancedSettingsSnapshot> => ipcRenderer.invoke(IPC.settings.getAdvanced),
+  updateAdvanced: (
+    key: ApplyerSettingKey,
+    value: unknown
+  ): Promise<{ ok: true; snapshot: AdvancedSettingsSnapshot } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.updateAdvanced, { key, value }),
+  resetAdvanced: (
+    key: ApplyerSettingKey
+  ): Promise<{ ok: true; snapshot: AdvancedSettingsSnapshot } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.resetAdvanced, { key }),
+  getNotificationPreferences: (): Promise<NotificationPreferences> =>
+    ipcRenderer.invoke(IPC.settings.getNotificationPreferences),
+  setNotificationPreferences: (
+    preferences: NotificationPreferences
+  ): Promise<{ ok: boolean; preferences?: NotificationPreferences; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setNotificationPreferences, { preferences }),
+  testNotification: (kind: NotificationTestKind): Promise<{ ok: boolean; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.testNotification, { kind }),
+  setNotificationLocale: (locale: NotificationLocale): Promise<{ ok: boolean; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setNotificationLocale, { locale })
 }
 
 const storageLocationApi = {
@@ -236,15 +397,20 @@ const appApi = {
 }
 
 const dataApi = {
-  exportJson: (selection: ExportSelection, labels: DialogLabels): Promise<ExportFileResult> =>
-    ipcRenderer.invoke(IPC.data.exportJson, { selection, labels }),
+  exportJson: (selection: ExportSelection, labels: DialogLabels, theme: ThemeState): Promise<ExportFileResult> =>
+    ipcRenderer.invoke(IPC.data.exportJson, { selection, labels, theme }),
   exportCsv: (table: CsvTable, labels: DialogLabels): Promise<ExportFileResult> =>
     ipcRenderer.invoke(IPC.data.exportCsv, { table, labels }),
-  getExportSizes: (): Promise<ExportSizes> => ipcRenderer.invoke(IPC.data.getExportSizes),
+  getExportSizes: (theme: ThemeState): Promise<ExportSizes> =>
+    ipcRenderer.invoke(IPC.data.getExportSizes, { theme }),
   pickImportFile: (labels: DialogLabels): Promise<ImportPickResult> =>
     ipcRenderer.invoke(IPC.data.pickImportFile, { labels }),
-  import: (bundle: ExportBundle, selection: ExportSelection): Promise<ImportApplyResult> =>
-    ipcRenderer.invoke(IPC.data.import, { bundle, selection })
+  import: (
+    bundle: ExportBundle,
+    selection: ExportSelection,
+    reviewedAutoStartCommand?: string
+  ): Promise<ImportApplyResult> =>
+    ipcRenderer.invoke(IPC.data.import, { bundle, selection, reviewedAutoStartCommand })
 }
 
 const clipboardApi = {
@@ -257,10 +423,12 @@ const api = {
   clipboard: clipboardApi,
   jobs: jobsApi,
   indexedJobs: indexedJobsApi,
+  companyBoards: companyBoardsApi,
   exclusions: exclusionsApi,
   profile: profileApi,
   onboarding: onboardingApi,
   browserControl: browserControlApi,
+  agentPermissions: agentPermissionsApi,
   browserSetup: browserSetupApi,
   settings: settingsApi,
   storageLocation: storageLocationApi,

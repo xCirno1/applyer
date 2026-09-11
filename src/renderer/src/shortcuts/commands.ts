@@ -42,6 +42,11 @@ export const COMMANDS = {
     category: 'Terminal',
     defaultCombo: 'f2'
   },
+  'terminal.search': {
+    id: 'terminal.search',
+    category: 'Terminal',
+    defaultCombo: 'mod+f'
+  },
   'view.toggleOverview': {
     id: 'view.toggleOverview',
     category: 'View',

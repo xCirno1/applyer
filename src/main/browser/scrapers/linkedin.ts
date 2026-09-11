@@ -102,7 +102,7 @@ export async function fetchLinkedInJobDetails(url: string): Promise<JobDetailsOu
     if (!data.descriptionHtml) {
       return {
         status: 'not_found',
-        message: 'Could not find a job description on this LinkedIn page — it may require sign-in or have expired.'
+        message: 'Could not find a job description on this LinkedIn page; it may require sign-in or have expired.'
       }
     }
 

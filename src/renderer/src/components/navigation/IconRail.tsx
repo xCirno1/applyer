@@ -4,15 +4,20 @@ import Tooltip from '../ui/Tooltip'
 
 export type RailPage = 'workspace' | 'indexedJobs'
 
-const ITEMS: { page: RailPage; labelKey: 'rail.jobBoard' | 'rail.indexedJobs'; icon: (props: { className?: string }) => ReactElement }[] = [
+const ITEMS: { page: RailPage; labelKey: 'rail.jobBoard' | 'rail.discovery'; icon: (props: { className?: string }) => ReactElement }[] = [
   { page: 'workspace', labelKey: 'rail.jobBoard', icon: BoardIcon },
-  { page: 'indexedJobs', labelKey: 'rail.indexedJobs', icon: SearchIcon }
+  { page: 'indexedJobs', labelKey: 'rail.discovery', icon: SearchIcon }
 ]
 
 /**
- * Persistent left-side page switcher between the job board and the Indexed
- * Jobs page — Settings deliberately stays on its own header gear button
- * rather than joining this rail.
+ * The left rail switching `App.tsx`'s `MainShell` between the Workspace and
+ * Job Discovery screens (the rail label the `IndexedJobs` page screen
+ * answers to, since that page holds Indexed, Company Boards and Excluded
+ * rather than only the first). Sits below the shared full-width top bar
+ * rather than spanning the whole window height — two inline-SVG icon
+ * buttons, active state is a left accent border (no icon background or
+ * rounded badge, per the style guidelines). Settings deliberately stays off
+ * this rail (header gear button instead).
  */
 export default function IconRail({
   active,

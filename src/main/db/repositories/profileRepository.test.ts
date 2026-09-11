@@ -15,6 +15,7 @@ beforeEach(() => {
 import { getProfile, saveProfile, hasProfile } from './profileRepository'
 import { setStorageMode } from './settingsRepository'
 import { profile as profileTable } from '../schema'
+import { writeSecureField } from '../encryption'
 import type { ProfileFields } from '@shared/types/profile'
 
 function profile(overrides: Partial<ProfileFields> = {}): ProfileFields {
@@ -36,6 +37,7 @@ function profile(overrides: Partial<ProfileFields> = {}): ProfileFields {
     yearsExperience: 5,
     summary: 'Experienced backend engineer.',
     skills: ['TypeScript', 'Node.js'],
+    additionalInformation: [],
     ...overrides
   }
 }
@@ -61,14 +63,50 @@ describe('saveProfile / getProfile round trip', () => {
     expect(getProfile()).toEqual(profile())
   })
 
+  it('reads an encrypted profile saved before additional information existed', () => {
+    setStorageMode('encrypted')
+    const legacyProfile: Record<string, unknown> = { ...profile() }
+    delete legacyProfile.additionalInformation
+    testDb
+      .insert(profileTable)
+      .values({ id: 1, securePayload: writeSecureField(JSON.stringify(legacyProfile), 'encrypted') })
+      .run()
+
+    expect(getProfile()).toEqual(profile({ additionalInformation: [] }))
+  })
+
   it('defaults to encrypted mode ("fails closed") when no storage mode has been chosen yet', () => {
     saveProfile(profile({ email: 'secret@example.com' }))
     // Verify the raw DB row went through the encrypted-field path, i.e. it's
     // not plaintext on disk despite no explicit setStorageMode call.
     const raw = testDb.select().from(profileTable).get()
-    expect(raw?.email?.startsWith('enc:v1:')).toBe(true)
+    expect(raw?.securePayload?.startsWith('enc:v1:')).toBe(true)
+    expect(JSON.stringify(raw)).not.toContain('secret@example.com')
     // But reads back correctly through the repository regardless.
     expect(getProfile()?.email).toBe('secret@example.com')
+  })
+
+  it('leaves no profile field plaintext in the raw encrypted row', () => {
+    setStorageMode('encrypted')
+    saveProfile(profile())
+    const raw = testDb.select().from(profileTable).get()
+    const serialized = JSON.stringify(raw)
+    for (const secret of ['Jane Doe', 'jane@example.com', 'linkedin.com/in/jane', 'US Citizen', 'Backend Engineer', '120000', 'TypeScript']) {
+      expect(serialized).not.toContain(secret)
+    }
+    expect(raw?.securePayload).toMatch(/^enc:v1:/)
+  })
+
+  it.each([
+    ['malformed JSON', '{not-json'],
+    ['an invalid profile shape', JSON.stringify({ fullName: 42 })]
+  ])('rejects %s in the encrypted profile envelope', (_case, serialized) => {
+    testDb
+      .insert(profileTable)
+      .values({ id: 1, securePayload: writeSecureField(serialized, 'encrypted') })
+      .run()
+
+    expect(() => getProfile()).toThrow('The stored profile payload is invalid or corrupted.')
   })
 
   it('upserts on a second save rather than creating a second row', () => {

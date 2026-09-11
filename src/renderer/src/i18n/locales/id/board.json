@@ -22,6 +22,31 @@
     "deselect": "Batalkan pilihan",
     "needsVerification": "perlu verifikasi"
   },
+  "failure": {
+    "tags": {
+      "captchaVerification": "Verifikasi CAPTCHA",
+      "loginRequired": "Perlu masuk",
+      "formNotSupported": "Formulir tidak didukung",
+      "expiredListing": "Lowongan kedaluwarsa",
+      "duplicate": "Duplikat",
+      "interrupted": "Terputus",
+      "browserUnavailable": "Browser tidak tersedia",
+      "other": "Lainnya"
+    },
+    "messages": {
+      "captchaVerification": "Tantangan verifikasi tidak diselesaikan tepat waktu atau dibatalkan.",
+      "loginRequired": "Lamaran ini mengharuskanmu masuk terlebih dahulu.",
+      "formNotSupported": "Applyer tidak menemukan kolom yang dikenali di formulir lamaran ini. Formulirnya mungkin perlu diisi secara manual.",
+      "expiredListing": "Lowongan ini sudah tidak tersedia.",
+      "duplicate": "Lowongan ini sudah masuk antrean dari pencarian lain.",
+      "interrupted": "Applyer ditutup atau dimulai ulang saat lowongan ini menunggu verifikasi. Coba lagi untuk mengulang prosesnya.",
+      "browserUnavailable": "Applyer tidak dapat menyiapkan browser untuk lamaran ini.",
+      "browserUnavailableDetail": "Applyer tidak dapat menyiapkan browser: {{detail}}",
+      "formOpenFailedDetail": "Applyer tidak dapat membuka halaman lamaran: {{detail}}",
+      "formFillFailedDetail": "Applyer gagal saat mengisi formulir: {{detail}}",
+      "jobNotFound": "Lowongan tidak ditemukan."
+    }
+  },
   "selection": {
     "count": "{{count}} dipilih",
     "clear": "Bersihkan"
@@ -32,6 +57,8 @@
     "retryAll": "Coba lagi semua",
     "unqueue": "Keluarkan dari antrean",
     "unqueueCount": "Keluarkan dari antrean ({{count}})",
+    "remove": "Hapus",
+    "removeCount": "Hapus ({{count}})",
     "exclude": "Kecualikan",
     "excludeCount": "Kecualikan ({{count}})",
     "open": "Buka",
@@ -44,9 +71,11 @@
     "retryTitleMenu": "Coba lagi lowongan ini?",
     "retryMessage_other": "{{count}} lowongan yang gagal akan dikembalikan ke Antre supaya dicoba lagi.",
     "excludeTitle_other": "Kecualikan lowongan ini?",
-    "excludeMessage_other": "{{count}} lowongan akan dihapus dari papan dan link-nya masuk daftar blokir permanen. Lowongan itu tidak akan muncul lagi di pencarian dan tidak bisa diantre lagi, baik olehmu maupun oleh agen. Kalau berubah pikiran, batalkan lewat Lowongan Terindeks > Dikecualikan.",
+    "excludeMessage_other": "{{count}} lowongan akan dihapus dari papan dan link-nya masuk daftar blokir permanen. Lowongan itu tidak akan muncul lagi di pencarian dan tidak bisa diantre lagi, baik olehmu maupun oleh agen. Kalau berubah pikiran, batalkan lewat Penemuan Lowongan > Dikecualikan.",
     "unqueueTitle_other": "Keluarkan lowongan dari antrean?",
     "unqueueMessage_other": "{{count}} lowongan akan dihapus dari papan, tapi link-nya tidak diblokir. Agen masih bisa menemukan dan mengantrekannya lagi nanti.",
+    "removeTitle_other": "Hapus lowongan yang sudah selesai?",
+    "removeMessage_other": "{{count}} lowongan berstatus Terisi atau Terkirim akan dihapus permanen dari papan. Link-nya tidak diblokir, jadi lowongan itu bisa ditemukan dan diantrekan lagi nanti.",
     "markSubmittedTitle": "Tandai sebagai terkirim",
     "markSubmittedMessage": "Pastikan kamu memang sudah mengirim lamaran ini sendiri. Tombol ini tidak mengirim apa pun, cuma mencatat kalau kamu sudah melakukannya.",
     "markSubmittedConfirm": "Tandai terkirim"
@@ -58,6 +87,8 @@
     "excludeFailed": "Gagal mengecualikan lowongan yang dipilih.",
     "unqueued_other": "{{count}} lowongan dikeluarkan dari antrean.",
     "unqueueFailed": "Gagal mengeluarkan lowongan dari antrean.",
+    "removed_other": "{{count}} lowongan yang sudah selesai dihapus.",
+    "removeFailed": "Gagal menghapus lowongan yang dipilih.",
     "markedSubmitted": "Ditandai sebagai terkirim.",
     "markSubmittedFailed": "Gagal menandai sebagai terkirim.",
     "movedToQueued": "Dikembalikan ke Antre.",
@@ -65,13 +96,15 @@
     "excludedSingle": "Dikecualikan. Lowongan ini tidak akan muncul lagi di pencarian.",
     "excludeSingleFailed": "Gagal mengecualikan lowongan ini.",
     "unqueuedSingle": "Dihapus dari antrean.",
-    "unqueueSingleFailed": "Gagal mengeluarkan lowongan ini dari antrean."
+    "unqueueSingleFailed": "Gagal mengeluarkan lowongan ini dari antrean.",
+    "removedSingle": "Dihapus dari papan.",
+    "removeSingleFailed": "Gagal menghapus lowongan ini."
   },
   "detail": {
     "match": "cocok {{score}}%",
     "whyMatched": "Kenapa cocok",
     "screenshot": "Lamaran yang sudah diisi (screenshot)",
-    "screenshotAlt": "Screenshot formulir lamaran yang sudah diisi",
+    "screenshotAlt": "Screenshot halaman {{page}} formulir lamaran yang sudah diisi",
     "activity": "Aktivitas",
     "openListing": "Buka lowongan aslinya ↗"
   },

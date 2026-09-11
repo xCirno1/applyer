@@ -58,8 +58,11 @@ submit, in your hands.
 - **The agent is sandboxed to a small toolset.** It gets exactly the MCP tools listed
   [below](#what-the-agent-can-do-mcp-tools). It cannot browse your filesystem, run
   arbitrary commands outside its own terminal, or touch anything else on your machine.
-- **Nothing gets submitted without you.** `fill_application` opens a real, visible
-  browser window and fills the form. You review it and click submit yourself.
+- **Button presses require your approval.** `inspect_application` opens a real,
+  visible browser window and `fill_application` fills only the answers the agent
+  selected. Direct submit controls remain unavailable. Pressing a navigation-like
+  button is disabled by default because site scripts can attach irreversible actions
+  to any button; enable it once or persistently only when you accept that risk.
 
 ## How it works
 
@@ -120,7 +123,10 @@ Other things worth knowing:
 | `queue_job` | Adds a posting to your board, deduplicated by URL. |
 | `list_jobs` | Lists what's already on the board, optionally by status, to avoid re-queuing. |
 | `flag_failure` | Marks a job Failed with a reason tag (login required, expired listing, and so on; unrecognized tags register themselves). |
-| `fill_application` | Opens a visible browser, fills the standard fields from your profile, and never submits. Custom essay questions are left for you. If the site throws up a verification challenge it returns right away and resumes once you clear it. |
+| `inspect_application` | Opens and retains a visible application form, returning opaque field and recognized navigation-button IDs for the current visible step with semantic labels, browser hints, types, current values, and choices without changing anything. Password, hidden-step, arbitrary action, and final-action controls are omitted. Re-inspection uses only the original live window. |
+| `click_application_button` | With explicit button-press permission, clicks an inspected Next, Continue, Proceed, Back, or Previous button, consumes every button ID from that inspection, then requires a fresh inspection. Native form submission is suppressed, but website scripts may still perform arbitrary or irreversible actions. |
+| `fill_application` | Fills only explicit fieldId/value pairs chosen by the agent from an inspection. Partial pages remain Queued so later steps and stored-document uploads stay available; an explicit `finalStep` flag moves the completed form to Filled for review. It never clicks a button, advances a page, or submits. |
+| `edit_application` | Updates only explicit fieldId/value pairs in that original live form. It leaves attachments untouched and never opens a replacement, clicks a button, or submits. |
 | `exclude_job` | Blacklists a posting URL permanently, at your explicit request only. The tool description tells the agent not to use it as its own quality filter. |
 
 That is the entire surface area the agent has. Nothing else in the app or on your machine
@@ -130,9 +136,10 @@ is exposed to it.
 
 Everything stays on your computer. Settings gives you control over the details:
 
-- **Storage mode**: encrypted through your OS keychain, or plain readable files. You can
-  switch either way after onboarding, and your existing profile and documents are
-  rewritten in the new format.
+- **Storage mode**: encrypted through your OS keychain, or plain readable files. Encrypted
+  mode covers the complete SQLite database, documents and their metadata, screenshots, and
+  file logs. You can switch either way after onboarding; see
+  [`docs/encryption.md`](docs/encryption.md) for recovery and verification details.
 - **Storage location**: keep the default app-data directory, move everything (database,
   documents, screenshots, logs) to a folder of your choosing while the app keeps running,
   or connect to an existing Applyer dataset somewhere else. If a custom location is missing
@@ -145,6 +152,35 @@ Everything stays on your computer. Settings gives you control over the details:
 - **Browser**: by default Applyer looks for your installed Chrome, then Edge, and only
   downloads its own Chromium if neither is there. You can pin a specific choice instead. In
   a packaged build, a first-time download is confirmed by you and shows live progress.
+
+### Advanced JSON settings
+
+Operational defaults live in one file, [`src/shared/settings.json`](src/shared/settings.json).
+On first launch Applyer also creates `settings.json` in its user-data directory. That user
+file is a partial override: add only the values you want to change, then restart Applyer.
+The development build uses its separate `applyer-dev` user-data directory. The exact active
+directory is shown in Help > About.
+
+The same overrides can be edited without opening the file manually. Open **Settings >
+Developer**, enable **Developer mode**, then expand a subsystem and its nested group. The
+editor chooses a control from each value's data type, validates before saving, shows which
+values are overridden, and lets each override be reset independently. Dangerous values ask
+for confirmation. Developer mode only reveals these controls; enabling it does not alter any
+runtime limit by itself.
+
+For example:
+
+```json
+{
+  "listJobsDefaultLimit": 30,
+  "atsFetchTimeoutMs": 20000
+}
+```
+
+Unknown or invalid entries are ignored and logged. Keys beginning with `dangerous` control
+resource ceilings, network concurrency, upload limits, or cache compatibility. They can be
+overridden, but the prefix is intentional: raising or otherwise changing them may increase
+memory/network usage, weaken safety limits, or invalidate stored data.
 
 ## Prerequisites
 
@@ -204,6 +240,7 @@ npm run typecheck      # tsc, no emit (main and renderer projects)
 npm run lint           # eslint
 npm run test           # unit test suite (Vitest)
 npm run test:watch     # unit test suite in watch mode
+npm run test:site      # local forms for browser/notification testing
 npm run smoke:mcp      # exercises the MCP server end to end against a running dev instance
 npm run db:generate    # generate a Drizzle migration from schema changes
 npm run db:migrate     # apply migrations to the local database

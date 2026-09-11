@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactElement } from 'react'
+import { useState, useEffect, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import logo from './assets/logo.png'
 import WorkspacePage from './pages/Workspace/WorkspacePage'
@@ -9,11 +9,15 @@ import StorageRecoveryFlow from './pages/StorageRecovery/StorageRecoveryFlow'
 import ToastProvider from './components/ui/ToastProvider'
 import { useToast } from './components/ui/useToast'
 import Skeleton from './components/ui/Skeleton'
+import Button from './components/ui/Button'
+import Callout from './components/ui/Callout'
+import ErrorBoundary from './components/ui/ErrorBoundary'
 import IconRail, { type RailPage } from './components/navigation/IconRail'
 import JobDetailModal from './components/board/JobDetailModal'
 import ExportModal from './pages/Settings/ExportModal'
 import ImportModal from './pages/Settings/ImportModal'
 import BrowserSetupModal from './components/browser/BrowserSetupModal'
+import AgentPermissionPrompt from './components/terminal/AgentPermissionPrompt'
 import { useBrowserSetupState } from './components/browser/useBrowserSetupState'
 import AppMenuBar from './components/workspace/AppMenuBar'
 import DevBuildTag from './components/navigation/DevBuildTag'
@@ -35,6 +39,44 @@ type BootState =
   | { phase: 'storage-recovery'; status: StorageLocationStatus }
   | { phase: 'onboarding' }
   | { phase: 'ready' }
+  // Reached when the boot IPC calls themselves reject. Without it the app sat
+  // on the loading skeleton forever, since nothing else ever moves it off.
+  | { phase: 'failed' }
+
+/**
+ * Shown when a screen's render throws. Deliberately not the whole window: the
+ * boundaries below wrap each screen body, so a broken panel leaves the top bar,
+ * the rail, and — the one that matters — the terminal's live pty session alone.
+ */
+function ScreenErrorFallback({ error, onRetry }: { error: Error; onRetry: () => void }): ReactElement {
+  const { t } = useTranslation('common')
+  return (
+    <div className="flex h-full flex-col items-start gap-3 overflow-y-auto bg-canvas-inset p-6">
+      <Callout tone="danger" title={t('errorBoundary.title')}>
+        {t('errorBoundary.body')}
+      </Callout>
+      <Button size="sm" onClick={onRetry}>
+        {t('errorBoundary.tryAgain')}
+      </Button>
+      <details className="text-[11px] text-text-faint">
+        <summary className="cursor-pointer">{t('errorBoundary.details')}</summary>
+        <pre className="mt-1 max-w-full overflow-x-auto whitespace-pre-wrap">{error.message}</pre>
+      </details>
+    </div>
+  )
+}
+
+/** One boundary per screen, so the others keep running when one of them throws. */
+function ScreenBoundary({ label, children }: { label: string; children: ReactNode }): ReactElement {
+  return (
+    <ErrorBoundary
+      label={label}
+      fallback={(error, reset) => <ScreenErrorFallback error={error} onRetry={reset} />}
+    >
+      {children}
+    </ErrorBoundary>
+  )
+}
 
 function MainShell(): ReactElement {
   const { t } = useTranslation('workspace')
@@ -126,17 +168,21 @@ function MainShell(): ReactElement {
               <IconRail active={screen === 'settings' ? 'workspace' : screen} onSelect={setScreen} />
               <div className="min-h-0 min-w-0 flex-1">
                 <div className={screen === 'workspace' ? 'h-full' : 'hidden'}>
-                  <WorkspacePage
-                    layout={layout}
-                    setSidebarVisible={setSidebarVisible}
-                    setDockVisible={setDockVisible}
-                    setDockTab={setDockTab}
-                    setSidebarWidth={setSidebarWidth}
-                    setDockHeight={setDockHeight}
-                  />
+                  <ScreenBoundary label="WorkspacePage">
+                    <WorkspacePage
+                      layout={layout}
+                      setSidebarVisible={setSidebarVisible}
+                      setDockVisible={setDockVisible}
+                      setDockTab={setDockTab}
+                      setSidebarWidth={setSidebarWidth}
+                      setDockHeight={setDockHeight}
+                    />
+                  </ScreenBoundary>
                 </div>
                 <div className={screen === 'indexedJobs' ? 'h-full' : 'hidden'}>
-                  <IndexedJobsPage />
+                  <ScreenBoundary label="IndexedJobsPage">
+                    <IndexedJobsPage />
+                  </ScreenBoundary>
                 </div>
               </div>
             </div>
@@ -146,8 +192,17 @@ function MainShell(): ReactElement {
               <div className="flex h-nav shrink-0 items-center border-b border-border bg-canvas px-3">
                 <button
                   onClick={() => setScreen('workspace')}
-                  className="cursor-pointer text-[12px] font-medium text-text-muted hover:text-text"
+                  className="flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-text-muted hover:text-text"
                 >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
+                    <path
+                      d="M19 12H5M5 12l6-6M5 12l6 6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
                   {t('topBar.backToWorkspace')}
                 </button>
                 <div className="ml-auto flex items-center">
@@ -155,11 +210,13 @@ function MainShell(): ReactElement {
                 </div>
               </div>
               <div className="min-h-0 flex-1">
-                <SettingsPage
-                  initialSection={settingsSection}
-                  onOpenExport={() => setExportOpen(true)}
-                  onOpenImport={() => setImportOpen(true)}
-                />
+                <ScreenBoundary label="SettingsPage">
+                  <SettingsPage
+                    initialSection={settingsSection}
+                    onOpenExport={() => setExportOpen(true)}
+                    onOpenImport={() => setImportOpen(true)}
+                  />
+                </ScreenBoundary>
               </div>
             </div>
           )}
@@ -172,6 +229,7 @@ function MainShell(): ReactElement {
           without navigating to Settings > Data first. */}
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
+      <AgentPermissionPrompt />
       <BrowserSetupModal
         state={browserSetup.state}
         dismissed={browserSetup.dismissed}
@@ -203,6 +261,21 @@ function StartupWarningToast({ warning }: { warning: AppError | null }): null {
   return null
 }
 
+/** The boot check itself failed — the one screen that cannot assume a working database. */
+function BootFailure({ onRetry }: { onRetry: () => void }): ReactElement {
+  const { t } = useTranslation('common')
+  return (
+    <div className="flex h-full flex-col items-start gap-3 bg-canvas-inset p-6">
+      <Callout tone="danger" title={t('boot.failedTitle')}>
+        {t('boot.failedBody')}
+      </Callout>
+      <Button size="sm" onClick={onRetry}>
+        {t('boot.failedRetry')}
+      </Button>
+    </div>
+  )
+}
+
 export default function App(): ReactElement {
   const [boot, setBoot] = useState<BootState>({ phase: 'loading' })
   const [startupWarning, setStartupWarning] = useState<AppError | null>(null)
@@ -215,16 +288,25 @@ export default function App(): ReactElement {
     // would claim `completed: false` even though the user finished
     // onboarding against their actual (currently unreachable) database, so
     // onboarding must not be checked until storage is resolved.
-    window.api.storageLocation.getStatus().then((status) => {
-      if (status.startupFallbackWarning) setStartupWarning(status.startupFallbackWarning)
-      if (status.needsRecovery) {
-        setBoot({ phase: 'storage-recovery', status })
-        return
-      }
-      window.api.onboarding.getStatus().then((onboardingStatus) => {
+    void (async () => {
+      setBoot({ phase: 'loading' })
+      try {
+        const status = await window.api.storageLocation.getStatus()
+        if (status.startupFallbackWarning) setStartupWarning(status.startupFallbackWarning)
+        if (status.needsRecovery) {
+          setBoot({ phase: 'storage-recovery', status })
+          return
+        }
+        const onboardingStatus = await window.api.onboarding.getStatus()
         setBoot({ phase: onboardingStatus.completed ? 'ready' : 'onboarding' })
-      })
-    })
+      } catch (err) {
+        // Both calls reach the database, so this is what an unopenable one
+        // looks like from here. Left as its own phase with a retry rather than
+        // an unhandled rejection and a skeleton nothing ever replaces.
+        console.error('Boot state check failed', err)
+        setBoot({ phase: 'failed' })
+      }
+    })()
   }
 
   useEffect(checkBootState, [])
@@ -235,17 +317,20 @@ export default function App(): ReactElement {
         <ThemeProvider>
           <ToastProvider>
             <StartupWarningToast warning={startupWarning} />
-            {boot.phase === 'loading' && (
-              <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
-                <Skeleton className="h-6 w-48" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-            )}
-            {boot.phase === 'storage-recovery' && (
-              <StorageRecoveryFlow status={boot.status} onResolved={checkBootState} />
-            )}
-            {boot.phase === 'onboarding' && <OnboardingFlow onComplete={() => setBoot({ phase: 'ready' })} />}
-            {boot.phase === 'ready' && <MainShell />}
+            <ScreenBoundary label="App">
+              {boot.phase === 'loading' && (
+                <div className="flex h-full flex-col gap-2 bg-canvas-inset p-6">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              )}
+              {boot.phase === 'failed' && <BootFailure onRetry={checkBootState} />}
+              {boot.phase === 'storage-recovery' && (
+                <StorageRecoveryFlow status={boot.status} onResolved={checkBootState} />
+              )}
+              {boot.phase === 'onboarding' && <OnboardingFlow onComplete={() => setBoot({ phase: 'ready' })} />}
+              {boot.phase === 'ready' && <MainShell />}
+            </ScreenBoundary>
           </ToastProvider>
         </ThemeProvider>
       </LocaleProvider>

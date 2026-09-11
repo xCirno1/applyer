@@ -5,12 +5,30 @@ import type { StorageMode } from '@shared/types/profile'
 import type { AutoStartCommand, BrowserPreference } from '@shared/types/ipcEvents'
 import type { IndexedJobsRetention } from '@shared/types/indexedJob'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  DEFAULT_NOTIFICATION_LOCALE,
+  isNotificationLocale,
+  isNotificationPreferences,
+  type NotificationLocale,
+  type NotificationPreferences
+} from '@shared/types/notification'
+import {
+  DENIED_AGENT_PERMISSIONS,
+  DEFAULT_AGENT_PERMISSIONS,
+  isAgentPermissions,
+  type AgentPermissions
+} from '@shared/types/agentPermissions'
 
 const STORAGE_MODE_KEY = 'storage_mode'
 const ONBOARDING_COMPLETED_KEY = 'onboarding_completed'
 const AUTO_START_COMMAND_KEY = 'auto_start_command'
 const INDEXED_JOBS_RETENTION_KEY = 'indexed_jobs_retention_days'
 const BROWSER_PREFERENCE_KEY = 'browser_preference'
+const ALLOW_LOCAL_ADDRESSES_KEY = 'allow_local_addresses'
+const NOTIFICATION_PREFERENCES_KEY = 'notification_preferences'
+const NOTIFICATION_LOCALE_KEY = 'notification_locale'
+const AGENT_PERMISSIONS_KEY = 'agent_permissions'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -50,6 +68,38 @@ export function setAutoStartCommand(command: AutoStartCommand): void {
   setSetting(AUTO_START_COMMAND_KEY, command)
 }
 
+export function getAgentPermissions(): AgentPermissions {
+  const value = getSetting(AGENT_PERMISSIONS_KEY)
+  if (!value) return { ...DEFAULT_AGENT_PERMISSIONS }
+  try {
+    const parsed: unknown = JSON.parse(value)
+    if (isAgentPermissions(parsed)) return parsed
+    // Settings written before button pressing became a separate permission
+    // keep their existing choices while the new capability fails closed.
+    if (typeof parsed === 'object' && parsed !== null) {
+      const legacy = parsed as Partial<AgentPermissions>
+      if (
+        typeof legacy.autoCompleteFields === 'boolean' &&
+        typeof legacy.autoUploadDocuments === 'boolean' &&
+        legacy.autoPressButtons === undefined
+      ) {
+        return {
+          autoCompleteFields: legacy.autoCompleteFields,
+          autoUploadDocuments: legacy.autoUploadDocuments,
+          autoPressButtons: false
+        }
+      }
+    }
+    return { ...DENIED_AGENT_PERMISSIONS }
+  } catch {
+    return { ...DENIED_AGENT_PERMISSIONS }
+  }
+}
+
+export function setAgentPermissions(permissions: AgentPermissions): void {
+  setSetting(AGENT_PERMISSIONS_KEY, JSON.stringify(permissions))
+}
+
 export function getIndexedJobsRetentionDays(): IndexedJobsRetention {
   const value = getSetting(INDEXED_JOBS_RETENTION_KEY)
   if (value === 'unlimited') return 'unlimited'
@@ -68,4 +118,60 @@ export function getBrowserPreference(): BrowserPreference {
 
 export function setBrowserPreference(preference: BrowserPreference): void {
   setSetting(BROWSER_PREFERENCE_KEY, preference)
+}
+
+/** Local/private browser destinations are denied unless the user explicitly opts in. */
+export function getAllowLocalAddresses(): boolean {
+  return getSetting(ALLOW_LOCAL_ADDRESSES_KEY) === '1'
+}
+
+export function setAllowLocalAddresses(allowed: boolean): void {
+  setSetting(ALLOW_LOCAL_ADDRESSES_KEY, allowed ? '1' : '0')
+}
+
+export function getNotificationPreferences(): NotificationPreferences {
+  const value = getSetting(NOTIFICATION_PREFERENCES_KEY)
+  if (!value) return { ...DEFAULT_NOTIFICATION_PREFERENCES }
+  try {
+    const parsed: unknown = JSON.parse(value)
+    if (isNotificationPreferences(parsed)) return parsed
+    // Preferences written before permission-request notifications existed
+    // are upgraded one field at a time so a new release does not reset the
+    // user's existing category choices back to every default.
+    if (typeof parsed === 'object' && parsed !== null) {
+      const legacy = parsed as Partial<NotificationPreferences>
+      if (
+        typeof legacy.enabled === 'boolean' &&
+        typeof legacy.verificationRequired === 'boolean' &&
+        typeof legacy.jobFilled === 'boolean' &&
+        typeof legacy.jobFailed === 'boolean' &&
+        legacy.permissionRequired === undefined
+      ) {
+        return {
+          enabled: legacy.enabled,
+          verificationRequired: legacy.verificationRequired,
+          permissionRequired: DEFAULT_NOTIFICATION_PREFERENCES.permissionRequired,
+          jobFilled: legacy.jobFilled,
+          jobFailed: legacy.jobFailed
+        }
+      }
+    }
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES }
+  } catch {
+    return { ...DEFAULT_NOTIFICATION_PREFERENCES }
+  }
+}
+
+export function setNotificationPreferences(preferences: NotificationPreferences): void {
+  setSetting(NOTIFICATION_PREFERENCES_KEY, JSON.stringify(preferences))
+}
+
+/** Last renderer-resolved locale, cached so main can localize events before a window finishes loading next launch. */
+export function getNotificationLocale(): NotificationLocale {
+  const value = getSetting(NOTIFICATION_LOCALE_KEY)
+  return isNotificationLocale(value) ? value : DEFAULT_NOTIFICATION_LOCALE
+}
+
+export function setNotificationLocale(locale: NotificationLocale): void {
+  setSetting(NOTIFICATION_LOCALE_KEY, locale)
 }

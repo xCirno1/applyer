@@ -1,4 +1,26 @@
 import { z } from 'zod'
+import {
+  LIST_JOBS_MAX_LIMIT,
+  SEARCH_JOBS_MAX_LIMIT
+} from '@shared/constants'
+import { getSettings } from '@shared/settings'
+import { isNavigableUrl } from '@shared/url'
+
+const settings = getSettings()
+
+/**
+ * Every URL an agent hands us is one the app will eventually open: fetched
+ * in a headless page (`get_job_details`), navigated to in a real window
+ * (`inspect_application`, via the queued job), or opened in the OS browser from
+ * the job card. `z.url()` alone is not that check — it accepts `file:`,
+ * `data:` and `javascript:` too — so the scheme rule lives here, at the door
+ * these arrive through. See `@shared/url` for why, and
+ * `browser/jobDetails.ts` / `browser/fillTaskRunner.ts` for the second door.
+ */
+const navigableUrl = z
+  .string()
+  .trim()
+  .refine(isNavigableUrl, 'must be an http:// or https:// URL')
 
 const jobSourceEnum = z.enum(['greenhouse', 'lever', 'ashby', 'workday', 'linkedin', 'indeed', 'generic'])
 const jobStatusEnum = z.enum(['queued', 'filled', 'submitted', 'failed'])
@@ -10,17 +32,17 @@ export const searchJobsShape = {
   remote: z.boolean().optional(),
   jobType: z.enum(['full_time', 'part_time', 'contract', 'internship']).optional(),
   sources: z.array(jobSourceEnum).optional(),
-  limit: z.number().int().min(1).max(50).optional()
+  limit: z.number().int().min(1).max(SEARCH_JOBS_MAX_LIMIT).optional()
 }
 
 export const getJobDetailsShape = {
-  url: z.string().trim().url()
+  url: navigableUrl
 }
 
 export const queueJobShape = {
   title: z.string().trim().min(1).max(300),
   company: z.string().trim().min(1).max(300),
-  url: z.string().trim().url(),
+  url: navigableUrl,
   location: z.string().trim().max(300).optional(),
   source: z.string().trim().max(50).optional(),
   description: z.string().max(50000).optional(),
@@ -31,7 +53,7 @@ export const queueJobShape = {
 
 export const listJobsShape = {
   status: jobStatusEnum.optional(),
-  limit: z.number().int().min(1).max(50).optional(),
+  limit: z.number().int().min(1).max(LIST_JOBS_MAX_LIMIT).optional(),
   offset: z.number().int().min(0).optional()
 }
 
@@ -44,7 +66,14 @@ export const flagFailureShape = {
   message: z.string().trim().max(500).optional()
 }
 
-export const getProfileShape = {}
+/**
+ * `includeDocumentText` is opt-in rather than always on: the extracted text
+ * of a resume is by far the largest thing this tool can return, and most
+ * calls (judging a match, filling a form) only need the structured profile.
+ */
+export const getProfileShape = {
+  includeDocumentText: z.boolean().optional()
+}
 
 /**
  * Every field is optional because `update_profile` merges onto the stored
@@ -70,16 +99,75 @@ export const updateProfileShape = {
   salaryCurrency: z.string().trim().max(10).optional(),
   yearsExperience: z.number().int().min(0).max(80).nullable().optional(),
   summary: z.string().trim().max(5000).optional(),
-  skills: z.array(z.string().trim().max(100)).max(100).optional()
+  skills: z.array(z.string().trim().max(100)).max(100).optional(),
+  additionalInformation: z
+    .array(z.object({ question: z.string().trim().min(1).max(500), answer: z.string().max(5000) }))
+    .max(50)
+    .optional()
 }
 
+const applicationAnswers = z
+  .array(
+    z.object({
+      fieldId: z.string().trim().min(1).max(200),
+      value: z.union([z.string().max(5000), z.boolean(), z.array(z.string().max(1000)).max(100)])
+    })
+  )
+  .max(100)
+
 export const fillApplicationShape = {
+  jobId: z.string().trim().min(1),
+  answers: applicationAnswers,
+  finalStep: z.boolean().optional().describe(
+    'Set true only when every application page has been filled and the retained form is ready for user review. This changes only the Applyer board state and never submits the form.'
+  )
+}
+
+export const inspectApplicationShape = {
   jobId: z.string().trim().min(1)
 }
 
+export const clickApplicationButtonShape = {
+  jobId: z.string().trim().min(1),
+  buttonId: z.string().trim().min(1).max(200)
+}
+
+export const editApplicationShape = {
+  jobId: z.string().trim().min(1),
+  answers: applicationAnswers.min(1)
+}
+
 export const excludeJobShape = {
-  url: z.string().trim().url(),
+  url: navigableUrl,
   title: z.string().trim().max(300).optional(),
   company: z.string().trim().max(300).optional(),
   reason: z.string().trim().max(300).optional()
+}
+
+const atsProviderEnum = z.enum(['greenhouse', 'lever', 'ashby', 'workday'])
+
+/**
+ * `company` carries whatever the agent has — a name, a domain, or a board
+ * URL — and the app resolves it. `provider` + `token` skip that resolution
+ * for an agent that already knows the exact slug.
+ *
+ * `provider` alone is the third, and commonest, thing a web search actually
+ * establishes: which ATS a company's careers page points at, without the
+ * slug. That is kept as a *preference* — every provider is still probed, and
+ * one holding postings still outranks the preferred one — which is the rule
+ * an ATS migration needs, since the abandoned board answers too. A `token`
+ * with no `provider` remains an error: it doesn't say which API to ask (this
+ * shape is a field map, so the tool checks that itself).
+ */
+export const addCompanyBoardShape = {
+  company: z.string().trim().min(1).max(200),
+  provider: atsProviderEnum.optional(),
+  token: z.string().trim().min(1).max(100).optional(),
+  displayName: z.string().trim().max(200).optional()
+}
+
+export const listCompanyBoardsShape = {
+  search: z.string().trim().max(200).optional(),
+  limit: z.number().int().min(1).max(settings.dangerousMcpListCompanyBoardsMaxLimit).optional(),
+  offset: z.number().int().min(0).optional()
 }

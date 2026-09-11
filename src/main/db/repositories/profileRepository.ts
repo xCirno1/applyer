@@ -3,17 +3,54 @@ import { getDb } from '../index'
 import { profile } from '../schema'
 import { readSecureField, writeSecureField } from '../encryption'
 import { getStorageMode } from './settingsRepository'
-import type { ProfileFields } from '@shared/types/profile'
+import { normalizeProfileFields, type ProfileFields } from '@shared/types/profile'
 
 const PROFILE_ID = 1
 
-/** Text columns that may hold sensitive PII and go through the storage-mode encryption path. */
-const SECURE_FIELDS = ['fullName', 'email', 'phone', 'location', 'summary'] as const
+/** All candidate fields are serialized into one encrypted envelope. */
+const SECURE_FIELDS = [
+  'fullName',
+  'email',
+  'phone',
+  'location',
+  'linkedinUrl',
+  'githubUrl',
+  'portfolioUrl',
+  'workAuthorization',
+  'desiredRoles',
+  'desiredLocations',
+  'remotePreference',
+  'salaryMin',
+  'salaryMax',
+  'salaryCurrency',
+  'yearsExperience',
+  'summary',
+  'skills',
+  'additionalInformation'
+] as const
 
 export function getProfile(): ProfileFields | null {
   const row = getDb().select().from(profile).where(eq(profile.id, PROFILE_ID)).get()
   if (!row) return null
 
+  if (row.securePayload) {
+    const serialized = readSecureField(row.securePayload)
+    if (!serialized) throw new Error('The encrypted profile payload was empty.')
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(serialized)
+    } catch {
+      throw new Error('The stored profile payload is invalid or corrupted.')
+    }
+    const normalized = normalizeProfileFields(parsed)
+    if (!normalized) {
+      throw new Error('The stored profile payload is invalid or corrupted.')
+    }
+    return normalized
+  }
+
+  // Legacy rows are read long enough to be re-saved into the envelope by a
+  // profile edit or storage-mode migration.
   return {
     fullName: readSecureField(row.fullName) ?? '',
     email: readSecureField(row.email) ?? '',
@@ -31,7 +68,8 @@ export function getProfile(): ProfileFields | null {
     salaryCurrency: row.salaryCurrency ?? '',
     yearsExperience: row.yearsExperience,
     summary: readSecureField(row.summary) ?? '',
-    skills: row.skills ?? []
+    skills: row.skills ?? [],
+    additionalInformation: []
   }
 }
 
@@ -44,23 +82,26 @@ export function saveProfile(fields: ProfileFields): void {
 
   const values = {
     id: PROFILE_ID,
-    fullName: writeSecureField(fields.fullName, mode),
-    email: writeSecureField(fields.email, mode),
-    phone: writeSecureField(fields.phone, mode),
-    location: writeSecureField(fields.location, mode),
-    linkedinUrl: fields.linkedinUrl || null,
-    githubUrl: fields.githubUrl || null,
-    portfolioUrl: fields.portfolioUrl || null,
-    workAuthorization: fields.workAuthorization || null,
-    desiredRoles: fields.desiredRoles,
-    desiredLocations: fields.desiredLocations,
-    remotePreference: fields.remotePreference,
-    salaryMin: fields.salaryMin,
-    salaryMax: fields.salaryMax,
-    salaryCurrency: fields.salaryCurrency || null,
-    yearsExperience: fields.yearsExperience,
-    summary: writeSecureField(fields.summary, mode),
-    skills: fields.skills,
+    // Clear every legacy content column so encrypted mode does not leave a
+    // second plaintext copy alongside the new complete envelope.
+    fullName: null,
+    email: null,
+    phone: null,
+    location: null,
+    linkedinUrl: null,
+    githubUrl: null,
+    portfolioUrl: null,
+    workAuthorization: null,
+    desiredRoles: null,
+    desiredLocations: null,
+    remotePreference: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryCurrency: null,
+    yearsExperience: null,
+    summary: null,
+    skills: null,
+    securePayload: writeSecureField(JSON.stringify(fields), mode),
     updatedAt: now
   }
 

@@ -5,6 +5,13 @@ import { useJobsStore } from '../../state/jobsStore'
 import { usePendingCaptchaAlerts } from '../../providers/CaptchaAlertContext'
 import Tag from '../ui/Tag'
 import DonutChart from '../ui/DonutChart'
+import MetaList from '../ui/MetaList'
+
+// The workspace's left sidebar — a `DonutChart` + legend of per-status job
+// counts/share, and a "needs verification" list (from `CaptchaAlertContext`'s
+// `pending`, clickable to open that job's detail modal via `jobsStore`). The
+// analogue of a persistent analysis rail alongside the board, rather than
+// requiring a separate page.
 
 const STATUS_ORDER: JobStatus[] = ['queued', 'filled', 'submitted', 'failed']
 
@@ -78,10 +85,13 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
                   <div key={status} className="flex items-center gap-1.5">
                     <span className={`h-2 w-2 shrink-0 ${STATUS_SWATCH[status]}`} aria-hidden="true" />
                     <span className="min-w-0 flex-1 truncate text-[11px] text-text-muted">{t(`status.${status}`)}</span>
-                    <span className="shrink-0 text-[11px] tabular-nums text-text">
-                      {count}
-                      {totalTracked > 0 && <span className="text-text-faint"> · {share}%</span>}
-                    </span>
+                    <MetaList
+                      className="shrink-0 text-[11px] tabular-nums text-text"
+                      items={[
+                        { key: 'count', value: count },
+                        totalTracked > 0 && { key: 'share', value: `${share}%`, className: 'text-text-faint' }
+                      ]}
+                    />
                   </div>
                 )
               })}

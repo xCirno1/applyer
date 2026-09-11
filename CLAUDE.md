@@ -21,7 +21,7 @@
 - Never use chips with dot on the left side.
 - Prioritize rectangle buttons rather than pills. 
 - Don't hand-tune radii, type sizes, or spacing to taste.
-- Minimize the usage of em-dashes.
+- Don't use em-dashes.
 - **Density is a feature.** Controls are fixed-height (`h-6`/`h-7`), table
   rows are `py-1.5`, panel padding is `px-3`. Whitespace between *sections* should be smaller than you'd use on a content page.
 - **Depth comes from 1px seams and the surface ramp**
@@ -41,6 +41,9 @@
 - After finishing a run, always suggest the user on what additional features can be implemented next.
 - You don't need to start a development server to test, just run simple curls/typecheck/lint is enough.
 - If you start it, don't forget to terminate after use.
+
+## App-specific Guidelines
+- When adding new data model to the app, respect user's data storage encryption setting.
 
 ## Components
 Catalog of existing components, organization conventions, and where to add new ones — kept in its own file since it documents the codebase (not agent behavior) and changes independently of the guidelines above.

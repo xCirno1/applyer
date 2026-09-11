@@ -3,6 +3,24 @@ import { useTranslation } from 'react-i18next'
 import type { TerminalTab } from './useTerminalTabs'
 import ContextMenu, { type ContextMenuState } from '../ui/ContextMenu'
 
+// The sub-tab strip TerminalGroup renders above its sessions — per-tab
+// close button (visible on hover), "+" to add a new terminal (disabled past
+// MAX_TERMINALS). Double-click (or right-click > Rename, or the
+// terminal.rename shortcut/menu item) a tab to rename it in place; drag a
+// tab onto another to reorder, or past the last tab to send it to the end
+// (native HTML5 drag-and-drop, no library; the bar itself is the drop
+// target for "past the last tab" since there's no other tab there to drop
+// "onto") — all pure UI-state operations on useTerminalTabs, the underlying
+// pty session is untouched. Fully controlled by TerminalGroup
+// (rename-in-progress state lives there, not locally) so the keyboard
+// shortcut can target the active tab.
+//
+// A single capture-phase click guard on the whole bar swallows the trailing
+// ghost `click` Chromium can fire after a completed drag — critically
+// including on the "+" button, since an unguarded ghost click landing there
+// (easy to hit while aiming for the tail position) calls onAdd and spawns a
+// genuinely new pty, which looks like the terminal "restarted".
+
 export default function TerminalTabBar({
   tabs,
   activeId,

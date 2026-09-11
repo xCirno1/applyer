@@ -8,8 +8,9 @@ import { playwrightBrowsersDir } from '../config/paths'
 import { runCommand } from '../config/processUtils'
 import { parseDownloadProgressLine } from './downloadProgress'
 import { broadcastBrowserSetupProgress, broadcastBrowserSetupStatus } from '../ipc/jobsBroadcast'
-import { getBrowserPreference } from '../db/repositories/settingsRepository'
+import { getAllowLocalAddresses, getBrowserPreference } from '../db/repositories/settingsRepository'
 import type { ResolvedBrowserStatus } from '@shared/types/ipcEvents'
+import { protectBrowserContext } from './networkAccess'
 
 const PREFERENCE_LABELS = { chrome: 'System Chrome', msedge: 'System Edge' } as const
 
@@ -120,7 +121,7 @@ async function launchWithResolution(headless: boolean): Promise<Browser> {
     }
     if (preference !== 'auto') {
       throw new Error(
-        `The selected browser (${PREFERENCE_LABELS[preference]}) could not be launched — it may not be ` +
+        `The selected browser (${PREFERENCE_LABELS[preference]}) could not be launched. It may not be ` +
           `installed on this system. Pick a different option in Settings > Browser, or switch to "Auto".`
       )
     }
@@ -179,7 +180,7 @@ export async function ensureManagedChromiumDownloaded(
         const confirmed = await confirmManagedDownload()
         if (!confirmed) {
           throw new Error(
-            'Browser download was declined — job automation needs a browser to continue. Answer the setup ' +
+            'Browser download was declined. Job automation needs a browser to continue. Answer the setup ' +
               'prompt to try again, or pick "System Chrome"/"System Edge" in Settings > Browser if one is installed.'
           )
         }
@@ -230,11 +231,13 @@ async function getHeadlessBrowser(): Promise<Browser> {
 /** Used for read-only work (searching, fetching a job description) — never for anything interactive. */
 export async function newHeadlessContext(): Promise<BrowserContext> {
   const browser = await getHeadlessBrowser()
-  return browser.newContext({
+  const context = await browser.newContext({
     userAgent: REALISTIC_USER_AGENT,
     viewport: { width: 1280, height: 900 },
     locale: 'en-US'
   })
+  await protectBrowserContext(context, getAllowLocalAddresses())
+  return context
 }
 
 /** Used for anything interactive (login, filling a form) — a real, visible window the user can watch and take over. Caller owns closing both. */
@@ -249,6 +252,7 @@ export async function launchHeadedContext(): Promise<{ browser: Browser; context
     viewport: null,
     locale: 'en-US'
   })
+  await protectBrowserContext(context, getAllowLocalAddresses())
   return { browser, context }
 }
 

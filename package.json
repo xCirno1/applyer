@@ -13,8 +13,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "postinstall": "electron-rebuild -f -w better-sqlite3,node-pty && cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium",
+    "postinstall": "patch-package --error-on-fail && electron-rebuild -f -w better-sqlite3,node-pty && cross-env PLAYWRIGHT_BROWSERS_PATH=0 playwright install chromium",
     "dev": "electron-vite dev",
+    "prebuild": "patch-package --error-on-fail",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
@@ -24,8 +25,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "smoke:mcp": "tsx scripts/smoke-mcp.ts",
+    "pretest": "patch-package --error-on-fail",
     "test": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest run",
     "test:watch": "cross-env NODE_OPTIONS=--no-experimental-webstorage vitest",
+    "test:site": "tsx scripts/test-site.ts",
     "package": "tsx scripts/package.ts",
     "package:linux": "tsx scripts/package.ts --linux",
     "package:win": "tsx scripts/package.ts --win",
@@ -39,14 +42,15 @@
     "@modelcontextprotocol/sdk": "^1.30.0",
     "@uiw/react-codemirror": "^4.25.11",
     "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
     "@xterm/addon-webgl": "^0.19.0",
     "@xterm/xterm": "^6.0.0",
-    "better-sqlite3": "^13.0.3",
+    "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^13.0.3",
     "drizzle-orm": "^0.45.2",
     "electron-log": "^5.4.4",
     "electron-updater": "^6.8.9",
     "i18next": "^26.4.0",
-    "mammoth": "^1.12.1",
+    "mammoth": "1.12.1",
     "node-pty": "^1.1.0",
     "pdf-parse": "^2.4.5",
     "playwright": "^1.62.1",
@@ -81,11 +85,17 @@
     "eslint-plugin-react-refresh": "^0.5.4",
     "globals": "^17.11.0",
     "jsdom": "^29.1.1",
+    "jszip": "^3.10.1",
+    "patch-package": "^8.0.1",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.12",
     "typescript": "^5.9.3",
     "vite": "^7.3.6",
     "vitest": "^4.1.11"
+  },
+  "overrides": {
+    "@xmldom/xmldom": "0.9.12",
+    "plist": "3.1.0"
   },
   "build": {
     "appId": "com.applyer.app",
@@ -101,7 +111,8 @@
       "!**/node_modules/@napi-rs/canvas*/**"
     ],
     "electronLanguages": [
-      "en-US"
+      "en-US",
+      "id"
     ],
     "asar": true,
     "asarUnpack": [

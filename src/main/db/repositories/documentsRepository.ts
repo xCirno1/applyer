@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { writeFileSync, readFileSync, unlinkSync, existsSync } from 'fs'
+import { writeFileSync, readFileSync, unlinkSync, existsSync, chmodSync } from 'fs'
 import { join } from 'path'
 import { eq } from 'drizzle-orm'
 import { getDb } from '../index'
@@ -19,7 +19,7 @@ function toSummary(row: DocumentRow): DocumentSummary {
   return {
     id: row.id,
     kind: row.kind,
-    originalFilename: row.originalFilename,
+    originalFilename: readSecureField(row.originalFilename) ?? '',
     sizeBytes: row.sizeBytes,
     hasExtractedText: !!row.extractedText,
     createdAt: row.createdAt
@@ -91,7 +91,9 @@ export async function addDocument(input: AddDocumentInput): Promise<DocumentSumm
   return withStorageWriteLock(() => {
     const { data: storedBytes, isEncrypted } = writeSecureBuffer(input.data, mode)
     const storedPath = join(documentsDir(), id)
-    writeFileSync(storedPath, storedBytes)
+    // Owner-only: in plaintext storage mode this file *is* the resume, and
+    // even encrypted there is no reason for it to be world-readable.
+    writeFileSync(storedPath, storedBytes, { mode: 0o600 })
 
     const now = new Date().toISOString()
     getDb()
@@ -100,9 +102,9 @@ export async function addDocument(input: AddDocumentInput): Promise<DocumentSumm
         id,
         profileId: PROFILE_ID,
         kind: input.kind,
-        originalFilename: input.originalFilename,
+        originalFilename: writeSecureField(input.originalFilename, mode) ?? '',
         storedPath,
-        mimeType: input.mimeType,
+        mimeType: writeSecureField(input.mimeType, mode) ?? '',
         sizeBytes: input.data.byteLength,
         extractedText: writeSecureField(extractedTextRaw, mode),
         isEncryptedAtRest: isEncrypted,
@@ -158,13 +160,25 @@ export function rewriteDocumentStorageMode(id: string, mode: StorageMode): Promi
 
     const decryptedBytes = readSecureBuffer(readFileSync(row.storedPath), row.isEncryptedAtRest)
     const decryptedText = readSecureField(row.extractedText)
+    const decryptedFilename = readSecureField(row.originalFilename) ?? ''
+    const decryptedMimeType = readSecureField(row.mimeType) ?? ''
 
     const { data: newBytes, isEncrypted } = writeSecureBuffer(decryptedBytes, mode)
+    // `mode` on an existing file is ignored, so the permissions of a document
+    // written before that became the default are fixed here — this path
+    // already rewrites every document, and switching to plaintext is exactly
+    // when the file's own permissions start carrying the weight.
     writeFileSync(row.storedPath, newBytes)
+    chmodSync(row.storedPath, 0o600)
 
     getDb()
       .update(documents)
-      .set({ isEncryptedAtRest: isEncrypted, extractedText: writeSecureField(decryptedText, mode) })
+      .set({
+        isEncryptedAtRest: isEncrypted,
+        originalFilename: writeSecureField(decryptedFilename, mode) ?? '',
+        mimeType: writeSecureField(decryptedMimeType, mode) ?? '',
+        extractedText: writeSecureField(decryptedText, mode)
+      })
       .where(eq(documents.id, id))
       .run()
   })

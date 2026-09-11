@@ -6,6 +6,7 @@ import { getProfile, saveProfile } from '../db/repositories/profileRepository'
 import { listDocuments, addDocument, deleteDocument } from '../db/repositories/documentsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
 import { MAX_DOCUMENT_SIZE_BYTES } from '@shared/constants'
+import { documentIdPayload } from './payloadSchemas'
 import type { UploadDocumentRequest } from '@shared/types/ipcEvents'
 
 const profileFieldsSchema = z.object({
@@ -25,7 +26,10 @@ const profileFieldsSchema = z.object({
   salaryCurrency: z.string().max(10),
   yearsExperience: z.number().int().min(0).max(80).nullable(),
   summary: z.string().max(5000),
-  skills: z.array(z.string().max(100)).max(100)
+  skills: z.array(z.string().max(100)).max(100),
+  additionalInformation: z
+    .array(z.object({ question: z.string().trim().min(1).max(500), answer: z.string().max(5000) }))
+    .max(50)
 })
 
 const ALLOWED_MIME_TYPES = new Set([
@@ -84,8 +88,10 @@ export function registerProfileIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.profile.deleteDocument, async (_event, { documentId }: { documentId: string }) => {
-    await deleteDocument(documentId)
+  ipcMain.handle(IPC.profile.deleteDocument, async (_event, payload: unknown) => {
+    const parsed = documentIdPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false }
+    await deleteDocument(parsed.data.documentId)
     return { ok: true }
   })
 }

@@ -12,6 +12,7 @@
     "newTerminal": "Terminal Baru",
     "closeTerminal": "Tutup Terminal",
     "renameTerminal": "Ganti Nama Terminal",
+    "findInTerminal": "Cari di Terminal",
     "nextTerminalTab": "Tab Terminal Berikutnya",
     "prevTerminalTab": "Tab Terminal Sebelumnya",
     "refreshBoard": "Muat Ulang Papan",
@@ -25,7 +26,7 @@
     "title": "Tentang Applyer",
     "name": "Applyer",
     "version": "Versi {{version}}",
-    "developmentBuildDataDirectory": "Build pengembangan — direktori data"
+    "dataDirectory": "Direktori data:"
   },
   "retryAll": {
     "title": "Coba lagi semua lowongan yang gagal?",
@@ -42,11 +43,27 @@
   },
   "rail": {
     "jobBoard": "Papan Lowongan",
-    "indexedJobs": "Lowongan Terindeks"
+    "discovery": "Penemuan Lowongan"
   },
   "topBar": {
     "settings": "Pengaturan",
-    "backToWorkspace": "← Kembali ke workspace"
+    "backToWorkspace": "Kembali ke workspace"
+  },
+  "permissionPrompt": {
+    "title": "Izin agen diperlukan",
+    "agentWantsAccess": "Agen meminta akses.",
+    "context": "Untuk mengisi lamaran {{title}} di {{company}}",
+    "requested": "Tindakan yang diminta",
+    "completeFields": "Isi kolom yang dikenali memakai informasi profil tersimpan",
+    "uploadDocuments": "Unggah resume atau cover letter tersimpan",
+    "pressButtons": "Tekan tombol navigasi lamaran yang diperiksa (skrip situs dapat melakukan tindakan permanen)",
+    "explanation": "Izinkan kali ini hanya berlaku untuk lamaran ini. Selalu izinkan memperbarui pengaturan Akses agen untuk lamaran berikutnya. Penekanan tombol dapat menjalankan skrip situs apa pun, jadi biarkan izin itu nonaktif jika kamu ingin melanjutkan formulir sendiri.",
+    "deny": "Tolak",
+    "allowAlways": "Selalu izinkan",
+    "allowOnce": "Izinkan kali ini",
+    "saved": "Izin agen disimpan untuk lamaran berikutnya.",
+    "loadFailed": "Gagal memuat permintaan izin agen yang menunggu.",
+    "respondFailed": "Gagal menjawab permintaan izin agen."
   },
   "terminal": {
     "none": "Tidak ada terminal yang kebuka.",
@@ -55,7 +72,35 @@
     "renameLabel": "Ganti nama {{title}}",
     "closeLabel": "Tutup {{title}}",
     "atMax": "Maksimal cuma bisa buka {{count}} terminal",
-    "pasteFailed": "Gagal membaca papan klip."
+    "pasteFailed": "Gagal membaca papan klip.",
+    "permissions": {
+      "trigger": "Akses agen",
+      "title": "Izin agen",
+      "intro": "Atur apa yang boleh dimasukkan atau ditekan agen di situs lowongan. Handler tombol dapat melakukan tindakan permanen.",
+      "allowAutoCompleteFields": "Isi kolom secara otomatis",
+      "allowAutoCompleteFieldsHint": "Nama, detail kontak, lokasi, dan tautan profil. Aktif secara bawaan.",
+      "allowAutoUploadDocuments": "Unggah dokumen secara otomatis",
+      "allowAutoUploadDocumentsHint": "Resume dan cover letter tersimpan. Nonaktif secara bawaan.",
+      "allowAutoPressButtons": "Tekan tombol lamaran",
+      "allowAutoPressButtonsHint": "Izinkan tombol navigasi yang diperiksa menjalankan skrip situs, yang dapat melakukan tindakan permanen. Nonaktif secara bawaan.",
+      "saved": "Izin agen tersimpan.",
+      "saveFailed": "Gagal menyimpan izin agen.",
+      "loadFailed": "Gagal memuat izin agen.",
+      "retry": "Coba lagi"
+    },
+    "search": {
+      "placeholder": "Cari",
+      "noResults": "Tidak ada hasil",
+      "resultCount": "{{index}} dari {{count}}",
+      "manyMatches_other": "{{count}}+ hasil",
+      "caseSensitive": "Cocokkan huruf besar/kecil",
+      "wholeWord": "Cocokkan seluruh kata",
+      "regex": "Gunakan ekspresi reguler",
+      "previous": "Hasil sebelumnya",
+      "next": "Hasil berikutnya",
+      "close": "Tutup pencarian",
+      "resize": "Ubah ukuran panel pencarian"
+    }
   },
   "logs": {
     "title": "Log Aktivitas",
@@ -79,6 +124,7 @@
     "terminal.nextTab": "Tab terminal berikutnya",
     "terminal.prevTab": "Tab terminal sebelumnya",
     "terminal.rename": "Ganti nama terminal",
+    "terminal.search": "Cari di terminal",
     "view.toggleOverview": "Tampilkan/sembunyikan panel ringkasan",
     "view.toggleConsole": "Tampilkan/sembunyikan dock konsol",
     "dock.showTerminal": "Buka tab terminal",

@@ -39,7 +39,11 @@ export const claudeAdapter: McpAdapter = {
     const envFlags = Object.entries(env ?? {}).flatMap(([key, value]) => ['-e', `${key}=${value}`])
     const result = await runCommand(
       'claude',
-      ['mcp', 'add', '--scope', scopeFlag(scope), ...envFlags, serverName, '--', command, ...args],
+      // `-e`/`--env` is a variadic option: if it comes before the positional
+      // <name> argument, it greedily swallows the name as another env pair
+      // ("Invalid environment variable format: <name>"), so <name> must
+      // come first — see `claude mcp add --help`'s own example order.
+      ['mcp', 'add', '--scope', scopeFlag(scope), serverName, ...envFlags, '--', command, ...args],
       { cwd: scopeCwd(scope) }
     )
     if (result.code === 0) return { success: true }
@@ -50,7 +54,7 @@ export const claudeAdapter: McpAdapter = {
     const envFlags = Object.entries(env ?? {})
       .map(([key, value]) => `-e ${key}=${value}`)
       .join(' ')
-    const addCommand = `claude mcp add --scope ${scopeFlag(scope)} ${envFlags ? envFlags + ' ' : ''}${serverName} -- ${quote(command)} ${args.map(quote).join(' ')}`
+    const addCommand = `claude mcp add --scope ${scopeFlag(scope)} ${serverName}${envFlags ? ' ' + envFlags : ''} -- ${quote(command)} ${args.map(quote).join(' ')}`
     const cwd = scopeCwd(scope)
     return cwd ? `cd ${quote(cwd)} && ${addCommand}` : addCommand
   }

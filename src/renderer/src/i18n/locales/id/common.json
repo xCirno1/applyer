@@ -11,10 +11,12 @@
     "loadMore": "Muat lagi",
     "copy": "Salin",
     "copied": "Tersalin",
+    "copyFailed": "Gagal menyalin",
     "back": "Kembali",
     "next": "Lanjut",
     "skip": "Lewati",
-    "browse": "Pilih…"
+    "browse": "Pilih…",
+    "done": "Selesai"
   },
   "dropdown": {
     "placeholder": "Pilih…"
@@ -23,6 +25,10 @@
     "label": "Halaman",
     "previous": "Halaman sebelumnya",
     "next": "Halaman berikutnya"
+  },
+  "table": {
+    "filter": "Saring tabel ini",
+    "sortBy": "Urutkan menurut kolom ini"
   },
   "fileDrop": {
     "hint": "Klik atau tarik file ke sini"
@@ -58,9 +64,28 @@
     "skills": "Skill",
     "commaSeparated": "pisahkan pakai koma",
     "summary": "Ringkasan",
+    "additionalInformation": "Informasi tambahan",
+    "additionalInformationHint": "Simpan jawaban untuk pertanyaan lamaran, misalnya \"Apa hobimu?\", agar Applyer dapat mengisinya saat pertanyaan muncul.",
+    "addAdditionalInformation": "Tambah jawaban",
+    "question": "Pertanyaan",
+    "answer": "Jawaban",
+    "notSet": "Belum diisi",
+    "editField": "Edit {{field}}",
+    "editAdditionalInformation": "Edit jawaban untuk {{question}}",
     "nameEmailRequired": "Nama lengkap dan email harus diisi.",
     "saved": "Profil tersimpan.",
     "saveFailed": "Gagal menyimpan profil.",
     "changedElsewhere": "Profil diperbarui dari tempat lain. Perubahan yang belum disimpan di sini tetap dipertahankan, jadi menyimpan sekarang akan menimpa pembaruan itu."
+  },
+  "errorBoundary": {
+    "title": "Ada yang tidak beres di sini",
+    "body": "Bagian Applyer ini berhenti tampil. Bagian lain masih berjalan - coba lagi, dan kalau terus berulang, mulai ulang aplikasinya.",
+    "tryAgain": "Coba lagi",
+    "details": "Detail teknis"
+  },
+  "boot": {
+    "failedTitle": "Applyer tidak bisa dijalankan",
+    "failedBody": "Aplikasi tidak bisa membaca status penyimpanannya sendiri. Biasanya ini berarti folder penyimpanan tidak tersedia: drive terputus, atau foldernya dipindah atau jadi hanya-baca.",
+    "failedRetry": "Coba lagi"
   }
 }

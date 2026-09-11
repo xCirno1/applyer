@@ -46,7 +46,7 @@ export async function fetchWorkdayJobDetails(url: string): Promise<JobDetailsOut
     if (!data.html) {
       return {
         status: 'not_found',
-        message: 'Could not find the job description container on this Workday page — the tenant may use a non-standard layout.'
+        message: 'Could not find the job description container on this Workday page; the tenant may use a non-standard layout.'
       }
     }
 

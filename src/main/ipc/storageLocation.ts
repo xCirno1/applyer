@@ -24,6 +24,7 @@ import { appLogger } from '../logger'
 import { relaunchApp } from '../relaunch'
 import { broadcastStorageLocationProgress } from './jobsBroadcast'
 import { appError, unexpectedError } from '@shared/types/errorCodes'
+import { dialogLabelsPayload } from './payloadSchemas'
 
 function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err)
@@ -72,7 +73,11 @@ export function registerStorageLocationIpc(): void {
     }
   })
 
-  ipcMain.handle(IPC.storageLocation.pickFolder, async (_event, { labels }: { labels: DialogLabels }): Promise<StorageLocationPickResult> => {
+  ipcMain.handle(IPC.storageLocation.pickFolder, async (_event, payload: unknown): Promise<StorageLocationPickResult> => {
+    // Cosmetic: a missing title is a blank dialog title, not a reason to
+    // refuse to open the folder picker.
+    const parsed = dialogLabelsPayload.safeParse(payload)
+    const labels: DialogLabels = parsed.success ? parsed.data.labels : { title: '', filterName: '' }
     const { canceled, filePaths } = await dialog.showOpenDialog({
       title: labels.title,
       properties: ['openDirectory', 'createDirectory']

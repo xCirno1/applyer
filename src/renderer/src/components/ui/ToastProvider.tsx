@@ -1,5 +1,12 @@
 import { useCallback, useState, type ReactElement, type ReactNode } from 'react'
 import { ToastContext, type ToastVariant } from './ToastContext'
+import { toastInsetStyle } from './toastInset'
+
+// Toast notification system for success/error/info events (context split into
+// ToastContext.ts so this file stays a component-only export, required for Fast
+// Refresh). Mounted once at the root of App.tsx. Consumers call
+// useToast().success/error/info(message) rather than reaching into the context
+// directly.
 
 interface ToastItem {
   id: string
@@ -27,7 +34,13 @@ export default function ToastProvider({ children }: { children: ReactNode }): Re
   return (
     <ToastContext.Provider value={{ push }}>
       {children}
-      <div className="pointer-events-none fixed bottom-3 right-3 z-[100] flex w-80 flex-col gap-1.5">
+      {/* Bottom offset comes from `toastInset.ts` rather than a fixed
+          `bottom-3`, so a screen with a full-width footer band (onboarding)
+          can keep the stack off its primary action. */}
+      <div
+        className="pointer-events-none fixed right-3 z-[100] flex w-80 flex-col gap-1.5"
+        style={toastInsetStyle()}
+      >
         {toasts.map((toast) => (
           <div
             key={toast.id}

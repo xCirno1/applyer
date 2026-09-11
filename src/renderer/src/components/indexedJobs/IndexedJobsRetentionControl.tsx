@@ -5,10 +5,11 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import Tooltip from '../ui/Tooltip'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
+import { callIpc } from '../../lib/ipcCall'
 import type { IndexedJobsRetention } from '@shared/types/indexedJob'
-import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
+import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS, INDEXED_JOBS_RETENTION_OPTIONS } from '@shared/constants'
 
-const DAY_OPTIONS = [7, 14, 30, 90] as const
+const DAY_OPTIONS = INDEXED_JOBS_RETENTION_OPTIONS.filter((value): value is number => typeof value === 'number')
 
 function toRetention(value: string): IndexedJobsRetention {
   return value === 'unlimited' ? 'unlimited' : Number.parseInt(value, 10)
@@ -34,7 +35,11 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
   const errorMessage = useErrorMessage()
 
   useEffect(() => {
-    window.api.indexedJobs.getRetention().then((retention) => {
+    void callIpc(
+      'indexedJobs.getRetention',
+      () => window.api.indexedJobs.getRetention(),
+      INDEXED_JOBS_RETENTION_DEFAULT_DAYS
+    ).then((retention) => {
       setCurrent(retention)
       setLoaded(true)
     })
@@ -43,7 +48,11 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
   const handleConfirm = async (): Promise<void> => {
     if (pending === null) return
     setSaving(true)
-    const result = await window.api.indexedJobs.setRetention(pending)
+    const result = await callIpc(
+      'indexedJobs.setRetention',
+      () => window.api.indexedJobs.setRetention(pending),
+      { ok: false }
+    )
     setSaving(false)
     setPending(null)
     if (result.ok) {
@@ -60,7 +69,9 @@ export default function IndexedJobsRetentionControl({ className = '' }: { classN
 
   const options = [
     ...DAY_OPTIONS.map((days) => ({ value: String(days), label: t('retention.days', { count: days }) })),
-    { value: 'unlimited', label: t('retention.unlimited') }
+    ...(INDEXED_JOBS_RETENTION_OPTIONS.includes('unlimited')
+      ? [{ value: 'unlimited', label: t('retention.unlimited') }]
+      : [])
   ]
 
   return (

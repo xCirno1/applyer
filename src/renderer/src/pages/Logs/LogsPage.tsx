@@ -5,6 +5,7 @@ import Skeleton from '../../components/ui/Skeleton'
 import Tag from '../../components/ui/Tag'
 import Dropdown from '../../components/ui/Dropdown'
 import { useFormatters } from '../../i18n/format'
+import { callIpc } from '../../lib/ipcCall'
 import type { ActivityLevel, ActivityLogEntry } from '@shared/types/activity'
 
 const PAGE_SIZE = 50
@@ -27,11 +28,14 @@ export default function LogsPage(): ReactElement {
 
   const fetchPage = async (offset: number, replace: boolean): Promise<void> => {
     setLoading(true)
-    const result = await window.api.logs.list({
-      level: level || undefined,
-      limit: PAGE_SIZE,
-      offset
-    })
+    const result = await callIpc('logs.list', () =>
+      window.api.logs.list({
+        level: level || undefined,
+        limit: PAGE_SIZE,
+        offset
+      }),
+      { entries: [], total: 0 }
+    )
     setEntries((prev) => (replace ? result.entries : [...prev, ...result.entries]))
     setTotal(result.total)
     setLoading(false)

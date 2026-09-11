@@ -12,6 +12,7 @@
     "newTerminal": "New Terminal",
     "closeTerminal": "Close Terminal",
     "renameTerminal": "Rename Terminal",
+    "findInTerminal": "Find in Terminal",
     "nextTerminalTab": "Next Terminal Tab",
     "prevTerminalTab": "Previous Terminal Tab",
     "refreshBoard": "Refresh Board",
@@ -25,7 +26,7 @@
     "title": "About Applyer",
     "name": "Applyer",
     "version": "Version {{version}}",
-    "developmentBuildDataDirectory": "Development build — data directory"
+    "dataDirectory": "Data directory:"
   },
   "retryAll": {
     "title": "Retry all failed jobs?",
@@ -44,11 +45,27 @@
   },
   "rail": {
     "jobBoard": "Job Board",
-    "indexedJobs": "Indexed Jobs"
+    "discovery": "Job Discovery"
   },
   "topBar": {
     "settings": "Settings",
-    "backToWorkspace": "← Back to workspace"
+    "backToWorkspace": "Back to workspace"
+  },
+  "permissionPrompt": {
+    "title": "Agent permission required",
+    "agentWantsAccess": "Agent wants access.",
+    "context": "To fill the application for {{title}} at {{company}}",
+    "requested": "Requested actions",
+    "completeFields": "Complete recognized fields using your saved profile information",
+    "uploadDocuments": "Upload your saved resume or cover letter",
+    "pressButtons": "Press an inspected application navigation button (site scripts may perform irreversible actions)",
+    "explanation": "Allow this time applies only to this application. Always allow updates the Agent access setting for future applications. Button presses can run arbitrary site scripts, so leave that permission disabled if you want to advance forms yourself.",
+    "deny": "Deny",
+    "allowAlways": "Always allow",
+    "allowOnce": "Allow this time",
+    "saved": "Agent permission saved for future applications.",
+    "loadFailed": "Could not load pending agent permission requests.",
+    "respondFailed": "Could not answer the agent permission request."
   },
   "terminal": {
     "none": "No terminals open.",
@@ -57,7 +74,36 @@
     "renameLabel": "Rename {{title}}",
     "closeLabel": "Close {{title}}",
     "atMax": "You can have at most {{count}} terminals open",
-    "pasteFailed": "Could not read the clipboard."
+    "pasteFailed": "Could not read the clipboard.",
+    "permissions": {
+      "trigger": "Agent access",
+      "title": "Agent permissions",
+      "intro": "Control what agents may enter or press on job sites. Button handlers may perform irreversible actions.",
+      "allowAutoCompleteFields": "Automatically complete fields",
+      "allowAutoCompleteFieldsHint": "Names, contact details, locations, and profile links. Enabled by default.",
+      "allowAutoUploadDocuments": "Automatically upload documents",
+      "allowAutoUploadDocumentsHint": "Stored resumes and cover letters. Disabled by default.",
+      "allowAutoPressButtons": "Press application buttons",
+      "allowAutoPressButtonsHint": "Allows inspected navigation buttons to run site scripts, which may perform irreversible actions. Disabled by default.",
+      "saved": "Agent permissions saved.",
+      "saveFailed": "Could not save agent permissions.",
+      "loadFailed": "Could not load agent permissions.",
+      "retry": "Retry"
+    },
+    "search": {
+      "placeholder": "Find",
+      "noResults": "No results",
+      "resultCount": "{{index}} of {{count}}",
+      "manyMatches_one": "{{count}}+ match",
+      "manyMatches_other": "{{count}}+ matches",
+      "caseSensitive": "Match case",
+      "wholeWord": "Match whole word",
+      "regex": "Use regular expression",
+      "previous": "Previous match",
+      "next": "Next match",
+      "close": "Close find",
+      "resize": "Resize find panel"
+    }
   },
   "logs": {
     "title": "Activity Log",
@@ -82,6 +128,7 @@
     "terminal.nextTab": "Next terminal tab",
     "terminal.prevTab": "Previous terminal tab",
     "terminal.rename": "Rename terminal",
+    "terminal.search": "Find in terminal",
     "view.toggleOverview": "Toggle overview panel",
     "view.toggleConsole": "Toggle console dock",
     "dock.showTerminal": "Show terminal tab",

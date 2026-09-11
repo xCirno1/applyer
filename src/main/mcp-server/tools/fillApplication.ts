@@ -5,11 +5,15 @@ import { logActivity } from '../../db/repositories/activityLogRepository'
 import { jsonResult, textError } from '../toolResult'
 import type { fillApplicationShape } from '../schemas'
 
-type Args = { [K in keyof typeof fillApplicationShape]: z.infer<(typeof fillApplicationShape)[K]> }
+type Args = {
+  jobId: z.infer<typeof fillApplicationShape.jobId>
+  answers: z.infer<typeof fillApplicationShape.answers>
+  finalStep?: z.infer<typeof fillApplicationShape.finalStep>
+}
 
 export async function fillApplicationTool(args: Args): Promise<CallToolResult> {
   try {
-    const result = await runFillTask(args.jobId)
+    const result = await runFillTask(args.jobId, args.answers, args.finalStep ?? false)
     logActivity('info', `fill_application -> ${result.status}`, { jobId: args.jobId })
     return jsonResult(result)
   } catch (err) {

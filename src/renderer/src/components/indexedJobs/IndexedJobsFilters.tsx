@@ -4,6 +4,11 @@ import { useIndexedJobsStore } from '../../state/indexedJobsStore'
 import Dropdown from '../ui/Dropdown'
 import type { IndexedJobMatchFilter } from '@shared/types/indexedJob'
 
+// Filter/search controls above `IndexedJobsList`. The far-right compact-mode
+// toggle (`indexedJobsStore.compact`) is the one control here that changes
+// layout rather than narrowing the query — it flips `IndexedJobRow` between
+// its comfortable card view and single dense table-like lines.
+
 function DensityIcon(): ReactElement {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -31,11 +36,17 @@ export default function IndexedJobsFilters(): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchDraft])
 
-  // LinkedIn/Indeed are proper nouns and stay untranslated.
+  // Every source name here is a proper noun and stays untranslated. The four
+  // ATS providers appear because a search now indexes company boards too, so
+  // filtering to one of them answers "what did my own watchlist turn up?".
   const sourceOptions = [
     { value: '', label: t('filters.allSources') },
     { value: 'linkedin', label: 'LinkedIn' },
-    { value: 'indeed', label: 'Indeed' }
+    { value: 'indeed', label: 'Indeed' },
+    { value: 'greenhouse', label: 'Greenhouse' },
+    { value: 'lever', label: 'Lever' },
+    { value: 'ashby', label: 'Ashby' },
+    { value: 'workday', label: 'Workday' }
   ]
 
   const matchOptions: { value: IndexedJobMatchFilter; label: string }[] = [

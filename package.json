@@ -149,6 +149,7 @@
         "deb",
         "rpm"
       ],
+      "icon": "build/icons",
       "category": "Office",
       "syncDesktopName": true,
       "executableName": "applyer",

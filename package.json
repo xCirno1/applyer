@@ -91,6 +91,9 @@
   },
   "overrides": {
     "@xmldom/xmldom": "0.9.12",
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.25.0"
+    },
     "plist": "3.1.0"
   },
   "build": {

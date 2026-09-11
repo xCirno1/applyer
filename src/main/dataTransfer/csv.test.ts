@@ -56,6 +56,25 @@ describe('jobsToCsv', () => {
     const cells = csv.split('\r\n')[1]!.split(',')
     expect(cells[2]).toBe('') // Location
   })
+
+  it.each([
+    ['=1+1', "'=1+1"],
+    ['+cmd', "'+cmd"],
+    ['-2+3', "'-2+3"],
+    ['@SUM(A1:A2)', "'@SUM(A1:A2)"],
+    ['\t=1+1', "'\t=1+1"],
+    ['\r=1+1', `"'\r=1+1"`],
+    ['\n=1+1', `"'\n=1+1"`]
+  ])('neutralizes spreadsheet formula prefix in %j', (title, expectedField) => {
+    const csv = jobsToCsv([job({ title })])
+    const dataRow = csv.slice(csv.indexOf('\r\n') + 2)
+    expect(dataRow.startsWith(`${expectedField},`)).toBe(true)
+  })
+
+  it('does not rewrite genuine negative numbers', () => {
+    const csv = jobsToCsv([job({ matchScore: -1 })])
+    expect(csv).toContain(',queued,linkedin,,-1,')
+  })
 })
 
 describe('exclusionsToCsv', () => {
@@ -114,6 +133,13 @@ describe('indexedJobsToCsv', () => {
   it('quotes a query containing a comma', () => {
     const lines = indexedJobsToCsv([indexedRow({ searchQuery: 'backend, platform' })]).split('\r\n')
     expect(lines[1]).toContain('"backend, platform"')
+  })
+
+  it('neutralizes spreadsheet formulas in indexed job fields', () => {
+    const lines = indexedJobsToCsv([indexedRow({ title: '=HYPERLINK("https://example.com")' })]).split(
+      '\r\n'
+    )
+    expect(lines[1]?.startsWith('"\'=HYPERLINK(""https://example.com"")"')).toBe(true)
   })
 })
 

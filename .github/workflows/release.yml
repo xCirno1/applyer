@@ -7,11 +7,6 @@ name: Release
 on:
   push:
     tags: ['v*']
-    # A test lane: pushing this branch runs the full matrix without cutting a
-    # tag. A push trigger reads the workflow from the pushed branch, so this
-    # works before the file has ever landed on the default branch — unlike
-    # workflow_dispatch, which only appears once it is on main.
-    branches: ['release-test']
   workflow_dispatch:
 
 concurrency:

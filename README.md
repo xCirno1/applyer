@@ -22,11 +22,11 @@
 <br />
 
 <div align="center">
-  <a href="docs/media/applyer-demo.mp4">
+  <a href="https://cdn.xcirno.dev/assets/applyer-demo.mp4">
     <img src="docs/screenshots/board.png" alt="Applyer job board and agent terminal — open the 36-second demo" width="920" />
   </a>
   <br />
-  <sub><a href="docs/media/applyer-demo.mp4">▶ Watch the 36-second product tour</a></sub>
+  <sub><a href="https://cdn.xcirno.dev/assets/applyer-demo.mp4">▶ Watch the 36-second product tour</a></sub>
 </div>
 
 ## One workspace, from search to review

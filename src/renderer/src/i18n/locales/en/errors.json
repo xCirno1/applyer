@@ -60,6 +60,8 @@
   "recoveryOpenFailed": "Your custom storage location (\"{{root}}\") could not be opened: {{message}}",
   "pointerInvalid": "The saved storage location file was invalid. Using the default storage location instead.",
   "pointerUnreadable": "The saved storage location file could not be read. Using the default storage location instead.",
+  "invalidRemoteBrowserEndpoint": "The remote debugging address must be an http(s):// or ws(s):// URL.",
+  "remoteBrowserUnreachable": "Could not attach to the browser at {{endpoint}} ({{message}}). Make sure it is running with remote debugging enabled on that address.",
   "unexpected": "Something went wrong: {{message}}",
   "unexpectedNoDetail": "Something went wrong."
 }

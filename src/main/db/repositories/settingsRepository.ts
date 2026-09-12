@@ -14,6 +14,11 @@ import {
   type NotificationPreferences
 } from '@shared/types/notification'
 import {
+  DEFAULT_REMOTE_BROWSER_SETTINGS,
+  isRemoteBrowserSettings,
+  type RemoteBrowserSettings
+} from '@shared/types/remoteBrowser'
+import {
   DENIED_AGENT_PERMISSIONS,
   DEFAULT_AGENT_PERMISSIONS,
   isAgentPermissions,
@@ -26,6 +31,7 @@ const AUTO_START_COMMAND_KEY = 'auto_start_command'
 const INDEXED_JOBS_RETENTION_KEY = 'indexed_jobs_retention_days'
 const BROWSER_PREFERENCE_KEY = 'browser_preference'
 const ALLOW_LOCAL_ADDRESSES_KEY = 'allow_local_addresses'
+const REMOTE_BROWSER_KEY = 'remote_browser'
 const NOTIFICATION_PREFERENCES_KEY = 'notification_preferences'
 const NOTIFICATION_LOCALE_KEY = 'notification_locale'
 const AGENT_PERMISSIONS_KEY = 'agent_permissions'
@@ -127,6 +133,27 @@ export function getAllowLocalAddresses(): boolean {
 
 export function setAllowLocalAddresses(allowed: boolean): void {
   setSetting(ALLOW_LOCAL_ADDRESSES_KEY, allowed ? '1' : '0')
+}
+
+/**
+ * Attaching to the user's own running browser is off unless explicitly turned
+ * on, and an unreadable stored value counts as off: silently attaching to a
+ * browser full of signed-in accounts is the one outcome a corrupt row must
+ * never produce.
+ */
+export function getRemoteBrowserSettings(): RemoteBrowserSettings {
+  const value = getSetting(REMOTE_BROWSER_KEY)
+  if (!value) return { ...DEFAULT_REMOTE_BROWSER_SETTINGS }
+  try {
+    const parsed: unknown = JSON.parse(value)
+    return isRemoteBrowserSettings(parsed) ? { enabled: parsed.enabled, endpoint: parsed.endpoint } : { ...DEFAULT_REMOTE_BROWSER_SETTINGS }
+  } catch {
+    return { ...DEFAULT_REMOTE_BROWSER_SETTINGS }
+  }
+}
+
+export function setRemoteBrowserSettings(settings: RemoteBrowserSettings): void {
+  setSetting(REMOTE_BROWSER_KEY, JSON.stringify({ enabled: settings.enabled, endpoint: settings.endpoint }))
 }
 
 export function getNotificationPreferences(): NotificationPreferences {

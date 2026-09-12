@@ -1,10 +1,10 @@
 import { randomUUID } from 'crypto'
 import { writeFileSync, unlinkSync } from 'fs'
 import { join, extname } from 'path'
-import type { Browser, BrowserContext, Page } from 'playwright'
+import type { Page } from 'playwright'
 import { clearBlocking, getJob, refreshFilled, setBlocking, setFilled } from '../db/repositories/jobsRepository'
 import { listDocuments, readDocumentBytes } from '../db/repositories/documentsRepository'
-import { launchHeadedContext } from './browserController'
+import { openHeadedBrowser, type HeadedBrowser } from './browserController'
 import { detectCaptcha } from './captchaDetector'
 import {
   clickApplicationButton,
@@ -70,7 +70,7 @@ export type ClickButtonTaskResult =
   | { status: 'failed'; jobId: string; reasonTag: string; message: string }
 
 interface ApplicationSession {
-  browser: Browser
+  headed: HeadedBrowser
   page: Page
   /** Remains fill while the agent advances through the initially opened form. */
   phase: 'fill' | 'edit'
@@ -83,11 +83,11 @@ interface ApplicationSession {
 
 const activeApplicationSessions = new Map<string, ApplicationSession>()
 
-function retainApplicationSession(jobId: string, browser: Browser, page: Page): void {
+function retainApplicationSession(jobId: string, headed: HeadedBrowser, page: Page): void {
   const previous = activeApplicationSessions.get(jobId)
-  if (previous && previous.page !== page) void previous.browser.close().catch(() => {})
+  if (previous && previous.page !== page) void previous.headed.close(previous.page)
   const session: ApplicationSession = {
-    browser,
+    headed,
     page,
     phase: 'fill',
     currentStepIndex: 0,
@@ -98,14 +98,17 @@ function retainApplicationSession(jobId: string, browser: Browser, page: Page): 
   activeApplicationSessions.set(jobId, session)
   const discard = (): void => {
     if (activeApplicationSessions.get(jobId) === session) activeApplicationSessions.delete(jobId)
+    // The attached browser's connection outlives every session, so a listener left on it
+    // per finished job would pile up for the whole run.
+    headed.browser.off('disconnected', discard)
   }
   page.once('close', discard)
-  browser.once('disconnected', discard)
+  headed.browser.on('disconnected', discard)
 }
 
 function getActiveSession(jobId: string): ApplicationSession | null {
   const session = activeApplicationSessions.get(jobId)
-  if (!session || !session.browser.isConnected() || session.page.isClosed()) {
+  if (!session || !session.headed.browser.isConnected() || session.page.isClosed()) {
     activeApplicationSessions.delete(jobId)
     return null
   }
@@ -212,11 +215,11 @@ async function continueInspectionAfterCaptcha(
   taskId: string,
   jobId: string,
   page: Page,
-  browser: Browser
+  headed: HeadedBrowser
 ): Promise<void> {
   const outcome = await waitForCaptchaResolution(taskId, jobId, page)
   if (outcome === 'cancelled') {
-    await browser.close().catch(() => {})
+    await headed.close(page)
     failJob(jobId, 'captcha_verification', 'The verification challenge was not resolved in time (or was cancelled).')
     return
   }
@@ -294,24 +297,21 @@ export async function runInspectTask(jobId: string): Promise<InspectTaskResult> 
     return failAndReturn(jobId, 'form_not_supported', `This job's application link is not an http(s) URL, so it cannot be opened: ${targetUrl}`)
   }
 
-  let browser: Browser
-  let context: BrowserContext
+  let headed: HeadedBrowser
   try {
-    const headed = await launchHeadedContext()
-    browser = headed.browser
-    context = headed.context
+    headed = await openHeadedBrowser()
   } catch (error) {
     return failAndReturn(jobId, 'browser_unavailable', `Couldn't prepare a browser: ${String(error)}`)
   }
 
-  let page: Page
+  let page: Page | null = null
   try {
-    page = await context.newPage()
+    page = await headed.newPage()
     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 })
     await page.waitForTimeout(1500)
-    retainApplicationSession(jobId, browser, page)
+    retainApplicationSession(jobId, headed, page)
   } catch (error) {
-    await browser.close().catch(() => {})
+    await headed.close(page)
     return failAndReturn(jobId, 'form_not_supported', `Failed to open the application page: ${String(error)}`)
   }
 
@@ -323,7 +323,7 @@ export async function runInspectTask(jobId: string): Promise<InspectTaskResult> 
     if (updated) broadcastJobUpdate(updated)
     broadcastCaptchaDetected({ taskId, jobId, jobTitle: job.title, company: job.company })
     await page.bringToFront().catch(() => {})
-    continueInspectionAfterCaptcha(taskId, jobId, page, browser).catch((error) => {
+    continueInspectionAfterCaptcha(taskId, jobId, page, headed).catch((error) => {
       mcpLogger.error(`Application inspection continuation crashed: ${String(error)}`)
     })
     return {

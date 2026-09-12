@@ -95,6 +95,7 @@ import type {
   AgentPermissionRequest,
   AgentPermissions
 } from '@shared/types/agentPermissions'
+import type { RemoteBrowserProbe, RemoteBrowserSettings } from '@shared/types/remoteBrowser'
 
 function settingsFromArguments(argv: readonly string[]): ApplyerSettings | undefined {
   const prefix = '--applyer-settings='
@@ -310,6 +311,13 @@ const browserSetupApi = {
   getAllowLocalAddresses: (): Promise<boolean> => ipcRenderer.invoke(IPC.browserSetup.getAllowLocalAddresses),
   setAllowLocalAddresses: (allowed: boolean): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke(IPC.browserSetup.setAllowLocalAddresses, { allowed }),
+  getRemoteBrowser: (): Promise<RemoteBrowserSettings> => ipcRenderer.invoke(IPC.browserSetup.getRemoteBrowser),
+  setRemoteBrowser: (settings: RemoteBrowserSettings): Promise<{ ok: boolean; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.browserSetup.setRemoteBrowser, settings),
+  testRemoteBrowser: (
+    endpoint: string
+  ): Promise<{ ok: true; probe: RemoteBrowserProbe } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.browserSetup.testRemoteBrowser, { endpoint }),
   getStatus: (): Promise<ResolvedBrowserStatus> => ipcRenderer.invoke(IPC.browserSetup.getStatus),
   onProgress: (callback: (payload: BrowserDownloadProgressPayload) => void): (() => void) => {
     const listener = (_event: Electron.IpcRendererEvent, payload: BrowserDownloadProgressPayload): void =>

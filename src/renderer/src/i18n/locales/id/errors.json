@@ -60,6 +60,8 @@
   "recoveryOpenFailed": "Lokasi penyimpanan pilihanmu (\"{{root}}\") tidak bisa dibuka: {{message}}",
   "pointerInvalid": "File lokasi penyimpanan yang tersimpan tidak valid. Untuk sementara dipakai lokasi bawaan.",
   "pointerUnreadable": "File lokasi penyimpanan yang tersimpan tidak bisa dibaca. Untuk sementara dipakai lokasi bawaan.",
+  "invalidRemoteBrowserEndpoint": "Alamat remote debugging harus berupa URL http(s):// atau ws(s)://.",
+  "remoteBrowserUnreachable": "Tidak bisa menyambung ke browser di {{endpoint}} ({{message}}). Pastikan browsernya sedang berjalan dengan remote debugging aktif di alamat itu.",
   "unexpected": "Ada yang salah: {{message}}",
   "unexpectedNoDetail": "Ada yang salah."
 }

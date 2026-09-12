@@ -1,6 +1,6 @@
 import { lookup } from 'node:dns/promises'
 import { isIP } from 'node:net'
-import type { BrowserContext } from 'playwright'
+import type { BrowserContext, Page } from 'playwright'
 import { appLogger } from '../logger'
 
 type LookupAddress = { address: string; family: number }
@@ -39,10 +39,7 @@ function expandIpv6(address: string): number[] | null {
     const ipv4 = dottedMatch[1]!
     if (isIP(ipv4) !== 4) return null
     const [a = 0, b = 0, c = 0, d = 0] = ipv4.split('.').map(Number)
-    source = `${source.slice(0, -ipv4.length)}${((a << 8) | b).toString(16)}:${(
-      (c << 8) |
-      d
-    ).toString(16)}`
+    source = `${source.slice(0, -ipv4.length)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`
   }
 
   const halves = source.split('::')
@@ -120,14 +117,23 @@ export async function assertRemoteNetworkUrl(url: string, lookupAll: LookupAll =
 }
 
 /**
- * Applies the destination rule to every browser request, including redirects,
- * iframes and subresources. Results are cached per context to avoid resolving
- * the same asset host for every request.
+ * Anything whose requests can be intercepted: a whole context (every page in
+ * it, including popups) or one page. The second form exists for the attached
+ * browser (see `shared/types/remoteBrowser.ts`), where the context is the
+ * user's own default profile and routing it would put every one of their
+ * tabs' requests through this process.
  */
-export async function protectBrowserContext(context: BrowserContext, allowLocalAddresses: boolean): Promise<void> {
+export type RequestRoutable = Pick<BrowserContext, 'route'> | Pick<Page, 'route'>
+
+/**
+ * Applies the destination rule to every request the target makes, including
+ * redirects, iframes and subresources. Results are cached per target to avoid
+ * resolving the same asset host for every request.
+ */
+export async function protectBrowserRequests(target: RequestRoutable, allowLocalAddresses: boolean): Promise<void> {
   if (allowLocalAddresses) return
   const checks = new Map<string, Promise<void>>()
-  await context.route('**/*', async (route) => {
+  await target.route('**/*', async (route) => {
     const url = route.request().url()
     let parsed: URL
     try {
@@ -155,4 +161,49 @@ export async function protectBrowserContext(context: BrowserContext, allowLocalA
       await route.abort('blockedbyclient')
     }
   })
+}
+
+/** `protectBrowserRequests` for a context Applyer launched itself, where covering every page (popups included) is the point. */
+export async function protectBrowserContext(context: BrowserContext, allowLocalAddresses: boolean): Promise<void> {
+  await protectBrowserRequests(context, allowLocalAddresses)
+}
+
+/**
+ * `protectBrowserRequests` for one page in a context Applyer does not own.
+ * Popups the page opens inherit the guard; other tabs in that context are
+ * left alone, since they are the user's, not Applyer's.
+ *
+ * Page-level routing has one hole a context-level guard does not: a popup's
+ * first request has already been sent by the time the `popup` event fires, so
+ * it cannot be intercepted. The response is cross-origin to the opener, so the
+ * page cannot read it, but a popup opened straight to a local address is
+ * still closed as soon as it appears rather than left running.
+ */
+export async function protectBrowserPage(page: Page, allowLocalAddresses: boolean): Promise<void> {
+  if (allowLocalAddresses) return
+  page.on('popup', (popup) => {
+    guardPopup(popup).catch((err) => {
+      appLogger.warn(`Could not guard a popup's network access, closing it: ${String(err)}`)
+      popup.close().catch(() => {})
+    })
+  })
+  await protectBrowserRequests(page, allowLocalAddresses)
+}
+
+async function guardPopup(popup: Page): Promise<void> {
+  await protectBrowserPage(popup, false)
+  const url = popup.url()
+  let parsed: URL
+  try {
+    parsed = new URL(url)
+  } catch {
+    return
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return
+  try {
+    await assertRemoteNetworkUrl(url)
+  } catch (err) {
+    appLogger.warn(`Closed a popup opened to ${url}: ${String(err)}`)
+    await popup.close()
+  }
 }

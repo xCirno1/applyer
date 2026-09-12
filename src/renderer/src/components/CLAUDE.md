@@ -7,7 +7,7 @@ Reusable UI lives under `src/renderer/src/components/`, organized by concern:
 - `components/board/` — the job task board (Kanban columns, job cards, detail modal, captcha alert banner, filters, the pipeline overview sidebar).
 - `components/workspace/` — the panel arrangement gluing board/terminal/logs into one screen (the resizable dock, layout persistence). Domain-agnostic in principle but currently only used by the one workspace screen, so it stays split from `ui/` until a second consumer shows up.
 - `components/onboarding/` — onboarding-specific composite widgets: the flow's own frame (`OnboardingShell` + `OnboardingStepRail`) and the storage-mode card. The frame lives here rather than in `pages/Onboarding/` for the same reason as everything else in this directory: the pages assemble steps, they don't define the chrome those steps sit in. Step *order* is the other half and stays with the pages (`pages/Onboarding/onboardingSteps.ts`), since it is what the flow navigates, not what the frame draws.
-- `components/settings/` — settings-specific composite widgets: the MCP connection card and language picker shared with onboarding, plus the developer-mode advanced settings editor and its complete section/group presentation map.
+- `components/settings/` — settings-specific composite widgets: the MCP connection card and language picker shared with onboarding, plus the developer-mode advanced settings editor and its complete section/group presentation map, and the Browser section's "attach to a running browser" card (the remote-debugging switch, endpoint, and connection test).
 - `components/companyBoards/` — the Job Discovery page's "Company Boards" tab: the watchlist of company ATS boards (Greenhouse/Lever/Ashby/Workday) that `search_jobs` fetches. Sits beside `indexedJobs/` rather than inside it because it is a different kind of list — an *input* to job discovery rather than a record of what discovery found — but on the same page for exactly that reason: none of those four providers has a cross-company search endpoint, so this list is the entire coverage of those sources, and the Indexed tab next door is where you see what it produced.
 - `components/indexedJobs/` — the Indexed Jobs page's body: the "Indexed" tab's filters/list/row/retention control, showing every job a search has surfaced (matched or not), independent of the board's `columns` (queued/filled/submitted/failed only ever holds jobs the agent chose to queue); plus the "Excluded" tab's `ExclusionsPanel`, moved here from Settings since it's really a view onto the same job-discovery pipeline.
 - `components/navigation/` — cross-page chrome used by `App.tsx`'s `MainShell` itself rather than owned by any one screen (`IconRail`, the left rail switching between the Workspace and Job Discovery screens, plus `DevBuildTag`, the top-bar dev-build marker). Same "split from `ui/` once there's a real consumer" reasoning as `workspace/` below, just one level higher — this is chrome *above* the screens, not glue *within* one screen.
@@ -34,6 +34,7 @@ The *why* for each component — behavioral quirks, the bugs a given approach wa
 | `Skeleton` | `ui/Skeleton.tsx` |
 | `CopyBlock` | `ui/CopyBlock.tsx` |
 | `Callout` | `ui/Callout.tsx` |
+| `WarningPanel` | `ui/WarningPanel.tsx` |
 | `ProgressBar` | `ui/ProgressBar.tsx` |
 | `Tooltip` | `ui/Tooltip.tsx` |
 | `Pagination` | `ui/Pagination.tsx` |
@@ -75,6 +76,7 @@ The *why* for each component — behavioral quirks, the bugs a given approach wa
 | `McpCliCard` | `settings/McpCliCard.tsx` (labels in `settings/mcpCliLabels.ts`, split out for Fast Refresh) |
 | `LanguagePicker` | `settings/LanguagePicker.tsx` |
 | `AdvancedSettingsEditor` / `SettingsDisclosure` | `settings/AdvancedSettingsEditor.tsx`, `settings/SettingsDisclosure.tsx` (hierarchy/search in `settings/advancedSettingsSections.ts`) |
+| `RemoteBrowserCard` | `settings/RemoteBrowserCard.tsx` |
 | `ResizeHandle` | `ui/ResizeHandle.tsx` |
 | `Collapsible` | `ui/Collapsible.tsx` |
 | `WorkspaceDock` | `workspace/WorkspaceDock.tsx` |

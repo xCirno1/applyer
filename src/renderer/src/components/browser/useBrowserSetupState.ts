@@ -58,6 +58,10 @@ export function useBrowserSetupState(): BrowserSetupHook {
       } else if (payload.status === 'ready') {
         toast.success(t('browserSetup.complete'))
         setState({ status: 'idle' })
+      } else if (payload.status === 'attaching') {
+        // Not a modal: the thing that needs the user's attention is the browser's own
+        // permission prompt, in another window, so a nudge toward it is all this can be.
+        toast.info(t('browserSetup.attaching', { endpoint: payload.endpoint }))
       } else {
         toast.error(`Browser setup failed: ${payload.message}`)
         setState({ status: 'error', message: payload.message })

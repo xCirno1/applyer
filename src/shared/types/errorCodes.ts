@@ -39,6 +39,9 @@ export type ErrorCode =
   | 'commandTooLong'
   | 'unsupportedFileType'
   | 'fileTooLarge'
+  // Attaching to a running browser over its remote-debugging port (Settings > Browser).
+  | 'invalidRemoteBrowserEndpoint'
+  | 'remoteBrowserUnreachable'
   // Company ATS boards (adding, resolving and tracking a company's own board).
   | 'boardInputRequired'
   | 'boardNotFound'

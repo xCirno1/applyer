@@ -14,6 +14,8 @@ import {
   listJobsQuerySchema,
   mcpTargetPayload,
   readListQuery,
+  remoteBrowserEndpointPayload,
+  remoteBrowserPayload,
   respondInstallPayload,
   taskIdPayload
 } from './payloadSchemas'
@@ -71,6 +73,25 @@ describe('enum payloads', () => {
     expect(respondInstallPayload.safeParse({ accept: true }).success).toBe(true)
     expect(respondInstallPayload.safeParse({ accept: 'yes' }).success).toBe(false)
     expect(respondInstallPayload.safeParse({}).success).toBe(false)
+  })
+
+  // The endpoint is persisted and later handed straight to Playwright, so the
+  // same URL rule the settings form applies inline has to hold at the boundary.
+  it('accepts a remote browser configuration with a CDP endpoint, trimmed', () => {
+    expect(remoteBrowserPayload.safeParse({ enabled: true, endpoint: ' http://127.0.0.1:9222 ' })).toEqual({
+      success: true,
+      data: { enabled: true, endpoint: 'http://127.0.0.1:9222' }
+    })
+    expect(remoteBrowserEndpointPayload.safeParse({ endpoint: 'ws://localhost:9222/devtools/browser/abc' }).success).toBe(true)
+  })
+
+  it('rejects a remote browser configuration with a missing, empty or non-CDP endpoint', () => {
+    expect(remoteBrowserPayload.safeParse({ enabled: true }).success).toBe(false)
+    expect(remoteBrowserPayload.safeParse({ enabled: true, endpoint: '' }).success).toBe(false)
+    expect(remoteBrowserPayload.safeParse({ enabled: true, endpoint: 'file:///etc/passwd' }).success).toBe(false)
+    expect(remoteBrowserPayload.safeParse({ enabled: 'yes', endpoint: 'http://127.0.0.1:9222' }).success).toBe(false)
+    expect(remoteBrowserEndpointPayload.safeParse({ endpoint: 9222 }).success).toBe(false)
+    expect(remoteBrowserEndpointPayload.safeParse({}).success).toBe(false)
   })
 
   // `cli` indexes an adapter table; an unrecognised one used to be a lookup

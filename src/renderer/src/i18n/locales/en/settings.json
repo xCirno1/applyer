@@ -139,7 +139,34 @@
     "localAddressesConfirmMessage": "Agents and job pages will be able to connect to localhost, private IP addresses, and services on your local network. A malicious page could probe or send requests to those services. Only enable this while testing sites you trust.",
     "localAddressesConfirm": "Allow Local Addresses",
     "localAddressesSaved": "Local address permission saved. It applies to new browser sessions.",
-    "localAddressesSaveFailed": "Could not save the local address permission."
+    "localAddressesSaveFailed": "Could not save the local address permission.",
+    "remoteTitle": "Attach to a running browser",
+    "remoteStateOn": "On",
+    "remoteStateOff": "Off",
+    "remoteIntro": "Instead of opening its own window, Applyer can open application forms as new tabs in a browser you already have running, signed in to everything you are signed in to. Nothing is copied or decrypted from that browser's profile.",
+    "remoteEnable": "Attach to a running browser",
+    "remoteEnableHint": "Applies to the interactive application window only, and overrides the preferred browser above for it (in development builds too). Job searches keep running in Applyer's own headless browser.",
+    "remoteEndpoint": "Remote debugging address",
+    "remoteEndpointHint": "Where the browser listens for DevTools connections. Chrome's default is http://127.0.0.1:9222; Applyer reads the browser's current websocket path from its profile folder itself. For a browser using a custom profile folder, paste the ws:// address from that folder's DevToolsActivePort file instead.",
+    "remoteEndpointEmpty": "Enter the address the browser is listening on.",
+    "remoteEndpointTooLong": "That address is too long.",
+    "remoteEndpointInvalidUrl": "That does not look like a valid URL.",
+    "remoteEndpointUnsupportedProtocol": "The address must start with http://, https://, ws:// or wss://.",
+    "remoteSave": "Save",
+    "remoteTest": "Test connection",
+    "remoteTestOk_one": "Reached {{version}} with {{count}} open tab.",
+    "remoteTestOk_other": "Reached {{version}} with {{count}} open tabs.",
+    "remoteTestVia": "Websocket path read from {{profileDir}}.",
+    "remoteTestNoProfile": "Reached {{version}}, but it has no profile to attach to. Start it normally, with a window open.",
+    "remoteTestWaiting": "Waiting for the browser. If it asks whether to allow remote debugging, accept it in the browser window.",
+    "remoteHowTo": "In Chrome 144 or newer, open chrome://inspect/#remote-debugging and turn on \"Allow remote debugging for this browser instance\". Chrome asks for your permission when Applyer first connects, then Applyer keeps that connection for the rest of its run. Older browsers need this startup flag instead:",
+    "remoteSaved": "Browser attachment settings saved. They take effect the next time an application window is opened.",
+    "remoteSaveFailed": "Could not save the browser attachment settings.",
+    "remoteScopeTitle": "Whole-browser access",
+    "remoteScopeWarning": "Remote debugging exposes the entire browser, and every account signed in to it, to any program on this computer that connects to the port, not only Applyer. Turn it off in the browser when you are not using it. Whether it avoids a site's automation detection is not guaranteed either: some detect the debugging connection itself.",
+    "remoteConfirmTitle": "Attach Applyer to your browser?",
+    "remoteConfirmMessage": "With remote debugging on, any program on this computer that connects to that port gets full read and control access to the browser and everything you are signed in to, not just Applyer. Applyer's own tools only inspect and fill application forms, but the browser does not enforce that. Only enable this on a computer you trust, and turn remote debugging off in the browser when you are done.",
+    "remoteConfirm": "Attach to browser"
   },
   "storage": {
     "intro": "Everything stays on this computer either way. This changes how all stored data is kept on disk, including the database, documents, screenshots, and logs.",
@@ -371,6 +398,7 @@
     "downloading": "Downloading a browser in the background. This is needed for job search and applications.",
     "progress": "{{percent}}% of {{total}}",
     "failed": "The browser download failed: {{message}}",
-    "complete": "Browser setup complete. Job automation is ready."
+    "complete": "Browser setup complete. Job automation is ready.",
+    "attaching": "Attaching to your browser at {{endpoint}}. If it asks whether to allow remote debugging, accept it in the browser window."
   }
 }

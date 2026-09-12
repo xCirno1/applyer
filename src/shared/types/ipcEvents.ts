@@ -91,6 +91,9 @@ export const IPC = {
     setPreference: 'browserSetup:setPreference',
     getAllowLocalAddresses: 'browserSetup:getAllowLocalAddresses',
     setAllowLocalAddresses: 'browserSetup:setAllowLocalAddresses',
+    getRemoteBrowser: 'browserSetup:getRemoteBrowser',
+    setRemoteBrowser: 'browserSetup:setRemoteBrowser',
+    testRemoteBrowser: 'browserSetup:testRemoteBrowser',
     getStatus: 'browserSetup:getStatus',
     onProgress: 'browserSetup:progress',
     onStatus: 'browserSetup:status'
@@ -241,6 +244,8 @@ export type BrowserSetupStatusPayload =
   | { status: 'downloading' }
   | { status: 'ready' }
   | { status: 'error'; message: string }
+  /** Attaching to the user's own browser has been pending long enough that it is probably waiting on its permission prompt. */
+  | { status: 'attaching'; endpoint: string }
 
 /**
  * `auto` (default) tries system Chrome, then system Edge, then falls back to a managed

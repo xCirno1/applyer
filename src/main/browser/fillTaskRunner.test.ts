@@ -8,11 +8,11 @@ let testDb: ReturnType<typeof drizzle<typeof schema>>
 vi.mock('../db/index', () => ({ getDb: () => testDb }))
 
 const browserMocks = vi.hoisted(() => ({
-  launchHeadedContext: vi.fn(),
+  openHeadedBrowser: vi.fn(),
   requestAgentPermissions: vi.fn(),
   detectCaptcha: vi.fn().mockResolvedValue({ blocked: false })
 }))
-vi.mock('./browserController', () => ({ launchHeadedContext: browserMocks.launchHeadedContext }))
+vi.mock('./browserController', () => ({ openHeadedBrowser: browserMocks.openHeadedBrowser }))
 vi.mock('./captchaDetector', () => ({ detectCaptcha: browserMocks.detectCaptcha }))
 vi.mock('./agentPermissionGate', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./agentPermissionGate')>()),
@@ -21,7 +21,7 @@ vi.mock('./agentPermissionGate', async (importOriginal) => ({
 
 beforeEach(() => {
   testDb = createTestDb().db
-  browserMocks.launchHeadedContext.mockReset()
+  browserMocks.openHeadedBrowser.mockReset()
   browserMocks.requestAgentPermissions.mockReset()
   browserMocks.detectCaptcha.mockReset().mockResolvedValue({ blocked: false })
 })
@@ -43,12 +43,14 @@ function retainablePage(fields: unknown[]): { evaluate: ReturnType<typeof vi.fn>
   }
   const browser = {
     isConnected: vi.fn().mockReturnValue(true),
-    once: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
     close: vi.fn()
   }
-  browserMocks.launchHeadedContext.mockResolvedValue({
+  browserMocks.openHeadedBrowser.mockResolvedValue({
     browser,
-    context: { newPage: vi.fn().mockResolvedValue(page) }
+    newPage: vi.fn().mockResolvedValue(page),
+    close: vi.fn().mockResolvedValue(undefined)
   })
   return page
 }
@@ -101,12 +103,14 @@ function retainableDomPage(html: string): Document {
   }
   const browser = {
     isConnected: vi.fn().mockReturnValue(true),
-    once: vi.fn(),
+    on: vi.fn(),
+    off: vi.fn(),
     close: vi.fn()
   }
-  browserMocks.launchHeadedContext.mockResolvedValue({
+  browserMocks.openHeadedBrowser.mockResolvedValue({
     browser,
-    context: { newPage: vi.fn().mockResolvedValue(page) }
+    newPage: vi.fn().mockResolvedValue(page),
+    close: vi.fn().mockResolvedValue(undefined)
   })
   return dom.window.document
 }

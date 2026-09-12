@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { ALL_EXPORT_DOMAINS } from '@shared/types/dataTransfer'
+import { checkRemoteBrowserEndpoint } from '@shared/types/remoteBrowser'
 import { appLogger } from '../logger'
 
 /**
@@ -39,6 +40,21 @@ export const browserPreferencePayload = z.object({
 })
 export const respondInstallPayload = z.object({ accept: z.boolean() })
 export const allowLocalAddressesPayload = z.object({ allowed: z.boolean() })
+
+/**
+ * The endpoint is stored and later handed to Playwright's `connectOverCDP` as-is, so it
+ * is checked (and trimmed) with the same rule the settings form uses for inline feedback.
+ */
+const remoteBrowserEndpoint = z.string().transform((value, ctx) => {
+  const check = checkRemoteBrowserEndpoint(value)
+  if (!check.ok) {
+    ctx.addIssue({ code: 'custom', message: check.problem })
+    return z.NEVER
+  }
+  return check.endpoint
+})
+export const remoteBrowserPayload = z.object({ enabled: z.boolean(), endpoint: remoteBrowserEndpoint })
+export const remoteBrowserEndpointPayload = z.object({ endpoint: remoteBrowserEndpoint })
 
 export const mcpTargetPayload = z.object({
   cli: z.enum(['claude', 'codex']),

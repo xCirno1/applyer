@@ -4,6 +4,8 @@ import Select from '../../components/ui/Select'
 import Skeleton from '../../components/ui/Skeleton'
 import Checkbox from '../../components/ui/Checkbox'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
+import WarningPanel from '../../components/ui/WarningPanel'
+import RemoteBrowserCard from '../../components/settings/RemoteBrowserCard'
 import { useToast } from '../../components/ui/useToast'
 import { callIpc } from '../../lib/ipcCall'
 import type { BrowserPreference, ResolvedBrowserStatus } from '@shared/types/ipcEvents'
@@ -123,15 +125,9 @@ export default function BrowserSection(): ReactElement {
       )}
       <p className="text-[12px] text-text-muted">{t('browser.outro')}</p>
 
-      <div className="flex flex-col gap-2 border border-warning bg-canvas-soft p-3">
-        <div className="flex items-center gap-2 text-warning">
-          <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M12 3 22 21H2L12 3Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-            <path d="M12 9v5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            <circle cx="12" cy="17.5" r="1" fill="currentColor" />
-          </svg>
-          <h2 className="text-[13px] font-semibold">{t('browser.networkAccessTitle')}</h2>
-        </div>
+      <RemoteBrowserCard />
+
+      <WarningPanel title={t('browser.networkAccessTitle')}>
         {allowLocalAddresses === null ? (
           <Skeleton className="h-10 w-full" />
         ) : (
@@ -144,7 +140,7 @@ export default function BrowserSection(): ReactElement {
             disabled={savingLocalAddresses}
           />
         )}
-      </div>
+      </WarningPanel>
 
       <ConfirmDialog
         open={confirmLocalAddresses}

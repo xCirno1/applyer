@@ -1,4 +1,4 @@
-import type { Browser, BrowserContext } from 'playwright'
+import type { Browser, BrowserContext, Page } from 'playwright'
 import { app } from 'electron'
 import { existsSync } from 'fs'
 import { createRequire } from 'module'
@@ -8,14 +8,37 @@ import { playwrightBrowsersDir } from '../config/paths'
 import { runCommand } from '../config/processUtils'
 import { parseDownloadProgressLine } from './downloadProgress'
 import { broadcastBrowserSetupProgress, broadcastBrowserSetupStatus } from '../ipc/jobsBroadcast'
-import { getAllowLocalAddresses, getBrowserPreference } from '../db/repositories/settingsRepository'
+import {
+  getAllowLocalAddresses,
+  getBrowserPreference,
+  getRemoteBrowserSettings
+} from '../db/repositories/settingsRepository'
 import type { ResolvedBrowserStatus } from '@shared/types/ipcEvents'
-import { protectBrowserContext } from './networkAccess'
+import type { RemoteBrowserProbe } from '@shared/types/remoteBrowser'
+import { protectBrowserContext, protectBrowserPage } from './networkAccess'
+import { resolveRemoteBrowserCandidates } from './devToolsActivePort'
 
 const PREFERENCE_LABELS = { chrome: 'System Chrome', msedge: 'System Edge' } as const
 
 const REALISTIC_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+
+/**
+ * Long on purpose. A browser that isn't listening refuses the connection immediately, so
+ * the timeout never applies to it; what it does bound is the case where the browser holds
+ * the handshake open while it asks the user for permission (Chrome 144+'s
+ * chrome://inspect/#remote-debugging switch does exactly that, on every connection). Two
+ * minutes is enough to notice the prompt and click it, and a prompt nobody answers should
+ * still fail eventually rather than hang the agent's tool call forever.
+ */
+const REMOTE_CONNECT_TIMEOUT_MS = 120_000
+
+/**
+ * How long a connect may take before the renderer is told to point the user at the
+ * browser's permission prompt. Short enough to be seen while the prompt is still up,
+ * long enough that a flag-launched Chrome (no prompt, connects at once) never triggers it.
+ */
+const REMOTE_ATTACH_ANNOUNCE_DELAY_MS = 1_500
 
 let headlessBrowser: Browser | null = null
 
@@ -240,20 +263,235 @@ export async function newHeadlessContext(): Promise<BrowserContext> {
   return context
 }
 
-/** Used for anything interactive (login, filling a form) — a real, visible window the user can watch and take over. Caller owns closing both. */
-export async function launchHeadedContext(): Promise<{ browser: Browser; context: BrowserContext }> {
+/**
+ * A visible browser the agent can drive. `newPage()` is the only way to get a page out of
+ * it, so every page carries the local-address guard whichever way the browser was obtained,
+ * and `close()` is the only way to end a session, so a session never has to know whether
+ * the browser underneath is one Applyer launched (close the window) or one it attached to
+ * (close only the tab, keep the connection).
+ */
+export interface HeadedBrowser {
+  browser: Browser
+  newPage(): Promise<Page>
+  /** Ends the session that owns `page`. Safe to call with a page that already closed, or with none. */
+  close(page: Page | null): Promise<void>
+}
+
+/**
+ * Used for anything interactive (login, filling a form): a real, visible window the user can
+ * watch and take over. Either a fresh isolated window Applyer launches, or, when Settings >
+ * Browser has "attach to a running browser" on, a new tab in the user's own already-running
+ * browser (see `shared/types/remoteBrowser.ts` for why and what that trades away).
+ */
+export async function openHeadedBrowser(): Promise<HeadedBrowser> {
+  const remote = getRemoteBrowserSettings()
+  if (remote.enabled) return attachHeadedBrowser(remote.endpoint)
+
   const browser = await launchWithResolution(false)
   const context = await browser.newContext({
     userAgent: REALISTIC_USER_AGENT,
     // null (not a fixed size) lets the page's rendering area follow the real OS window as the
     // user drags/resizes it, instead of Playwright pinning content to a fixed viewport
-    // regardless of the window's actual size — the headless context's fixed viewport (below)
+    // regardless of the window's actual size; the headless context's fixed viewport (above)
     // is deliberately different, since that one is never resized by a human.
     viewport: null,
     locale: 'en-US'
   })
   await protectBrowserContext(context, getAllowLocalAddresses())
-  return { browser, context }
+  return {
+    browser,
+    newPage: () => context.newPage(),
+    close: async (page) => {
+      if (page && !page.isClosed()) await page.close().catch(() => {})
+      await browser.close().catch(() => {})
+    }
+  }
+}
+
+/**
+ * One line only: Playwright appends a multi-line call log that is noise in a settings toast
+ * or MCP result. A timeout is reworded, since "Timeout 120000ms exceeded" hides what almost
+ * certainly happened: the browser put up its permission prompt and nobody accepted it.
+ */
+function describeConnectError(err: unknown): string {
+  const message = err instanceof Error ? err.message : String(err)
+  const firstLine = message.split('\n', 1)[0]?.trim() || 'unknown error'
+  if (/\bTimeout \d+ms exceeded\b/.test(firstLine)) {
+    return (
+      `the browser did not accept the connection within ${Math.round(REMOTE_CONNECT_TIMEOUT_MS / 1000)}s; ` +
+      'if it showed a prompt asking to allow remote debugging, it was not accepted in time'
+    )
+  }
+  return firstLine
+}
+
+/**
+ * Carries the endpoint and the one-line cause separately from the prose, so the IPC layer
+ * can hand the renderer a translatable `{ code, params }` while the MCP tool result and the
+ * log keep the full English sentence.
+ */
+export class RemoteBrowserUnreachableError extends Error {
+  constructor(
+    readonly endpoint: string,
+    readonly detail: string
+  ) {
+    super(
+      `Couldn't attach to the browser at ${endpoint} (${detail}). Make sure it is running with remote ` +
+        `debugging enabled on that address, or turn off "Attach to a running browser" in Settings > Browser.`
+    )
+    this.name = 'RemoteBrowserUnreachableError'
+  }
+}
+
+/**
+ * Tries each URL `resolveRemoteBrowserCandidates` derives from the setting, in order, and
+ * reports the first candidate's failure if none connects: that one (the websocket path read
+ * from the browser's own profile folder, when there is one) is the most specific, whereas
+ * the HTTP root tried last fails with an unhelpful 404 against Chrome's newer switch.
+ * `announce` tells the renderer to point the user at the browser's permission prompt once
+ * the handshake has been pending a while; off for the settings page's own test, which shows
+ * that hint itself.
+ */
+async function connectRemoteBrowser(
+  endpoint: string,
+  options: { announce: boolean }
+): Promise<{ browser: Browser; profileDir: string | null }> {
+  const chromium = await getChromium()
+  const candidates = await resolveRemoteBrowserCandidates(endpoint)
+  const announce = options.announce
+    ? setTimeout(() => broadcastBrowserSetupStatus({ status: 'attaching', endpoint }), REMOTE_ATTACH_ANNOUNCE_DELAY_MS)
+    : null
+  announce?.unref()
+  const failures: string[] = []
+  try {
+    for (const candidate of candidates) {
+      try {
+        const browser = await chromium.connectOverCDP(candidate.url, { timeout: REMOTE_CONNECT_TIMEOUT_MS })
+        appLogger.info(
+          `Attached to the browser at ${candidate.url}` +
+            (candidate.profileDir ? ` (websocket path read from ${candidate.profileDir})` : '')
+        )
+        return { browser, profileDir: candidate.profileDir ?? null }
+      } catch (err) {
+        const detail = describeConnectError(err)
+        appLogger.info(`Could not attach to the browser at ${candidate.url}: ${detail}`)
+        failures.push(detail)
+      }
+    }
+  } finally {
+    if (announce) clearTimeout(announce)
+  }
+  throw new RemoteBrowserUnreachableError(endpoint, failures[0] ?? 'no connection candidates')
+}
+
+interface AttachedBrowser {
+  endpoint: string
+  browser: Browser
+  profileDir: string | null
+}
+
+// One connection to the user's browser, shared by every session and by the settings page's
+// test, for as long as it stays up. Chrome 144+'s remote-debugging switch asks the user's
+// permission on every new CDP connection and offers no way to remember the answer, so the
+// only way to ask once per Applyer run rather than once per job is to never let go of the
+// connection between jobs. Sessions close their own tab and leave the connection alone.
+let attachedBrowser: AttachedBrowser | null = null
+// Dedupes concurrent first-attachers so two jobs starting together raise one prompt, not two.
+let attachingPromise: Promise<AttachedBrowser> | null = null
+
+/**
+ * The shared attached connection for `endpoint`, connecting (and possibly prompting) only if
+ * there isn't one already, or the one there is went down, or points somewhere else.
+ */
+async function getAttachedBrowser(endpoint: string, options: { announce: boolean }): Promise<AttachedBrowser> {
+  if (attachedBrowser?.endpoint === endpoint && attachedBrowser.browser.isConnected()) return attachedBrowser
+  if (attachingPromise) return attachingPromise
+  attachingPromise = (async () => {
+    // A connection to a different endpoint, or a dead one, is replaced rather than kept around.
+    await disconnectAttachedBrowser()
+    const { browser, profileDir } = await connectRemoteBrowser(endpoint, options)
+    const attached: AttachedBrowser = { endpoint, browser, profileDir }
+    browser.once('disconnected', () => {
+      if (attachedBrowser === attached) attachedBrowser = null
+    })
+    attachedBrowser = attached
+    return attached
+  })().finally(() => {
+    attachingPromise = null
+  })
+  return attachingPromise
+}
+
+/**
+ * Drops the shared connection to the user's browser, if any. Called when the setting changes
+ * (a new endpoint, or attaching turned off) and at quit; otherwise the connection is kept so
+ * the browser's permission prompt is answered once per run, not once per job. Open tabs are
+ * the user's now and are left alone.
+ */
+export async function disconnectAttachedBrowser(): Promise<void> {
+  const attached = attachedBrowser
+  attachedBrowser = null
+  if (!attached) return
+  try {
+    await attached.browser.close()
+  } catch (err) {
+    appLogger.warn(`Failed to disconnect from the attached browser cleanly: ${String(err)}`)
+  }
+}
+
+/**
+ * The user's default profile is `contexts()[0]` on a CDP-attached browser; that, not a
+ * `newContext()` (which would be a fresh, signed-out incognito context), is the whole point
+ * of attaching. No user-agent/viewport/locale overrides either: this is their real browser,
+ * and pretending otherwise would only make the session look less like them.
+ */
+async function attachHeadedBrowser(endpoint: string): Promise<HeadedBrowser> {
+  const { browser } = await getAttachedBrowser(endpoint, { announce: true })
+  const context = browser.contexts()[0]
+  if (!context) {
+    await disconnectAttachedBrowser()
+    throw new Error(
+      `The browser at ${endpoint} exposes no profile to attach to. Start it normally (with a window open) ` +
+        `and remote debugging enabled, or turn off "Attach to a running browser" in Settings > Browser.`
+    )
+  }
+  const allowLocalAddresses = getAllowLocalAddresses()
+  return {
+    browser,
+    newPage: async () => {
+      const page = await context.newPage()
+      try {
+        // Page-level, not context-level: the context is the user's whole browser, and
+        // routing it would push every request from every one of their tabs through here.
+        await protectBrowserPage(page, allowLocalAddresses)
+      } catch (err) {
+        await page.close().catch(() => {})
+        throw err
+      }
+      return page
+    },
+    // Only the tab: the connection is shared and outlives this session (see attachedBrowser).
+    close: async (page) => {
+      if (page && !page.isClosed()) await page.close().catch(() => {})
+    }
+  }
+}
+
+/**
+ * Settings > Browser's "Test connection": attaches and reads what's there, without opening
+ * anything. The connection is kept as the shared one, so a test followed by a job is one
+ * permission prompt, not two. Throws with the same wording a real launch would, so what the
+ * user sees in the settings toast is what the agent would see in a tool result.
+ */
+export async function probeRemoteBrowser(endpoint: string): Promise<RemoteBrowserProbe> {
+  const { browser, profileDir } = await getAttachedBrowser(endpoint, { announce: false })
+  const context = browser.contexts()[0]
+  return {
+    browserVersion: browser.version(),
+    hasDefaultContext: context !== undefined,
+    pageCount: context ? context.pages().length : 0,
+    profileDir
+  }
 }
 
 export async function closeAllBrowsers(): Promise<void> {
@@ -265,6 +503,7 @@ export async function closeAllBrowsers(): Promise<void> {
     }
     headlessBrowser = null
   }
+  await disconnectAttachedBrowser()
 }
 
 /** Test-only: true while a managed-download confirmation prompt is awaiting an answer. */
@@ -275,6 +514,8 @@ export function __hasPendingInstallConfirmation(): boolean {
 /** Test-only: clears module-level resolution state between test cases. */
 export function __resetBrowserControllerForTests(): void {
   headlessBrowser = null
+  attachedBrowser = null
+  attachingPromise = null
   chromiumModule = null
   chromiumImportPromise = null
   resolvedLaunchOptions = null

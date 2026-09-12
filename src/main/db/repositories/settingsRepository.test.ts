@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
+import { eq } from 'drizzle-orm'
 import { createTestDb } from '../testDb'
 import { appSettings } from '../schema'
 import type * as schema from '../schema'
@@ -22,6 +23,8 @@ import {
   setIndexedJobsRetentionDays,
   getBrowserPreference,
   setBrowserPreference,
+  getRemoteBrowserSettings,
+  setRemoteBrowserSettings,
   getAgentPermissions,
   setAgentPermissions,
   getAllowLocalAddresses,
@@ -105,6 +108,38 @@ describe('browser preference', () => {
     // Simulates a value from a future/older app version rather than one this app wrote itself.
     testDb.insert(appSettings).values({ key: 'browser_preference', value: 'firefox' }).run()
     expect(getBrowserPreference()).toBe('auto')
+  })
+})
+
+describe('remote browser settings', () => {
+  it('defaults to disabled with the loopback endpoint', () => {
+    expect(getRemoteBrowserSettings()).toEqual({ enabled: false, endpoint: 'http://127.0.0.1:9222' })
+  })
+
+  it('round-trips an enabled configuration with a custom endpoint', () => {
+    setRemoteBrowserSettings({ enabled: true, endpoint: 'ws://localhost:9333/devtools/browser/abc' })
+    expect(getRemoteBrowserSettings()).toEqual({ enabled: true, endpoint: 'ws://localhost:9333/devtools/browser/abc' })
+    setRemoteBrowserSettings({ enabled: false, endpoint: 'http://127.0.0.1:9222' })
+    expect(getRemoteBrowserSettings()).toEqual({ enabled: false, endpoint: 'http://127.0.0.1:9222' })
+  })
+
+  it('treats an unreadable stored value as disabled', () => {
+    testDb.insert(appSettings).values({ key: 'remote_browser', value: '{not json' }).run()
+    expect(getRemoteBrowserSettings()).toEqual({ enabled: false, endpoint: 'http://127.0.0.1:9222' })
+  })
+
+  it('treats a stored value with an unusable endpoint as disabled', () => {
+    testDb
+      .insert(appSettings)
+      .values({ key: 'remote_browser', value: JSON.stringify({ enabled: true, endpoint: 'file:///tmp/x' }) })
+      .run()
+    expect(getRemoteBrowserSettings()).toEqual({ enabled: false, endpoint: 'http://127.0.0.1:9222' })
+  })
+
+  it('drops unknown fields instead of persisting them', () => {
+    setRemoteBrowserSettings({ enabled: true, endpoint: 'http://127.0.0.1:9222', extra: 1 } as never)
+    const row = testDb.select().from(appSettings).where(eq(appSettings.key, 'remote_browser')).get()
+    expect(JSON.parse(row!.value)).toEqual({ enabled: true, endpoint: 'http://127.0.0.1:9222' })
   })
 })
 

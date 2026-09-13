@@ -19,12 +19,12 @@ interface BulkConfirmState {
  * Right-clicking a card outside the current selection replaces the
  * selection with just that card (standard file-manager convention);
  * right-clicking a card that's already part of a multi-selection scopes
- * Retry/Unqueue/Exclude to the whole selection instead of just the one
+ * actions to the whole selection instead of just the one
  * card. Retry only confirms when it would touch more than one job
  * (single-job retry matches `JobDetailModal`'s immediate behavior);
- * Unqueue, Remove, and Exclude always confirm, matching their single-job
- * dialogs. Remove is available for Filled/Submitted jobs and keeps their
- * URLs discoverable; Exclude permanently blacklists a URL.
+ * Mark Filled, Unqueue, Remove, and Exclude always confirm, matching their
+ * single-job dialogs. Remove is available for Filled/Submitted jobs and
+ * keeps their URLs discoverable; Exclude permanently blacklists a URL.
  */
 export function useJobContextMenu(): {
   openContextMenu: (e: MouseEvent, job: JobRecord, onOpen: () => void) => void
@@ -33,14 +33,16 @@ export function useJobContextMenu(): {
   const { t } = useTranslation('board')
   const [menuState, setMenuState] = useState<ContextMenuState | null>(null)
   const [confirmRetry, setConfirmRetry] = useState<BulkConfirmState | null>(null)
+  const [confirmMarkFilled, setConfirmMarkFilled] = useState<BulkConfirmState | null>(null)
   const [confirmExclude, setConfirmExclude] = useState<BulkConfirmState | null>(null)
   const [confirmUnqueue, setConfirmUnqueue] = useState<BulkConfirmState | null>(null)
   const [confirmRemove, setConfirmRemove] = useState<BulkConfirmState | null>(null)
   const [retrying, setRetrying] = useState(false)
+  const [markingFilled, setMarkingFilled] = useState(false)
   const [excluding, setExcluding] = useState(false)
   const [unqueueing, setUnqueueing] = useState(false)
   const [removing, setRemoving] = useState(false)
-  const { retryMany, excludeMany, unqueueMany, removeCompletedMany } = useJobActions()
+  const { markFilledMany, retryMany, excludeMany, unqueueMany, removeCompletedMany } = useJobActions()
 
   const openContextMenu = (e: MouseEvent, job: JobRecord, onOpen: () => void): void => {
     e.preventDefault()
@@ -58,6 +60,7 @@ export function useJobContextMenu(): {
       : [job]
 
     const retryableIds = targetJobs.filter((j) => j.status === 'failed').map((j) => j.id)
+    const fillableIds = targetJobs.filter((j) => j.status === 'queued').map((j) => j.id)
     const excludableIds = targetJobs.filter((j) => j.status !== 'submitted').map((j) => j.id)
     const unqueueableIds = targetJobs.filter((j) => j.status === 'queued').map((j) => j.id)
     const removableIds = targetJobs
@@ -77,6 +80,14 @@ export function useJobContextMenu(): {
           if (retryableIds.length > 1) setConfirmRetry({ ids: retryableIds })
           else void retryMany(retryableIds)
         }
+      })
+    }
+    if (fillableIds.length > 0) {
+      items.push({
+        type: 'action',
+        key: 'markFilled',
+        label: isBulk ? t('actions.markFilledCount', { count: fillableIds.length }) : t('actions.markFilled'),
+        onSelect: () => setConfirmMarkFilled({ ids: fillableIds })
       })
     }
     if (unqueueableIds.length > 0) {
@@ -116,6 +127,22 @@ export function useJobContextMenu(): {
   const menuNode = (
     <>
       <ContextMenu state={menuState} onClose={() => setMenuState(null)} />
+
+      <ConfirmDialog
+        open={confirmMarkFilled !== null}
+        title={t('confirm.markFilledTitle', { count: confirmMarkFilled?.ids.length ?? 0 })}
+        message={t('confirm.markFilledMessage', { count: confirmMarkFilled?.ids.length ?? 0 })}
+        confirmLabel={t('actions.markFilled')}
+        loading={markingFilled}
+        onConfirm={async () => {
+          if (!confirmMarkFilled) return
+          setMarkingFilled(true)
+          await markFilledMany(confirmMarkFilled.ids)
+          setMarkingFilled(false)
+          setConfirmMarkFilled(null)
+        }}
+        onCancel={() => setConfirmMarkFilled(null)}
+      />
 
       <ConfirmDialog
         open={confirmRetry !== null}

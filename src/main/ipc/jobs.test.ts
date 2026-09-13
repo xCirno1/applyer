@@ -69,6 +69,8 @@ const unqueueJob = vi.fn<(id: string) => JobRecord | null>(() => job())
 const unqueueJobsByIds = vi.fn((ids: string[]) => ids)
 const removeCompletedJob = vi.fn<(id: string) => JobRecord | null>(() => job({ status: 'filled' }))
 const removeCompletedJobsByIds = vi.fn((ids: string[]) => ids)
+const forceFillJob = vi.fn<(id: string) => JobRecord | null>(() => job({ status: 'filled' }))
+const forceFillJobsByIds = vi.fn<(ids: string[]) => JobRecord[]>((ids) => ids.map((id) => job({ id, status: 'filled' })))
 
 vi.mock('../jobActions', () => ({
   excludeJob: (...args: unknown[]) => excludeJob(...(args as [])),
@@ -76,7 +78,9 @@ vi.mock('../jobActions', () => ({
   unqueueJob: (id: string) => unqueueJob(id),
   unqueueJobsByIds: (ids: string[]) => unqueueJobsByIds(ids),
   removeCompletedJob: (id: string) => removeCompletedJob(id),
-  removeCompletedJobsByIds: (ids: string[]) => removeCompletedJobsByIds(ids)
+  removeCompletedJobsByIds: (ids: string[]) => removeCompletedJobsByIds(ids),
+  forceFillJob: (id: string) => forceFillJob(id),
+  forceFillJobsByIds: (ids: string[]) => forceFillJobsByIds(ids)
 }))
 
 vi.mock('./jobsBroadcast', () => ({ broadcastJobUpdate: vi.fn() }))
@@ -132,6 +136,30 @@ describe('jobs:get', () => {
 })
 
 describe('mutations', () => {
+  it('marks a queued job filled', () => {
+    expect(__invokeIpc(IPC.jobs.markFilled, { jobId: 'job-1' })).toMatchObject({
+      ok: true,
+      job: { status: 'filled' }
+    })
+    expect(forceFillJob).toHaveBeenCalledWith('job-1')
+  })
+
+  it('reports a job that is no longer queued when marking it filled', () => {
+    forceFillJob.mockReturnValueOnce(null)
+    expect(__invokeIpc(IPC.jobs.markFilled, { jobId: 'job-1' })).toEqual({
+      ok: false,
+      error: { code: 'jobNotQueued' }
+    })
+  })
+
+  it.each(badPayloads)('refuses markFilled for %s', (_label, payload) => {
+    expect(__invokeIpc(IPC.jobs.markFilled, payload)).toEqual({
+      ok: false,
+      error: { code: 'jobNotFound' }
+    })
+    expect(forceFillJob).not.toHaveBeenCalled()
+  })
+
   it('marks a job submitted', () => {
     expect(__invokeIpc(IPC.jobs.markSubmitted, { jobId: 'job-1' })).toMatchObject({ ok: true })
     expect(setSubmitted).toHaveBeenCalledWith('job-1')
@@ -209,10 +237,19 @@ describe('bulk mutations', () => {
   ]
 
   it('acts on a valid list', () => {
+    expect(__invokeIpc(IPC.jobs.markFilledMany, { jobIds: ['a', 'b'] })).toMatchObject({
+      ok: true,
+      jobs: [{ id: 'a', status: 'filled' }, { id: 'b', status: 'filled' }]
+    })
     expect(__invokeIpc(IPC.jobs.excludeMany, { jobIds: ['a', 'b'] })).toEqual({ ok: true, excludedIds: ['a', 'b'] })
     expect(__invokeIpc(IPC.jobs.unqueueMany, { jobIds: ['a'] })).toEqual({ ok: true, unqueuedIds: ['a'] })
     expect(__invokeIpc(IPC.jobs.removeMany, { jobIds: ['a'] })).toEqual({ ok: true, removedIds: ['a'] })
     expect(__invokeIpc(IPC.jobs.retryMany, { jobIds: ['a'] })).toEqual({ ok: true, jobs: [] })
+  })
+
+  it.each(badLists)('refuses markFilledMany for %s', (_label, payload) => {
+    expect(__invokeIpc(IPC.jobs.markFilledMany, payload)).toEqual({ ok: false, jobs: [] })
+    expect(forceFillJobsByIds).not.toHaveBeenCalled()
   })
 
   it.each(badLists)('refuses excludeMany for %s', (_label, payload) => {

@@ -7,6 +7,9 @@ Notable changes to Applyer are documented here. This project follows
 
 ### Added
 
+- Queued jobs can now be marked as Filled manually from the job details,
+  right-click menu, or bulk-selection toolbar without filling or submitting
+  the application on the user's behalf.
 - Settings > Browser can attach the interactive application window to a browser you
   already have running, over its remote-debugging port, instead of launching a separate
   signed-out one. Works with both Chrome 144+'s "Allow remote debugging" switch (whose

@@ -4,14 +4,15 @@ import { useToast } from '../ui/useToast'
 import { callIpc } from '../../lib/ipcCall'
 
 /**
- * The two bulk job mutations shared by the board's `BulkActionBar` and each
+ * Bulk job mutations shared by the board's `BulkActionBar` and each
  * `JobCard`'s right-click menu (`useJobContextMenu`) — kept in one place so
  * both entry points apply store updates and toasts identically. Confirming
  * (or not) before calling these is the caller's job: single-job retry stays
- * immediate to match `JobDetailModal`'s existing behavior, while anything
- * touching more than one job goes through a `ConfirmDialog` first.
+ * immediate to match `JobDetailModal`'s existing behavior, while manual
+ * status changes and destructive actions are confirmed.
  */
 export function useJobActions(): {
+  markFilledMany: (ids: string[]) => Promise<void>
   retryMany: (ids: string[]) => Promise<void>
   excludeMany: (ids: string[]) => Promise<void>
   unqueueMany: (ids: string[]) => Promise<void>
@@ -21,6 +22,20 @@ export function useJobActions(): {
   const applyUpdate = useJobsStore((s) => s.applyUpdate)
   const removeJobLocal = useJobsStore((s) => s.removeJobLocal)
   const toast = useToast()
+
+  const markFilledMany = async (ids: string[]): Promise<void> => {
+    if (ids.length === 0) return
+    const result = await callIpc('jobs.markFilledMany', () => window.api.jobs.markFilledMany(ids), {
+      ok: false,
+      jobs: []
+    })
+    if (!result.ok) {
+      toast.error(t('toast.markFilledFailed'))
+      return
+    }
+    for (const job of result.jobs) applyUpdate(job)
+    toast.success(t('toast.markedFilled', { count: result.jobs.length }))
+  }
 
   const retryMany = async (ids: string[]): Promise<void> => {
     if (ids.length === 0) return
@@ -80,5 +95,5 @@ export function useJobActions(): {
     toast.success(t('toast.removed', { count: result.removedIds.length }))
   }
 
-  return { retryMany, excludeMany, unqueueMany, removeCompletedMany }
+  return { markFilledMany, retryMany, excludeMany, unqueueMany, removeCompletedMany }
 }

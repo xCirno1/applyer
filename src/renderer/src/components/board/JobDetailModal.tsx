@@ -16,9 +16,9 @@ import { failureLabelKey, failureMessageDisplay, humanizeFailureTag } from './fa
 
 // Full job detail: description rendered as sanitized HTML, match reasons, a
 // screenshot preview for Filled jobs served via the `applyer-file://`
-// protocol, and status-contextual actions — Unqueue for Queued, Retry for
-// Failed, Mark Submitted for Filled, Exclude for anything not yet Submitted,
-// and Remove for Filled/Submitted — all behind spinner+disable /
+// protocol, and status-contextual actions — Unqueue or Mark Filled for
+// Queued, Retry for Failed, Mark Submitted for Filled, Exclude for anything
+// not yet Submitted, and Remove for Filled/Submitted — all behind spinner+disable /
 // `ConfirmDialog`, never a bare click. Excluding
 // removes the job from the board and blacklists its URL (see
 // `indexedJobs/ExclusionsPanel.tsx`); Unqueue removes it from the board
@@ -36,11 +36,13 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
   const removeJobLocal = useJobsStore((s) => s.removeJobLocal)
   const toast = useToast()
   const [submitting, setSubmitting] = useState(false)
+  const [markingFilled, setMarkingFilled] = useState(false)
   const [retrying, setRetrying] = useState(false)
   const [excluding, setExcluding] = useState(false)
   const [unqueueing, setUnqueueing] = useState(false)
   const [removing, setRemoving] = useState(false)
   const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false)
+  const [confirmMarkFilledOpen, setConfirmMarkFilledOpen] = useState(false)
   const [confirmExcludeOpen, setConfirmExcludeOpen] = useState(false)
   const [confirmUnqueueOpen, setConfirmUnqueueOpen] = useState(false)
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
@@ -94,6 +96,20 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
       onClose()
     } else {
       toast.error(result.error ? errorMessage(result.error) : t('toast.markSubmittedFailed'))
+    }
+  }
+
+  const handleMarkFilled = async (): Promise<void> => {
+    setConfirmMarkFilledOpen(false)
+    setMarkingFilled(true)
+    const result = await callIpc('jobs.markFilled', () => window.api.jobs.markFilled(job.id), { ok: false })
+    setMarkingFilled(false)
+    if (result.ok && result.job) {
+      applyUpdate(result.job)
+      toast.success(t('toast.markedFilledSingle'))
+      onClose()
+    } else {
+      toast.error(result.error ? errorMessage(result.error) : t('toast.markFilledSingleFailed'))
     }
   }
 
@@ -244,9 +260,14 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
           </a>
           <div className="flex gap-2">
             {job.status === 'queued' && (
-              <Button size="sm" variant="secondary" onClick={() => setConfirmUnqueueOpen(true)} loading={unqueueing}>
-                {t('actions.unqueue')}
-              </Button>
+              <>
+                <Button size="sm" variant="secondary" onClick={() => setConfirmUnqueueOpen(true)} loading={unqueueing}>
+                  {t('actions.unqueue')}
+                </Button>
+                <Button size="sm" onClick={() => setConfirmMarkFilledOpen(true)} loading={markingFilled}>
+                  {t('actions.markFilled')}
+                </Button>
+              </>
             )}
             {(job.status === 'filled' || job.status === 'submitted') && (
               <Button size="sm" variant="secondary" onClick={() => setConfirmRemoveOpen(true)} loading={removing}>
@@ -271,6 +292,16 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmMarkFilledOpen}
+        title={t('confirm.markFilledTitle', { count: 1 })}
+        message={t('confirm.markFilledMessage', { count: 1 })}
+        confirmLabel={t('actions.markFilled')}
+        loading={markingFilled}
+        onConfirm={handleMarkFilled}
+        onCancel={() => setConfirmMarkFilledOpen(false)}
+      />
 
       <ConfirmDialog
         open={confirmSubmitOpen}

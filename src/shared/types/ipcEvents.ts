@@ -11,6 +11,8 @@ export const IPC = {
   jobs: {
     list: 'jobs:list',
     get: 'jobs:get',
+    markFilled: 'jobs:markFilled',
+    markFilledMany: 'jobs:markFilledMany',
     markSubmitted: 'jobs:markSubmitted',
     retry: 'jobs:retry',
     retryAll: 'jobs:retryAll',

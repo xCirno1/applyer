@@ -1,8 +1,14 @@
-import { setFailed, listBlockedJobs, getJob, getJobByUrl, removeJob } from './db/repositories/jobsRepository'
+import { setFailed, setFilled, listBlockedJobs, getJob, getJobByUrl, removeJob } from './db/repositories/jobsRepository'
 import { ensureFailureTag } from './db/repositories/failureTagsRepository'
 import { logActivity } from './db/repositories/activityLogRepository'
 import { excludeUrl } from './db/repositories/jobExclusionsRepository'
-import { broadcastJobUpdate, broadcastJobRemoved, broadcastExclusionsChanged } from './ipc/jobsBroadcast'
+import {
+  broadcastJobUpdate,
+  broadcastJobRemoved,
+  broadcastExclusionsChanged,
+  broadcastCaptchaResolved
+} from './ipc/jobsBroadcast'
+import { resumeGate } from './browser/captchaGate'
 import type { JobRecord } from '@shared/types/job'
 import type { ExclusionRecord, ExcludedBy } from '@shared/types/exclusion'
 
@@ -33,6 +39,36 @@ export function reconcileOrphanedBlockedJobs(): void {
   for (const job of listBlockedJobs()) {
     failJob(job.id, 'interrupted', 'The app was closed or restarted while this job was waiting on a verification challenge. Retry it to try again.')
   }
+}
+
+/**
+ * Lets the user finish tracking an application they completed manually.
+ * Only Queued jobs are eligible. If the job is waiting at a CAPTCHA gate,
+ * release that in-memory wait as well so it cannot later overwrite the
+ * user's explicit state change or leave a stale verification banner behind.
+ */
+export function forceFillJob(jobId: string): JobRecord | null {
+  const current = getJob(jobId)
+  if (!current || current.status !== 'queued') return null
+
+  const job = setFilled(jobId)
+  if (current.blockingTaskId) {
+    resumeGate(current.blockingTaskId)
+    broadcastCaptchaResolved({ taskId: current.blockingTaskId, jobId })
+  }
+  broadcastJobUpdate(job)
+  logActivity('info', `Marked job Filled manually: ${job.title}`, { jobId, url: job.url })
+  return job
+}
+
+/** Marks only currently Queued ids Filled and returns the rows that changed. */
+export function forceFillJobsByIds(jobIds: string[]): JobRecord[] {
+  const updated: JobRecord[] = []
+  for (const id of jobIds) {
+    const job = forceFillJob(id)
+    if (job) updated.push(job)
+  }
+  return updated
 }
 
 export interface ExcludeJobInput {

@@ -55,6 +55,8 @@
     "retry": "Retry",
     "retryCount": "Retry ({{count}})",
     "retryAll": "Retry all",
+    "markFilled": "Mark Filled",
+    "markFilledCount": "Mark Filled ({{count}})",
     "unqueue": "Unqueue",
     "unqueueCount": "Unqueue ({{count}})",
     "remove": "Remove",
@@ -67,6 +69,10 @@
     "markSubmitted": "Mark Submitted"
   },
   "confirm": {
+    "markFilledTitle_one": "Mark this job as filled?",
+    "markFilledTitle_other": "Mark selected jobs as filled?",
+    "markFilledMessage_one": "This moves {{count}} queued job to Filled. It doesn't fill in or submit the application; use this only if you've completed it manually.",
+    "markFilledMessage_other": "This moves {{count}} queued jobs to Filled. It doesn't fill in or submit the applications; use this only if you've completed them manually.",
     "retryTitle": "Retry selected jobs?",
     "retryTitleMenu": "Retry these jobs?",
     "retryMessage_one": "This moves {{count}} failed job back to Queued so it's attempted again.",
@@ -88,6 +94,11 @@
     "markSubmittedConfirm": "Mark submitted"
   },
   "toast": {
+    "markedFilled_one": "Marked {{count}} job as filled.",
+    "markedFilled_other": "Marked {{count}} jobs as filled.",
+    "markFilledFailed": "Failed to mark the selected jobs as filled.",
+    "markedFilledSingle": "Marked as filled.",
+    "markFilledSingleFailed": "Failed to mark this job as filled.",
     "retried_one": "Retried {{count}} job.",
     "retried_other": "Retried {{count}} jobs.",
     "retryFailed": "Failed to retry the selected jobs.",

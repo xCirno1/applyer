@@ -55,6 +55,8 @@
     "retry": "Coba lagi",
     "retryCount": "Coba lagi ({{count}})",
     "retryAll": "Coba lagi semua",
+    "markFilled": "Tandai Terisi",
+    "markFilledCount": "Tandai Terisi ({{count}})",
     "unqueue": "Keluarkan dari antrean",
     "unqueueCount": "Keluarkan dari antrean ({{count}})",
     "remove": "Hapus",
@@ -67,6 +69,8 @@
     "markSubmitted": "Tandai Terkirim"
   },
   "confirm": {
+    "markFilledTitle_other": "Tandai lowongan sebagai terisi?",
+    "markFilledMessage_other": "{{count}} lowongan antrean akan dipindahkan ke Terisi. Tindakan ini tidak mengisi atau mengirim lamaran; gunakan hanya jika kamu sudah menyelesaikannya secara manual.",
     "retryTitle": "Coba lagi lowongan yang dipilih?",
     "retryTitleMenu": "Coba lagi lowongan ini?",
     "retryMessage_other": "{{count}} lowongan yang gagal akan dikembalikan ke Antre supaya dicoba lagi.",
@@ -81,6 +85,10 @@
     "markSubmittedConfirm": "Tandai terkirim"
   },
   "toast": {
+    "markedFilled_other": "{{count}} lowongan ditandai sebagai terisi.",
+    "markFilledFailed": "Gagal menandai lowongan yang dipilih sebagai terisi.",
+    "markedFilledSingle": "Ditandai sebagai terisi.",
+    "markFilledSingleFailed": "Gagal menandai lowongan ini sebagai terisi.",
     "retried_other": "{{count}} lowongan dicoba lagi.",
     "retryFailed": "Gagal mencoba lagi lowongan yang dipilih.",
     "excluded_other": "{{count}} lowongan dikecualikan.",

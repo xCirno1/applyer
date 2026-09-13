@@ -137,6 +137,10 @@ const terminalApi = {
 const jobsApi = {
   list: (query: ListJobsQuery): Promise<ListJobsResult> => ipcRenderer.invoke(IPC.jobs.list, query),
   get: (jobId: string): Promise<{ job: JobRecord | null }> => ipcRenderer.invoke(IPC.jobs.get, { jobId }),
+  markFilled: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.jobs.markFilled, { jobId }),
+  markFilledMany: (jobIds: string[]): Promise<{ ok: boolean; jobs: JobRecord[] }> =>
+    ipcRenderer.invoke(IPC.jobs.markFilledMany, { jobIds }),
   markSubmitted: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: string }> =>
     ipcRenderer.invoke(IPC.jobs.markSubmitted, { jobId }),
   retry: (jobId: string): Promise<{ ok: boolean; job?: JobRecord; error?: string }> =>

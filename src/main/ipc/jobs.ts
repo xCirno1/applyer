@@ -16,6 +16,8 @@ import {
   excludeJobsByIds,
   removeCompletedJob,
   removeCompletedJobsByIds,
+  forceFillJob,
+  forceFillJobsByIds,
   unqueueJob,
   unqueueJobsByIds
 } from '../jobActions'
@@ -65,6 +67,19 @@ export function registerJobsIpc(): void {
     } catch (err) {
       return { ok: false, error: toJobError(err) }
     }
+  })
+
+  ipcMain.handle(IPC.jobs.markFilled, (_event, payload: unknown) => {
+    const parsed = jobIdPayload.safeParse(payload)
+    if (!parsed.success) return jobNotFound
+    const job = forceFillJob(parsed.data.jobId)
+    return job ? { ok: true, job } : { ok: false, error: appError('jobNotQueued') }
+  })
+
+  ipcMain.handle(IPC.jobs.markFilledMany, (_event, payload: unknown) => {
+    const parsed = jobIdsPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false, jobs: [] }
+    return { ok: true, jobs: forceFillJobsByIds(parsed.data.jobIds) }
   })
 
   ipcMain.handle(IPC.jobs.retry, (_event, payload: unknown) => {

@@ -8,12 +8,12 @@ import { useJobActions } from './useJobActions'
 /**
  * Appears above the board whenever one or more job cards are checked
  * (`jobsStore.selectedJobIds`) — the always-visible equivalent of the
- * Retry/Exclude actions each `JobCard`'s right-click menu also offers once
+ * job actions each `JobCard`'s right-click menu also offers once
  * a selection exists (see `useJobContextMenu`). Retry only confirms when it
  * would touch more than one job at once, matching that menu's rule and
- * `JobDetailModal`'s existing single-job behavior; destructive actions
- * always confirm. Remove is limited to Filled/Submitted jobs and does not
- * blacklist their URLs.
+ * `JobDetailModal`'s existing single-job behavior; destructive actions and
+ * manual Filled overrides always confirm. Remove is limited to
+ * Filled/Submitted jobs and does not blacklist their URLs.
  */
 export default function BulkActionBar(): ReactElement | null {
   const { t } = useTranslation('board')
@@ -29,13 +29,15 @@ export default function BulkActionBar(): ReactElement | null {
   const selectedJobs = Object.values(columns)
     .flatMap((c) => c.jobs)
     .filter((j) => selectedJobIds.has(j.id))
-  const { retryMany, excludeMany, unqueueMany, removeCompletedMany } = useJobActions()
+  const { markFilledMany, retryMany, excludeMany, unqueueMany, removeCompletedMany } = useJobActions()
 
   const [confirmRetryOpen, setConfirmRetryOpen] = useState(false)
+  const [confirmMarkFilledOpen, setConfirmMarkFilledOpen] = useState(false)
   const [confirmExcludeOpen, setConfirmExcludeOpen] = useState(false)
   const [confirmUnqueueOpen, setConfirmUnqueueOpen] = useState(false)
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false)
   const [retrying, setRetrying] = useState(false)
+  const [markingFilled, setMarkingFilled] = useState(false)
   const [excluding, setExcluding] = useState(false)
   const [unqueueing, setUnqueueing] = useState(false)
   const [removing, setRemoving] = useState(false)
@@ -43,6 +45,7 @@ export default function BulkActionBar(): ReactElement | null {
   if (selectedJobIds.size === 0) return null
 
   const retryableIds = selectedJobs.filter((j) => j.status === 'failed').map((j) => j.id)
+  const fillableIds = selectedJobs.filter((j) => j.status === 'queued').map((j) => j.id)
   const excludableIds = selectedJobs.filter((j) => j.status !== 'submitted').map((j) => j.id)
   const unqueueableIds = selectedJobs.filter((j) => j.status === 'queued').map((j) => j.id)
   const removableIds = selectedJobs
@@ -54,6 +57,14 @@ export default function BulkActionBar(): ReactElement | null {
     setRetrying(true)
     await retryMany(retryableIds)
     setRetrying(false)
+    clearSelection()
+  }
+
+  const handleMarkFilled = async (): Promise<void> => {
+    setConfirmMarkFilledOpen(false)
+    setMarkingFilled(true)
+    await markFilledMany(fillableIds)
+    setMarkingFilled(false)
     clearSelection()
   }
 
@@ -91,6 +102,15 @@ export default function BulkActionBar(): ReactElement | null {
         <Button
           size="sm"
           variant="secondary"
+          disabled={fillableIds.length === 0}
+          loading={markingFilled}
+          onClick={() => setConfirmMarkFilledOpen(true)}
+        >
+          {fillableIds.length > 0 ? t('actions.markFilledCount', { count: fillableIds.length }) : t('actions.markFilled')}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
           disabled={removableIds.length === 0}
           loading={removing}
           onClick={() => setConfirmRemoveOpen(true)}
@@ -125,6 +145,15 @@ export default function BulkActionBar(): ReactElement | null {
         </Button>
       </div>
 
+      <ConfirmDialog
+        open={confirmMarkFilledOpen}
+        title={t('confirm.markFilledTitle', { count: fillableIds.length })}
+        message={t('confirm.markFilledMessage', { count: fillableIds.length })}
+        confirmLabel={t('actions.markFilled')}
+        loading={markingFilled}
+        onConfirm={handleMarkFilled}
+        onCancel={() => setConfirmMarkFilledOpen(false)}
+      />
       <ConfirmDialog
         open={confirmRetryOpen}
         title={t('confirm.retryTitle')}

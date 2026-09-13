@@ -6,24 +6,34 @@ import type * as schema from './db/schema'
 let testDb: ReturnType<typeof drizzle<typeof schema>>
 vi.mock('./db/index', () => ({ getDb: () => testDb }))
 
-const { broadcastExclusionsChanged, broadcastJobRemoved } = vi.hoisted(() => ({
+const { broadcastExclusionsChanged, broadcastJobRemoved, broadcastJobUpdate, broadcastCaptchaResolved, resumeGate } = vi.hoisted(() => ({
   broadcastExclusionsChanged: vi.fn(),
-  broadcastJobRemoved: vi.fn()
+  broadcastJobRemoved: vi.fn(),
+  broadcastJobUpdate: vi.fn(),
+  broadcastCaptchaResolved: vi.fn(),
+  resumeGate: vi.fn()
 }))
 vi.mock('./ipc/jobsBroadcast', () => ({
-  broadcastJobUpdate: vi.fn(),
+  broadcastJobUpdate,
   broadcastJobRemoved,
-  broadcastExclusionsChanged
+  broadcastExclusionsChanged,
+  broadcastCaptchaResolved
 }))
+vi.mock('./browser/captchaGate', () => ({ resumeGate }))
 
 beforeEach(() => {
   testDb = createTestDb().db
   broadcastExclusionsChanged.mockClear()
   broadcastJobRemoved.mockClear()
+  broadcastJobUpdate.mockClear()
+  broadcastCaptchaResolved.mockClear()
+  resumeGate.mockClear()
 })
 
 import {
   failJob,
+  forceFillJob,
+  forceFillJobsByIds,
   reconcileOrphanedBlockedJobs,
   excludeJob,
   excludeJobsByIds,
@@ -41,6 +51,57 @@ import type { JobRecord } from '@shared/types/job'
 function newJob(url = 'https://example.com/1'): JobRecord {
   return queueJob({ title: 'Engineer', company: 'Acme', url }).job
 }
+
+describe('forceFillJob', () => {
+  it('moves a queued job to Filled, broadcasts it, and records the manual action', () => {
+    const queued = newJob()
+
+    const filled = forceFillJob(queued.id)
+
+    expect(filled?.status).toBe('filled')
+    expect(filled?.filledAt).toBeTruthy()
+    expect(broadcastJobUpdate).toHaveBeenCalledWith(expect.objectContaining({ id: queued.id, status: 'filled' }))
+    expect(listActivity({ jobId: queued.id }).entries[0]?.message).toContain('Filled manually')
+  })
+
+  it('does not change a non-queued or unknown job', () => {
+    const failed = newJob()
+    failJob(failed.id, 'other')
+    broadcastJobUpdate.mockClear()
+
+    expect(forceFillJob(failed.id)).toBeNull()
+    expect(forceFillJob('does-not-exist')).toBeNull()
+    expect(getJob(failed.id)?.status).toBe('failed')
+    expect(broadcastJobUpdate).not.toHaveBeenCalled()
+  })
+
+  it('releases a pending verification wait when the user overrides the status', () => {
+    const queued = newJob()
+    setBlocking(queued.id, 'captcha_verification', 'task-1')
+
+    const filled = forceFillJob(queued.id)
+
+    expect(filled).toMatchObject({ status: 'filled', blockingReason: null, blockingTaskId: null })
+    expect(resumeGate).toHaveBeenCalledWith('task-1')
+    expect(broadcastCaptchaResolved).toHaveBeenCalledWith({ taskId: 'task-1', jobId: queued.id })
+  })
+})
+
+describe('forceFillJobsByIds', () => {
+  it('marks only queued jobs Filled and returns the changed rows', () => {
+    const first = newJob('https://x.com/first')
+    const second = newJob('https://x.com/second')
+    const failed = newJob('https://x.com/failed')
+    failJob(failed.id, 'other')
+
+    const updated = forceFillJobsByIds([first.id, failed.id, 'missing', second.id])
+
+    expect(updated.map((job) => job.id)).toEqual([first.id, second.id])
+    expect(getJob(first.id)?.status).toBe('filled')
+    expect(getJob(second.id)?.status).toBe('filled')
+    expect(getJob(failed.id)?.status).toBe('failed')
+  })
+})
 
 describe('failJob', () => {
   it('transitions the job to failed and auto-registers the failure tag', () => {

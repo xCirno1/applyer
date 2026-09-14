@@ -15,6 +15,7 @@ import type enOnboarding from './locales/en/onboarding.json'
 import type enIndexedJobs from './locales/en/indexedJobs.json'
 import type enWorkspace from './locales/en/workspace.json'
 import type enErrors from './locales/en/errors.json'
+import type enResumes from './locales/en/resumes.json'
 
 declare module 'i18next' {
   interface CustomTypeOptions {
@@ -28,6 +29,7 @@ declare module 'i18next' {
       indexedJobs: typeof enIndexedJobs
       workspace: typeof enWorkspace
       errors: typeof enErrors
+      resumes: typeof enResumes
     }
   }
 }

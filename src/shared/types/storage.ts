@@ -13,6 +13,7 @@ export interface StorageStats {
     exclusions: number
     companyBoards: number
     documents: number
+    resumeVariants: number
     activityLogEntries: number
   }
 }

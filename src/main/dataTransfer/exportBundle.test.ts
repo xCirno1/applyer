@@ -15,9 +15,11 @@ import { upsertIndexedJobs, listAllIndexedJobs } from '../db/repositories/indexe
 import { excludeUrl } from '../db/repositories/jobExclusionsRepository'
 import { addCompanyBoard, recordCompanyBoardFetch } from '../db/repositories/companyBoardsRepository'
 import { saveProfile } from '../db/repositories/profileRepository'
-import { setAutoStartCommand, setNotificationPreferences } from '../db/repositories/settingsRepository'
+import { setAutoStartCommand, setNotificationPreferences, setResumeSettings, setStorageMode } from '../db/repositories/settingsRepository'
+import { assignVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
+import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
 import { jobsToCsv, companyBoardsToCsv, indexedJobsToCsv } from './csv'
-import { buildExportBundle, bundleJsonBytes, computeExportSizes, filenameTimestamp } from './exportBundle'
+import { buildExportBundle, bundleJsonBytes, computeExportSizes, exportableJobs, filenameTimestamp } from './exportBundle'
 import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
 import type { ExportSelection } from '@shared/types/dataTransfer'
 import { DEFAULT_THEME_STATE } from '@shared/types/theme'
@@ -39,6 +41,41 @@ describe('buildExportBundle', () => {
     expect(bundle.data.profile).toBeUndefined()
     expect(bundle.data.settings).toBeUndefined()
     expect(bundle.data.theme).toBeUndefined()
+  })
+
+  it('exports variants by name and jobs with the name of the variant they use', () => {
+    setStorageMode('plaintext')
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT, templateId: 'modern', pageSize: 'a4' })
+    const backend = saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT, templateId: 'compact' })
+    const assigned = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' }).job
+    const plain = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/2' }).job
+    assignVariant(assigned.id, backend.id)
+
+    setResumeSettings({ fallbackAttachment: 'master', autoTailor: true })
+
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), jobs: true, resumes: true }, testTheme)
+    expect(bundle.data.resumes).toEqual({
+      master: { content: SAMPLE_RESUME_CONTENT, templateId: 'modern', pageSize: 'a4', style: {} },
+      variants: [{ name: 'Backend', content: SAMPLE_RESUME_CONTENT, templateId: 'compact' }],
+      settings: { fallbackAttachment: 'master', autoTailor: true }
+    })
+    const jobs = bundle.data.jobs!
+    expect(jobs.find((job) => job.id === assigned.id)?.resumeVariantName).toBe('Backend')
+    expect(jobs.find((job) => job.id === plain.id)?.resumeVariantName).toBeNull()
+  })
+
+  it('gives the CSV export the same variant names as the bundle', () => {
+    setStorageMode('plaintext')
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    const backend = saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT })
+    const assigned = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1' }).job
+    assignVariant(assigned.id, backend.id)
+
+    const csv = jobsToCsv(exportableJobs())
+    expect(csv.split('\n')[0]).toContain('Resume Variant')
+    expect(csv.split('\n')[1]).toMatch(/,Backend$/)
+    // The plain table dump the IPC handler used to export has no names at all.
+    expect(jobsToCsv(listAllJobs())).not.toContain('Backend')
   })
 
   it('includes tracked company boards when selected', () => {

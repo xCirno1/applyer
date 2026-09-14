@@ -1,6 +1,13 @@
 import { z } from 'zod'
 import { ALL_EXPORT_DOMAINS } from '@shared/types/dataTransfer'
 import { checkRemoteBrowserEndpoint } from '@shared/types/remoteBrowser'
+import {
+  resumeContentSchema,
+  resumePageSizeSchema,
+  resumeStyleSchema,
+  resumeTemplateIdSchema,
+  resumeVariantNameSchema
+} from '@shared/resume/resumeContentSchema'
 import { appLogger } from '../logger'
 
 /**
@@ -34,6 +41,41 @@ export const excludeJobPayload = z.object({ jobId: id, reason: z.string().option
 export const documentIdPayload = z.object({ documentId: id })
 export const exclusionIdPayload = z.object({ id })
 export const taskIdPayload = z.object({ taskId: id })
+
+/**
+ * Resume writes share `resumeContentSchema` with the MCP tools and the import
+ * schema, so the editor cannot save something the agent would be refused for.
+ * Unique ids are checked in the handler (`validateResumeContent`), since that
+ * rule spans the whole document rather than one field.
+ */
+export const saveMasterResumePayload = z.object({
+  content: resumeContentSchema,
+  templateId: resumeTemplateIdSchema.optional(),
+  pageSize: resumePageSizeSchema.optional(),
+  style: resumeStyleSchema.optional(),
+  sourceDocumentId: id.nullable().optional()
+})
+/** Content may only be left out on an update (`id` given): that is a rename or template change, which keeps the stored content. */
+export const saveResumeVariantPayload = z
+  .object({
+    id: id.optional(),
+    name: resumeVariantNameSchema,
+    content: resumeContentSchema.optional(),
+    templateId: resumeTemplateIdSchema.optional()
+  })
+  .refine((value) => value.id !== undefined || value.content !== undefined, { message: 'A new variant needs content.' })
+export const resumeVariantIdPayload = z.object({ id })
+export const assignResumeVariantPayload = z.object({ jobId: id, variantId: id.nullable() })
+export const resumePdfTargetPayload = z.object({
+  target: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('master') }),
+    z.object({ kind: z.literal('variant'), id })
+  ])
+})
+export const resumeSettingsPayload = z.object({
+  fallbackAttachment: z.enum(['original', 'master']),
+  autoTailor: z.boolean()
+})
 
 export const browserPreferencePayload = z.object({
   preference: z.enum(['auto', 'chrome', 'msedge', 'managed'])

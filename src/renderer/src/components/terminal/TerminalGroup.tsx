@@ -1,10 +1,11 @@
-import { useRef, useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import TerminalPane, { type TerminalPaneHandle } from './TerminalPane'
 import TerminalTabBar from './TerminalTabBar'
 import { useTerminalTabs } from './useTerminalTabs'
 import Button from '../ui/Button'
 import { useShortcutHandler } from '../../providers/ShortcutsContext'
+import { registerActiveTerminal, registerTerminalOpener } from './terminalBridge'
 
 /**
  * Multiple concurrent terminal sessions as sub-tabs of the dock's Terminal
@@ -47,6 +48,21 @@ export default function TerminalGroup(): ReactElement {
   // the `terminal.search` shortcut still only needs to reach whichever one
   // is currently active.
   const paneHandles = useRef(new Map<string, TerminalPaneHandle>())
+
+  // Lets pages that never render the terminal (Resume Variants, the job
+  // modal) type a prompt into it. The target looks the pane up at paste
+  // time rather than capturing a handle, since the ref callbacks below
+  // repopulate the map on every commit.
+  useEffect(() => {
+    registerActiveTerminal(
+      activeId === null ? null : { paste: (text) => paneHandles.current.get(activeId)?.paste(text) }
+    )
+    return () => registerActiveTerminal(null)
+  }, [activeId])
+  useEffect(() => {
+    registerTerminalOpener(addTerminal)
+    return () => registerTerminalOpener(null)
+  }, [addTerminal])
 
   const cycleTab = (direction: 1 | -1): void => {
     if (tabs.length === 0) return

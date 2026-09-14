@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import { spawn } from 'child_process'
 import { appLogger } from './logger'
+import { closeGuard } from './closeGuard'
 
 export interface RelaunchOptions {
   execPath: string
@@ -95,6 +96,10 @@ function relaunchAppImage(options: RelaunchOptions): void {
  * dev-only limitation of the supervisor, not of this function.
  */
 export function relaunchApp(): void {
+  // The caller has already committed (the storage pointer is rewritten), so
+  // the unsaved-changes guard must not turn this quit into a cancelled
+  // close with a relaunch still scheduled behind it.
+  closeGuard.release()
   try {
     const options = relaunchOptionsFor(process.env, process.argv)
     if (options) {

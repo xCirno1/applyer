@@ -1,8 +1,9 @@
-import { useState, useEffect, type ReactElement, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import logo from './assets/logo.png'
 import WorkspacePage from './pages/Workspace/WorkspacePage'
 import IndexedJobsPage from './pages/IndexedJobs/IndexedJobsPage'
+import ResumesPage, { type ResumesTab } from './pages/Resumes/ResumesPage'
 import SettingsPage, { type SectionId } from './pages/Settings/SettingsPage'
 import OnboardingFlow from './pages/Onboarding/OnboardingFlow'
 import StorageRecoveryFlow from './pages/StorageRecovery/StorageRecoveryFlow'
@@ -22,6 +23,10 @@ import { useBrowserSetupState } from './components/browser/useBrowserSetupState'
 import AppMenuBar from './components/workspace/AppMenuBar'
 import DevBuildTag from './components/navigation/DevBuildTag'
 import { useWorkspaceLayout } from './components/workspace/useWorkspaceLayout'
+import ShellDock from './components/workspace/ShellDock'
+import type { DockScreen } from './components/workspace/workspaceLayout'
+import { pasteIntoTerminal } from './components/terminal/terminalBridge'
+import { TerminalInputContext } from './providers/TerminalInputContext'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
 import ThemeProvider from './providers/ThemeProvider'
 import LocaleProvider from './providers/LocaleProvider'
@@ -29,6 +34,9 @@ import ShortcutsProvider from './providers/ShortcutsProvider'
 import { useShortcutHandler } from './providers/ShortcutsContext'
 import { useJobsStore } from './state/jobsStore'
 import { useProfileStore } from './state/profileStore'
+import { useResumesStore } from './state/resumesStore'
+import { syncUnsavedChangesToMain } from './state/unsavedChangesStore'
+import ConfirmDialog from './components/ui/ConfirmDialog'
 import { useErrorMessage } from './i18n/formatError'
 import type { StorageLocationStatus } from '@shared/types/storageLocation'
 import type { AppError } from '@shared/types/errorCodes'
@@ -69,10 +77,7 @@ function ScreenErrorFallback({ error, onRetry }: { error: Error; onRetry: () => 
 /** One boundary per screen, so the others keep running when one of them throws. */
 function ScreenBoundary({ label, children }: { label: string; children: ReactNode }): ReactElement {
   return (
-    <ErrorBoundary
-      label={label}
-      fallback={(error, reset) => <ScreenErrorFallback error={error} onRetry={reset} />}
-    >
+    <ErrorBoundary label={label} fallback={(error, reset) => <ScreenErrorFallback error={error} onRetry={reset} />}>
       {children}
     </ErrorBoundary>
   )
@@ -80,6 +85,7 @@ function ScreenBoundary({ label, children }: { label: string; children: ReactNod
 
 function MainShell(): ReactElement {
   const { t } = useTranslation('workspace')
+  const toast = useToast()
   const [screen, setScreen] = useState<Screen>('workspace')
   const [settingsSection, setSettingsSection] = useState<SectionId>('profile')
   const [exportOpen, setExportOpen] = useState(false)
@@ -88,29 +94,75 @@ function MainShell(): ReactElement {
   const closeJob = useJobsStore((s) => s.closeJob)
   const browserSetup = useBrowserSetupState()
   const subscribeToProfileUpdates = useProfileStore((s) => s.subscribeToUpdates)
+  const subscribeToResumeUpdates = useResumesStore((s) => s.subscribeToUpdates)
+  const selectResumeVariant = useResumesStore((s) => s.select)
+  const [resumesTabRequest, setResumesTabRequest] = useState<{
+    tab: ResumesTab
+    nonce: number
+  } | null>(null)
   useShortcutHandler('app.toggleSettings', () => setScreen((s) => (s === 'settings' ? 'workspace' : 'settings')))
 
   // Here rather than in the Settings profile form, which only exists while
   // that section is open — see profileStore's subscribeToUpdates.
   useEffect(() => subscribeToProfileUpdates(), [subscribeToProfileUpdates])
+  // Same reasoning: the Resume Variants screen is mounted-but-hidden and the
+  // board's "tailored" tags read the variant list, so the subscription lives
+  // here and not on the page.
+  useEffect(() => subscribeToResumeUpdates(), [subscribeToResumeUpdates])
+
+  // Closing the window over unsaved edits: main holds the close back and
+  // asks here, since the dialog has to be the app's own (no native prompts)
+  // and the editors that know about the edits live under this shell.
+  const [closeRequested, setCloseRequested] = useState(false)
+  useEffect(() => syncUnsavedChangesToMain((value) => window.api.app.setUnsavedChanges(value)), [])
+  useEffect(() => window.api.app.onCloseRequested(() => setCloseRequested(true)), [])
+
+  // A job with a variant assigned lands on that variant; one without lands
+  // on the master, which is where "there is nothing tailored yet" is
+  // explained and fixed.
+  const openResumeVariant = (jobId: string): void => {
+    const variantId = useResumesStore.getState().variantIdByJob.get(jobId) ?? null
+    selectResumeVariant(variantId)
+    setResumesTabRequest((previous) => ({
+      tab: variantId ? 'variants' : 'master',
+      nonce: (previous?.nonce ?? 0) + 1
+    }))
+    setScreen('resumes')
+  }
 
   // Owned here (not inside WorkspacePage) so the top bar it drives — logo,
   // menu, settings — can span the full window width, above the icon rail,
   // the same way VS Code's menu bar spans full width above its activity
   // bar rather than being indented past it.
-  const { layout, setSidebarVisible, setDockVisible, setDockTab, setSidebarWidth, setDockHeight } =
-    useWorkspaceLayout()
+  const { layout, setSidebarVisible, setDockVisible, setDockTab, setSidebarWidth, setDockHeight } = useWorkspaceLayout()
+
+  // The dock is one instance under all three rail screens, but each screen
+  // remembers whether it is showing; every toggle here is for the screen the
+  // user is looking at (Settings has no dock, so it counts as the workspace).
+  const dockScreen: DockScreen = screen === 'settings' ? 'workspace' : screen
+  const dockVisible = layout.dockVisible[dockScreen]
 
   const showTerminalTab = (): void => {
-    setDockVisible(true)
+    setDockVisible(dockScreen, true)
     setDockTab('terminal')
   }
 
+  // "Send to terminal" from the resume prompts: show the dock here, switch
+  // to the Terminal tab, type the sentence (the user still presses Enter).
+  const sendToTerminal = useCallback(
+    (text: string): void => {
+      setDockVisible(dockScreen, true)
+      setDockTab('terminal')
+      if (!pasteIntoTerminal(text)) toast.error(t('topBar.terminalUnavailable'))
+    },
+    [dockScreen, setDockVisible, setDockTab, toast, t]
+  )
+
   useShortcutHandler('view.toggleOverview', () => setSidebarVisible(!layout.sidebarVisible))
-  useShortcutHandler('view.toggleConsole', () => setDockVisible(!layout.dockVisible))
+  useShortcutHandler('view.toggleConsole', () => setDockVisible(dockScreen, !dockVisible))
   useShortcutHandler('dock.showTerminal', showTerminalTab)
   useShortcutHandler('dock.showLogs', () => {
-    setDockVisible(true)
+    setDockVisible(dockScreen, true)
     setDockTab('logs')
   })
 
@@ -122,114 +174,137 @@ function MainShell(): ReactElement {
   return (
     <div className="flex h-full flex-col bg-canvas-inset">
       <CaptchaAlertProvider>
-        <main className="min-h-0 flex-1">
-          {/* The workspace and Indexed Jobs screens stay mounted even while
-              the other is showing (or Settings is open) — Workspace owns
-              the terminal's live pty session and the jobs live-update
-              subscription, and Indexed Jobs owns its own live-update
-              subscription, both of which a remount would kill/drop. Toggled
-              via `hidden` rather than conditional rendering for that reason.
-              Settings mounts fresh each visit since it holds no state worth
-              preserving. */}
-          <div className={screen !== 'settings' ? 'flex h-full flex-col' : 'hidden'}>
-            <header className="flex h-nav shrink-0 items-center gap-2 border-b border-border bg-canvas px-3">
-              <img src={logo} alt="Applyer" className="h-5 w-5 shrink-0" draggable={false} />
-              <AppMenuBar
-                onOpenSettings={openSettings}
-                onOpenExport={() => setExportOpen(true)}
-                onOpenImport={() => setImportOpen(true)}
-                sidebarVisible={layout.sidebarVisible}
-                onToggleSidebar={() => setSidebarVisible(!layout.sidebarVisible)}
-                dockVisible={layout.dockVisible}
-                onToggleDock={() => setDockVisible(!layout.dockVisible)}
-                onShowTerminalTab={showTerminalTab}
-              />
-              <div className="ml-auto flex items-center gap-1.5">
-                <DevBuildTag />
-                <button
-                  onClick={() => openSettings()}
-                  title={t('topBar.settings')}
-                  aria-label={t('topBar.settings')}
-                  className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
-                >
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <path
-                      d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinejoin="round"
-                    />
-                    <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
-                  </svg>
-                </button>
-              </div>
-            </header>
-            <div className="flex min-h-0 flex-1">
-              <IconRail active={screen === 'settings' ? 'workspace' : screen} onSelect={setScreen} />
-              <div className="min-h-0 min-w-0 flex-1">
-                <div className={screen === 'workspace' ? 'h-full' : 'hidden'}>
-                  <ScreenBoundary label="WorkspacePage">
-                    <WorkspacePage
-                      layout={layout}
-                      setSidebarVisible={setSidebarVisible}
-                      setDockVisible={setDockVisible}
-                      setDockTab={setDockTab}
-                      setSidebarWidth={setSidebarWidth}
-                      setDockHeight={setDockHeight}
-                    />
-                  </ScreenBoundary>
-                </div>
-                <div className={screen === 'indexedJobs' ? 'h-full' : 'hidden'}>
-                  <ScreenBoundary label="IndexedJobsPage">
-                    <IndexedJobsPage />
-                  </ScreenBoundary>
-                </div>
-              </div>
-            </div>
-          </div>
-          {screen === 'settings' && (
-            <div className="flex h-full flex-col">
-              <div className="flex h-nav shrink-0 items-center border-b border-border bg-canvas px-3">
-                <button
-                  onClick={() => setScreen('workspace')}
-                  className="flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-text-muted hover:text-text"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
-                    <path
-                      d="M19 12H5M5 12l6-6M5 12l6 6"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  {t('topBar.backToWorkspace')}
-                </button>
-                <div className="ml-auto flex items-center">
+        <TerminalInputContext.Provider value={sendToTerminal}>
+          <main className="min-h-0 flex-1">
+            {/* The three rail screens stay mounted even while another is
+              showing (or Settings is open): the shell-level dock below them
+              owns the terminal's live pty session, Workspace owns the jobs
+              live-update subscription, and Indexed Jobs owns its own, all of
+              which a remount would kill/drop. Toggled via `hidden` rather
+              than conditional rendering for that reason. Settings mounts
+              fresh each visit since it holds no state worth preserving. */}
+            <div className={screen !== 'settings' ? 'flex h-full flex-col' : 'hidden'}>
+              <header className="flex h-nav shrink-0 items-center gap-2 border-b border-border bg-canvas px-3">
+                <img src={logo} alt="Applyer" className="h-5 w-5 shrink-0" draggable={false} />
+                <AppMenuBar
+                  onOpenSettings={openSettings}
+                  onOpenExport={() => setExportOpen(true)}
+                  onOpenImport={() => setImportOpen(true)}
+                  sidebarVisible={layout.sidebarVisible}
+                  onToggleSidebar={() => setSidebarVisible(!layout.sidebarVisible)}
+                  dockVisible={dockVisible}
+                  onToggleDock={() => setDockVisible(dockScreen, !dockVisible)}
+                  onShowTerminalTab={showTerminalTab}
+                />
+                <div className="ml-auto flex items-center gap-1.5">
                   <DevBuildTag />
+                  <button
+                    onClick={() => openSettings()}
+                    title={t('topBar.settings')}
+                    aria-label={t('topBar.settings')}
+                    className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinejoin="round"
+                      />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8" />
+                    </svg>
+                  </button>
+                </div>
+              </header>
+              <div className="flex min-h-0 flex-1">
+                <IconRail active={screen === 'settings' ? 'workspace' : screen} onSelect={setScreen} />
+                <div className="min-h-0 min-w-0 flex-1">
+                  <ShellDock
+                    layout={layout}
+                    visible={dockVisible}
+                    setDockTab={setDockTab}
+                    setDockHeight={setDockHeight}
+                    onHide={() => setDockVisible(dockScreen, false)}
+                  >
+                    <div className={screen === 'workspace' ? 'h-full' : 'hidden'}>
+                      <ScreenBoundary label="WorkspacePage">
+                        <WorkspacePage
+                          layout={layout}
+                          setSidebarVisible={setSidebarVisible}
+                          setSidebarWidth={setSidebarWidth}
+                        />
+                      </ScreenBoundary>
+                    </div>
+                    <div className={screen === 'indexedJobs' ? 'h-full' : 'hidden'}>
+                      <ScreenBoundary label="IndexedJobsPage">
+                        <IndexedJobsPage />
+                      </ScreenBoundary>
+                    </div>
+                    <div className={screen === 'resumes' ? 'h-full' : 'hidden'}>
+                      <ScreenBoundary label="ResumesPage">
+                        <ResumesPage requestedTab={resumesTabRequest} />
+                      </ScreenBoundary>
+                    </div>
+                  </ShellDock>
                 </div>
               </div>
-              <div className="min-h-0 flex-1">
-                <ScreenBoundary label="SettingsPage">
-                  <SettingsPage
-                    initialSection={settingsSection}
-                    onOpenExport={() => setExportOpen(true)}
-                    onOpenImport={() => setImportOpen(true)}
-                  />
-                </ScreenBoundary>
-              </div>
             </div>
-          )}
-        </main>
+            {screen === 'settings' && (
+              <div className="flex h-full flex-col">
+                <div className="flex h-nav shrink-0 items-center border-b border-border bg-canvas px-3">
+                  <button
+                    onClick={() => setScreen('workspace')}
+                    className="flex cursor-pointer items-center gap-1.5 text-[12px] font-medium text-text-muted hover:text-text"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="shrink-0">
+                      <path
+                        d="M19 12H5M5 12l6-6M5 12l6 6"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    {t('topBar.backToWorkspace')}
+                  </button>
+                  <div className="ml-auto flex items-center">
+                    <DevBuildTag />
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1">
+                  <ScreenBoundary label="SettingsPage">
+                    <SettingsPage
+                      initialSection={settingsSection}
+                      onOpenExport={() => setExportOpen(true)}
+                      onOpenImport={() => setImportOpen(true)}
+                    />
+                  </ScreenBoundary>
+                </div>
+              </div>
+            )}
+          </main>
+        </TerminalInputContext.Provider>
       </CaptchaAlertProvider>
       {/* Global — driven entirely by jobsStore's openJobId/activeJob, so any
           panel on any screen (board, sidebar, Indexed Jobs) can open it. */}
-      <JobDetailModal job={activeJob} onClose={closeJob} />
+      <JobDetailModal job={activeJob} onClose={closeJob} onOpenResume={openResumeVariant} />
       {/* Global too, for the same reason — the File menu pops these directly
           without navigating to Settings > Data first. */}
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} />
       <AgentPermissionPrompt />
+      <ConfirmDialog
+        open={closeRequested}
+        title={t('closeGuard.title')}
+        message={t('closeGuard.message')}
+        confirmLabel={t('closeGuard.confirm')}
+        danger
+        onConfirm={() => {
+          setCloseRequested(false)
+          window.api.app.confirmClose()
+        }}
+        onCancel={() => setCloseRequested(false)}
+      />
       <BrowserSetupModal
         state={browserSetup.state}
         dismissed={browserSetup.dismissed}

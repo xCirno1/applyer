@@ -24,5 +24,16 @@ export default tseslint.config(
   {
     files: ['src/renderer/**/*.{ts,tsx}'],
     ...reactRefresh.configs.vite()
+  },
+  {
+    // The local test job site is served verbatim to a browser, so it is plain
+    // script, not TypeScript; the TS-only rules do not apply to it.
+    files: ['test/fixtures/job-site/**/*.js'],
+    languageOptions: {
+      globals: globals.browser
+    },
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off'
+    }
   }
 )

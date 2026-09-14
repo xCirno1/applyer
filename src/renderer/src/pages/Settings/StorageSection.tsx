@@ -207,6 +207,7 @@ export default function StorageSection(): ReactElement {
                   ['countExclusions', stats.counts.exclusions],
                   ['countCompanyBoards', stats.counts.companyBoards],
                   ['countDocuments', stats.counts.documents],
+                  ['countResumeVariants', stats.counts.resumeVariants],
                   ['countActivityLog', stats.counts.activityLogEntries]
                 ] as const
               ).map(([key, count]) => (

@@ -211,6 +211,7 @@
     "countExclusions": "Pengecualian",
     "countCompanyBoards": "Papan lowongan perusahaan",
     "countDocuments": "Dokumen",
+    "countResumeVariants": "Resume yang disesuaikan",
     "countActivityLog": "Entri log aktivitas",
     "moveTitle": "Ubah lokasi penyimpanan",
     "moveMessage": "Pindahkan database, dokumen, screenshot, dan log kamu ke \"{{path}}\"? Mungkin butuh waktu sebentar, dan Applyer tetap jalan selama prosesnya.",
@@ -319,6 +320,7 @@
     "groups": {
       "failureTags": "Tag kegagalan bawaan",
       "uploads": "Batas unggahan",
+      "resumes": "Batas konten resume",
       "listing": "Pencarian dan daftar",
       "indexedJobs": "Lowongan terindeks",
       "exclusions": "Pengecualian",
@@ -350,6 +352,7 @@
     "domainExclusions": "Lowongan yang dikecualikan",
     "domainCompanyBoards": "Papan lowongan perusahaan",
     "domainProfile": "Profil",
+    "domainResumes": "Resume",
     "domainSettings": "Pengaturan aplikasi",
     "domainTheme": "Tampilan",
     "domainJobsHint": "Lowongan berstatus antre, terisi, terkirim, dan gagal di papan.",
@@ -357,6 +360,7 @@
     "domainExclusionsHint": "Daftar blokir link lowongan yang tidak akan dimunculkan lagi.",
     "domainCompanyBoardsHint": "Papan lowongan perusahaan yang diambil saat pencarian. Setiap papan masuk tanpa status; pencarian berikutnya yang mengisi jumlah lowongannya.",
     "domainProfileHint": "Isi profil kandidatmu (dokumen yang diunggah tidak ikut).",
+    "domainResumesHint": "Resume utama terstruktur dan semua varian yang disesuaikan per lowongan. Varian hanya diimpor jika lowongannya juga ada.",
     "domainSettingsHint": "Perintah otomatis, preferensi notifikasi, dan lama penyimpanan lowongan terindeks.",
     "domainThemeHint": "Mode tema, warna aksen, corak permukaan, dan CSS sendiri (termasuk preset yang disimpan). Biasanya cuma tersimpan di perangkat ini.",
     "exportModalTitle": "Ekspor data",
@@ -389,9 +393,12 @@
     "exclusionsAdded_other": "{{count}} pengecualian ditambahkan",
     "companyBoardsAdded_other": "{{count}} papan lowongan perusahaan ditambahkan",
     "profileUpdated": "profil diperbarui",
+    "resumesAdded_other": "{{count}} resume diimpor",
     "settingsUpdated": "pengaturan diperbarui",
     "themeUpdated": "tampilan diperbarui",
     "importComplete": "Impor selesai: {{parts}}.",
-    "importCompleteEmpty": "Impor selesai. Tidak ada data baru yang perlu ditambahkan."
+    "importCompleteEmpty": "Impor selesai. Tidak ada data baru yang perlu ditambahkan.",
+    "resumeAssignmentsLinked_other": "{{count}} lowongan ditautkan ke varian resumenya",
+    "resumeAssignmentsUnresolved_other": "{{count}} lowongan menyebut varian resume yang tidak ada di sini"
   }
 }

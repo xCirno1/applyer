@@ -4,6 +4,7 @@ import type { JobRecord, JobStatus } from '@shared/types/job'
 import Tag from '../ui/Tag'
 import { useBlockedJobIds } from '../../providers/CaptchaAlertContext'
 import { useJobsStore } from '../../state/jobsStore'
+import { useResumesStore } from '../../state/resumesStore'
 import { useJobContextMenu } from './useJobContextMenu'
 import { failureLabelKey, humanizeFailureTag } from './failureDisplay'
 
@@ -18,6 +19,11 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
   const { t } = useTranslation('board')
   const blockedJobIds = useBlockedJobIds()
   const blocked = blockedJobIds.has(job.id)
+  // Only this job's variant id and its stale flag, so a card re-renders when
+  // its own assignment changes rather than on every variant write.
+  const variantId = useResumesStore((s) => s.variantIdByJob.get(job.id) ?? null)
+  const tailored = variantId !== null
+  const tailoredStale = useResumesStore((s) => s.variants.some((variant) => variant.id === variantId && variant.stale))
   const selected = useJobsStore((s) => s.selectedJobIds.has(job.id))
   const hasSelection = useJobsStore((s) => s.selectedJobIds.size > 0)
   const toggleSelected = useJobsStore((s) => s.toggleSelected)
@@ -80,6 +86,11 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
         {blocked && (
           <div className="mt-0.5">
             <Tag label={t('card.needsVerification')} tone="warning" />
+          </div>
+        )}
+        {tailored && (
+          <div className="mt-0.5">
+            <Tag label={t('card.tailoredResume')} tone={tailoredStale ? 'warning' : 'success'} />
           </div>
         )}
         {job.failureTag && (

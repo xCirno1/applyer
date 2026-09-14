@@ -5,7 +5,7 @@
 // suspense boundary to every screen.
 //
 // Namespaces mirror the components/ directory split (board, settings,
-// onboarding, indexedJobs, workspace) plus two cross-cutting ones: `common`
+// onboarding, indexedJobs, workspace, resumes) plus two cross-cutting ones: `common`
 // for shared primitives and `errors` for the codes the main process returns
 // over IPC (see src/shared/types/errorCodes.ts).
 import i18n from 'i18next'
@@ -18,6 +18,7 @@ import enOnboarding from './locales/en/onboarding.json'
 import enIndexedJobs from './locales/en/indexedJobs.json'
 import enWorkspace from './locales/en/workspace.json'
 import enErrors from './locales/en/errors.json'
+import enResumes from './locales/en/resumes.json'
 
 import idCommon from './locales/id/common.json'
 import idBoard from './locales/id/board.json'
@@ -26,6 +27,7 @@ import idOnboarding from './locales/id/onboarding.json'
 import idIndexedJobs from './locales/id/indexedJobs.json'
 import idWorkspace from './locales/id/workspace.json'
 import idErrors from './locales/id/errors.json'
+import idResumes from './locales/id/resumes.json'
 
 import { FALLBACK_LOCALE, readStoredLocale, resolveLocale, systemLanguages } from './locale'
 
@@ -39,7 +41,8 @@ export const resources = {
     onboarding: enOnboarding,
     indexedJobs: enIndexedJobs,
     workspace: enWorkspace,
-    errors: enErrors
+    errors: enErrors,
+    resumes: enResumes
   },
   id: {
     common: idCommon,
@@ -48,7 +51,8 @@ export const resources = {
     onboarding: idOnboarding,
     indexedJobs: idIndexedJobs,
     workspace: idWorkspace,
-    errors: idErrors
+    errors: idErrors,
+    resumes: idResumes
   }
 } as const
 
@@ -57,7 +61,7 @@ i18n.use(initReactI18next).init({
   lng: resolveLocale(readStoredLocale(), systemLanguages()),
   fallbackLng: FALLBACK_LOCALE,
   defaultNS,
-  ns: ['common', 'board', 'settings', 'onboarding', 'indexedJobs', 'workspace', 'errors'],
+  ns: ['common', 'board', 'settings', 'onboarding', 'indexedJobs', 'workspace', 'errors', 'resumes'],
   interpolation: {
     // React escapes interpolated values on render already; letting i18next
     // escape them too would double-encode apostrophes in job titles and

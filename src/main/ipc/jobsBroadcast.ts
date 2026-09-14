@@ -34,6 +34,10 @@ export function broadcastJobRemoved(jobId: string): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.jobs.onRemoved, { jobId })
   }
+  // Removing a job removes it from the variant it used (the list carries
+  // which jobs use each variant), so that list is stale the moment the job
+  // is gone.
+  broadcastResumesChanged()
 }
 
 /** Payload-less — the renderer just refetches its currently-loaded page on signal. */
@@ -97,6 +101,19 @@ export function broadcastCompanyBoardFetched(payload: BoardFetchedPayload): void
 export function broadcastProfileChanged(): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.profile.onChanged)
+  }
+}
+
+/**
+ * Payload-less, like the profile signal. Fired by every resume write (the
+ * renderer's own saves, the agent's `set_master_resume` /
+ * `save_resume_variant` / `assign_resume`, a data import) and by job
+ * removal, since the variant list carries which jobs use each variant and
+ * the board's "tailored" indicator reads from it.
+ */
+export function broadcastResumesChanged(): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.resumes.onChanged)
   }
 }
 

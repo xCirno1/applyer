@@ -15,6 +15,10 @@ export interface ApplyerSettings {
   jobDetailsCacheTtlMs: number
   dangerousJobDetailsCachePayloadVersion: number
   dangerousMaxDocumentSizeBytes: number
+  dangerousResumeMaxSections: number
+  dangerousResumeMaxItemsPerSection: number
+  dangerousResumeMaxBulletsPerEntry: number
+  dangerousResumeMaxTextChars: number
   dangerousMaxCompanyBoards: number
   listCompanyBoardsDefaultLimit: number
   dangerousMcpListCompanyBoardsMaxLimit: number

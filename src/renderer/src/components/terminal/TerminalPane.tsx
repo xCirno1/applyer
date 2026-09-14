@@ -157,6 +157,13 @@ function toOscColorReply(cssVarExpression: string): string {
 /** Imperative handle so `TerminalGroup` can open the active pane's find bar from the global `terminal.search` shortcut. */
 export interface TerminalPaneHandle {
   openSearch: () => void
+  /**
+   * Types text as if pasted (xterm wraps it in bracketed-paste markers when
+   * the foreground program asked for them, so a multi-line prompt lands in
+   * the agent's input box rather than running line by line). Text that
+   * arrives before the pty exists waits for it instead of being dropped.
+   */
+  paste: (text: string) => void
 }
 
 const DEFAULT_SEARCH_OPTIONS: Record<'caseSensitive' | 'wholeWord' | 'regex', boolean> = {
@@ -170,6 +177,9 @@ const TerminalPane = forwardRef<TerminalPaneHandle>(function TerminalPane(_props
   const termRef = useRef<Terminal | null>(null)
   const searchAddonRef = useRef<SearchAddon | null>(null)
   const searchInputRef = useRef<HTMLInputElement>(null)
+  // Set by the mount effect once there is a terminal to type into; the
+  // handle's `paste` goes through it so the handle itself never changes.
+  const pasteRef = useRef<((text: string) => void) | null>(null)
   const { state, resolvedScheme } = useTheme()
   const { t } = useTranslation('workspace')
   const toast = useToast()
@@ -247,8 +257,12 @@ const TerminalPane = forwardRef<TerminalPaneHandle>(function TerminalPane(_props
 
   // Deliberately keyed on the state `openSearch` closes over rather than the
   // function itself, which is a fresh identity every render regardless.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useImperativeHandle(ref, () => ({ openSearch }), [searchQuery, searchOptions])
+  useImperativeHandle(
+    ref,
+    () => ({ openSearch, paste: (text: string) => pasteRef.current?.(text) }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [searchQuery, searchOptions]
+  )
 
   const updateQuery = (query: string): void => {
     setSearchQuery(query)
@@ -307,6 +321,15 @@ const TerminalPane = forwardRef<TerminalPaneHandle>(function TerminalPane(_props
 
     let sessionId: string | undefined
     let disposed = false
+    const pasteQueue: string[] = []
+    pasteRef.current = (text: string): void => {
+      if (!sessionId) {
+        pasteQueue.push(text)
+        return
+      }
+      term.paste(text)
+      term.focus()
+    }
     const kittyKeyboard = new KittyKeyboardState()
     let removeDataListener: (() => void) | undefined
     let removeExitListener: (() => void) | undefined
@@ -324,6 +347,7 @@ const TerminalPane = forwardRef<TerminalPaneHandle>(function TerminalPane(_props
           return
         }
         sessionId = result.sessionId
+        for (const text of pasteQueue.splice(0)) pasteRef.current?.(text)
 
         removeDataListener = window.api.terminal.onData((payload) => {
           if (payload.sessionId === sessionId) {
@@ -446,6 +470,7 @@ const TerminalPane = forwardRef<TerminalPaneHandle>(function TerminalPane(_props
 
     return () => {
       disposed = true
+      pasteRef.current = null
       resizeObserver.disconnect()
       onDataDisposable.dispose()
       searchResultsDisposable.dispose()

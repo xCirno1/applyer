@@ -1,0 +1,230 @@
+{
+  "tabs": {
+    "variants": "Variants",
+    "master": "Master resume",
+    "templates": "Templates"
+  },
+  "status": {
+    "current": "current",
+    "stale": "stale",
+    "tailored": "tailored",
+    "unsaved": "unsaved changes",
+    "new": "new"
+  },
+  "variants": {
+    "title": "Resume variants",
+    "count_one": "{{count}} variant",
+    "count_other": "{{count}} variants",
+    "new": "New variant",
+    "newName": "New variant",
+    "tipLabel": "Tip:",
+    "tipBody": "The agent writes the best variants. Click for a sentence to say to it.",
+    "tipDismiss": "Hide this tip",
+    "usedBy_one": "used by {{count}} job",
+    "usedBy_other": "used by {{count}} jobs",
+    "noMasterTitle": "No master resume yet",
+    "noMasterBody": "Variants are named copies of your master resume, each rewritten with a focus. Jobs pick one. Set the master up first.",
+    "goToMaster": "Set up the master resume",
+    "emptyTitle": "No variants yet",
+    "emptyBody": "Ask the agent to write a variant (a backend-focused one, a concise one-page one, one for a specific posting), or start one from the master. Each job can then be pointed at a variant.",
+    "selectOne": "Select a variant to preview it.",
+    "loadFailed": "This variant could not be loaded.",
+    "staleTitle": "Based on an older master",
+    "staleBody": "The master resume changed after this variant was written. The variant still attaches as-is; ask the agent to refresh it, or edit it here.",
+    "linkedJobs": "Used by",
+    "noLinkedJobs": "No job uses this variant yet. Pick it from the Resume selector in a job's details, or ask the agent to assign it.",
+    "nameRequired": "Give the variant a name before saving.",
+    "nameTaken": "A variant called \"{{name}}\" already exists. Pick another name.",
+    "usedByNone": "not used by any job"
+  },
+  "details": {
+    "title": "Details",
+    "template": "Template",
+    "pageSize": "Page size",
+    "status": "Status",
+    "updated": "Updated",
+    "source": "Imported from",
+    "sourceNone": "Built by hand or by the agent",
+    "sourceRemoved": "an upload that was since removed",
+    "changes": "Changes vs. master",
+    "willAttach": "Attached to applications",
+    "fontFamily": "Font",
+    "fontSize": "Font size",
+    "linkStyle": "Links",
+    "name": "Name",
+    "namePlaceholder": "Backend-focused, Concise one-page, ...",
+    "willAttachJobs_one": "{{count}} job",
+    "willAttachJobs_other": "{{count}} jobs"
+  },
+  "view": {
+    "preview": "Preview",
+    "edit": "Edit",
+    "diff": "Diff"
+  },
+  "actions": {
+    "exportPdf": "Export PDF",
+    "exporting": "Exporting…",
+    "openJob": "Open job",
+    "deleteMaster": "Delete master resume",
+    "createEmpty": "Start from an empty resume",
+    "save": "Save",
+    "saving": "Saving…",
+    "discard": "Discard changes",
+    "deleteVariant": "Delete variant",
+    "rename": "Rename"
+  },
+  "confirm": {
+    "deleteMasterTitle": "Delete the master resume?",
+    "deleteMasterMessage": "The structured master resume and every variant will be deleted; jobs go back to your original upload. Uploaded files are not affected. This cannot be undone.",
+    "deleteMaster": "Delete",
+    "discardTitle": "Hold up, unsaved changes",
+    "discardMessage": "Your edits to \"{{name}}\" have not been saved. Leave and discard them?",
+    "discard": "Discard changes",
+    "deleteVariantTitle": "Delete this variant?",
+    "deleteVariantMessage_one": "\"{{name}}\" will be deleted. {{count}} job uses it and will get the master resume or your original upload instead, according to the fallback setting.",
+    "deleteVariantMessage_other": "\"{{name}}\" will be deleted. {{count}} jobs use it and will get the master resume or your original upload instead, according to the fallback setting.",
+    "deleteVariant": "Delete",
+    "deleteVariantMessageNone": "\"{{name}}\" will be deleted. No job uses it."
+  },
+  "toast": {
+    "variantSaved": "Variant saved.",
+    "variantRemoved": "Tailored resume removed.",
+    "masterSaved": "Master resume saved.",
+    "masterDeleted": "Master resume deleted.",
+    "settingsSaved": "Resume settings saved.",
+    "exported": "Exported to {{path}}",
+    "saveFailed": "Could not save: {{message}}",
+    "variantCreated": "Variant \"{{name}}\" created.",
+    "variantRenamed": "Variant renamed to \"{{name}}\".",
+    "variantRemoved_one": "Variant deleted; {{count}} job goes back to the default resume.",
+    "variantRemoved_other": "Variant deleted; {{count}} jobs go back to the default resume.",
+    "variantAssigned": "This job will use \"{{name}}\".",
+    "variantUnassigned": "This job will use the default resume.",
+    "variantRemovedNone": "Variant deleted."
+  },
+  "export": {
+    "dialogTitle": "Export resume as PDF",
+    "filterName": "PDF document"
+  },
+  "master": {
+    "emptyTitle": "No master resume yet",
+    "emptyBody": "The master is your resume as structured content: a header plus any number of sections, each with its own title and layout. The agent can build it from the resume you uploaded, or you can start from scratch.",
+    "emptyBodyNoUpload": "Upload a resume in Settings > Documents so the agent can import it, or start from scratch below.",
+    "fallback": "When a job has no variant assigned, attach",
+    "fallbackOriginal": "the original uploaded file",
+    "fallbackMaster": "the master resume, rendered",
+    "fallbackHint": "The original upload keeps your own layout; the rendered master uses the selected template so every application looks the same.",
+    "autoTailor": "Tailor automatically",
+    "autoTailorHint": "Tells the agent to pick a resume variant for every job it queues (an existing one, or a new one when the posting warrants it) before filling the application. Off means it does so only when you ask.",
+    "defaultTemplate": "Default template",
+    "pageSizeLetter": "US Letter",
+    "pageSizeA4": "A4",
+    "templateDefault": "Template default",
+    "fontSizePt": "{{size}} pt"
+  },
+  "templates": {
+    "title": "Templates",
+    "body": "Every resume is rendered through one of these layouts. Pick the default here; a variant can override it.",
+    "sampleNote": "Shown with sample content until a master resume exists.",
+    "openPreview": "Open the full {{name}} preview",
+    "select": "Use as default",
+    "selected": "Default",
+    "classic": {
+      "name": "Classic",
+      "description": "Single column, serif, centered header. The safe default for any industry."
+    },
+    "compact": {
+      "name": "Compact",
+      "description": "Dense sans-serif with tighter spacing. Fits more on one page."
+    },
+    "modern": {
+      "name": "Modern",
+      "description": "Sans-serif with an accent colour and dates in the left gutter. Still one column, still plain text."
+    }
+  },
+  "editor": {
+    "header": "Header",
+    "fullName": "Full name",
+    "headline": "Headline",
+    "contacts": "Contact lines",
+    "contactLabel": "Label",
+    "contactValue": "Value",
+    "contactUrl": "Link (optional)",
+    "addContact": "Add contact line",
+    "sections": "Sections",
+    "sectionTitle": "Section title",
+    "untitledSection": "Untitled section",
+    "addSection": "Add section",
+    "layout": "Layout",
+    "layoutText": "Paragraph",
+    "layoutEntries": "Dated entries",
+    "layoutGroups": "Labelled groups",
+    "layoutList": "Plain list",
+    "layoutTextHint": "One paragraph: a summary or objective.",
+    "layoutEntriesHint": "Items with a title, organisation, dates and bullets: jobs, degrees, projects.",
+    "layoutGroupsHint": "Labelled lists: skills by category, languages.",
+    "layoutListHint": "A flat list: certifications, awards, interests.",
+    "layoutLocked": "The layout can only change while the section is empty.",
+    "body": "Text",
+    "entries": "Entries",
+    "addEntry": "Add entry",
+    "entryTitle": "Title",
+    "entrySubtitle": "Organisation",
+    "entryMeta": "Location or note",
+    "entryStart": "Start",
+    "entryEnd": "End",
+    "entryUrl": "Link (optional)",
+    "bullets": "Bullets",
+    "addBullet": "Add bullet",
+    "groups": "Groups",
+    "addGroup": "Add group",
+    "groupLabel": "Label",
+    "groupItems": "Items",
+    "items": "Items",
+    "addItem": "Add item",
+    "oneItemPerLine": "one per line",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Remove",
+    "idsNote": "Existing sections, entries and groups keep their ids when edited, so variants stay matched to them."
+  },
+  "diff": {
+    "title": "Changes against the master",
+    "summary": "+{{added}} added, -{{removed}} removed, ~{{changed}} changed",
+    "short": "+{{added}} / -{{removed}} / ~{{changed}}",
+    "noChanges": "This variant is identical to the master.",
+    "legend": "Green: added. Red, struck through: removed."
+  },
+  "prompts": {
+    "caption": "Say this to the agent in the terminal:",
+    "import": "Import my uploaded resume into the master resume in Applyer, keeping the wording exactly as written.",
+    "importNoUpload": "Help me build my master resume in Applyer from what I tell you about my experience.",
+    "tailor": "Tailor a variant of my resume for the {{title}} role at {{company}} and explain what you changed.",
+    "use": "Use my \"{{name}}\" resume variant for the {{title}} role at {{company}}, adjusting it for the posting if needed, and explain what you changed.",
+    "refresh": "My master resume changed; refresh my \"{{name}}\" resume variant against it.",
+    "write": "Write a resume variant called \"Backend\" that leads with my backend work and fits on one page.",
+    "writeHint": "Change the name and the focus to what you want. Once it exists, pick it from the Resume selector in a job's details.",
+    "send": "Send to terminal"
+  },
+  "preview": {
+    "title": "Resume preview",
+    "empty": "Nothing to preview yet."
+  },
+  "fonts": {
+    "georgia": "Georgia",
+    "times": "Times New Roman",
+    "garamond": "Garamond",
+    "helvetica": "Helvetica / Arial",
+    "calibri": "Calibri",
+    "segoe": "Segoe UI / system sans-serif"
+  },
+  "linkStyles": {
+    "plain": "Same as text",
+    "blue": "Blue",
+    "underline": "Underlined"
+  },
+  "layout": {
+    "resizeList": "Resize variant list",
+    "resizeDetails": "Resize details panel"
+  }
+}

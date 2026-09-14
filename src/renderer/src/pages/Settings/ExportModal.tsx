@@ -19,6 +19,7 @@ const DOMAIN_KEYS = {
   exclusions: { label: 'data.domainExclusions', hint: 'data.domainExclusionsHint' },
   companyBoards: { label: 'data.domainCompanyBoards', hint: 'data.domainCompanyBoardsHint' },
   profile: { label: 'data.domainProfile', hint: 'data.domainProfileHint' },
+  resumes: { label: 'data.domainResumes', hint: 'data.domainResumesHint' },
   settings: { label: 'data.domainSettings', hint: 'data.domainSettingsHint' },
   theme: { label: 'data.domainTheme', hint: 'data.domainThemeHint' }
 } as const satisfies Record<ExportDomain, { label: string; hint: string }>
@@ -29,6 +30,7 @@ const DOMAIN_ORDER: ExportDomain[] = [
   'exclusions',
   'companyBoards',
   'profile',
+  'resumes',
   'settings',
   'theme'
 ]

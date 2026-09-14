@@ -25,7 +25,8 @@ function rowToCsv(row: CsvValue[]): string {
   return row.map(escapeCsvField).join(',')
 }
 
-export function jobsToCsv(records: JobRecord[]): string {
+/** Accepts the export shape too, so the spreadsheet can name the resume variant a job uses. */
+export function jobsToCsv(records: Array<JobRecord & { resumeVariantName?: string | null }>): string {
   const header = [
     'Title',
     'Company',
@@ -41,7 +42,8 @@ export function jobsToCsv(records: JobRecord[]): string {
     'Failure Message',
     'Queued At',
     'Filled At',
-    'Submitted At'
+    'Submitted At',
+    'Resume Variant'
   ]
   const lines = [rowToCsv(header)]
   for (const r of records) {
@@ -61,7 +63,8 @@ export function jobsToCsv(records: JobRecord[]): string {
         r.failureMessage,
         r.queuedAt,
         r.filledAt,
-        r.submittedAt
+        r.submittedAt,
+        r.resumeVariantName ?? null
       ])
     )
   }

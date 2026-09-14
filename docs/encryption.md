@@ -6,6 +6,7 @@ Encrypted storage is fail-closed. Applyer never silently substitutes plaintext w
 
 - The entire SQLite database, including jobs, indexed search history, exclusions, company boards, settings, cached job details, profiles, document metadata, and activity history.
 - Uploaded document bytes and extracted text.
+- The structured master resume and every named variant (field-level, like the profile, on top of the database encryption). The master's template, page size and font choice, a variant's name, and which variant a job points at are plain columns: they describe the layout and the bookkeeping, not the person.
 - Screenshot bytes.
 - `app.log` and `mcp.log` entries.
 

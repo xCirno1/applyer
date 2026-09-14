@@ -27,6 +27,8 @@ export interface JobRecord {
   queuedAt: string
   filledAt: string | null
   submittedAt: string | null
+  /** The named resume variant this job attaches (see `shared/types/resume.ts`); null means the fallback (master or original upload). */
+  resumeVariantId: string | null
   createdAt: string
   updatedAt: string
 }

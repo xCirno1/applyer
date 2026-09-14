@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { getDb } from '../index'
-import { jobs, indexedJobs, jobExclusions, companyBoards, documents, activityLog } from '../schema'
+import { jobs, indexedJobs, jobExclusions, companyBoards, documents, activityLog, resumeVariants } from '../schema'
 
 export interface StorageRowCounts {
   jobs: number
@@ -8,13 +8,21 @@ export interface StorageRowCounts {
   exclusions: number
   companyBoards: number
   documents: number
+  resumeVariants: number
   activityLogEntries: number
 }
 
 export function getStorageRowCounts(): StorageRowCounts {
   const db = getDb()
   const count = (
-    table: typeof jobs | typeof indexedJobs | typeof jobExclusions | typeof companyBoards | typeof documents | typeof activityLog
+    table:
+      | typeof jobs
+      | typeof indexedJobs
+      | typeof jobExclusions
+      | typeof companyBoards
+      | typeof documents
+      | typeof resumeVariants
+      | typeof activityLog
   ): number =>
     db.select({ count: sql<number>`count(*)` }).from(table).get()?.count ?? 0
 
@@ -24,6 +32,7 @@ export function getStorageRowCounts(): StorageRowCounts {
     exclusions: count(jobExclusions),
     companyBoards: count(companyBoards),
     documents: count(documents),
+    resumeVariants: count(resumeVariants),
     activityLogEntries: count(activityLog)
   }
 }

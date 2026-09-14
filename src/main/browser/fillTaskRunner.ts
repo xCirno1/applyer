@@ -1,10 +1,13 @@
 import { randomUUID } from 'crypto'
-import { writeFileSync, unlinkSync } from 'fs'
+import { writeFileSync, mkdirSync } from 'fs'
 import { join, extname } from 'path'
 import type { Page } from 'playwright'
 import { clearBlocking, getJob, refreshFilled, setBlocking, setFilled } from '../db/repositories/jobsRepository'
 import { listDocuments, readDocumentBytes } from '../db/repositories/documentsRepository'
 import { openHeadedBrowser, type HeadedBrowser } from './browserController'
+import { renderResumePdf, resolveResumeAttachment, resumeFileName } from './resumeRenderer'
+import { removeFile, removeMaterializedDocument } from './attachmentCleanup'
+import { logActivity } from '../db/repositories/activityLogRepository'
 import { detectCaptcha } from './captchaDetector'
 import {
   clickApplicationButton,
@@ -56,7 +59,8 @@ export type InspectTaskResult =
       mode: 'fill' | 'edit'
       fields: ApplicationField[]
       buttons: ApplicationButton[]
-      storedDocuments: Array<{ kind: 'resume' | 'cover_letter'; filename: string }>
+      /** `source` says which resume the `resume` file value attaches: the job's assigned variant, the master, or (absent) the upload. */
+      storedDocuments: Array<{ kind: 'resume' | 'cover_letter'; filename: string; source?: 'variant' | 'master' }>
       message: string
     }
   | { status: 'paused_captcha'; jobId: string; taskId: string; message: string }
@@ -129,13 +133,62 @@ function materializeDocument(kind: 'resume' | 'cover_letter'): string | undefine
   return path
 }
 
-function safeUnlink(path: string | undefined): void {
-  if (!path) return
+/**
+ * The resume a job gets, as a file Playwright can hand to a file input.
+ *
+ * A tailored variant (or the master, when that is the chosen fallback) is
+ * rendered fresh into its own temp directory so the file can carry a
+ * human-looking name: the form shows the basename, and so does the ATS to
+ * whoever opens the application. Rendering needs the headless browser; when
+ * it fails the field is left alone and the failure reported, never silently
+ * downgraded to the original upload, since attaching the wrong resume is
+ * worse than a skipped field the agent can retry.
+ *
+ * The "attached" activity entry is not written here: rendering a file is not
+ * attaching it, and the form can still refuse the upload. The caller logs it
+ * once `fillForm` reports the resume was actually handed to the input.
+ */
+interface MaterializedResume {
+  path?: string
+  failure?: string
+  /** What the rendered file is, for the activity entry written once it is attached. */
+  rendered?: { kind: 'variant' | 'master'; templateId: string; stale: boolean }
+}
+
+async function materializeResume(jobId: string): Promise<MaterializedResume> {
+  let plan
   try {
-    unlinkSync(path)
-  } catch {
-    // Best-effort cleanup of a short-lived decrypted document.
+    plan = resolveResumeAttachment(jobId)
+  } catch (error) {
+    logActivity('warn', 'Stored resume could not be read for attachment', { jobId, error: String(error) })
+    return { failure: `stored resume could not be read: ${String(error)}` }
   }
+  if (plan.kind === 'original') return { path: materializeDocument('resume') }
+  try {
+    const bytes = await renderResumePdf(plan.content, plan.templateId, plan.pageSize, plan.style)
+    const dir = join(tempDir(), randomUUID())
+    mkdirSync(dir, { recursive: true, mode: 0o700 })
+    const path = join(dir, resumeFileName(plan.content))
+    writeFileSync(path, bytes, { mode: 0o600 })
+    return {
+      path,
+      rendered: { kind: plan.kind, templateId: plan.templateId, stale: plan.kind === 'variant' && plan.stale }
+    }
+  } catch (error) {
+    logActivity('warn', `${plan.kind === 'variant' ? 'Tailored' : 'Master'} resume could not be rendered`, {
+      jobId,
+      error: String(error)
+    })
+    return { failure: `${plan.kind === 'variant' ? 'tailored' : 'master'} resume could not be rendered: ${String(error)}` }
+  }
+}
+
+function logResumeAttached(jobId: string, rendered: NonNullable<MaterializedResume['rendered']>): void {
+  logActivity('info', rendered.kind === 'variant' ? 'Attached the tailored resume' : 'Attached the master resume', {
+    jobId,
+    templateId: rendered.templateId,
+    ...(rendered.stale ? { stale: true } : {})
+  })
 }
 
 function screenshotPathFor(jobId: string, stepIndex: number): string {
@@ -257,6 +310,20 @@ async function inspectSession(jobId: string, page: Page): Promise<InspectTaskRes
       kind: document.kind,
       filename: document.originalFilename
     }))
+    // A tailored or master resume is attached in place of the upload, and it
+    // exists even when nothing was ever uploaded, so list it as the resume
+    // the agent may name. A corrupt stored resume is reported at fill time.
+    try {
+      const plan = resolveResumeAttachment(jobId)
+      if (plan.kind !== 'original') {
+        const rendered = { kind: 'resume' as const, filename: resumeFileName(plan.content), source: plan.kind }
+        const uploadIndex = storedDocuments.findIndex((document) => document.kind === 'resume')
+        if (uploadIndex >= 0) storedDocuments.splice(uploadIndex, 1, rendered)
+        else storedDocuments.unshift(rendered)
+      }
+    } catch (error) {
+      logActivity('warn', 'Stored resume could not be read while inspecting a form', { jobId, error: String(error) })
+    }
     return {
       status: 'inspected',
       jobId,
@@ -452,22 +519,27 @@ async function applyAnswers(
   edit: boolean,
   finalStep: boolean
 ): Promise<FillTaskResult | EditTaskResult> {
-  let resumePath: string | undefined
+  let resume: MaterializedResume | undefined
   let coverLetterPath: string | undefined
+  // Rendered only if `fillForm` reaches a file control whose answer names the
+  // resume: rendering spins up the headless browser, which a text answer
+  // that happens to say "resume" must never trigger.
+  const resumeFile = async (): Promise<{ path?: string; unavailableReason?: string }> => {
+    resume = await materializeResume(jobId)
+    return { path: resume.path, unavailableReason: resume.failure }
+  }
   try {
-    if (!edit && permissions.autoUploadDocuments) {
-      resumePath = materializeDocument('resume')
-      coverLetterPath = materializeDocument('cover_letter')
-    }
+    if (!edit && permissions.autoUploadDocuments) coverLetterPath = materializeDocument('cover_letter')
     const result = answers.length > 0
       ? await fillForm(page, answers, {
           allowFieldCompletion: permissions.autoCompleteFields,
           allowDocumentUploads: !edit && permissions.autoUploadDocuments,
           updateDocuments: !edit,
-          resumeFilePath: resumePath,
+          resumeFile: !edit && permissions.autoUploadDocuments ? resumeFile : undefined,
           coverLetterFilePath: coverLetterPath
         })
-      : { filledFields: [], skippedFields: [], requiredPermissions: [] }
+      : { filledFields: [], skippedFields: [], requiredPermissions: [], attachedDocuments: [] }
+    if (resume?.rendered && result.attachedDocuments.includes('resume')) logResumeAttached(jobId, resume.rendered)
     if (result.requiredPermissions.length > 0) {
       return {
         status: 'permission_denied',
@@ -481,7 +553,9 @@ async function applyAnswers(
         status: 'failed',
         jobId,
         reasonTag: 'form_not_supported',
-        message: 'No supplied field was changed. Inspect the live form again and use its current field IDs and option values. If the target is on an earlier step, click a currently listed Back or Previous button, then re-inspect.'
+        message:
+          `No supplied field was changed.${result.skippedFields.length > 0 ? ` Skipped: ${result.skippedFields.join('; ')}.` : ''}` +
+          ' Inspect the live form again and use its current field IDs and option values. If the target is on an earlier step, click a currently listed Back or Previous button, then re-inspect.'
       }
     }
     const completedFinalStep = !edit && finalStep && result.skippedFields.length === 0 &&
@@ -499,7 +573,7 @@ async function applyAnswers(
       if (!updated) throw new Error(`Job not found: ${jobId}`)
       if (edit || completedFinalStep) {
         for (const obsoletePath of session.obsoleteScreenshotPaths) {
-          if (!capturedPaths.includes(obsoletePath)) safeUnlink(obsoletePath)
+          if (!capturedPaths.includes(obsoletePath)) removeFile(obsoletePath)
         }
         session.obsoleteScreenshotPaths = []
       }
@@ -539,8 +613,8 @@ async function applyAnswers(
       message: `${edit ? 'Failed while editing' : 'Failed while filling'} the open form: ${String(error)}`
     }
   } finally {
-    safeUnlink(resumePath)
-    safeUnlink(coverLetterPath)
+    removeMaterializedDocument(resume?.path)
+    removeMaterializedDocument(coverLetterPath)
   }
 }
 

@@ -18,7 +18,18 @@ export const ADVANCED_SETTINGS_SECTIONS: AdvancedSettingsSection[] = [
   },
   {
     id: 'documents',
-    groups: [{ id: 'uploads', keys: ['dangerousMaxDocumentSizeBytes'] }]
+    groups: [
+      { id: 'uploads', keys: ['dangerousMaxDocumentSizeBytes'] },
+      {
+        id: 'resumes',
+        keys: [
+          'dangerousResumeMaxSections',
+          'dangerousResumeMaxItemsPerSection',
+          'dangerousResumeMaxBulletsPerEntry',
+          'dangerousResumeMaxTextChars'
+        ]
+      }
+    ]
   },
   {
     id: 'jobs',

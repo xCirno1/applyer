@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Resume upload preview | Applyer test site</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <h1>Resume upload preview</h1>
+    <p class="hint">
+      This form is never submitted. It shows exactly which file Applyer attached to the resume field, so you can check
+      that a per-job tailored resume (or the master, or the original upload) is what reached the form.
+    </p>
+    <form>
+      <label for="full-name">Full name</label>
+      <input id="full-name" name="fullName" autocomplete="name">
+
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" autocomplete="email">
+
+      <label for="resume">Resume</label>
+      <input id="resume" name="resume" type="file" accept=".pdf,.doc,.docx,.txt">
+    </form>
+
+    <section class="panel upload-preview" id="resume-preview" hidden>
+      <h2>Attached resume</h2>
+      <dl class="upload-meta">
+        <dt>File name</dt>
+        <dd id="resume-name"></dd>
+        <dt>Type</dt>
+        <dd id="resume-type"></dd>
+        <dt>Size</dt>
+        <dd id="resume-size"></dd>
+        <dt>Attached at</dt>
+        <dd id="resume-time"></dd>
+      </dl>
+      <p class="hint" id="resume-note"></p>
+      <iframe id="resume-frame" title="Attached resume" hidden></iframe>
+      <pre id="resume-text" hidden></pre>
+    </section>
+
+    <script src="/resume-upload.js"></script>
+  </body>
+</html>

@@ -1,0 +1,1 @@
+ALTER TABLE `resume_master` ADD `style` text;

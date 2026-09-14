@@ -22,6 +22,14 @@ APPLYER_TEST_SITE_HOST=127.0.0.1 APPLYER_TEST_SITE_PORT=9000 npm run test:site
 4. For the resolvable challenge, click **Resolve test challenge** in the browser window. Applyer polls for resolution and should continue within about two seconds.
 5. Use a new URL or add a unique query string for each queued test job because `queue_job` deduplicates by URL.
 
+## Checking which resume was attached
+
+Use <http://127.0.0.1:8765/resume-upload.html> after setting up a master resume and tailoring it for a job:
+
+1. Queue the page as a job and ask the agent to tailor the resume for it (`tailor_resume`), or leave the job without a variant to exercise the fallback.
+2. Run `fill_application` with the resume field set to `resume`.
+3. The page shows the attached file's name, type and size, and renders a PDF inline, so you can confirm that the job-specific content (not the master or the original upload) is what reached the form. Rendered resumes (a variant or the master) are named `<Full name> - Resume.pdf`; the original upload keeps its own file name.
+
 ## Button navigation flow
 
 Use <http://127.0.0.1:8765/buttons.html> to exercise agent-controlled buttons:

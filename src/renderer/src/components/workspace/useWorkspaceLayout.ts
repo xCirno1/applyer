@@ -5,6 +5,7 @@ import {
   clampSidebarWidth,
   readStoredWorkspaceLayout,
   writeStoredWorkspaceLayout,
+  type DockScreen,
   type DockTab,
   type WorkspaceLayout
 } from './workspaceLayout'
@@ -24,7 +25,8 @@ const PERSIST_DEBOUNCE_MS = 200
 export interface WorkspaceLayoutController {
   layout: WorkspaceLayout
   setSidebarVisible: (visible: boolean) => void
-  setDockVisible: (visible: boolean) => void
+  /** Per rail screen: the dock is one instance, but each screen remembers whether it shows it. */
+  setDockVisible: (screen: DockScreen, visible: boolean) => void
   setDockTab: (tab: DockTab) => void
   /** @param available Width of the region the sidebar shares with the board. */
   setSidebarWidth: (width: number, available?: number) => void
@@ -68,7 +70,11 @@ export function useWorkspaceLayout(): WorkspaceLayoutController {
   }, [])
 
   const setSidebarVisible = useCallback((visible: boolean) => update({ sidebarVisible: visible }), [update])
-  const setDockVisible = useCallback((visible: boolean) => update({ dockVisible: visible }), [update])
+  const setDockVisible = useCallback(
+    (screen: DockScreen, visible: boolean) =>
+      setLayout((current) => ({ ...current, dockVisible: { ...current.dockVisible, [screen]: visible } })),
+    []
+  )
   const setDockTab = useCallback((tab: DockTab) => update({ dockTab: tab }), [update])
 
   const setSidebarWidth = useCallback(

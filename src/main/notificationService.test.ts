@@ -49,6 +49,7 @@ function job(status: JobRecord['status']): JobRecord {
     queuedAt: '2020-01-01T00:00:00.000Z',
     filledAt: status === 'filled' ? '2020-01-01T01:00:00.000Z' : null,
     submittedAt: null,
+    resumeVariantId: null,
     createdAt: '2020-01-01T00:00:00.000Z',
     updatedAt: '2020-01-01T01:00:00.000Z'
   }

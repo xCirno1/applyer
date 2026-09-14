@@ -20,7 +20,8 @@
   "card": {
     "select": "Pilih lowongan",
     "deselect": "Batalkan pilihan",
-    "needsVerification": "perlu verifikasi"
+    "needsVerification": "perlu verifikasi",
+    "tailoredResume": "varian resume"
   },
   "failure": {
     "tags": {
@@ -114,7 +115,17 @@
     "screenshot": "Lamaran yang sudah diisi (screenshot)",
     "screenshotAlt": "Screenshot halaman {{page}} formulir lamaran yang sudah diisi",
     "activity": "Aktivitas",
-    "openListing": "Buka lowongan aslinya ↗"
+    "openListing": "Buka lowongan aslinya ↗",
+    "resume": "Resume",
+    "openResume": "Buka di Varian Resume",
+    "tailorWithAgent": "Sesuaikan dengan agen",
+    "resumeSelect": "Resume yang dilampirkan",
+    "resumeDefault": "Resume utama (bawaan)",
+    "resumeAssigned": "\"{{name}}\" akan dilampirkan (template {{template}}, {{changes}}).",
+    "resumeStale": "Varian ini berdasarkan resume utama yang lebih lama.",
+    "resumeMaster": "Tidak ada varian yang ditetapkan; resume utama akan dilampirkan.",
+    "resumeOriginal": "Tidak ada varian yang ditetapkan; file asli yang diunggah akan dilampirkan.",
+    "resumeNoMaster": "Resume utama belum disiapkan; file asli yang diunggah akan dilampirkan."
   },
   "overview": {
     "title": "Ringkasan",

@@ -522,7 +522,14 @@ export interface FillFormOptions {
   allowDocumentUploads: boolean
   /** File controls are immutable during edit_application. */
   updateDocuments?: boolean
-  resumeFilePath?: string
+  /**
+   * Produces the resume file on demand. Called at most once, and only when a
+   * file control's answer names the resume: producing it can mean rendering
+   * a PDF in the headless browser, which a text answer that merely says
+   * "resume" must never trigger. `unavailableReason` (a render failure) is
+   * reported on the field instead of the generic hint.
+   */
+  resumeFile?: () => Promise<{ path?: string; unavailableReason?: string }>
   coverLetterFilePath?: string
 }
 
@@ -530,6 +537,8 @@ export interface FillFormResult {
   filledFields: string[]
   skippedFields: string[]
   requiredPermissions: AgentPermission[]
+  /** Stored documents actually handed to a file input on this call, in field order. */
+  attachedDocuments: Array<'resume' | 'cover_letter'>
 }
 
 export function inspectAnswerRequirements(
@@ -567,7 +576,13 @@ export async function fillForm(
 
   const filledFields: string[] = []
   const skippedFields: string[] = []
+  const attachedDocuments: Array<'resume' | 'cover_letter'> = []
   const requiredPermissions = new Set<AgentPermission>()
+  let resumeFilePromise: ReturnType<NonNullable<FillFormOptions['resumeFile']>> | undefined
+  const resumeFile = (): ReturnType<NonNullable<FillFormOptions['resumeFile']>> => {
+    if (!resumeFilePromise) resumeFilePromise = options.resumeFile ? options.resumeFile() : Promise.resolve({})
+    return resumeFilePromise
+  }
   const usedFieldIds = new Set<string>()
 
   for (const answer of answers) {
@@ -592,14 +607,21 @@ export async function fillForm(
           skippedFields.push(`${field.label} (automatic document uploads are not allowed)`)
           continue
         }
-        const documentKind = scalarValue(answer.value)
-        const path = documentKind === 'resume' ? options.resumeFilePath : documentKind === 'cover_letter' ? options.coverLetterFilePath : undefined
-        if (!path) {
-          skippedFields.push(`${field.label} (value must name an available stored document: resume or cover_letter)`)
+        const requested = scalarValue(answer.value)
+        const documentKind = requested === 'resume' || requested === 'cover_letter' ? requested : null
+        const resume = documentKind === 'resume' ? await resumeFile() : undefined
+        const path = documentKind === 'resume' ? resume?.path : documentKind === 'cover_letter' ? options.coverLetterFilePath : undefined
+        if (!documentKind || !path) {
+          skippedFields.push(
+            documentKind === 'resume' && resume?.unavailableReason
+              ? `${field.label} (${resume.unavailableReason})`
+              : `${field.label} (value must name an available stored document: resume or cover_letter)`
+          )
           continue
         }
         await page.locator(field.selector!).setInputFiles(path)
         filledFields.push(field.label)
+        attachedDocuments.push(documentKind)
         continue
       }
 
@@ -645,5 +667,5 @@ export async function fillForm(
     }
   }
 
-  return { filledFields, skippedFields, requiredPermissions: [...requiredPermissions] }
+  return { filledFields, skippedFields, requiredPermissions: [...requiredPermissions], attachedDocuments }
 }

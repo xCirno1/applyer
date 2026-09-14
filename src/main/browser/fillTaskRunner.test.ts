@@ -14,6 +14,11 @@ const browserMocks = vi.hoisted(() => ({
 }))
 vi.mock('./browserController', () => ({ openHeadedBrowser: browserMocks.openHeadedBrowser }))
 vi.mock('./captchaDetector', () => ({ detectCaptcha: browserMocks.detectCaptcha }))
+const renderMocks = vi.hoisted(() => ({ renderResumePdf: vi.fn() }))
+vi.mock('./resumeRenderer', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./resumeRenderer')>()),
+  renderResumePdf: renderMocks.renderResumePdf
+}))
 vi.mock('./agentPermissionGate', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./agentPermissionGate')>()),
   requestAgentPermissions: browserMocks.requestAgentPermissions
@@ -24,11 +29,16 @@ beforeEach(() => {
   browserMocks.openHeadedBrowser.mockReset()
   browserMocks.requestAgentPermissions.mockReset()
   browserMocks.detectCaptcha.mockReset().mockResolvedValue({ blocked: false })
+  renderMocks.renderResumePdf.mockReset()
 })
 
 import { runClickButtonTask, runEditTask, runFillTask, runInspectTask } from './fillTaskRunner'
 import { getJob, queueJob, setFilled, setSubmitted } from '../db/repositories/jobsRepository'
-import { setAgentPermissions } from '../db/repositories/settingsRepository'
+import { setAgentPermissions, setResumeSettings, setStorageMode } from '../db/repositories/settingsRepository'
+import { assignVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
+import { listActivity } from '../db/repositories/activityLogRepository'
+import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
+import { existsSync } from 'fs'
 
 function retainablePage(fields: unknown[]): { evaluate: ReturnType<typeof vi.fn> } {
   const page = {
@@ -270,6 +280,155 @@ describe('retained application sessions', () => {
       status: 'permission_denied',
       requiredPermissions: ['autoUploadDocuments']
     })
+  })
+})
+
+describe('resume attachment', () => {
+  function resumeFormPage(): { setInputFiles: ReturnType<typeof vi.fn> } {
+    const setInputFiles = vi.fn().mockResolvedValue(undefined)
+    const page = retainablePage([
+      { fieldId: 'field-resume', selector: '#resume', label: 'Resume', control: 'file', required: true, currentValue: '' }
+    ])
+    page.evaluate.mockResolvedValue([
+      { fieldId: 'field-resume', selector: '#resume', label: 'Resume', control: 'file', required: true, currentValue: '' }
+    ])
+    const locator = vi.fn().mockImplementation(() => ({ fill: vi.fn(), setInputFiles }))
+    ;(page as unknown as { locator: unknown }).locator = locator
+    return { setInputFiles }
+  }
+
+  beforeEach(() => {
+    setStorageMode('plaintext')
+    setAgentPermissions({ autoCompleteFields: true, autoUploadDocuments: true, autoPressButtons: false })
+  })
+
+  it('attaches a rendered tailored resume under a human-readable name and cleans it up', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT, templateId: 'compact' })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT, templateId: 'modern' }).id)
+    renderMocks.renderResumePdf.mockResolvedValue(Buffer.from('%PDF-1.4 tailored'))
+    const { setInputFiles } = resumeFormPage()
+
+    const inspected = await runInspectTask(job.id)
+    expect(inspected).toMatchObject({
+      status: 'inspected',
+      storedDocuments: [{ kind: 'resume', filename: 'Alex Morgan - Resume.pdf', source: 'variant' }]
+    })
+
+    let attachedPath = ''
+    let existedWhenAttached = false
+    setInputFiles.mockImplementation(async (path: string) => {
+      attachedPath = path
+      existedWhenAttached = existsSync(path)
+    })
+    const result = await runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])
+
+    expect(result).toMatchObject({ status: 'partially_filled', filledFields: ['Resume'], skippedFields: [] })
+    expect(renderMocks.renderResumePdf).toHaveBeenCalledWith(SAMPLE_RESUME_CONTENT, 'modern', 'letter', {})
+    expect(attachedPath.split(/[\\/]/).pop()).toBe('Alex Morgan - Resume.pdf')
+    expect(existedWhenAttached).toBe(true)
+    expect(existsSync(attachedPath)).toBe(false)
+    expect(listActivity({ jobId: job.id }).entries.some((entry) => entry.message === 'Attached the tailored resume')).toBe(true)
+  })
+
+  it('falls back to the master only when that is the chosen fallback', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT, templateId: 'classic', pageSize: 'a4' })
+    renderMocks.renderResumePdf.mockResolvedValue(Buffer.from('%PDF-1.4 master'))
+    const { setInputFiles } = resumeFormPage()
+
+    await runInspectTask(job.id)
+    // Default fallback is the original upload, and nothing was uploaded.
+    await expect(runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])).resolves.toMatchObject({
+      status: 'failed',
+      message: expect.stringContaining('Skipped: Resume (value must name an available stored document')
+    })
+    expect(renderMocks.renderResumePdf).not.toHaveBeenCalled()
+
+    setResumeSettings({ fallbackAttachment: 'master', autoTailor: false })
+    await expect(runInspectTask(job.id)).resolves.toMatchObject({
+      storedDocuments: [{ kind: 'resume', source: 'master' }]
+    })
+    await expect(runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])).resolves.toMatchObject({
+      filledFields: ['Resume']
+    })
+    expect(renderMocks.renderResumePdf).toHaveBeenCalledWith(SAMPLE_RESUME_CONTENT, 'classic', 'a4', {})
+    expect(setInputFiles).toHaveBeenCalledTimes(1)
+  })
+
+  it('reports a render failure on the field instead of attaching something else', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    renderMocks.renderResumePdf.mockRejectedValue(new Error('browser download was declined'))
+    const { setInputFiles } = resumeFormPage()
+
+    await runInspectTask(job.id)
+    const result = await runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])
+
+    expect(result).toMatchObject({
+      status: 'failed',
+      message: expect.stringContaining('Skipped: Resume (tailored resume could not be rendered: Error: browser download was declined)')
+    })
+    expect(setInputFiles).not.toHaveBeenCalled()
+    expect(listActivity({ jobId: job.id, level: 'warn' }).entries.some((entry) => entry.message.includes('could not be rendered'))).toBe(true)
+  })
+
+  it('does not record an attachment when the upload itself fails', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    renderMocks.renderResumePdf.mockResolvedValue(Buffer.from('%PDF-1.4 tailored'))
+    const { setInputFiles } = resumeFormPage()
+    setInputFiles.mockRejectedValue(new Error('input detached'))
+
+    await runInspectTask(job.id)
+    const result = await runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])
+
+    expect(result).toMatchObject({ status: 'failed', message: expect.stringContaining('Skipped: Resume') })
+    expect(setInputFiles).toHaveBeenCalledTimes(1)
+    expect(listActivity({ jobId: job.id }).entries.some((entry) => entry.message === 'Attached the tailored resume')).toBe(false)
+  })
+
+  it('does not record an attachment for a stale field id', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    renderMocks.renderResumePdf.mockResolvedValue(Buffer.from('%PDF-1.4 tailored'))
+    const { setInputFiles } = resumeFormPage()
+
+    await runInspectTask(job.id)
+    const result = await runFillTask(job.id, [{ fieldId: 'field-gone', value: 'resume' }])
+
+    expect(result).toMatchObject({ status: 'failed', message: expect.stringContaining('field not found') })
+    expect(setInputFiles).not.toHaveBeenCalled()
+    expect(listActivity({ jobId: job.id }).entries.some((entry) => entry.message === 'Attached the tailored resume')).toBe(false)
+  })
+
+  it('does not render for a text answer that merely says resume', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    retainablePage([
+      { fieldId: 'field-source', selector: '#source', label: 'How did you hear about us', control: 'input', required: false, currentValue: '' }
+    ])
+    await runInspectTask(job.id)
+    await expect(runFillTask(job.id, [{ fieldId: 'field-source', value: 'resume' }])).resolves.toMatchObject({
+      filledFields: ['How did you hear about us']
+    })
+    expect(renderMocks.renderResumePdf).not.toHaveBeenCalled()
+  })
+
+  it('does not render when no answer names the resume', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    retainablePage([
+      { fieldId: 'field-email', selector: '#email', label: 'Email', control: 'input', required: true, currentValue: '' }
+    ])
+    await runInspectTask(job.id)
+    await runFillTask(job.id, [{ fieldId: 'field-email', value: 'jane@example.com' }])
+    expect(renderMocks.renderResumePdf).not.toHaveBeenCalled()
   })
 })
 

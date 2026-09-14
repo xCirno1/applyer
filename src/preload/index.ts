@@ -22,6 +22,16 @@ import {
 } from '@shared/types/ipcEvents'
 import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job'
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
+import type {
+  MasterResume,
+  ResumeContent,
+  ResumePageSize,
+  ResumeSettings,
+  ResumeTemplateId,
+  ResumeVariant,
+  ResumeVariantSummary,
+  ResumeStyle
+} from '@shared/types/resume'
 import type { ListActivityQuery, ListActivityResult } from '@shared/types/activity'
 import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
 import type {
@@ -256,6 +266,47 @@ const profileApi = {
   }
 }
 
+type ResumeWriteResult<T> = { ok: true; value: T } | { ok: false; error: AppError }
+
+const resumesApi = {
+  getMaster: (): Promise<{ master: MasterResume | null }> => ipcRenderer.invoke(IPC.resumes.getMaster),
+  saveMaster: (input: {
+    content: ResumeContent
+    templateId?: ResumeTemplateId
+    pageSize?: ResumePageSize
+    style?: ResumeStyle
+    sourceDocumentId?: string | null
+  }): Promise<ResumeWriteResult<MasterResume>> => ipcRenderer.invoke(IPC.resumes.saveMaster, input),
+  deleteMaster: (): Promise<ResumeWriteResult<null>> => ipcRenderer.invoke(IPC.resumes.deleteMaster),
+  listVariants: (): Promise<{ variants: ResumeVariantSummary[] }> => ipcRenderer.invoke(IPC.resumes.listVariants),
+  getVariant: (id: string): Promise<{ variant: (ResumeVariant & { stale: boolean }) | null }> =>
+    ipcRenderer.invoke(IPC.resumes.getVariant, { id }),
+  saveVariant: (input: {
+    id?: string
+    name: string
+    content?: ResumeContent
+    templateId?: ResumeTemplateId
+  }): Promise<ResumeWriteResult<ResumeVariant & { stale: boolean }>> =>
+    ipcRenderer.invoke(IPC.resumes.saveVariant, input),
+  deleteVariant: (id: string): Promise<ResumeWriteResult<{ unassignedJobs: number }>> =>
+    ipcRenderer.invoke(IPC.resumes.deleteVariant, { id }),
+  assignVariant: (jobId: string, variantId: string | null): Promise<ResumeWriteResult<JobRecord>> =>
+    ipcRenderer.invoke(IPC.resumes.assignVariant, { jobId, variantId }),
+  exportPdf: (
+    target: { kind: 'master' } | { kind: 'variant'; id: string },
+    labels: DialogLabels
+  ): Promise<{ ok: boolean; canceled?: boolean; filePath?: string; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.resumes.exportPdf, { target, labels }),
+  getSettings: (): Promise<{ settings: ResumeSettings }> => ipcRenderer.invoke(IPC.resumes.getSettings),
+  setSettings: (settings: ResumeSettings): Promise<ResumeWriteResult<ResumeSettings>> =>
+    ipcRenderer.invoke(IPC.resumes.setSettings, settings),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.resumes.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.resumes.onChanged, listener)
+  }
+}
+
 const onboardingApi = {
   getStatus: (): Promise<OnboardingStatus> => ipcRenderer.invoke(IPC.onboarding.getStatus),
   setStorageMode: (mode: StorageMode): Promise<{ ok: boolean; error?: string }> =>
@@ -405,7 +456,14 @@ const logsApi = {
 }
 
 const appApi = {
-  getInfo: (): Promise<AppInfo> => ipcRenderer.invoke(IPC.app.getInfo)
+  getInfo: (): Promise<AppInfo> => ipcRenderer.invoke(IPC.app.getInfo),
+  setUnsavedChanges: (value: boolean): void => ipcRenderer.send(IPC.app.setUnsavedChanges, value),
+  confirmClose: (): void => ipcRenderer.send(IPC.app.confirmClose),
+  onCloseRequested: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.app.onCloseRequested, listener)
+    return () => ipcRenderer.removeListener(IPC.app.onCloseRequested, listener)
+  }
 }
 
 const dataApi = {
@@ -438,6 +496,7 @@ const api = {
   companyBoards: companyBoardsApi,
   exclusions: exclusionsApi,
   profile: profileApi,
+  resumes: resumesApi,
   onboarding: onboardingApi,
   browserControl: browserControlApi,
   agentPermissions: agentPermissionsApi,

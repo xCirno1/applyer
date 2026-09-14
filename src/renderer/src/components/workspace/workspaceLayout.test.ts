@@ -74,8 +74,33 @@ describe('parseWorkspaceLayout', () => {
   })
 
   it('accepts a fully valid layout', () => {
-    const layout = { sidebarVisible: false, dockVisible: false, sidebarWidth: 300, dockHeight: 200, dockTab: 'logs' }
+    const layout = {
+      sidebarVisible: false,
+      dockVisible: { workspace: false, indexedJobs: true, resumes: false },
+      sidebarWidth: 300,
+      dockHeight: 200,
+      dockTab: 'logs'
+    }
     expect(parseWorkspaceLayout(layout)).toEqual(layout)
+  })
+
+  it('applies a legacy boolean dockVisible to every screen', () => {
+    expect(parseWorkspaceLayout({ dockVisible: false }).dockVisible).toEqual({
+      workspace: false,
+      indexedJobs: false,
+      resumes: false
+    })
+    expect(parseWorkspaceLayout({ dockVisible: true }).dockVisible).toEqual(DEFAULT_WORKSPACE_LAYOUT.dockVisible)
+  })
+
+  it('reads dockVisible per screen with the default for missing or non-boolean keys', () => {
+    expect(parseWorkspaceLayout({ dockVisible: { resumes: false, workspace: 'no' } }).dockVisible).toEqual({
+      workspace: true,
+      indexedJobs: true,
+      resumes: false
+    })
+    expect(parseWorkspaceLayout({ dockVisible: [false] }).dockVisible).toEqual(DEFAULT_WORKSPACE_LAYOUT.dockVisible)
+    expect(parseWorkspaceLayout({ dockVisible: 'yes' }).dockVisible).toEqual(DEFAULT_WORKSPACE_LAYOUT.dockVisible)
   })
 
   it('falls back field-by-field: bad dockTab does not discard other valid fields', () => {

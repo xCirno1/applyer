@@ -20,7 +20,8 @@
   "card": {
     "select": "Select job",
     "deselect": "Deselect job",
-    "needsVerification": "needs verification"
+    "needsVerification": "needs verification",
+    "tailoredResume": "resume variant"
   },
   "failure": {
     "tags": {
@@ -128,7 +129,17 @@
     "screenshot": "Filled application (screenshots)",
     "screenshotAlt": "Screenshot of filled application page {{page}}",
     "activity": "Activity",
-    "openListing": "Open original listing ↗"
+    "openListing": "Open original listing ↗",
+    "resume": "Resume",
+    "openResume": "Open in Resume Variants",
+    "tailorWithAgent": "Tailor with the agent",
+    "resumeSelect": "Resume to attach",
+    "resumeDefault": "Master (default)",
+    "resumeAssigned": "\"{{name}}\" will be attached ({{template}} template, {{changes}}).",
+    "resumeStale": "This variant is based on an older master resume.",
+    "resumeMaster": "No variant assigned; the master resume will be attached.",
+    "resumeOriginal": "No variant assigned; the original uploaded file will be attached.",
+    "resumeNoMaster": "No master resume is set up; the original uploaded file will be attached."
   },
   "overview": {
     "title": "Overview",

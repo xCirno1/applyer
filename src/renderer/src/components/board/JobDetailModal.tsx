@@ -13,8 +13,10 @@ import { useFormatters } from '../../i18n/format'
 import type { JobRecord } from '@shared/types/job'
 import type { ActivityLogEntry } from '@shared/types/activity'
 import { failureLabelKey, failureMessageDisplay, humanizeFailureTag } from './failureDisplay'
+import JobResumeBlock from './JobResumeBlock'
 
-// Full job detail: description rendered as sanitized HTML, match reasons, a
+// Full job detail: description rendered as sanitized HTML, match reasons, the
+// resume block (which resume the application gets, see `JobResumeBlock`), a
 // screenshot preview for Filled jobs served via the `applyer-file://`
 // protocol, and status-contextual actions — Unqueue or Mark Filled for
 // Queued, Retry for Failed, Mark Submitted for Filled, Exclude for anything
@@ -28,7 +30,16 @@ import { failureLabelKey, failureMessageDisplay, humanizeFailureTag } from './fa
 // `activeJob` for why: multiple panels across multiple screens (the board,
 // `PipelineOverview`'s verification list, Indexed Jobs rows) all open it.
 
-export default function JobDetailModal({ job, onClose }: { job: JobRecord | null; onClose: () => void }): ReactElement | null {
+export default function JobDetailModal({
+  job,
+  onClose,
+  onOpenResume
+}: {
+  job: JobRecord | null
+  onClose: () => void
+  /** Navigates to the Resume Variants screen with this job selected; owned by `MainShell` since it switches screens. */
+  onOpenResume: (jobId: string) => void
+}): ReactElement | null {
   const { t } = useTranslation('board')
   const errorMessage = useErrorMessage()
   const format = useFormatters()
@@ -206,6 +217,8 @@ export default function JobDetailModal({ job, onClose }: { job: JobRecord | null
             </ul>
           </div>
         )}
+
+        <JobResumeBlock job={job} onOpenResume={(jobId) => { onClose(); onOpenResume(jobId) }} onPromptSent={onClose} />
 
         {(job.screenshotPaths.length > 0 || job.screenshotPath) && (
           <div>

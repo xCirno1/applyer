@@ -37,6 +37,7 @@ function toJobRecord(row: JobRow): JobRecord {
     queuedAt: row.queuedAt,
     filledAt: row.filledAt,
     submittedAt: row.submittedAt,
+    resumeVariantId: row.resumeVariantId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }
@@ -350,7 +351,9 @@ export function listAllJobs(): JobRecord[] {
  * `queueJob`/`getJobByUrl`). Ids are regenerated rather than reused from the
  * file, since two independently-exported bundles could theoretically carry
  * colliding ids; screenshot paths and the in-memory-only blocking fields are
- * dropped since they'd point at another machine's filesystem/live task.
+ * dropped since they'd point at another machine's filesystem/live task. The
+ * resume variant is dropped for the same reason (its id is minted on import
+ * too) and re-linked by name afterwards, see `linkVariantsByName`.
  */
 export function importJobs(records: JobRecord[]): { imported: number; skipped: number } {
   const db = getDb()
@@ -383,6 +386,7 @@ export function importJobs(records: JobRecord[]): { imported: number; skipped: n
         queuedAt: r.queuedAt,
         filledAt: r.filledAt,
         submittedAt: r.submittedAt,
+        resumeVariantId: null,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt
       })

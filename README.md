@@ -38,6 +38,10 @@ browser. Final submission stays with you.
   exclusions, filters, bulk actions, notifications, and a searchable audit trail.
 - **Draft multi-page applications** through inspected fields and permission-gated
   navigation. The agent cannot access a final-submit action.
+- **Keep named resume variants** ("Backend-focused", "Concise one-page") built from a
+  structured master resume: the agent rewrites and reorders what you already have
+  (never adds to it), each job points at the variant that fits it, you review the diff
+  and the rendered PDF, and that is what gets attached.
 - **Keep your workflow yours** with movable local storage, JSON/CSV import and export,
   custom appearance, keyboard shortcuts, and English or Indonesian UI.
 

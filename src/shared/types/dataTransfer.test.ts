@@ -17,6 +17,7 @@ function sizesFixture(): ExportSizes {
     exclusions: { json: 40, csv: 20 },
     companyBoards: { json: 25, csv: 15 },
     profile: { json: 30 },
+    resumes: { json: 20 },
     settings: { json: 10 },
     theme: { json: 15 },
     wrapperBytes: 60
@@ -40,6 +41,6 @@ describe('totalJsonBytes', () => {
 
   it('adds (domain count - 1) commas when every domain is selected', () => {
     const total = totalJsonBytes(sizesFixture(), allDomainsSelected())
-    expect(total).toBe(60 + 100 + 70 + 40 + 25 + 30 + 10 + 15 + 6) // wrapper + all seven + 6 separator commas
+    expect(total).toBe(60 + 100 + 70 + 40 + 25 + 30 + 20 + 10 + 15 + 7) // wrapper + all eight + 7 separator commas
   })
 })

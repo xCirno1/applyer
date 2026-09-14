@@ -22,6 +22,13 @@ export type MetaEntry = MetaItem | false | null | undefined | '' | 0
 interface Props {
   items: MetaEntry[]
   className?: string
+  /**
+   * Let the run break onto further lines instead of staying on one. Every
+   * item still carries a seam on its left; the container is pulled left by
+   * the item padding and clips, so a seam that would start a new line falls
+   * outside and is never drawn.
+   */
+  wrap?: boolean
 }
 
 /**
@@ -37,11 +44,27 @@ interface Props {
  * Used by JobDetailModal's meta line, ExclusionsPanel rows, PipelineOverview's
  * legend counts, and the document lists in Settings/onboarding.
  */
-export default function MetaList({ items, className = '' }: Props): ReactElement {
+export default function MetaList({ items, className = '', wrap = false }: Props): ReactElement {
   const visible = items.filter(
     (item): item is MetaItem =>
       typeof item === 'object' && item !== null && item.value !== null && item.value !== undefined && item.value !== ''
   )
+
+  if (wrap) {
+    return (
+      <div className={`-ml-2 flex min-w-0 flex-wrap items-center gap-y-1 overflow-hidden ${className}`}>
+        {visible.map((item) => (
+          <span
+            key={item.key}
+            title={item.title}
+            className={['-ml-px border-l border-border-soft pl-2 pr-2', item.className ?? ''].filter(Boolean).join(' ')}
+          >
+            {item.value}
+          </span>
+        ))}
+      </div>
+    )
+  }
 
   return (
     <div className={`flex min-w-0 items-center ${className}`}>

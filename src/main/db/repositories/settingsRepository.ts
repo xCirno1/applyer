@@ -18,6 +18,7 @@ import {
   isRemoteBrowserSettings,
   type RemoteBrowserSettings
 } from '@shared/types/remoteBrowser'
+import { DEFAULT_RESUME_SETTINGS, type ResumeSettings } from '@shared/types/resume'
 import {
   DENIED_AGENT_PERMISSIONS,
   DEFAULT_AGENT_PERMISSIONS,
@@ -35,6 +36,7 @@ const REMOTE_BROWSER_KEY = 'remote_browser'
 const NOTIFICATION_PREFERENCES_KEY = 'notification_preferences'
 const NOTIFICATION_LOCALE_KEY = 'notification_locale'
 const AGENT_PERMISSIONS_KEY = 'agent_permissions'
+const RESUME_SETTINGS_KEY = 'resume_settings'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -201,4 +203,35 @@ export function getNotificationLocale(): NotificationLocale {
 
 export function setNotificationLocale(locale: NotificationLocale): void {
   setSetting(NOTIFICATION_LOCALE_KEY, locale)
+}
+
+/**
+ * How a missing variant is handled at fill time and whether the agent is told
+ * to tailor automatically. Unknown or corrupt values fall back to the
+ * defaults field by field: the original upload is the conservative
+ * attachment, and auto-tailoring is opt-in.
+ */
+export function getResumeSettings(): ResumeSettings {
+  const value = getSetting(RESUME_SETTINGS_KEY)
+  if (!value) return { ...DEFAULT_RESUME_SETTINGS }
+  try {
+    const parsed: unknown = JSON.parse(value)
+    const record = typeof parsed === 'object' && parsed !== null ? (parsed as Record<string, unknown>) : {}
+    return {
+      fallbackAttachment:
+        record.fallbackAttachment === 'master' || record.fallbackAttachment === 'original'
+          ? record.fallbackAttachment
+          : DEFAULT_RESUME_SETTINGS.fallbackAttachment,
+      autoTailor: typeof record.autoTailor === 'boolean' ? record.autoTailor : DEFAULT_RESUME_SETTINGS.autoTailor
+    }
+  } catch {
+    return { ...DEFAULT_RESUME_SETTINGS }
+  }
+}
+
+export function setResumeSettings(settings: ResumeSettings): void {
+  setSetting(
+    RESUME_SETTINGS_KEY,
+    JSON.stringify({ fallbackAttachment: settings.fallbackAttachment, autoTailor: settings.autoTailor })
+  )
 }

@@ -126,3 +126,20 @@ export const MAX_SLUG_CANDIDATES = settings.dangerousMaxSlugCandidates
  */
 export const ATS_PROBE_CONCURRENCY = settings.dangerousAtsProbeConcurrency
 export const ATS_PROBE_TIMEOUT_MS = settings.atsProbeTimeoutMs
+
+/**
+ * Caps on structured resume content (master and named variants).
+ *
+ * These bound what the agent can send through `set_master_resume` /
+ * `save_resume_variant` and what the editor will accept, so a runaway agent cannot
+ * store a megabyte of bullets that every preview then has to lay out. The
+ * values are well above any real resume: twenty sections of thirty entries
+ * is already several pages more than anyone should send a recruiter.
+ */
+export const RESUME_MAX_SECTIONS = settings.dangerousResumeMaxSections
+/** Entries in an `entries` section, groups in a `groups` section, items in a `list` section, or contacts in the header. */
+export const RESUME_MAX_ITEMS_PER_SECTION = settings.dangerousResumeMaxItemsPerSection
+/** Bullets under one entry, or items in one skills group. */
+export const RESUME_MAX_BULLETS_PER_ENTRY = settings.dangerousResumeMaxBulletsPerEntry
+/** Longest single string: a bullet, a `text` section body, a title. */
+export const RESUME_MAX_TEXT_CHARS = settings.dangerousResumeMaxTextChars

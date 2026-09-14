@@ -1,4 +1,12 @@
 import { z } from 'zod'
+import {
+  duplicateResumeIds,
+  resumeContentSchema,
+  resumePageSizeSchema,
+  resumeStyleSchema,
+  resumeTemplateIdSchema,
+  resumeVariantNameSchema
+} from '@shared/resume/resumeContentSchema'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTransfer'
 import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
@@ -50,6 +58,11 @@ const jobRecordSchema = z.object({
   queuedAt: z.string(),
   filledAt: z.string().nullable(),
   submittedAt: z.string().nullable(),
+  // Never trusted from a file: variant ids are minted on import, so the
+  // assignment travels as `resumeVariantName` and is re-linked afterwards.
+  resumeVariantId: z.null().catch(null),
+  // Optional so bundles written before named variants existed still import.
+  resumeVariantName: resumeVariantNameSchema.nullable().optional(),
   createdAt: z.string(),
   updatedAt: z.string()
 })
@@ -139,6 +152,29 @@ const profileFieldsSchema = z.object({
   additionalInformation: z.array(z.object({ question: z.string(), answer: z.string() })).default([])
 })
 
+// The same whole-document check IPC and MCP writes run: the zod shape only
+// sees one item at a time, and a hand-edited bundle with repeated ids would
+// otherwise land in the editor and the diff as two rows keyed the same.
+const uniqueIdResumeContentSchema = resumeContentSchema.superRefine((content, ctx) => {
+  const duplicates = duplicateResumeIds(content)
+  if (duplicates.length > 0) ctx.addIssue({ code: 'custom', message: `Duplicate ids: ${duplicates.join(', ')}` })
+})
+
+const resumesDataSchema = z.object({
+  master: z
+    .object({
+      content: uniqueIdResumeContentSchema,
+      templateId: resumeTemplateIdSchema,
+      pageSize: resumePageSizeSchema,
+      style: resumeStyleSchema.optional()
+    })
+    .nullable(),
+  variants: z.array(
+    z.object({ name: resumeVariantNameSchema, content: uniqueIdResumeContentSchema, templateId: resumeTemplateIdSchema })
+  ),
+  settings: z.object({ fallbackAttachment: z.enum(['original', 'master']), autoTailor: z.boolean() }).optional()
+})
+
 const settingsDataSchema = z.object({
   autoStartCommand: z.string(),
   indexedJobsRetentionDays: z.union([z.number().int().positive(), z.literal('unlimited')]),
@@ -189,6 +225,7 @@ const exportBundleSchema = z.object({
     exclusions: z.array(exclusionRecordSchema).optional(),
     companyBoards: z.array(companyBoardSchema).optional(),
     profile: profileFieldsSchema.nullable().optional(),
+    resumes: resumesDataSchema.optional(),
     settings: settingsDataSchema.optional(),
     theme: themeStateSchema.optional()
   })

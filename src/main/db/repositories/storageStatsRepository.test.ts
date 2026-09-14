@@ -21,6 +21,7 @@ describe('getStorageRowCounts', () => {
       exclusions: 0,
       companyBoards: 0,
       documents: 0,
+      resumeVariants: 0,
       activityLogEntries: 0
     })
   })
@@ -52,6 +53,7 @@ describe('getStorageRowCounts', () => {
       exclusions: 1,
       companyBoards: 1,
       documents: 0,
+      resumeVariants: 0,
       activityLogEntries: 1
     })
   })

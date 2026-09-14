@@ -5,10 +5,13 @@ import { importIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { importCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { boardKeyOf, isValidBoardDescriptor } from '../browser/ats/providers'
 import { saveProfile } from '../db/repositories/profileRepository'
+import { importResumes, linkVariantsByName } from '../db/repositories/resumeRepository'
+import type { ExportJobRecord, ExportResumesData } from '@shared/types/dataTransfer'
 import {
   setAutoStartCommand,
   setIndexedJobsRetentionDays,
-  setNotificationPreferences
+  setNotificationPreferences,
+  setResumeSettings
 } from '../db/repositories/settingsRepository'
 
 /**
@@ -55,6 +58,22 @@ export function applyImport(bundle: ExportBundle, selection: ExportSelection): I
   if (selection.profile && bundle.data.profile) {
     saveProfile(bundle.data.profile)
     summary.profile = true
+  }
+  if (selection.resumes && bundle.data.resumes) {
+    const resumes = bundle.data.resumes as ExportResumesData
+    summary.resumes = importResumes(resumes)
+    if (resumes.settings) {
+      setResumeSettings(resumes.settings)
+      summary.resumeSettings = true
+    }
+  }
+  // After both: a job names its variant, and the name only resolves once the
+  // variants (from this bundle, or already here) exist.
+  if (selection.jobs && bundle.data.jobs) {
+    const links = bundle.data.jobs
+      .filter((job): job is ExportJobRecord & { resumeVariantName: string } => !!job.resumeVariantName)
+      .map((job) => ({ jobUrl: job.url, variantName: job.resumeVariantName }))
+    if (links.length > 0) summary.resumeAssignments = linkVariantsByName(links)
   }
   if (selection.settings && bundle.data.settings) {
     setAutoStartCommand(bundle.data.settings.autoStartCommand)

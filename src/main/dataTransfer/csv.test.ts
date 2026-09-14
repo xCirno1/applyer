@@ -29,6 +29,7 @@ function job(overrides: Partial<JobRecord> = {}): JobRecord {
     queuedAt: '2020-01-01T00:00:00.000Z',
     filledAt: null,
     submittedAt: null,
+    resumeVariantId: null,
     createdAt: '2020-01-01T00:00:00.000Z',
     updatedAt: '2020-01-01T00:00:00.000Z',
     ...overrides
@@ -55,6 +56,13 @@ describe('jobsToCsv', () => {
     const csv = jobsToCsv([job()])
     const cells = csv.split('\r\n')[1]!.split(',')
     expect(cells[2]).toBe('') // Location
+    expect(cells[15]).toBe('') // Resume Variant, absent on a plain record
+  })
+
+  it('names the resume variant a job uses when the export shape carries it', () => {
+    const csv = jobsToCsv([{ ...job(), resumeVariantName: 'Backend' }])
+    expect(csv.split('\r\n')[0]).toContain('Resume Variant')
+    expect(csv.split('\r\n')[1]!.split(',')[15]).toBe('Backend')
   })
 
   it.each([

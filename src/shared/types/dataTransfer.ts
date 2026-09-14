@@ -7,6 +7,7 @@ import type { AtsProvider } from './companyBoard'
 import type { AppError } from './errorCodes'
 import type { NotificationPreferences } from './notification'
 import type { ThemeState } from './theme'
+import type { ResumeContent, ResumePageSize, ResumeSettings, ResumeTemplateId, ResumeStyle } from './resume'
 
 /**
  * Bumped whenever the export bundle shape changes in a way older imports can't
@@ -17,7 +18,15 @@ import type { ThemeState } from './theme'
  */
 export const EXPORT_SCHEMA_VERSION = 1
 
-export type ExportDomain = 'jobs' | 'indexedJobs' | 'exclusions' | 'companyBoards' | 'profile' | 'settings' | 'theme'
+export type ExportDomain =
+  | 'jobs'
+  | 'indexedJobs'
+  | 'exclusions'
+  | 'companyBoards'
+  | 'profile'
+  | 'resumes'
+  | 'settings'
+  | 'theme'
 
 export const ALL_EXPORT_DOMAINS: ExportDomain[] = [
   'jobs',
@@ -25,6 +34,7 @@ export const ALL_EXPORT_DOMAINS: ExportDomain[] = [
   'exclusions',
   'companyBoards',
   'profile',
+  'resumes',
   'settings',
   'theme'
 ]
@@ -38,6 +48,7 @@ export function allDomainsSelected(value = true): ExportSelection {
     exclusions: value,
     companyBoards: value,
     profile: value,
+    resumes: value,
     settings: value,
     theme: value
   }
@@ -56,11 +67,12 @@ export interface ExportBundle {
   exportedAt: string
   appVersion: string
   data: {
-    jobs?: JobRecord[]
+    jobs?: ExportJobRecord[]
     indexedJobs?: ExportIndexedJob[]
     exclusions?: ExclusionRecord[]
     companyBoards?: ExportCompanyBoard[]
     profile?: ProfileFields | null
+    resumes?: ExportResumesData
     settings?: ExportSettingsData
     /**
      * Unlike every other domain, never read or written by the main process —
@@ -71,6 +83,35 @@ export interface ExportBundle {
      */
     theme?: ThemeState
   }
+}
+
+/**
+ * A job as exported: the record plus the *name* of the resume variant it
+ * uses, since ids are minted afresh on import and the name is what a
+ * variant is known by. Resolved after both domains are imported (see
+ * `applyImport`); a name that matches nothing is counted, not an error.
+ * Optional so bundles written before named variants existed remain valid.
+ */
+export interface ExportJobRecord extends JobRecord {
+  resumeVariantName?: string | null
+}
+
+/**
+ * The structured master resume and its named variants. Timestamps are left
+ * out: the importing side stamps its own, and a variant is written against
+ * the imported master so none arrives stale. Which jobs use a variant
+ * travels with the jobs (`ExportJobRecord.resumeVariantName`), so a variant
+ * imports fine with no jobs at all. The attachment settings (what a job with
+ * no variant attaches, whether the agent tailors on its own) ride along here
+ * rather than in the settings domain: they only mean something next to the
+ * resumes they govern, and a restore that brought the master back but
+ * quietly went back to attaching the original upload would be a surprise.
+ * Optional so bundles written before they were exported remain valid.
+ */
+export interface ExportResumesData {
+  master: { content: ResumeContent; templateId: ResumeTemplateId; pageSize: ResumePageSize; style?: ResumeStyle } | null
+  variants: Array<{ name: string; content: ResumeContent; templateId: ResumeTemplateId }>
+  settings?: ResumeSettings
 }
 
 /**
@@ -149,6 +190,7 @@ export interface ExportSizes {
   exclusions: { json: number; csv: number }
   companyBoards: { json: number; csv: number }
   profile: { json: number }
+  resumes: { json: number }
   settings: { json: number }
   theme: { json: number }
   /** Fixed bytes of the bundle wrapper itself (schemaVersion/exportedAt/appVersion/`data: {}`) — present once whenever any domain is included in a JSON export, on top of the per-domain sizes above. */
@@ -182,6 +224,8 @@ export interface ImportDomainCounts {
   exclusions?: number
   companyBoards?: number
   profile?: number
+  /** Master (1 or 0) plus variants. */
+  resumes?: number
   settings?: number
   theme?: number
 }
@@ -203,6 +247,17 @@ export interface ImportSummary {
   /** `skipped` covers both an already-tracked board and one refused by the watchlist ceiling. */
   companyBoards?: { imported: number; skipped: number }
   profile?: boolean
+  /** `imported` counts the master (if any) plus variants; `skipped` is variants that could not be written (no master to base them on). */
+  resumes?: { imported: number; skipped: number }
+  /** The attachment settings that ride with the resumes domain were applied (the agent's instruction file depends on one of them). */
+  resumeSettings?: boolean
+  /**
+   * Job → variant assignments re-created from the jobs' `resumeVariantName`,
+   * present whenever the jobs domain was imported and any job named one.
+   * `unresolved` is a name no variant here has (the resumes domain was not
+   * selected, or the variant was deleted before the export).
+   */
+  resumeAssignments?: { linked: number; unresolved: number }
   settings?: boolean
   // No `theme` here: `applyImport` (main process) never touches that domain
   // — it's the renderer that reads `bundle.data.theme` off the same

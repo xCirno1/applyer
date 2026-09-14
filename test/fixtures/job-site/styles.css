@@ -85,3 +85,44 @@ button {
 [hidden] {
   display: none !important;
 }
+
+.upload-preview {
+  margin-top: 24px;
+}
+
+.upload-preview h2 {
+  font-size: 1.1rem;
+  margin: 0 0 12px;
+}
+
+.upload-meta {
+  display: grid;
+  gap: 4px 16px;
+  grid-template-columns: max-content 1fr;
+  margin: 0 0 12px;
+}
+
+.upload-meta dt {
+  opacity: 0.75;
+}
+
+.upload-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+#resume-frame {
+  border: 1px solid currentColor;
+  height: 720px;
+  margin-top: 12px;
+  width: 100%;
+}
+
+#resume-text {
+  border: 1px solid currentColor;
+  margin-top: 12px;
+  max-height: 480px;
+  overflow: auto;
+  padding: 12px;
+  white-space: pre-wrap;
+}

@@ -14,6 +14,7 @@ import {
 } from '../db/repositories/settingsRepository'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
+import { rewriteResumeStorageMode } from '../db/repositories/resumeRepository'
 import { isEncryptionAvailable } from '../db/encryption'
 import { logActivity } from '../db/repositories/activityLogRepository'
 import { computeStorageStats } from '../storageStats'
@@ -62,6 +63,7 @@ export function registerSettingsIpc(): void {
       for (const doc of listDocuments()) {
         await rewriteDocumentStorageMode(doc.id, mode)
       }
+      rewriteResumeStorageMode(mode)
       rewriteScreenshotStorageMode(mode)
       setLogStorageMode(mode)
 

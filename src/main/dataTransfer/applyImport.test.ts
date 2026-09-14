@@ -16,11 +16,15 @@ import { listAllExclusions, isUrlExcluded } from '../db/repositories/jobExclusio
 import { listAllIndexedJobs, upsertIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { getProfile } from '../db/repositories/profileRepository'
+import { listAllVariants, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
 import {
   getAutoStartCommand,
   getIndexedJobsRetentionDays,
-  getNotificationPreferences
+  getNotificationPreferences,
+  getResumeSettings,
+  setStorageMode
 } from '../db/repositories/settingsRepository'
+import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
 import { EXPORT_SCHEMA_VERSION, allDomainsSelected } from '@shared/types/dataTransfer'
 import type { ExportBundle, ExportSelection } from '@shared/types/dataTransfer'
 import type { JobRecord } from '@shared/types/job'
@@ -59,6 +63,7 @@ const jobFixture: JobRecord = {
   queuedAt: '2020-01-01T00:00:00.000Z',
   filledAt: null,
   submittedAt: null,
+  resumeVariantId: null,
   createdAt: '2020-01-01T00:00:00.000Z',
   updatedAt: '2020-01-01T00:00:00.000Z'
 }
@@ -190,6 +195,57 @@ describe('applyImport', () => {
     const result = applyImport(bundle({ jobs: [jobFixture] }), { ...NO_SELECTION, jobs: true, exclusions: true })
     expect(result.exclusions).toBeUndefined()
     expect(listAllExclusions()).toHaveLength(0)
+  })
+
+  it('imports resumes by name and re-links jobs to variants by name, counting unknown names', () => {
+    setStorageMode('plaintext')
+    const result = applyImport(
+      bundle({
+        jobs: [
+          { ...jobFixture, resumeVariantName: 'Backend' },
+          { ...jobFixture, id: 'external-2', url: 'https://example.com/imported-2', resumeVariantName: 'Gone' },
+          { ...jobFixture, id: 'external-3', url: 'https://example.com/imported-3', resumeVariantName: null }
+        ],
+        resumes: {
+          master: { content: SAMPLE_RESUME_CONTENT, templateId: 'modern', pageSize: 'a4' },
+          variants: [{ name: 'Backend', content: SAMPLE_RESUME_CONTENT, templateId: 'compact' }],
+          settings: { fallbackAttachment: 'master', autoTailor: true }
+        }
+      }),
+      { ...NO_SELECTION, jobs: true, resumes: true }
+    )
+    expect(result.jobs).toEqual({ imported: 3, skipped: 0 })
+    expect(result.resumes).toEqual({ imported: 2, skipped: 0 })
+    expect(getResumeSettings()).toEqual({ fallbackAttachment: 'master', autoTailor: true })
+    expect(result.resumeSettings).toBe(true)
+    expect(result.resumeAssignments).toEqual({ linked: 1, unresolved: 1 })
+    const backend = listAllVariants().find((variant) => variant.name === 'Backend')!
+    const jobs = listAllJobs()
+    expect(jobs.find((job) => job.url === 'https://example.com/imported')?.resumeVariantId).toBe(backend.id)
+    expect(jobs.find((job) => job.url === 'https://example.com/imported-2')?.resumeVariantId).toBeNull()
+    expect(jobs.find((job) => job.url === 'https://example.com/imported-3')?.resumeVariantId).toBeNull()
+  })
+
+  it('links jobs to variants that already exist here when only the jobs domain is selected, and reports nothing without names', () => {
+    setStorageMode('plaintext')
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    const backend = saveVariant({ name: 'backend', content: SAMPLE_RESUME_CONTENT })
+    const linked = applyImport(
+      bundle({
+        jobs: [{ ...jobFixture, resumeVariantName: 'Backend' }],
+        resumes: { master: null, variants: [{ name: 'Other', content: SAMPLE_RESUME_CONTENT, templateId: 'classic' }] }
+      }),
+      { ...NO_SELECTION, jobs: true }
+    )
+    expect(linked.resumes).toBeUndefined()
+    // Settings travel with the resumes domain, so a jobs-only import leaves them alone.
+    expect(getResumeSettings()).toEqual({ fallbackAttachment: 'original', autoTailor: false })
+    expect(linked.resumeAssignments).toEqual({ linked: 1, unresolved: 0 })
+    expect(listAllJobs()[0]?.resumeVariantId).toBe(backend.id)
+    expect(listAllVariants()).toHaveLength(1)
+
+    const plain = applyImport(bundle({ jobs: [{ ...jobFixture, id: 'x', url: 'https://example.com/plain' }] }), { ...NO_SELECTION, jobs: true })
+    expect(plain.resumeAssignments).toBeUndefined()
   })
 
   it('imports exclusions when selected and present', () => {

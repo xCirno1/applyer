@@ -5,6 +5,12 @@ import {
 } from '@shared/constants'
 import { getSettings } from '@shared/settings'
 import { isNavigableUrl } from '@shared/url'
+import {
+  resumeContentSchema,
+  resumePageSizeSchema,
+  resumeTemplateIdSchema,
+  resumeVariantNameSchema
+} from '@shared/resume/resumeContentSchema'
 
 const settings = getSettings()
 
@@ -170,4 +176,40 @@ export const listCompanyBoardsShape = {
   search: z.string().trim().max(200).optional(),
   limit: z.number().int().min(1).max(settings.dangerousMcpListCompanyBoardsMaxLimit).optional(),
   offset: z.number().int().min(0).optional()
+}
+
+/**
+ * Resume content is the one shape shared verbatim with the renderer's editor
+ * and the import schema (`@shared/resume/resumeContentSchema`), so the agent
+ * cannot store anything the user could not also have typed. Ids are the
+ * agent's own short tokens; `save_resume_variant` checks that every entry
+ * and group id already exists in the master, which is how a rephrased job is
+ * told apart from an invented one. Variants are addressed by name here (the
+ * agent and the user both talk about "the backend one"), never by id.
+ */
+export const getResumeShape = {
+  jobId: z.string().trim().min(1).optional()
+}
+
+export const setMasterResumeShape = {
+  content: resumeContentSchema,
+  templateId: resumeTemplateIdSchema.optional(),
+  pageSize: resumePageSizeSchema.optional(),
+  sourceDocumentId: z.string().trim().min(1).optional()
+}
+
+export const saveResumeVariantShape = {
+  name: resumeVariantNameSchema,
+  content: resumeContentSchema,
+  templateId: resumeTemplateIdSchema.optional(),
+  assignJobId: z.string().trim().min(1).optional()
+}
+
+export const assignResumeShape = {
+  jobId: z.string().trim().min(1),
+  variantName: resumeVariantNameSchema.nullable().optional()
+}
+
+export const deleteResumeVariantShape = {
+  name: resumeVariantNameSchema
 }

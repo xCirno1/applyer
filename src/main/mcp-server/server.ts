@@ -14,7 +14,12 @@ import {
   editApplicationShape,
   excludeJobShape,
   addCompanyBoardShape,
-  listCompanyBoardsShape
+  listCompanyBoardsShape,
+  getResumeShape,
+  setMasterResumeShape,
+  saveResumeVariantShape,
+  assignResumeShape,
+  deleteResumeVariantShape
 } from './schemas'
 import { getProfileTool } from './tools/getProfile'
 import { updateProfileTool } from './tools/updateProfile'
@@ -30,6 +35,11 @@ import { editApplicationTool } from './tools/editApplication'
 import { excludeJobTool } from './tools/excludeJob'
 import { addCompanyBoardTool } from './tools/addCompanyBoard'
 import { listCompanyBoardsTool } from './tools/listCompanyBoards'
+import { getResumeTool } from './tools/getResume'
+import { setMasterResumeTool } from './tools/setMasterResume'
+import { saveResumeVariantTool } from './tools/saveResumeVariant'
+import { assignResumeTool } from './tools/assignResume'
+import { deleteResumeVariantTool } from './tools/deleteResumeVariant'
 
 export function createApplyerMcpServer(): McpServer {
   const server = new McpServer({ name: 'applyer', version: APP_VERSION })
@@ -119,7 +129,7 @@ export function createApplyerMcpServer(): McpServer {
     {
       title: 'Inspect a job application form',
       description:
-        'Opens and retains a visible application form for a Queued job, then returns every supported field and explicitly recognized navigation button on the current visible step with opaque IDs. Fields include semantic labels, raw name/placeholder/autocomplete hints, control type, current value, required state, and available options. Password, hidden-step, arbitrary action, and final-action controls are omitted. A retained multi-step fill stays Queued and in fill mode across pages, including later document-upload steps. A Filled job can only re-inspect its original still-open form for editing. Labels and hints are context only and must never be used as identifiers. Inspection never changes the page or submits the application.',
+        'Opens and retains a visible application form for a Queued job, then returns every supported field and explicitly recognized navigation button on the current visible step with opaque IDs. Fields include semantic labels, raw name/placeholder/autocomplete hints, control type, current value, required state, and available options. storedDocuments lists the documents a file field may name (`resume`, `cover_letter`); a resume entry with source `variant` or `master` means the structured resume will be rendered and attached instead of an upload. Password, hidden-step, arbitrary action, and final-action controls are omitted. A retained multi-step fill stays Queued and in fill mode across pages, including later document-upload steps. A Filled job can only re-inspect its original still-open form for editing. Labels and hints are context only and must never be used as identifiers. Inspection never changes the page or submits the application.',
       inputSchema: inspectApplicationShape
     },
     inspectApplicationTool
@@ -141,7 +151,7 @@ export function createApplyerMcpServer(): McpServer {
     {
       title: 'Fill out a job application',
       description:
-        'Fills only the fieldId/value pairs supplied from the latest inspect_application result. By default it returns partially_filled and keeps the job Queued so later pages, including document-upload steps, remain fillable. Set finalStep to true only when every application page is complete and the retained form is ready for user review; that moves the job to Filled but never clicks or submits the ATS form. An empty answers list is accepted only for finalStep true, for a fieldless final review page. Never target a field by label. Use option values exactly as inspected. If permission is disabled, Applyer asks the user before changing the form.',
+        'Fills only the fieldId/value pairs supplied from the latest inspect_application result. For a file field, the value `resume` attaches the resume variant assigned to the job when there is one (see assign_resume and save_resume_variant), otherwise the master or the original upload per the user\'s setting; the inspect result\'s storedDocuments says which. By default it returns partially_filled and keeps the job Queued so later pages, including document-upload steps, remain fillable. Set finalStep to true only when every application page is complete and the retained form is ready for user review; that moves the job to Filled but never clicks or submits the ATS form. An empty answers list is accepted only for finalStep true, for a fieldless final review page. Never target a field by label. Use option values exactly as inspected. If permission is disabled, Applyer asks the user before changing the form.',
       inputSchema: fillApplicationShape
     },
     fillApplicationTool
@@ -194,6 +204,73 @@ export function createApplyerMcpServer(): McpServer {
       inputSchema: listCompanyBoardsShape
     },
     listCompanyBoardsTool
+  )
+
+  server.registerTool(
+    'get_resume',
+    {
+      title: 'Get the structured resume',
+      description:
+        "Returns the user's master resume as structured content (header, then ordered sections, each with a free-text title and one of four layouts: text, entries, groups, list), the list of saved resume variants (name, template, whether it is stale against the current master, and the jobs using it), and the resume settings. " +
+        'Pass `jobId` to also get the variant assigned to that job (or null) with its content and a diff summary against the master, and which resume fill_application will attach. ' +
+        "If no master exists the result says so and explains how to build one from the uploaded resume with set_master_resume. Call this before save_resume_variant (the variant must reuse the master's section, entry and group ids) and before assign_resume (to see which variants exist).",
+      inputSchema: getResumeShape
+    },
+    getResumeTool
+  )
+
+  server.registerTool(
+    'set_master_resume',
+    {
+      title: 'Set the master resume',
+      description:
+        "Creates or replaces the user's master resume: the structured source every resume variant is derived from and, depending on settings, what gets attached when a job has no variant assigned. " +
+        'Build it from the uploaded resume (get_profile with includeDocumentText true) or from what the user tells you. Keep every sentence as the user wrote it: this is a transcription into structure, not an edit. ' +
+        "Choose section titles from the source document, not from a fixed list, and pick each section's layout by shape: `text` for a summary paragraph, `entries` for dated items with bullets (jobs, degrees, projects, volunteering, publications), `groups` for labelled lists (skills by category, languages), `list` for flat items (certifications, awards). " +
+        'Give every section, entry, group and contact a short stable id (e.g. "exp-northwind") and never change an id once set; variants are matched to the master by id. Existing variants become stale when the master changes. ' +
+        "A contact's `value` is the visible text (the email, the phone number, or a short name like \"LinkedIn\" when `url` carries the full link, which prints as a hyperlink). An entry's `meta` is the location, printed under the dates. Group labels print with the template's own separator, so leave the trailing colon out.",
+      inputSchema: setMasterResumeShape
+    },
+    setMasterResumeTool
+  )
+
+  server.registerTool(
+    'save_resume_variant',
+    {
+      title: 'Save a named resume variant',
+      description:
+        "Creates or replaces a named, reusable resume variant: a full copy of the master's content rewritten with a focus (\"Backend-focused\", \"Detailed experience\", \"Concise one-page\", or a posting-specific one named after the job), which fill_application attaches for every job the variant is assigned to. Names match case-insensitively; saving an existing name replaces that variant's content for every job using it. " +
+        'Pass `assignJobId` to also assign the variant to that job in the same call (the usual way to tailor for one posting). ' +
+        "Start from get_resume (the master and the existing variants), read the posting with get_job_details, then: rewrite the summary for the role, reorder sections and bullets so the most relevant come first, reword bullets to use the posting's vocabulary where the underlying fact is the same, drop bullets and sections that do not help, and regroup skills. Adding a `text` or `list` section (a targeted summary, a short Highlights list) is fine. " +
+        'Never add a job, degree, project, or skill category the master does not have, and never state a fact the master does not support: every entry and group must keep an id from the master, and the call is refused if one does not. If the user has new experience, ask them and add it to the master with set_master_resume first. ' +
+        'Write in plain sentences: never use an em dash anywhere in resume text (use a comma, a colon, or two sentences instead), and no emoji. ' +
+        'Tell the user what you changed; they review the diff against the master in Applyer before the application is submitted.',
+      inputSchema: saveResumeVariantShape
+    },
+    saveResumeVariantTool
+  )
+
+  server.registerTool(
+    'assign_resume',
+    {
+      title: 'Choose which resume a job gets',
+      description:
+        "Points a tracked job at an existing resume variant by name, so fill_application attaches that variant for it; several jobs can share one variant. Leave `variantName` out (or null) to send the job back to the default: the master resume or the original upload, per the user's setting. " +
+        'Prefer this over writing a new variant when one of the existing variants already fits the posting (get_resume lists them with the jobs using each). The result says what will now be attached and whether the variant is stale against the current master.',
+      inputSchema: assignResumeShape
+    },
+    assignResumeTool
+  )
+
+  server.registerTool(
+    'delete_resume_variant',
+    {
+      title: 'Delete a resume variant',
+      description:
+        'Deletes a resume variant by name. Every job that used it goes back to the default attachment (the master or the original upload), and the result says how many jobs that affected. Use it when the user asks to discard a variant; to take a variant off one job without deleting it, use assign_resume with no variantName instead.',
+      inputSchema: deleteResumeVariantShape
+    },
+    deleteResumeVariantTool
   )
 
   return server

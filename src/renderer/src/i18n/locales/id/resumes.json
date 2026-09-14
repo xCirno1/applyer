@@ -1,0 +1,225 @@
+{
+  "tabs": {
+    "variants": "Varian",
+    "master": "Resume utama",
+    "templates": "Template"
+  },
+  "status": {
+    "current": "terkini",
+    "stale": "usang",
+    "tailored": "disesuaikan",
+    "unsaved": "perubahan belum disimpan",
+    "new": "baru"
+  },
+  "variants": {
+    "title": "Varian resume",
+    "count_other": "{{count}} varian",
+    "new": "Varian baru",
+    "newName": "Varian baru",
+    "tipLabel": "Tips:",
+    "tipBody": "Varian paling bagus ditulis oleh agen. Klik untuk melihat contoh kalimat yang bisa kamu katakan.",
+    "tipDismiss": "Sembunyikan tips ini",
+    "usedBy_other": "dipakai {{count}} lowongan",
+    "noMasterTitle": "Belum ada resume utama",
+    "noMasterBody": "Varian adalah salinan bernama dari resume utama, masing-masing ditulis ulang dengan fokus tertentu. Lowongan memilih salah satunya. Siapkan resume utama dulu.",
+    "goToMaster": "Siapkan resume utama",
+    "emptyTitle": "Belum ada varian",
+    "emptyBody": "Minta agen menulis varian (yang berfokus backend, yang ringkas satu halaman, atau untuk satu lowongan tertentu), atau mulai dari resume utama. Setiap lowongan lalu bisa diarahkan ke satu varian.",
+    "selectOne": "Pilih varian untuk melihat pratinjaunya.",
+    "loadFailed": "Varian ini tidak bisa dimuat.",
+    "staleTitle": "Berdasarkan resume utama yang lebih lama",
+    "staleBody": "Resume utama berubah setelah varian ini dibuat. Varian tetap dilampirkan seperti adanya; minta agen memperbaruinya, atau sunting di sini.",
+    "linkedJobs": "Dipakai oleh",
+    "noLinkedJobs": "Belum ada lowongan yang memakai varian ini. Pilih dari pemilih Resume di detail lowongan, atau minta agen menetapkannya.",
+    "nameRequired": "Beri nama varian sebelum menyimpan.",
+    "nameTaken": "Varian bernama \"{{name}}\" sudah ada. Pilih nama lain.",
+    "usedByNone": "tidak dipakai lowongan mana pun"
+  },
+  "details": {
+    "title": "Detail",
+    "template": "Template",
+    "pageSize": "Ukuran halaman",
+    "status": "Status",
+    "updated": "Diperbarui",
+    "source": "Diimpor dari",
+    "sourceNone": "Dibuat manual atau oleh agen",
+    "sourceRemoved": "unggahan yang sudah dihapus",
+    "changes": "Perubahan vs. resume utama",
+    "willAttach": "Dilampirkan ke lamaran",
+    "fontFamily": "Fon",
+    "fontSize": "Ukuran fon",
+    "linkStyle": "Tautan",
+    "name": "Nama",
+    "namePlaceholder": "Fokus backend, Ringkas satu halaman, ...",
+    "willAttachJobs_other": "{{count}} lowongan"
+  },
+  "view": {
+    "preview": "Pratinjau",
+    "edit": "Sunting",
+    "diff": "Perbedaan"
+  },
+  "actions": {
+    "exportPdf": "Ekspor PDF",
+    "exporting": "Mengekspor…",
+    "openJob": "Buka lowongan",
+    "deleteMaster": "Hapus resume utama",
+    "createEmpty": "Mulai dari resume kosong",
+    "save": "Simpan",
+    "saving": "Menyimpan…",
+    "discard": "Buang perubahan",
+    "deleteVariant": "Hapus varian",
+    "rename": "Ganti nama"
+  },
+  "confirm": {
+    "deleteMasterTitle": "Hapus resume utama?",
+    "deleteMasterMessage": "Resume utama terstruktur dan semua varian akan dihapus; lowongan kembali memakai unggahan aslimu. File yang diunggah tidak terpengaruh. Tindakan ini tidak bisa dibatalkan.",
+    "deleteMaster": "Hapus",
+    "discardTitle": "Tunggu, ada perubahan yang belum disimpan",
+    "discardMessage": "Suntinganmu pada \"{{name}}\" belum disimpan. Tinggalkan dan buang?",
+    "discard": "Buang perubahan",
+    "deleteVariantTitle": "Hapus varian ini?",
+    "deleteVariantMessage_other": "\"{{name}}\" akan dihapus. {{count}} lowongan memakainya dan akan memakai resume utama atau unggahan aslimu, sesuai pengaturan cadangan.",
+    "deleteVariant": "Hapus",
+    "deleteVariantMessageNone": "\"{{name}}\" akan dihapus. Tidak ada lowongan yang memakainya."
+  },
+  "toast": {
+    "variantSaved": "Varian tersimpan.",
+    "variantRemoved": "Resume yang disesuaikan dihapus.",
+    "masterSaved": "Resume utama tersimpan.",
+    "masterDeleted": "Resume utama dihapus.",
+    "settingsSaved": "Pengaturan resume tersimpan.",
+    "exported": "Diekspor ke {{path}}",
+    "saveFailed": "Tidak bisa menyimpan: {{message}}",
+    "variantCreated": "Varian \"{{name}}\" dibuat.",
+    "variantRenamed": "Varian diganti namanya menjadi \"{{name}}\".",
+    "variantRemoved_other": "Varian dihapus; {{count}} lowongan kembali ke resume bawaan.",
+    "variantAssigned": "Lowongan ini akan memakai \"{{name}}\".",
+    "variantUnassigned": "Lowongan ini akan memakai resume bawaan.",
+    "variantRemovedNone": "Varian dihapus."
+  },
+  "export": {
+    "dialogTitle": "Ekspor resume sebagai PDF",
+    "filterName": "Dokumen PDF"
+  },
+  "master": {
+    "emptyTitle": "Belum ada resume utama",
+    "emptyBody": "Resume utama adalah resumemu dalam bentuk konten terstruktur: header plus sejumlah bagian, masing-masing dengan judul dan tata letaknya sendiri. Agen bisa membangunnya dari resume yang kamu unggah, atau kamu bisa mulai dari nol.",
+    "emptyBodyNoUpload": "Unggah resume di Pengaturan > Dokumen supaya agen bisa mengimpornya, atau mulai dari nol di bawah.",
+    "fallback": "Kalau lowongan tidak punya varian, lampirkan",
+    "fallbackOriginal": "file asli yang diunggah",
+    "fallbackMaster": "resume utama, dirender",
+    "fallbackHint": "Unggahan asli mempertahankan tata letakmu sendiri; resume utama yang dirender memakai template terpilih sehingga semua lamaran tampil sama.",
+    "autoTailor": "Sesuaikan otomatis",
+    "autoTailorHint": "Memberi tahu agen untuk memilih varian resume bagi setiap lowongan yang diantrekan (yang sudah ada, atau yang baru kalau lowongannya memang perlu) sebelum mengisi lamaran. Kalau mati, agen hanya melakukannya saat kamu minta.",
+    "defaultTemplate": "Template bawaan",
+    "pageSizeLetter": "US Letter",
+    "pageSizeA4": "A4",
+    "templateDefault": "Bawaan templat",
+    "fontSizePt": "{{size}} pt"
+  },
+  "templates": {
+    "title": "Template",
+    "body": "Setiap resume dirender lewat salah satu tata letak ini. Pilih bawaannya di sini; varian bisa menimpanya.",
+    "sampleNote": "Ditampilkan dengan konten contoh sampai resume utama ada.",
+    "openPreview": "Buka pratinjau penuh {{name}}",
+    "select": "Jadikan bawaan",
+    "selected": "Bawaan",
+    "classic": {
+      "name": "Klasik",
+      "description": "Satu kolom, serif, header di tengah. Pilihan aman untuk industri apa pun."
+    },
+    "compact": {
+      "name": "Ringkas",
+      "description": "Sans-serif padat dengan spasi lebih rapat. Muat lebih banyak dalam satu halaman."
+    },
+    "modern": {
+      "name": "Modern",
+      "description": "Sans-serif dengan warna aksen dan tanggal di sisi kiri. Tetap satu kolom, tetap teks biasa."
+    }
+  },
+  "editor": {
+    "header": "Header",
+    "fullName": "Nama lengkap",
+    "headline": "Judul singkat",
+    "contacts": "Baris kontak",
+    "contactLabel": "Label",
+    "contactValue": "Nilai",
+    "contactUrl": "Tautan (opsional)",
+    "addContact": "Tambah baris kontak",
+    "sections": "Bagian",
+    "sectionTitle": "Judul bagian",
+    "untitledSection": "Bagian tanpa judul",
+    "addSection": "Tambah bagian",
+    "layout": "Tata letak",
+    "layoutText": "Paragraf",
+    "layoutEntries": "Entri bertanggal",
+    "layoutGroups": "Kelompok berlabel",
+    "layoutList": "Daftar biasa",
+    "layoutTextHint": "Satu paragraf: ringkasan atau tujuan.",
+    "layoutEntriesHint": "Item dengan judul, organisasi, tanggal, dan poin: pekerjaan, gelar, proyek.",
+    "layoutGroupsHint": "Daftar berlabel: keahlian per kategori, bahasa.",
+    "layoutListHint": "Daftar datar: sertifikasi, penghargaan, minat.",
+    "layoutLocked": "Tata letak hanya bisa diubah saat bagian masih kosong.",
+    "body": "Teks",
+    "entries": "Entri",
+    "addEntry": "Tambah entri",
+    "entryTitle": "Judul",
+    "entrySubtitle": "Organisasi",
+    "entryMeta": "Lokasi atau catatan",
+    "entryStart": "Mulai",
+    "entryEnd": "Selesai",
+    "entryUrl": "Tautan (opsional)",
+    "bullets": "Poin",
+    "addBullet": "Tambah poin",
+    "groups": "Kelompok",
+    "addGroup": "Tambah kelompok",
+    "groupLabel": "Label",
+    "groupItems": "Item",
+    "items": "Item",
+    "addItem": "Tambah item",
+    "oneItemPerLine": "satu per baris",
+    "moveUp": "Naikkan",
+    "moveDown": "Turunkan",
+    "remove": "Hapus",
+    "idsNote": "Bagian, entri, dan grup yang sudah ada mempertahankan id-nya saat disunting, jadi varian tetap cocok dengannya."
+  },
+  "diff": {
+    "title": "Perubahan terhadap resume utama",
+    "summary": "+{{added}} ditambah, -{{removed}} dihapus, ~{{changed}} diubah",
+    "short": "+{{added}} / -{{removed}} / ~{{changed}}",
+    "noChanges": "Varian ini identik dengan resume utama.",
+    "legend": "Hijau: ditambahkan. Merah dicoret: dihapus."
+  },
+  "prompts": {
+    "caption": "Katakan ini ke agen di terminal:",
+    "import": "Impor resume yang saya unggah ke resume utama di Applyer, pertahankan kata-katanya persis seperti aslinya.",
+    "importNoUpload": "Bantu saya menyusun resume utama di Applyer dari pengalaman yang saya ceritakan.",
+    "tailor": "Sesuaikan sebuah varian resume saya untuk posisi {{title}} di {{company}} dan jelaskan apa yang kamu ubah.",
+    "use": "Pakai varian resume \"{{name}}\" saya untuk posisi {{title}} di {{company}}, sesuaikan dengan lowongannya kalau perlu, dan jelaskan apa yang kamu ubah.",
+    "refresh": "Resume utama saya berubah; perbarui varian resume \"{{name}}\" saya terhadapnya.",
+    "write": "Tulis varian resume bernama \"Backend\" yang menonjolkan pekerjaan backend saya dan muat satu halaman.",
+    "writeHint": "Ganti nama dan fokusnya sesuai keinginanmu. Setelah ada, pilih dari pemilih Resume di detail lowongan.",
+    "send": "Kirim ke terminal"
+  },
+  "preview": {
+    "title": "Pratinjau resume",
+    "empty": "Belum ada yang bisa dipratinjau."
+  },
+  "fonts": {
+    "georgia": "Georgia",
+    "times": "Times New Roman",
+    "garamond": "Garamond",
+    "helvetica": "Helvetica / Arial",
+    "calibri": "Calibri",
+    "segoe": "Segoe UI / sans-serif sistem"
+  },
+  "linkStyles": {
+    "plain": "Sama seperti teks",
+    "blue": "Biru",
+    "underline": "Bergaris bawah"
+  },
+  "layout": {
+    "resizeList": "Ubah lebar daftar varian",
+    "resizeDetails": "Ubah lebar panel detail"
+  }
+}

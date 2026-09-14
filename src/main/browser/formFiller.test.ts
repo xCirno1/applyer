@@ -412,7 +412,7 @@ describe('fillForm', () => {
 
   it('never changes a file input during an edit', async () => {
     const { page, calls } = fakePage([{ fieldId: 'field-resume', selector: '#resume', label: 'Upload your résumé', control: 'file', inputType: 'file', required: true, currentValue: '' }])
-    const result = await fillForm(page, [{ fieldId: 'field-resume', value: 'resume' }], { allowFieldCompletion: true, allowDocumentUploads: false, updateDocuments: false, resumeFilePath: '/tmp/resume.pdf' })
+    const result = await fillForm(page, [{ fieldId: 'field-resume', value: 'resume' }], { allowFieldCompletion: true, allowDocumentUploads: false, updateDocuments: false, resumeFile: async () => ({ path: '/tmp/resume.pdf' }) })
     expect(calls.setInputFiles).not.toHaveBeenCalled()
     expect(result.skippedFields[0]).toContain('cannot be changed during editing')
     expect(result.requiredPermissions).toEqual([])

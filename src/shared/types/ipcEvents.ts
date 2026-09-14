@@ -65,6 +65,20 @@ export const IPC = {
     deleteDocument: 'profile:deleteDocument',
     onChanged: 'profile:changed'
   },
+  resumes: {
+    getMaster: 'resumes:getMaster',
+    saveMaster: 'resumes:saveMaster',
+    deleteMaster: 'resumes:deleteMaster',
+    listVariants: 'resumes:listVariants',
+    getVariant: 'resumes:getVariant',
+    saveVariant: 'resumes:saveVariant',
+    deleteVariant: 'resumes:deleteVariant',
+    assignVariant: 'resumes:assignVariant',
+    exportPdf: 'resumes:exportPdf',
+    getSettings: 'resumes:getSettings',
+    setSettings: 'resumes:setSettings',
+    onChanged: 'resumes:changed'
+  },
   onboarding: {
     getStatus: 'onboarding:getStatus',
     setStorageMode: 'onboarding:setStorageMode',
@@ -137,7 +151,12 @@ export const IPC = {
     import: 'data:import'
   },
   app: {
-    getInfo: 'app:getInfo'
+    getInfo: 'app:getInfo',
+    /** Renderer to main: whether any editor holds unsaved work (see renderer `state/unsavedChangesStore.ts`). */
+    setUnsavedChanges: 'app:setUnsavedChanges',
+    /** Main to renderer: a close was held back over unsaved work; ask, then `confirmClose` or do nothing. */
+    onCloseRequested: 'app:closeRequested',
+    confirmClose: 'app:confirmClose'
   },
   clipboard: {
     readText: 'clipboard:readText',

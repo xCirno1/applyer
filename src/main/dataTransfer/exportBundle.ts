@@ -7,13 +7,15 @@ import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
 import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { getProfile } from '../db/repositories/profileRepository'
+import { getMasterResume, listAllVariants, listVariantSummaries } from '../db/repositories/resumeRepository'
 import {
   getAutoStartCommand,
   getIndexedJobsRetentionDays,
-  getNotificationPreferences
+  getNotificationPreferences,
+  getResumeSettings
 } from '../db/repositories/settingsRepository'
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
-import type { ExportCompanyBoard } from '@shared/types/dataTransfer'
+import type { ExportCompanyBoard, ExportJobRecord, ExportResumesData } from '@shared/types/dataTransfer'
 import type { CompanyBoardRecord } from '@shared/types/companyBoard'
 
 /**
@@ -38,6 +40,35 @@ function exportableCompanyBoards(): ExportCompanyBoard[] {
   return listAllCompanyBoards().map(toExportBoard)
 }
 
+/** Content plus the attachment settings; timestamps and ids are regenerated on import (see `ExportResumesData`). */
+function exportableResumes(): ExportResumesData {
+  const master = getMasterResume()
+  return {
+    settings: getResumeSettings(),
+    master: master
+      ? { content: master.content, templateId: master.templateId, pageSize: master.pageSize, style: master.style }
+      : null,
+    variants: listAllVariants().map((variant) => ({
+      name: variant.name,
+      content: variant.content,
+      templateId: variant.templateId
+    }))
+  }
+}
+
+/**
+ * Jobs with the name of the variant each uses. Names are read from the
+ * summaries (no payload decrypted) rather than joined in the jobs query, so
+ * the jobs export stays a plain dump of the table.
+ */
+export function exportableJobs(): ExportJobRecord[] {
+  const names = new Map(listVariantSummaries().map((variant) => [variant.id, variant.name]))
+  return listAllJobs().map((job) => ({
+    ...job,
+    resumeVariantName: job.resumeVariantId ? (names.get(job.resumeVariantId) ?? null) : null
+  }))
+}
+
 /**
  * `theme` is unlike every other ingredient here: it isn't read from this
  * process's DB, it's whatever the renderer's current localStorage theme
@@ -47,11 +78,12 @@ function exportableCompanyBoards(): ExportCompanyBoard[] {
  */
 export function buildExportBundle(selection: ExportSelection, theme: ThemeState): ExportBundle {
   const data: ExportBundle['data'] = {}
-  if (selection.jobs) data.jobs = listAllJobs()
+  if (selection.jobs) data.jobs = exportableJobs()
   if (selection.indexedJobs) data.indexedJobs = listAllIndexedJobs()
   if (selection.exclusions) data.exclusions = listAllExclusions()
   if (selection.companyBoards) data.companyBoards = exportableCompanyBoards()
   if (selection.profile) data.profile = getProfile()
+  if (selection.resumes) data.resumes = exportableResumes()
   if (selection.settings) {
     data.settings = {
       autoStartCommand: getAutoStartCommand(),
@@ -97,11 +129,12 @@ export function bundleJsonBytes(data: ExportBundle['data']): number {
  * function's doc comment for why this is the one domain not read from the DB.
  */
 export function computeExportSizes(theme: ThemeState): ExportSizes {
-  const jobs = listAllJobs()
+  const jobs = exportableJobs()
   const indexedJobs = listAllIndexedJobs()
   const exclusions = listAllExclusions()
   const companyBoards = exportableCompanyBoards()
   const profile = getProfile()
+  const resumes = exportableResumes()
   const settings = {
     autoStartCommand: getAutoStartCommand(),
     indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
@@ -124,6 +157,7 @@ export function computeExportSizes(theme: ThemeState): ExportSizes {
       csv: Buffer.byteLength(companyBoardsToCsv(companyBoards), 'utf-8')
     },
     profile: { json: bundleJsonBytes({ profile }) - empty },
+    resumes: { json: bundleJsonBytes({ resumes }) - empty },
     settings: { json: bundleJsonBytes({ settings }) - empty },
     theme: { json: bundleJsonBytes({ theme }) - empty },
     wrapperBytes: empty

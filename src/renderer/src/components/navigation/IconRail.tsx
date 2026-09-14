@@ -2,18 +2,23 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import Tooltip from '../ui/Tooltip'
 
-export type RailPage = 'workspace' | 'indexedJobs'
+export type RailPage = 'workspace' | 'indexedJobs' | 'resumes'
 
-const ITEMS: { page: RailPage; labelKey: 'rail.jobBoard' | 'rail.discovery'; icon: (props: { className?: string }) => ReactElement }[] = [
+const ITEMS: {
+  page: RailPage
+  labelKey: 'rail.jobBoard' | 'rail.discovery' | 'rail.resumes'
+  icon: (props: { className?: string }) => ReactElement
+}[] = [
   { page: 'workspace', labelKey: 'rail.jobBoard', icon: BoardIcon },
-  { page: 'indexedJobs', labelKey: 'rail.discovery', icon: SearchIcon }
+  { page: 'indexedJobs', labelKey: 'rail.discovery', icon: SearchIcon },
+  { page: 'resumes', labelKey: 'rail.resumes', icon: DocumentIcon }
 ]
 
 /**
- * The left rail switching `App.tsx`'s `MainShell` between the Workspace and
- * Job Discovery screens (the rail label the `IndexedJobs` page screen
- * answers to, since that page holds Indexed, Company Boards and Excluded
- * rather than only the first). Sits below the shared full-width top bar
+ * The left rail switching `App.tsx`'s `MainShell` between the Workspace,
+ * Job Discovery and Resume Variants screens (the rail label the
+ * `IndexedJobs` page screen answers to, since that page holds Indexed,
+ * Company Boards and Excluded rather than only the first). Sits below the shared full-width top bar
  * rather than spanning the whole window height — two inline-SVG icon
  * buttons, active state is a left accent border (no icon background or
  * rounded badge, per the style guidelines). Settings deliberately stays off
@@ -58,6 +63,15 @@ function BoardIcon({ className }: { className?: string }): ReactElement {
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
       <rect x="3" y="4" width="18" height="16" rx="1" stroke="currentColor" strokeWidth="1.8" />
       <path d="M9 4v16M15 4v16" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  )
+}
+
+function DocumentIcon({ className }: { className?: string }): ReactElement {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+      <path d="M7 3h7l5 5v13H7z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M14 3v5h5M10 12h6M10 16h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
     </svg>
   )
 }

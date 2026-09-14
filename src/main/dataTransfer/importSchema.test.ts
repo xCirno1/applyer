@@ -4,6 +4,8 @@ import { EXPORT_SCHEMA_VERSION } from '@shared/types/dataTransfer'
 import type { ExportBundle } from '@shared/types/dataTransfer'
 import { DEFAULT_THEME_STATE, MAX_CSS_PRESETS, MAX_CUSTOM_CSS_LENGTH, MAX_PRESET_NAME_LENGTH } from '@shared/types/theme'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
+import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
+import { RESUME_VARIANT_NAME_MAX_CHARS } from '@shared/types/resume'
 
 function validBundle(): ExportBundle {
   return {
@@ -36,6 +38,7 @@ function validBundle(): ExportBundle {
           queuedAt: '2020-01-01T00:00:00.000Z',
           filledAt: null,
           submittedAt: null,
+          resumeVariantId: null,
           createdAt: '2020-01-01T00:00:00.000Z',
           updatedAt: '2020-01-01T00:00:00.000Z'
         }
@@ -105,6 +108,66 @@ describe('validateExportBundle', () => {
         data: { settings: { ...settings, notificationPreferences: { enabled: true } } }
       }).ok
     ).toBe(false)
+  })
+})
+
+describe('validateExportBundle: resumes and variant names', () => {
+  it('accepts variants by name and jobs naming a variant, normalising the names', () => {
+    const bundle = validBundle()
+    const job = bundle.data.jobs![0]!
+    const result = validateExportBundle({
+      ...bundle,
+      data: {
+        jobs: [{ ...job, resumeVariantName: '  Backend   focused ' }, { ...job, id: '2', url: 'https://example.com/2', resumeVariantName: null }],
+        resumes: {
+          master: { content: SAMPLE_RESUME_CONTENT, templateId: 'classic', pageSize: 'letter' },
+          variants: [{ name: ' Backend  focused', content: SAMPLE_RESUME_CONTENT, templateId: 'modern' }]
+        }
+      }
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.bundle.data.jobs?.[0]?.resumeVariantName).toBe('Backend focused')
+    expect(result.bundle.data.jobs?.[1]?.resumeVariantName).toBeNull()
+    expect(result.bundle.data.resumes?.variants[0]?.name).toBe('Backend focused')
+  })
+
+  it('never trusts a variant id from the file, and still accepts jobs written before names existed', () => {
+    const bundle = validBundle()
+    const job = bundle.data.jobs![0]!
+    const { resumeVariantId: _dropped, ...legacy } = job
+    void _dropped
+    const result = validateExportBundle({ ...bundle, data: { jobs: [{ ...legacy, resumeVariantId: 'from-file' }, legacy] } })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.bundle.data.jobs?.[0]?.resumeVariantId).toBeNull()
+    expect(result.bundle.data.jobs?.[1]?.resumeVariantId).toBeNull()
+  })
+
+  it('rejects an empty or over-long variant name, and the old per-job variant shape', () => {
+    const bundle = validBundle()
+    const resumes = { master: null, variants: [{ name: '   ', content: SAMPLE_RESUME_CONTENT, templateId: 'classic' }] }
+    expect(validateExportBundle({ ...bundle, data: { resumes } }).ok).toBe(false)
+    resumes.variants[0]!.name = 'x'.repeat(RESUME_VARIANT_NAME_MAX_CHARS + 1)
+    expect(validateExportBundle({ ...bundle, data: { resumes } }).ok).toBe(false)
+    const legacy = { master: null, variants: [{ jobId: 'j', content: SAMPLE_RESUME_CONTENT, templateId: 'classic' }] }
+    expect(validateExportBundle({ ...bundle, data: { resumes: legacy } }).ok).toBe(false)
+    const job = bundle.data.jobs![0]!
+    expect(validateExportBundle({ ...bundle, data: { jobs: [{ ...job, resumeVariantName: '' }] } }).ok).toBe(false)
+  })
+
+  it('rejects resume content with duplicate ids in the master or a variant', () => {
+    const bundle = validBundle()
+    const [first] = SAMPLE_RESUME_CONTENT.sections
+    const duplicated = { ...SAMPLE_RESUME_CONTENT, sections: [first!, { ...first!, title: 'Again' }] }
+    const okContent = { master: { content: SAMPLE_RESUME_CONTENT, templateId: 'classic', pageSize: 'letter' }, variants: [] }
+    expect(validateExportBundle({ ...bundle, data: { resumes: okContent } }).ok).toBe(true)
+
+    const badMaster = { master: { content: duplicated, templateId: 'classic', pageSize: 'letter' }, variants: [] }
+    expect(validateExportBundle({ ...bundle, data: { resumes: badMaster } }).ok).toBe(false)
+
+    const badVariant = { master: null, variants: [{ name: 'Backend', content: duplicated, templateId: 'classic' }] }
+    expect(validateExportBundle({ ...bundle, data: { resumes: badVariant } }).ok).toBe(false)
   })
 })
 

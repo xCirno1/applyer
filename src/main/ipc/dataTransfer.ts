@@ -13,18 +13,18 @@ import type {
   ImportApplyResult
 } from '@shared/types/dataTransfer'
 import { DEFAULT_THEME_STATE, type ThemeState } from '@shared/types/theme'
-import { listAllJobs } from '../db/repositories/jobsRepository'
 import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
 import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
-import { broadcastCompanyBoardsChanged, broadcastIndexedJobsChanged } from './jobsBroadcast'
+import { broadcastCompanyBoardsChanged, broadcastIndexedJobsChanged, broadcastResumesChanged } from './jobsBroadcast'
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from '../dataTransfer/csv'
 import { themeStateSchema, validateExportBundle } from '../dataTransfer/importSchema'
-import { buildExportBundle, computeExportSizes, filenameTimestamp } from '../dataTransfer/exportBundle'
+import { buildExportBundle, computeExportSizes, exportableJobs, filenameTimestamp } from '../dataTransfer/exportBundle'
 import { applyImport, requiresAutoStartReview } from '../dataTransfer/applyImport'
 import { csvTablePayload, dialogLabelsPayload, exportSelectionSchema } from './payloadSchemas'
 import { appLogger } from '../logger'
+import { writeAgentInstructions } from '../config/agentInstructions'
 
 /**
  * Dialog titles are cosmetic — the renderer translates them and passes them
@@ -94,7 +94,7 @@ export function registerDataTransferIpc(): void {
     const labels = readLabels(payload)
 
     const csvForTable: Record<CsvTable, () => string> = {
-      jobs: () => jobsToCsv(listAllJobs()),
+      jobs: () => jobsToCsv(exportableJobs()),
       exclusions: () => exclusionsToCsv(listAllExclusions()),
       companyBoards: () => companyBoardsToCsv(listAllCompanyBoards()),
       indexedJobs: () => indexedJobsToCsv(listAllIndexedJobs())
@@ -151,6 +151,9 @@ export function registerDataTransferIpc(): void {
         exclusions: bundle.data.exclusions?.length,
         companyBoards: bundle.data.companyBoards?.length,
         profile: bundle.data.profile ? 1 : undefined,
+        resumes: bundle.data.resumes
+          ? (bundle.data.resumes.master ? 1 : 0) + bundle.data.resumes.variants.length
+          : undefined,
         settings: bundle.data.settings ? 1 : undefined,
         theme: bundle.data.theme ? 1 : undefined
       }
@@ -192,6 +195,16 @@ export function registerDataTransferIpc(): void {
         // Same reasoning for the Indexed tab, which is push-updated for
         // exactly this kind of write happening while it sits mounted-but-hidden.
         if (summary.indexedJobs && summary.indexedJobs.imported > 0) broadcastIndexedJobsChanged()
+        // A jobs-only import can still point imported jobs at variants that
+        // already exist; the store's job-to-variant index is derived from
+        // the variant summaries, so those links need the same signal.
+        const resumesChanged = (summary.resumes?.imported ?? 0) > 0 || (summary.resumeAssignments?.linked ?? 0) > 0
+        if (resumesChanged) broadcastResumesChanged()
+        // The auto-tailor flag is baked into the agent's instruction file,
+        // which the settings IPC rewrites on every change; an import that
+        // changes it has to do the same or terminals opened before the
+        // next launch keep the old preference.
+        if (summary.resumeSettings) writeAgentInstructions()
         return { ok: true, summary }
       } catch (err) {
         return { ok: false, error: unexpectedError(err) }

@@ -4,6 +4,7 @@ import './logger'
 import { appLogger } from './logger'
 import { registerApplyerFileProtocol } from './protocols'
 import { createMainWindow } from './window'
+import { closeGuard } from './closeGuard'
 import { initDatabase, closeDatabase } from './db'
 import { registerTerminalIpc, setTerminalTarget } from './ipc/terminal'
 import { registerJobsIpc } from './ipc/jobs'
@@ -11,6 +12,7 @@ import { registerIndexedJobsIpc } from './ipc/indexedJobs'
 import { registerExclusionsIpc } from './ipc/exclusions'
 import { registerCompanyBoardsIpc } from './ipc/companyBoards'
 import { registerProfileIpc } from './ipc/profile'
+import { registerResumesIpc } from './ipc/resumes'
 import { registerOnboardingIpc } from './ipc/onboarding'
 import { registerBrowserControlIpc } from './ipc/browserControl'
 import { registerAgentPermissionsIpc } from './ipc/agentPermissions'
@@ -70,6 +72,7 @@ function installCrashHandlers(): void {
  */
 function openMainWindow(): BrowserWindow {
   const window = createMainWindow()
+  closeGuard.attach(window)
   setTerminalTarget(window.webContents)
   registerJobsBroadcastTarget(window.webContents)
   return window
@@ -143,6 +146,7 @@ function initializeApp(): void {
   registerExclusionsIpc()
   registerCompanyBoardsIpc()
   registerProfileIpc()
+  registerResumesIpc()
   registerOnboardingIpc()
   registerBrowserControlIpc()
   registerAgentPermissionsIpc()

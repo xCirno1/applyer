@@ -43,11 +43,13 @@
   },
   "rail": {
     "jobBoard": "Papan Lowongan",
-    "discovery": "Penemuan Lowongan"
+    "discovery": "Penemuan Lowongan",
+    "resumes": "Varian Resume"
   },
   "topBar": {
     "settings": "Pengaturan",
-    "backToWorkspace": "Kembali ke workspace"
+    "backToWorkspace": "Kembali ke workspace",
+    "terminalUnavailable": "Terminal tidak tersedia saat ini. Salin prompt saja."
   },
   "permissionPrompt": {
     "title": "Izin agen diperlukan",
@@ -132,5 +134,10 @@
     "app.toggleSettings": "Buka/tutup pengaturan"
   },
   "resizeOverview": "Ubah ukuran panel ringkasan",
-  "resizeDock": "Ubah ukuran dock konsol"
+  "resizeDock": "Ubah ukuran dock konsol",
+  "closeGuard": {
+    "title": "Tunggu, ada perubahan yang belum disimpan",
+    "message": "Resume yang sedang kamu sunting punya perubahan yang belum disimpan. Tetap tutup dan buang perubahannya?",
+    "confirm": "Tetap tutup"
+  }
 }

@@ -11,9 +11,18 @@
 
 export type DockTab = 'terminal' | 'logs'
 
+/**
+ * The rail screens the dock can sit under. The dock itself is one instance
+ * (one terminal session) mounted at the shell level; only *whether it is
+ * showing* is remembered per screen, since a tall resume preview and a
+ * kanban board want different amounts of the window.
+ */
+export type DockScreen = 'workspace' | 'indexedJobs' | 'resumes'
+export const DOCK_SCREENS: readonly DockScreen[] = ['workspace', 'indexedJobs', 'resumes']
+
 export interface WorkspaceLayout {
   sidebarVisible: boolean
-  dockVisible: boolean
+  dockVisible: Record<DockScreen, boolean>
   /** Pipeline sidebar width in px. */
   sidebarWidth: number
   /** Terminal/logs dock height in px. */
@@ -34,7 +43,7 @@ const MIN_BOARD_HEIGHT_PX = 200
 
 export const DEFAULT_WORKSPACE_LAYOUT: WorkspaceLayout = {
   sidebarVisible: true,
-  dockVisible: true,
+  dockVisible: { workspace: true, indexedJobs: true, resumes: true },
   sidebarWidth: 260,
   dockHeight: 280,
   dockTab: 'terminal'
@@ -65,6 +74,24 @@ function isDockTab(value: unknown): value is DockTab {
 }
 
 /**
+ * Before the dock was shared across screens `dockVisible` was a single
+ * boolean; a stored one still applies to every screen so an upgrade keeps
+ * the user's choice. An object is read key by key with the default for
+ * anything missing or not a boolean.
+ */
+function parseDockVisible(value: unknown): Record<DockScreen, boolean> {
+  if (typeof value === 'boolean') {
+    return { workspace: value, indexedJobs: value, resumes: value }
+  }
+  const record = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
+  const result = { ...DEFAULT_WORKSPACE_LAYOUT.dockVisible }
+  for (const screen of DOCK_SCREENS) {
+    if (typeof record[screen] === 'boolean') result[screen] = record[screen] as boolean
+  }
+  return result
+}
+
+/**
  * Rebuild a layout from whatever was in storage. Every field falls back
  * independently — this is user-writable storage, and a NaN width would
  * propagate straight into a style attribute (never trust received data).
@@ -83,7 +110,7 @@ export function parseWorkspaceLayout(raw: unknown): WorkspaceLayout {
 
   return {
     sidebarVisible: bool('sidebarVisible', DEFAULT_WORKSPACE_LAYOUT.sidebarVisible),
-    dockVisible: bool('dockVisible', DEFAULT_WORKSPACE_LAYOUT.dockVisible),
+    dockVisible: parseDockVisible(value.dockVisible),
     sidebarWidth: size('sidebarWidth', DEFAULT_WORKSPACE_LAYOUT.sidebarWidth, clampSidebarWidth),
     dockHeight: size('dockHeight', DEFAULT_WORKSPACE_LAYOUT.dockHeight, clampDockHeight),
     dockTab: isDockTab(value.dockTab) ? value.dockTab : DEFAULT_WORKSPACE_LAYOUT.dockTab

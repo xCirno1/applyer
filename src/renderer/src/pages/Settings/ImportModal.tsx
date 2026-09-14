@@ -18,6 +18,7 @@ const DOMAIN_KEYS = {
   exclusions: 'data.domainExclusions',
   companyBoards: 'data.domainCompanyBoards',
   profile: 'data.domainProfile',
+  resumes: 'data.domainResumes',
   settings: 'data.domainSettings',
   theme: 'data.domainTheme'
 } as const satisfies Record<ExportDomain, string>
@@ -28,11 +29,12 @@ const DOMAIN_ORDER: ExportDomain[] = [
   'exclusions',
   'companyBoards',
   'profile',
+  'resumes',
   'settings',
   'theme'
 ]
 
-const OVERWRITE_DOMAINS: ExportDomain[] = ['profile', 'settings', 'theme']
+const OVERWRITE_DOMAINS: ExportDomain[] = ['profile', 'resumes', 'settings', 'theme']
 
 /** The rest are merged into what's already there, so their hint counts rows rather than warning about a replacement. */
 const MERGE_DOMAINS: ExportDomain[] = ['jobs', 'indexedJobs', 'exclusions', 'companyBoards']
@@ -135,6 +137,12 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
     if (result.summary.companyBoards)
       parts.push(t('data.companyBoardsAdded', { count: result.summary.companyBoards.imported }))
     if (result.summary.profile) parts.push(t('data.profileUpdated'))
+    if (result.summary.resumes) parts.push(t('data.resumesAdded', { count: result.summary.resumes.imported }))
+    if (result.summary.resumeAssignments) {
+      const { linked, unresolved } = result.summary.resumeAssignments
+      if (linked > 0) parts.push(t('data.resumeAssignmentsLinked', { count: linked }))
+      if (unresolved > 0) parts.push(t('data.resumeAssignmentsUnresolved', { count: unresolved }))
+    }
     if (result.summary.settings) parts.push(t('data.settingsUpdated'))
     // Unlike every other domain, main never applies this one (it doesn't
     // have the renderer's localStorage) — it just carried `theme` through

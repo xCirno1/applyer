@@ -39,6 +39,12 @@ export type ErrorCode =
   | 'commandTooLong'
   | 'unsupportedFileType'
   | 'fileTooLarge'
+  // Structured resumes (master, named variants, PDF rendering).
+  | 'invalidResumeData'
+  | 'masterResumeMissing'
+  | 'variantNotFound'
+  | 'variantNameTaken'
+  | 'resumeRenderFailed'
   // Attaching to a running browser over its remote-debugging port (Settings > Browser).
   | 'invalidRemoteBrowserEndpoint'
   | 'remoteBrowserUnreachable'

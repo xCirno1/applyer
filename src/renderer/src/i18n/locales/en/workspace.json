@@ -45,11 +45,13 @@
   },
   "rail": {
     "jobBoard": "Job Board",
-    "discovery": "Job Discovery"
+    "discovery": "Job Discovery",
+    "resumes": "Resume Variants"
   },
   "topBar": {
     "settings": "Settings",
-    "backToWorkspace": "Back to workspace"
+    "backToWorkspace": "Back to workspace",
+    "terminalUnavailable": "The terminal is not available right now. Copy the prompt instead."
   },
   "permissionPrompt": {
     "title": "Agent permission required",
@@ -136,5 +138,10 @@
     "app.toggleSettings": "Open/close settings"
   },
   "resizeOverview": "Resize overview panel",
-  "resizeDock": "Resize console dock"
+  "resizeDock": "Resize console dock",
+  "closeGuard": {
+    "title": "Hold up, unsaved changes",
+    "message": "A resume you were editing has changes that have not been saved. Close anyway and lose them?",
+    "confirm": "Close anyway"
+  }
 }

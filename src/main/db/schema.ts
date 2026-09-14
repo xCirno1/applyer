@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 const nowIso = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
@@ -78,9 +78,64 @@ export const jobs = sqliteTable('jobs', {
   queuedAt: text('queued_at').notNull().default(nowIso),
   filledAt: text('filled_at'),
   submittedAt: text('submitted_at'),
+  /**
+   * The named resume variant this job's application attaches (see
+   * `resumeVariants`); null means the master or the original upload,
+   * whichever the fallback setting says. Cleared, not cascaded, when the
+   * variant is deleted: the job is still a job, it just goes back to the
+   * fallback. The reference is a lazy callback, so pointing at a table
+   * declared further down is fine.
+   */
+  resumeVariantId: text('resume_variant_id').references(() => resumeVariants.id, { onDelete: 'set null' }),
   createdAt: text('created_at').notNull().default(nowIso),
   updatedAt: text('updated_at').notNull().default(nowIso)
 })
+
+/**
+ * The user's resume as structured content (see `shared/types/resume.ts`),
+ * single row like `profile`. `secure_payload` is the field-encrypted JSON of
+ * `ResumeContent`: whole-database encryption already covers the row, but a
+ * resume is the most sensitive thing the app stores, so it gets the same
+ * envelope as the profile. Template and page size stay as plain columns since
+ * they carry nothing personal and the variant list reads them without
+ * decrypting anything.
+ */
+export const resumeMaster = sqliteTable('resume_master', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  securePayload: text('secure_payload').notNull(),
+  templateId: text('template_id').notNull().default('classic'),
+  pageSize: text('page_size').notNull().default('letter'),
+  /** JSON ResumeStyle (font family/size over the template); null means the template's own. */
+  style: text('style'),
+  /** No FK: the upload this was imported from may be deleted later without losing the master. */
+  sourceDocumentId: text('source_document_id'),
+  createdAt: text('created_at').notNull().default(nowIso),
+  updatedAt: text('updated_at').notNull().default(nowIso)
+})
+
+/**
+ * A named, reusable tailored copy of the master ("Backend-focused",
+ * "Concise one-page"). A full copy of the content rather than a patch, so it
+ * still renders after the master changes; the `based_on_master_updated_at`
+ * stamp is what marks it stale when that happens. Jobs point at a variant
+ * through `jobs.resume_variant_id` (many jobs, one variant), so deleting a
+ * job never deletes a variant and deleting a variant only unassigns its
+ * jobs. The name is unique case-insensitively, enforced in the repository;
+ * the index here is the exact-match backstop.
+ */
+export const resumeVariants = sqliteTable(
+  'resume_variants',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    securePayload: text('secure_payload').notNull(),
+    templateId: text('template_id').notNull(),
+    basedOnMasterUpdatedAt: text('based_on_master_updated_at').notNull(),
+    createdAt: text('created_at').notNull().default(nowIso),
+    updatedAt: text('updated_at').notNull().default(nowIso)
+  },
+  (table) => [uniqueIndex('resume_variants_name_unique').on(table.name)]
+)
 
 export const jobExclusions = sqliteTable('job_exclusions', {
   id: text('id').primaryKey(),

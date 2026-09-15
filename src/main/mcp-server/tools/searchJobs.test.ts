@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { createTestDb } from '../../db/testDb'
 import type * as schema from '../../db/schema'
+import * as schemaTables from '../../db/schema'
 
 let testDb: ReturnType<typeof drizzle<typeof schema>>
 vi.mock('../../db/index', () => ({ getDb: () => testDb }))
@@ -12,12 +13,15 @@ vi.mock('../../browser/jobSearch', () => ({ searchJobs: (...args: unknown[]) => 
 beforeEach(() => {
   testDb = createTestDb().db
   searchJobs.mockReset()
+  __resetRunTracker()
 })
 
 import { searchJobsTool } from './searchJobs'
 import { listActivity } from '../../db/repositories/activityLogRepository'
 import { listIndexedJobs } from '../../db/repositories/indexedJobsRepository'
 import { setSearchCountry } from '../../db/repositories/settingsRepository'
+import { createRun, loadRunEvents } from '../../db/repositories/runsRepository'
+import { __resetRunTracker } from '../../runs/runTracker'
 import type { JobSearchResultItem } from '../../browser/types'
 
 function parse(result: Awaited<ReturnType<typeof searchJobsTool>>): unknown {
@@ -116,5 +120,45 @@ describe('searchJobsTool', () => {
     searchJobs.mockResolvedValue({ results: [], searchedSources: [], warnings: [] })
     await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: 5 })
     expect(searchJobs).toHaveBeenCalledWith(expect.objectContaining({ limit: 5 }))
+  })
+
+  describe('run statistics', () => {
+    it('records the search with its per-source outcomes on the run in progress', async () => {
+      const run = createRun()
+      searchJobs.mockResolvedValue({
+        results: [resultItem()],
+        searchedSources: ['indeed', 'seek'],
+        warnings: ['seek: no listings matched'],
+        sourceOutcomes: { indeed: { results: 1, blocked: false, warned: false }, seek: { results: 0, blocked: false, warned: true } }
+      })
+      await searchJobsTool({ query: 'engineer', location: 'Sydney', remote: undefined, jobType: undefined, sources: undefined, country: 'au', limit: undefined })
+      const [event] = loadRunEvents(run.id)
+      expect(event).toMatchObject({
+        kind: 'search',
+        meta: {
+          query: 'engineer',
+          location: 'Sydney',
+          country: 'au',
+          results: 1,
+          failed: false,
+          sources: { indeed: { results: 1 }, seek: { warned: true } },
+          warnings: ['seek: no listings matched']
+        }
+      })
+      expect((event?.meta as { durationMs: number }).durationMs).toBeGreaterThanOrEqual(0)
+    })
+
+    it('records a failed search as failed', async () => {
+      const run = createRun()
+      searchJobs.mockRejectedValue(new Error('boom'))
+      await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
+      expect(loadRunEvents(run.id)[0]).toMatchObject({ kind: 'search', meta: { failed: true, results: 0, warnings: ['Error: boom'] } })
+    })
+
+    it('records nothing when no run is in progress', async () => {
+      searchJobs.mockResolvedValue({ results: [], searchedSources: [], warnings: [], sourceOutcomes: {} })
+      await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
+      expect(testDb.select().from(schemaTables.runEvents).all()).toHaveLength(0)
+    })
   })
 })

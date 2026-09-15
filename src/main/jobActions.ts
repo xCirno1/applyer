@@ -9,6 +9,8 @@ import {
   broadcastCaptchaResolved
 } from './ipc/jobsBroadcast'
 import { resumeGate } from './browser/captchaGate'
+import { recordRunEvent } from './runs/runTracker'
+import { detectSource } from './browser/sourceRouter'
 import type { JobRecord } from '@shared/types/job'
 import type { ExclusionRecord, ExcludedBy } from '@shared/types/exclusion'
 
@@ -19,11 +21,12 @@ import type { ExclusionRecord, ExcludedBy } from '@shared/types/exclusion'
  * rather than under mcp-server/ so browser/ doesn't have to import "up"
  * through the MCP layer.
  */
-export function failJob(jobId: string, reasonTag: string, message?: string | null): JobRecord {
+export function failJob(jobId: string, reasonTag: string, message?: string | null, by: 'agent' | 'app' = 'app'): JobRecord {
   ensureFailureTag(reasonTag)
   const job = setFailed(jobId, reasonTag, message)
   logActivity('warn', `Job failed: ${reasonTag}`, { jobId, message: message ?? undefined })
   broadcastJobUpdate(job)
+  recordRunEvent('job_failed', { source: job.source, jobId, meta: { reasonTag, by } })
   return job
 }
 
@@ -58,6 +61,7 @@ export function forceFillJob(jobId: string): JobRecord | null {
   }
   broadcastJobUpdate(job)
   logActivity('info', `Marked job Filled manually: ${job.title}`, { jobId, url: job.url })
+  recordRunEvent('job_marked_filled', { source: job.source, jobId })
   return job
 }
 
@@ -103,6 +107,11 @@ export function excludeJob(input: ExcludeJobInput): { exclusion: ExclusionRecord
   if (!result.wasExisting) {
     logActivity('info', `Excluded job posting (${input.excludedBy}): ${input.url}`, { reason: input.reason ?? undefined })
     broadcastExclusionsChanged()
+    recordRunEvent('job_excluded', {
+      source: trackedJob?.source ?? detectSource(input.url),
+      jobId: trackedJob?.id ?? null,
+      meta: { by: input.excludedBy, wasTracked: trackedJob !== null }
+    })
   }
 
   return result
@@ -140,6 +149,7 @@ export function unqueueJob(jobId: string): JobRecord | null {
   removeJob(jobId)
   broadcastJobRemoved(jobId)
   logActivity('info', `Unqueued job: ${job.title}`, { jobId, url: job.url })
+  recordRunEvent('job_unqueued', { source: job.source, jobId })
   return job
 }
 
@@ -170,6 +180,7 @@ export function removeCompletedJob(jobId: string): JobRecord | null {
   removeJob(jobId)
   broadcastJobRemoved(jobId)
   logActivity('info', `Removed completed job: ${job.title}`, { jobId, url: job.url, status: job.status })
+  recordRunEvent('job_removed', { source: job.source, jobId, meta: { status: job.status } })
   return job
 }
 

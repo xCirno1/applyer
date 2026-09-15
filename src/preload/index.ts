@@ -33,6 +33,14 @@ import type {
   ResumeStyle
 } from '@shared/types/resume'
 import type { ListActivityQuery, ListActivityResult } from '@shared/types/activity'
+import type {
+  ListRunEventsQuery,
+  ListRunEventsResult,
+  ListRunsQuery,
+  ListRunsResult,
+  RunRecord,
+  RunStats
+} from '@shared/types/run'
 import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
 import type {
   BoardCsvImportOptions,
@@ -459,6 +467,28 @@ const logsApi = {
   list: (query: ListActivityQuery): Promise<ListActivityResult> => ipcRenderer.invoke(IPC.logs.list, query)
 }
 
+type RunResult = { ok: true; run: RunRecord } | { ok: false; error: AppError }
+type RunWithStatsResult = { ok: true; run: RunRecord; stats: RunStats } | { ok: false; error: AppError }
+
+const runsApi = {
+  getActive: (): Promise<{ run: RunRecord | null; stats: RunStats | null }> => ipcRenderer.invoke(IPC.runs.getActive),
+  start: (label?: string | null): Promise<RunWithStatsResult> => ipcRenderer.invoke(IPC.runs.start, { label: label ?? null }),
+  stop: (): Promise<RunWithStatsResult> => ipcRenderer.invoke(IPC.runs.stop),
+  list: (query: ListRunsQuery): Promise<ListRunsResult> => ipcRenderer.invoke(IPC.runs.list, query),
+  get: (runId: string): Promise<RunResult> => ipcRenderer.invoke(IPC.runs.get, { runId }),
+  getStats: (runId: string): Promise<{ ok: true; stats: RunStats } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.runs.getStats, { runId }),
+  listEvents: (query: ListRunEventsQuery): Promise<ListRunEventsResult> => ipcRenderer.invoke(IPC.runs.listEvents, query),
+  rename: (runId: string, label: string | null): Promise<RunResult> => ipcRenderer.invoke(IPC.runs.rename, { runId, label }),
+  delete: (runId: string): Promise<{ ok: true } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.runs.delete, { runId }),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.runs.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.runs.onChanged, listener)
+  }
+}
+
 const appApi = {
   getInfo: (): Promise<AppInfo> => ipcRenderer.invoke(IPC.app.getInfo),
   setUnsavedChanges: (value: boolean): void => ipcRenderer.send(IPC.app.setUnsavedChanges, value),
@@ -508,6 +538,7 @@ const api = {
   settings: settingsApi,
   storageLocation: storageLocationApi,
   logs: logsApi,
+  runs: runsApi,
   app: appApi,
   data: dataApi
 }

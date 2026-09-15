@@ -19,6 +19,7 @@ import { registerAgentPermissionsIpc } from './ipc/agentPermissions'
 import { registerBrowserSetupIpc } from './ipc/browserSetup'
 import { registerSettingsIpc } from './ipc/settings'
 import { registerLogsIpc } from './ipc/logs'
+import { registerRunsIpc } from './ipc/runs'
 import { registerAppIpc } from './ipc/app'
 import { registerClipboardIpc } from './ipc/clipboard'
 import { registerDataTransferIpc } from './ipc/dataTransfer'
@@ -142,6 +143,7 @@ function initializeApp(): void {
   writeAgentInstructions()
 
   registerJobsIpc()
+  registerRunsIpc()
   registerIndexedJobsIpc()
   registerExclusionsIpc()
   registerCompanyBoardsIpc()

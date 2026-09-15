@@ -151,6 +151,45 @@ describe('detectCaptcha', () => {
     await expect(detectCaptcha(page)).resolves.toEqual({ blocked: true, reason: 'challenge_selector' })
   })
 
+  it("detects Cloudflare's current interstitial by its copy when its ids are randomised", async () => {
+    // Prosple (September 2026): a 403 titled "Just a moment..." whose element ids
+    // change per request, so no selector matches; the copy is the signal.
+    const { page } = fakePage({
+      bodyText:
+        'Just a moment...\nau.prosple.com Performing security verification This website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot.'
+    })
+    await expect(detectCaptcha(page)).resolves.toEqual({ blocked: true, reason: 'challenge_text' })
+  })
+
+  it('detects a visible Turnstile frame even though the widget is smaller than the size gate', async () => {
+    const { page } = fakePage({
+      frames: [
+        {
+          url: 'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/f/av0/x/light/fbE/new/normal',
+          element: { visible: true, box: { width: 300, height: 65 } }
+        }
+      ]
+    })
+    await expect(detectCaptcha(page)).resolves.toEqual({ blocked: true, reason: 'challenge_iframe' })
+  })
+
+  it('is not fooled by a hidden Turnstile frame (invisible mode on an ordinary form)', async () => {
+    const { page } = fakePage({
+      frames: [
+        {
+          url: 'https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/turnstile/f/av0/x/invisible',
+          element: { visible: false, box: null }
+        }
+      ]
+    })
+    await expect(detectCaptcha(page)).resolves.toEqual({ blocked: false })
+  })
+
+  it('does not read "a moment" in ordinary copy as a challenge', async () => {
+    const { page } = fakePage({ bodyText: 'Careers\nIt will only take a moment to apply. Just a moment ago we posted 3 roles.' })
+    await expect(detectCaptcha(page)).resolves.toEqual({ blocked: false })
+  })
+
   it('swallows a selector evaluation error and keeps checking rather than failing the whole check', async () => {
     const { page } = fakePage({
       locators: {

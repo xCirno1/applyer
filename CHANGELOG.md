@@ -90,6 +90,10 @@ Notable changes to Applyer are documented here. This project follows
   copied or decrypted from that browser's profile. Read-only job searches keep using
   Applyer's own headless browser, and the setting explains what opening that port exposes
   before it can be turned on.
+- Cloudflare's current "Just a moment..." interstitial (randomised element ids, a
+  Turnstile widget smaller than the old size gate) is now recognised as a challenge, so a
+  search on a site behind it (Prosple, for one) reports itself as blocked instead of as
+  "no listings matched".
 
 ## [1.0.0] - 2026-09-11
 

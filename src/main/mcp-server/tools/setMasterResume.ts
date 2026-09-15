@@ -4,6 +4,7 @@ import { saveMasterResume, listVariantSummaries } from '../../db/repositories/re
 import { isOnboardingCompleted } from '../../db/repositories/settingsRepository'
 import { listDocuments } from '../../db/repositories/documentsRepository'
 import { logActivity } from '../../db/repositories/activityLogRepository'
+import { recordRunEvent } from '../../runs/runTracker'
 import { broadcastResumesChanged } from '../../ipc/jobsBroadcast'
 import { validateResumeContent } from '@shared/resume/resumeContentSchema'
 import { jsonResult, textError } from '../toolResult'
@@ -45,6 +46,7 @@ export async function setMasterResumeTool(args: Args): Promise<CallToolResult> {
   const sections = master.content.sections.length
   logActivity('info', `Agent saved the master resume (${sections} sections)`, { templateId: master.templateId })
   broadcastResumesChanged()
+  recordRunEvent('resume_master_saved', { meta: { sections, templateId: master.templateId } })
 
   const staleVariants = listVariantSummaries().filter((variant) => variant.stale).length
   return jsonResult({

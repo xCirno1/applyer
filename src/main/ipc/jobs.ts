@@ -11,6 +11,7 @@ import {
   IllegalTransitionError
 } from '../db/repositories/jobsRepository'
 import { broadcastJobUpdate } from './jobsBroadcast'
+import { recordRunEvent } from '../runs/runTracker'
 import {
   excludeJob,
   excludeJobsByIds,
@@ -63,6 +64,7 @@ export function registerJobsIpc(): void {
     try {
       const job = setSubmitted(parsed.data.jobId)
       broadcastJobUpdate(job)
+      recordRunEvent('job_submitted', { source: job.source, jobId: job.id })
       return { ok: true, job }
     } catch (err) {
       return { ok: false, error: toJobError(err) }
@@ -88,6 +90,7 @@ export function registerJobsIpc(): void {
     try {
       const job = retry(parsed.data.jobId)
       broadcastJobUpdate(job)
+      recordRunEvent('job_retried', { source: job.source, jobId: job.id })
       return { ok: true, job }
     } catch (err) {
       return { ok: false, error: toJobError(err) }
@@ -96,7 +99,10 @@ export function registerJobsIpc(): void {
 
   ipcMain.handle(IPC.jobs.retryAll, () => {
     const updated = retryAllFailed()
-    for (const job of updated) broadcastJobUpdate(job)
+    for (const job of updated) {
+      broadcastJobUpdate(job)
+      recordRunEvent('job_retried', { source: job.source, jobId: job.id })
+    }
     return { ok: true, jobs: updated }
   })
 
@@ -104,7 +110,10 @@ export function registerJobsIpc(): void {
     const parsed = jobIdsPayload.safeParse(payload)
     if (!parsed.success) return { ok: false, jobs: [] }
     const updated = retryManyFailed(parsed.data.jobIds)
-    for (const job of updated) broadcastJobUpdate(job)
+    for (const job of updated) {
+      broadcastJobUpdate(job)
+      recordRunEvent('job_retried', { source: job.source, jobId: job.id })
+    }
     return { ok: true, jobs: updated }
   })
 

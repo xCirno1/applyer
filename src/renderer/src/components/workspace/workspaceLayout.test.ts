@@ -76,7 +76,7 @@ describe('parseWorkspaceLayout', () => {
   it('accepts a fully valid layout', () => {
     const layout = {
       sidebarVisible: false,
-      dockVisible: { workspace: false, indexedJobs: true, resumes: false },
+      dockVisible: { workspace: false, indexedJobs: true, resumes: false, runs: true },
       sidebarWidth: 300,
       dockHeight: 200,
       dockTab: 'logs'
@@ -88,7 +88,8 @@ describe('parseWorkspaceLayout', () => {
     expect(parseWorkspaceLayout({ dockVisible: false }).dockVisible).toEqual({
       workspace: false,
       indexedJobs: false,
-      resumes: false
+      resumes: false,
+      runs: false
     })
     expect(parseWorkspaceLayout({ dockVisible: true }).dockVisible).toEqual(DEFAULT_WORKSPACE_LAYOUT.dockVisible)
   })
@@ -97,7 +98,8 @@ describe('parseWorkspaceLayout', () => {
     expect(parseWorkspaceLayout({ dockVisible: { resumes: false, workspace: 'no' } }).dockVisible).toEqual({
       workspace: true,
       indexedJobs: true,
-      resumes: false
+      resumes: false,
+      runs: true
     })
     expect(parseWorkspaceLayout({ dockVisible: [false] }).dockVisible).toEqual(DEFAULT_WORKSPACE_LAYOUT.dockVisible)
     expect(parseWorkspaceLayout({ dockVisible: 'yes' }).dockVisible).toEqual(DEFAULT_WORKSPACE_LAYOUT.dockVisible)

@@ -17,6 +17,8 @@
   "invalidExport": "This file is not a valid Applyer export.",
   "autoStartReviewRequired": "Review and approve the imported auto-start command before importing it.",
   "jobNotFound": "Job not found.",
+  "runNotFound": "Run not found.",
+  "noActiveRun": "No run is in progress.",
   "jobNotQueued": "Job not found or no longer Queued.",
   "jobNotCompleted": "Job not found or no longer Filled or Submitted.",
   "illegalTransition": "That job is no longer {{from}}, so it can't be moved to {{to}}.",

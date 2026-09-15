@@ -11,6 +11,7 @@ import {
 } from '../../db/repositories/resumeRepository'
 import { isOnboardingCompleted } from '../../db/repositories/settingsRepository'
 import { logActivity } from '../../db/repositories/activityLogRepository'
+import { recordRunEvent } from '../../runs/runTracker'
 import { broadcastJobUpdate, broadcastResumesChanged } from '../../ipc/jobsBroadcast'
 import { validateResumeContent } from '@shared/resume/resumeContentSchema'
 import { diffResumeContent, unknownResumeIds } from '@shared/resume/resumeDiff'
@@ -119,6 +120,18 @@ export async function saveResumeVariantTool(args: Args): Promise<CallToolResult>
     }
   )
   broadcastResumesChanged()
+  recordRunEvent('resume_variant_saved', {
+    source: job?.source ?? null,
+    jobId: job?.id ?? null,
+    meta: {
+      name: variant.name,
+      replaced,
+      assigned: job !== null,
+      added: diff.summary.added,
+      removed: diff.summary.removed,
+      changed: diff.summary.changed
+    }
+  })
 
   const jobsUsing = listJobsUsingVariant(variant.id).length
   const assignedNote = job ? ` It is assigned to ${job.title} at ${job.company} and will be attached when fill_application uploads the resume for that job.` : ''

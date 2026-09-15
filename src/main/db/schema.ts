@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 const nowIso = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
@@ -236,3 +236,38 @@ export const activityLog = sqliteTable('activity_log', {
   meta: text('meta', { mode: 'json' }),
   createdAt: text('created_at').notNull().default(nowIso)
 })
+
+/**
+ * A run is a user-bounded stretch of agent work (see `shared/types/run.ts`);
+ * `run_events` is everything observed while it was in progress, one row per
+ * observation, and every statistic is folded from those rows on read rather
+ * than kept as a counter here. Neither table holds personal data (ids,
+ * source names, counts, reason tags and the search query only), so the
+ * whole-database encryption mode is the only envelope they need, same as
+ * `activity_log`. Events cascade with their run so deleting a run is one
+ * statement.
+ */
+export const runs = sqliteTable('runs', {
+  id: text('id').primaryKey(),
+  label: text('label'),
+  /** 1-based start order, for the default "Run #n" name; assigned by the repository. */
+  sequence: integer('sequence').notNull(),
+  startedAt: text('started_at').notNull().default(nowIso),
+  endedAt: text('ended_at')
+})
+
+export const runEvents = sqliteTable(
+  'run_events',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    runId: text('run_id')
+      .notNull()
+      .references(() => runs.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    source: text('source'),
+    jobId: text('job_id'),
+    meta: text('meta', { mode: 'json' }),
+    createdAt: text('created_at').notNull().default(nowIso)
+  },
+  (table) => [index('run_events_run_id_idx').on(table.runId, table.id)]
+)

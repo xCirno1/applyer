@@ -145,6 +145,19 @@ export const IPC = {
   logs: {
     list: 'logs:list'
   },
+  runs: {
+    getActive: 'runs:getActive',
+    start: 'runs:start',
+    stop: 'runs:stop',
+    list: 'runs:list',
+    get: 'runs:get',
+    getStats: 'runs:getStats',
+    listEvents: 'runs:listEvents',
+    rename: 'runs:rename',
+    delete: 'runs:delete',
+    /** Main to renderer, payload-less: the active run gained events or a run started/stopped/changed. */
+    onChanged: 'runs:changed'
+  },
   data: {
     exportJson: 'data:exportJson',
     exportCsv: 'data:exportCsv',

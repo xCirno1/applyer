@@ -37,6 +37,9 @@ browser. Final submission stays with you.
   and Workday boards.
 - **Work from a real pipeline** with queued, filled, submitted, and failed states,
   exclusions, filters, bulk actions, notifications, and a searchable audit trail.
+- **Measure each run** by starting one before handing the agent a task: searches and
+  results per site, jobs queued, forms filled, challenges hit, failures by reason and
+  every tool call are counted live, with a timeline and a history of past runs.
 - **Draft multi-page applications** through inspected fields and permission-gated
   navigation. The agent cannot access a final-submit action.
 - **Keep named resume variants** ("Backend-focused", "Concise one-page") built from a

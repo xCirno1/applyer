@@ -315,4 +315,38 @@ describe('searchJobs', () => {
     expect(outcome.results).toHaveLength(1)
     expect(outcome.warnings).toEqual([expect.stringContaining('board search exploded')])
   })
+
+  describe('per-source outcomes', () => {
+    it('reports what each site returned before dedupe, and whether it was blocked or warned', async () => {
+      const shared = { title: 'Same', company: 'Acme', location: 'Sydney' }
+      searchIndeed.mockResolvedValue({ results: [result('https://indeed.com/1', 'indeed', shared)], blocked: false })
+      searchSeek.mockResolvedValue({ results: [], blocked: false, warning: 'seek: no listings matched' })
+      searchProsple.mockResolvedValue({ results: [], blocked: true, warning: 'prosple: blocked by a verification challenge' })
+      searchJora.mockResolvedValue({ results: [result('https://au.jora.com/job/x-1', 'jora', shared)], blocked: false })
+      searchAtsBoards.mockResolvedValue({
+        results: [result('https://boards.greenhouse.io/acme/jobs/1', 'greenhouse'), result('https://jobs.lever.co/acme/1', 'lever')],
+        warnings: ['Acme (lever): could not be fetched (timeout).'],
+        searchedBoards: 3,
+        searchedProviders: ['greenhouse', 'lever']
+      })
+      const outcome = await searchJobs({ query: 'x', limit: 20, country: 'au' })
+      // Jora's copy is dropped from the results but still counted as what the site returned.
+      expect(outcome.results.map((row) => row.source)).not.toContain('jora')
+      expect(outcome.sourceOutcomes).toEqual({
+        indeed: { results: 1, blocked: false, warned: false },
+        linkedin: { results: 0, blocked: false, warned: false },
+        seek: { results: 0, blocked: false, warned: true },
+        jora: { results: 1, blocked: false, warned: false },
+        prosple: { results: 0, blocked: true, warned: true },
+        remotive: { results: 0, blocked: false, warned: false },
+        greenhouse: { results: 1, blocked: false, warned: false },
+        lever: { results: 1, blocked: false, warned: true }
+      })
+    })
+
+    it('leaves out sources that were not searched', async () => {
+      const outcome = await searchJobs({ query: 'x', limit: 20, country: 'de', sources: ['seek', 'indeed'] })
+      expect(Object.keys(outcome.sourceOutcomes)).toEqual(['indeed'])
+    })
+  })
 })

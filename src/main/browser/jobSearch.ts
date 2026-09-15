@@ -21,10 +21,22 @@ export interface SearchJobsParams {
   country?: SearchCountry
 }
 
+/** What one site did in a search, before cross-source dedupe, for the run statistics. */
+export interface SearchSourceOutcome {
+  /** Rows the site returned on its own, before dedupe against the other sites. */
+  results: number
+  /** The site answered with a verification challenge. */
+  blocked: boolean
+  /** The site came back with a warning (empty page, unrecognised layout, a board that could not be fetched). */
+  warned: boolean
+}
+
 export interface SearchJobsOutcome {
   results: JobSearchResultItem[]
   searchedSources: string[]
   warnings: string[]
+  /** Per searched source; the ATS providers are one entry each, with their boards' rows summed. */
+  sourceOutcomes: Record<string, SearchSourceOutcome>
 }
 
 /**
@@ -71,6 +83,7 @@ export async function searchJobs(params: SearchJobsParams): Promise<SearchJobsOu
   }
 
   const searchedSources: string[] = []
+  const sourceOutcomes: Record<string, SearchSourceOutcome> = {}
   // Held per source rather than appended to one list as each finishes, so the
   // final ordering doesn't depend on which network call returned first.
   const aggregatorResults = new Map<JobSource, JobSearchResultItem[]>()
@@ -90,6 +103,11 @@ export async function searchJobs(params: SearchJobsParams): Promise<SearchJobsOu
         searchedSources.push(adapter.source)
         if (result.warning) warnings.push(result.warning)
         aggregatorResults.set(adapter.source, result.results)
+        sourceOutcomes[adapter.source] = {
+          results: result.results.length,
+          blocked: result.blocked,
+          warned: result.warning !== undefined
+        }
       })()
     )
   }
@@ -110,6 +128,13 @@ export async function searchJobs(params: SearchJobsParams): Promise<SearchJobsOu
         searchedSources.push(...result.searchedProviders)
         warnings.push(...result.warnings)
         atsResults = result.results
+        for (const provider of result.searchedProviders) {
+          sourceOutcomes[provider] = {
+            results: result.results.filter((row) => row.source === provider).length,
+            blocked: false,
+            warned: result.warnings.some((warning) => warning.includes(`(${provider})`))
+          }
+        }
       })()
     )
   }
@@ -176,5 +201,5 @@ export async function searchJobs(params: SearchJobsParams): Promise<SearchJobsOu
   const aggregatorsMerged = interleaveByBoard(keptPerAggregator, params.limit)
   const results = interleaveByBoard([keptAts, aggregatorsMerged], params.limit)
 
-  return { results, searchedSources, warnings }
+  return { results, searchedSources, warnings, sourceOutcomes }
 }

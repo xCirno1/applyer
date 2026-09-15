@@ -18,6 +18,16 @@ import type { RunRecord, RunStats } from '@shared/types/run'
  * Statistics come folded from the main process rather than being kept here
  * as counters, so a reconnect or a restart mid-run shows the same numbers
  * the database holds.
+ *
+ * The history is read a page at a time, newest first: the first page on
+ * every refresh and older pages only when the header asks for them
+ * (`fetchMoreHistory`), so someone with hundreds of runs can still reach
+ * the oldest without every event burst re-reading all of them. A refresh
+ * re-reads only the first page and keeps the older pages already loaded;
+ * runs are appended at the top (a new run has the highest sequence) and a
+ * delete from this window is applied locally, so the kept tail only goes
+ * stale if another window renames an old run, which the next select
+ * corrects.
  */
 
 const HISTORY_PAGE = 50
@@ -32,13 +42,17 @@ interface RunsState {
   selectedRunId: string | null
   stats: RunStats | null
   history: RunRecord[]
+  /** How many runs exist in all; `history` holds the newest `history.length` of them. */
   historyTotal: number
+  /** True while an older page of the history is being read. */
+  historyLoadingMore: boolean
   loading: boolean
   loadedOnce: boolean
   /** True while start/stop/rename/delete is in flight; the header disables its controls. */
   acting: boolean
   fetchActive: () => Promise<void>
   fetchHistory: () => Promise<void>
+  fetchMoreHistory: () => Promise<void>
   select: (runId: string | null) => Promise<void>
   refresh: () => Promise<void>
   start: (label?: string | null) => Promise<ActionResult>
@@ -46,6 +60,20 @@ interface RunsState {
   rename: (runId: string, label: string | null) => Promise<ActionResult>
   remove: (runId: string) => Promise<ActionResult>
   subscribeToChanges: () => () => void
+}
+
+/**
+ * A fresh first page followed by the already-loaded runs older than it. A
+ * run the page also lists (renamed, or one that slid down after a delete)
+ * takes the page's copy. A page shorter than `pageSize` is the whole
+ * history, so anything loaded but missing from it was deleted elsewhere
+ * and is dropped rather than kept.
+ */
+export function keepOlderPages(firstPage: RunRecord[], loaded: RunRecord[], pageSize: number): RunRecord[] {
+  const oldest = firstPage[firstPage.length - 1]
+  if (!oldest || firstPage.length < pageSize) return firstPage
+  const listed = new Set(firstPage.map((run) => run.id))
+  return [...firstPage, ...loaded.filter((run) => run.sequence < oldest.sequence && !listed.has(run.id))]
 }
 
 async function statsFor(runId: string): Promise<RunStats | null> {
@@ -59,6 +87,7 @@ export const useRunsStore = create<RunsState>((set, get) => ({
   stats: null,
   history: [],
   historyTotal: 0,
+  historyLoadingMore: false,
   loading: false,
   loadedOnce: false,
   acting: false,
@@ -88,7 +117,24 @@ export const useRunsStore = create<RunsState>((set, get) => ({
       items: [],
       total: 0
     })
-    set({ history: result.items, historyTotal: result.total })
+    set({ history: keepOlderPages(result.items, get().history, HISTORY_PAGE), historyTotal: result.total })
+  },
+
+  fetchMoreHistory: async () => {
+    const { history, historyTotal, historyLoadingMore } = get()
+    if (historyLoadingMore || history.length >= historyTotal) return
+    set({ historyLoadingMore: true })
+    const result = await callIpc(
+      'runs.list',
+      () => window.api.runs.list({ limit: HISTORY_PAGE, offset: history.length }),
+      { items: [], total: historyTotal }
+    )
+    const known = new Set(get().history.map((run) => run.id))
+    set({
+      history: [...get().history, ...result.items.filter((run) => !known.has(run.id))],
+      historyTotal: result.total,
+      historyLoadingMore: false
+    })
   },
 
   select: async (runId) => {

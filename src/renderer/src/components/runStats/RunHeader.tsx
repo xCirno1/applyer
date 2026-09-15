@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import Button from '../ui/Button'
+import Spinner from '../ui/Spinner'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import Dropdown from '../ui/Dropdown'
 import Tag from '../ui/Tag'
@@ -19,13 +20,20 @@ import { RUN_LABEL_MAX_LENGTH } from '@shared/types/run'
  * (the repository does that to keep the invariant). The elapsed figure ticks
  * once a second from the run's own start stamp rather than counting locally,
  * so it survives a remount and agrees with the main process.
+ *
+ * The run picker lists the history a page at a time (`runsStore`), with a
+ * "show older" row under the list while there are runs it does not hold
+ * yet, so the oldest run stays reachable however many there are.
  */
 export default function RunHeader({
   active,
   selected,
   history,
+  historyTotal,
+  historyLoadingMore,
   acting,
   onSelect,
+  onLoadMore,
   onStart,
   onStop,
   onRename,
@@ -34,8 +42,11 @@ export default function RunHeader({
   active: RunRecord | null
   selected: RunRecord | null
   history: RunRecord[]
+  historyTotal: number
+  historyLoadingMore: boolean
   acting: boolean
   onSelect: (runId: string) => void
+  onLoadMore: () => void
   onStart: () => void
   onStop: () => void
   onRename: (runId: string, label: string | null) => Promise<boolean>
@@ -87,6 +98,7 @@ export default function RunHeader({
   }
 
   const inProgress = selected !== null && selected.endedAt === null
+  const older = Math.max(0, historyTotal - history.length)
 
   return (
     <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border-soft bg-canvas px-3">
@@ -101,6 +113,19 @@ export default function RunHeader({
           options={options}
           value={selected?.id ?? ''}
           onChange={onSelect}
+          footer={
+            older > 0 ? (
+              <button
+                type="button"
+                onClick={onLoadMore}
+                disabled={historyLoadingMore}
+                className="flex h-7 w-full cursor-pointer items-center gap-1.5 px-2.5 text-left text-[12px] text-text-muted hover:bg-canvas-soft hover:text-text disabled:cursor-default disabled:opacity-50"
+              >
+                {historyLoadingMore && <Spinner className="h-3 w-3" />}
+                {t('header.showOlder', { count: older })}
+              </button>
+            ) : null
+          }
         />
       )}
 

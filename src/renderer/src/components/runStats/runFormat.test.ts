@@ -50,4 +50,10 @@ describe('sourceLabel', () => {
     expect(sourceLabel('linkedin')).toBe('LinkedIn')
     expect(sourceLabel('somewhere-new')).toBe('somewhere-new')
   })
+
+  it('does not mistake inherited object properties for labels', () => {
+    expect(sourceLabel('__proto__')).toBe('__proto__')
+    expect(sourceLabel('toString')).toBe('toString')
+    expect(sourceLabel('constructor')).toBe('constructor')
+  })
 })

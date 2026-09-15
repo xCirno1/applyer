@@ -31,7 +31,15 @@ export function runDisplayName(run: Pick<RunRecord, 'label' | 'sequence'>, defau
   return run.label ?? defaultName(run.sequence)
 }
 
-/** A source's brand name, or the raw id for one this build does not know. */
+/**
+ * A source's brand name, or the raw id for one this build does not know.
+ * An own-property check rather than `in`: the id comes from whatever a run
+ * recorded, and an imported job can carry a source such as `__proto__` or
+ * `toString`, which `in` would resolve to an inherited object rather than
+ * a label and hand React something it cannot render.
+ */
 export function sourceLabel(source: string): string {
-  return source in JOB_SOURCE_LABELS ? JOB_SOURCE_LABELS[source as keyof typeof JOB_SOURCE_LABELS] : source
+  return Object.prototype.hasOwnProperty.call(JOB_SOURCE_LABELS, source)
+    ? JOB_SOURCE_LABELS[source as keyof typeof JOB_SOURCE_LABELS]
+    : source
 }

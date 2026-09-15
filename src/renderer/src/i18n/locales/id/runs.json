@@ -191,6 +191,8 @@
     "button_clicked_failed": "Klik tombol gagal pada {{job}}",
     "captcha_paused": "{{job}} dijeda karena tantangan verifikasi",
     "captcha_resolved": "{{job}} dilanjutkan setelah tantangan",
+    "captcha_paused_search": "Pencarian di {{source}} terhenti pada tantangan verifikasi",
+    "captcha_resolved_search": "Pencarian di {{source}} dilanjutkan setelah tantangan",
     "job_failed": "{{job}} gagal: {{reason}}",
     "job_submitted": "{{job}} ditandai Dikirim",
     "job_marked_filled": "{{job}} ditandai Terisi secara manual",

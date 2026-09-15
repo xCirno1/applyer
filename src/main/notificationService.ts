@@ -2,7 +2,8 @@ import { BrowserWindow, Notification } from 'electron'
 import { getNotificationLocale, getNotificationPreferences } from './db/repositories/settingsRepository'
 import { appLogger } from './logger'
 import { NOTIFICATION_CATALOGS, notificationMessage } from './notificationCatalogs'
-import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
+import { JOB_SOURCE_LABELS } from '@shared/types/jobSource'
+import type { CaptchaDetectedPayload, SearchChallengePayload } from '@shared/types/ipcEvents'
 import type { AgentPermissionRequest } from '@shared/types/agentPermissions'
 import type { JobRecord } from '@shared/types/job'
 import type { NotificationLocale, NotificationPreferences, NotificationTestKind } from '@shared/types/notification'
@@ -37,6 +38,16 @@ export function contentForVerification(
 ): DesktopNotificationContent | null {
   if (!preferences.enabled || !preferences.verificationRequired) return null
   return notificationMessage(locale, 'verificationRequired', payload.jobTitle, payload.company)
+}
+
+/** Same preference as a job's verification: it is the same "come and solve this" ask. */
+export function contentForSearchVerification(
+  payload: SearchChallengePayload,
+  preferences: NotificationPreferences,
+  locale: NotificationLocale = 'en'
+): DesktopNotificationContent | null {
+  if (!preferences.enabled || !preferences.verificationRequired) return null
+  return notificationMessage(locale, 'searchVerificationRequired', JOB_SOURCE_LABELS[payload.source], payload.host)
 }
 
 export function contentForPermissionRequest(
@@ -126,6 +137,15 @@ export function notifyForVerification(payload: CaptchaDetectedPayload): void {
     if (content) showDesktopNotification(content)
   } catch (err) {
     appLogger.warn(`Could not prepare verification notification: ${String(err)}`)
+  }
+}
+
+export function notifyForSearchVerification(payload: SearchChallengePayload): void {
+  try {
+    const content = contentForSearchVerification(payload, getNotificationPreferences(), getNotificationLocale())
+    if (content) showDesktopNotification(content)
+  } catch (err) {
+    appLogger.warn(`Could not prepare search verification notification: ${String(err)}`)
   }
 }
 

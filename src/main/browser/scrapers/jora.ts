@@ -1,5 +1,4 @@
-import { newHeadlessContext } from '../browserController'
-import { detectCaptcha } from '../captchaDetector'
+import { readSearchPage } from '../searchPage'
 import { SEARCH_COUNTRY_TIME_ZONES, aggregatorHost } from '@shared/types/jobSource'
 import { extractJoraSearchCards, type JoraCard } from './dom/jora'
 import { relativeListingDate } from './listingDate'
@@ -24,9 +23,6 @@ import type { AggregatorSearchParams, AggregatorSearchResult, JobDetailsOutcome,
  * challenge in the app's headless browser. Posting pages carry no JSON-LD,
  * so the selectors are the whole story there.
  */
-
-const NAVIGATION_TIMEOUT_MS = 20000
-const SETTLE_TIMEOUT_MS = 6000
 
 /**
  * The posting URL as Jora itself canonicalises it: the `/job/…` path on the
@@ -72,46 +68,40 @@ export async function searchJora(params: AggregatorSearchParams): Promise<Aggreg
     return { results: [], blocked: false, warning: `jora: no edition for country "${params.country}"` }
   }
 
-  const context = await newHeadlessContext()
-  try {
-    const page = await context.newPage()
-    const search = new URLSearchParams({ q: params.query })
-    if (params.location) search.set('l', params.location)
+  const search = new URLSearchParams({ q: params.query })
+  if (params.location) search.set('l', params.location)
 
-    await page.goto(`https://${host}/j?${search.toString()}`, {
-      waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT_MS
-    })
-    await page.waitForSelector('.job-card, [data-job-id]', { timeout: SETTLE_TIMEOUT_MS }).catch(() => undefined)
-
-    const captcha = await detectCaptcha(page)
-    if (captcha.blocked) {
-      return { results: [], blocked: true, warning: `jora: blocked by a verification challenge (${captcha.reason})` }
-    }
-
-    const cards = await page.evaluate(extractJoraSearchCards, null)
-    const now = new Date()
-    const seen = new Set<string>()
-    const results: JobSearchResultItem[] = []
-    for (const card of cards) {
-      const item = joraCardToResult(card, host, now, SEARCH_COUNTRY_TIME_ZONES[params.country])
-      if (!item || seen.has(item.url)) continue
-      seen.add(item.url)
-      results.push(item)
-      if (results.length >= params.limit) break
-    }
-
-    if (results.length === 0) {
-      return {
-        results,
-        blocked: false,
-        warning: `jora: no listings matched on ${host} (or the page layout was not recognised)`
+  const outcome = await readSearchPage({
+    source: 'jora',
+    host,
+    url: `https://${host}/j?${search.toString()}`,
+    waitFor: '.job-card, [data-job-id]',
+    read: async (page) => {
+      const cards = await page.evaluate(extractJoraSearchCards, null)
+      const now = new Date()
+      const seen = new Set<string>()
+      const results: JobSearchResultItem[] = []
+      for (const card of cards) {
+        const item = joraCardToResult(card, host, now, SEARCH_COUNTRY_TIME_ZONES[params.country])
+        if (!item || seen.has(item.url)) continue
+        seen.add(item.url)
+        results.push(item)
+        if (results.length >= params.limit) break
       }
+      return results
     }
-    return { results, blocked: false }
-  } finally {
-    await context.close()
+  })
+  if (outcome.status === 'blocked') return { results: [], blocked: true, warning: outcome.warning }
+
+  const results = outcome.value
+  if (results.length === 0) {
+    return {
+      results,
+      blocked: false,
+      warning: `jora: no listings matched on ${host} (or the page layout was not recognised)`
+    }
   }
+  return { results, blocked: false }
 }
 
 export async function fetchJoraJobDetails(url: string): Promise<JobDetailsOutcome> {

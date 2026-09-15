@@ -50,6 +50,11 @@
     "outro": "Company boards you track (Greenhouse, Lever, Ashby, Workday) are searched regardless of country.",
     "saved": "Job searches will use the {{country}} editions.",
     "saveFailed": "Could not save the job search country.",
+    "challengeFallback": "When a site refuses a headless search, open it in the application browser and ask me to clear its verification challenge",
+    "challengeFallbackHint": "Some sites (Prosple, for one) answer Applyer's hidden browser with a challenge no matter what and clear the same page in a visible window within seconds. With this on, a search that gets refused opens the page in the application browser (or your attached browser) and a banner asks you to look at it; with it off, the site is reported as blocked and the other sites carry on.",
+    "challengeFallbackSaved": "Refused searches will open in the application browser.",
+    "challengeFallbackOff": "Refused searches will be reported as blocked.",
+    "challengeFallbackSaveFailed": "Could not save the setting.",
     "sources": {
       "indeed": "General job board with a separate edition and index per country.",
       "linkedin": "One worldwide site; narrowed by the location you give the search, not by country.",

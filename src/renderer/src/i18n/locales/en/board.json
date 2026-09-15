@@ -156,6 +156,10 @@
     "cancel": "Cancel",
     "resuming": "Resuming \"{{title}}\"…",
     "movedToFailed": "\"{{title}}\" moved to Failed.",
-    "stillBlocked": "Still blocked. Finish the challenge in the browser window first."
+    "stillBlocked": "Still blocked. Finish the challenge in the browser window first.",
+    "searchMessage": "<1>{{site}}</1> ({{host}}) wants a verification challenge solved before it answers the job search. Solve it in the browser window that opened; most clear on their own within seconds.",
+    "searchResuming": "Reading the {{site}} results…",
+    "searchSkipped": "{{site}} skipped for this search.",
+    "skipSource": "Skip this site"
   }
 }

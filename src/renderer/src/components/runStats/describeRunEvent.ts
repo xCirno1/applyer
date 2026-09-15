@@ -74,9 +74,13 @@ export function describeRunEvent(event: RunEventView, t: T): string {
         ? t('events.button_clicked', { job, label: str(meta.label) ?? '?' })
         : t('events.button_clicked_failed', { job })
     case 'captcha_paused':
-      return t('events.captcha_paused', { job })
+      return meta.search === true
+        ? t('events.captcha_paused_search', { source: source(event) })
+        : t('events.captcha_paused', { job })
     case 'captcha_resolved':
-      return t('events.captcha_resolved', { job })
+      return meta.search === true
+        ? t('events.captcha_resolved_search', { source: source(event) })
+        : t('events.captcha_resolved', { job })
     case 'job_failed':
       return t('events.job_failed', { job, reason: str(meta.reasonTag) ?? 'other' })
     case 'job_submitted':

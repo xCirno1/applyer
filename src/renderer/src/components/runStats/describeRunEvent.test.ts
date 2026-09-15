@@ -92,6 +92,18 @@ describe('describeRunEvent', () => {
     expect(describeRunEvent(event('tool_call', { meta: { tool: 'queue_job', isError: true } }), t)).toBe('queue_job answered with an error')
   })
 
+  it('tells a search waiting on a challenge apart from a job doing so', () => {
+    expect(describeRunEvent(event('captcha_paused', { ...withJob }), t)).toBe(
+      'Backend Engineer at Acme paused on a verification challenge'
+    )
+    expect(describeRunEvent(event('captcha_paused', { source: 'prosple', meta: { search: true, reason: 'challenge_text' } }), t)).toBe(
+      'A search on Prosple paused on a verification challenge'
+    )
+    expect(describeRunEvent(event('captcha_resolved', { source: 'prosple', meta: { search: true } }), t)).toBe(
+      'The search on Prosple resumed after the challenge'
+    )
+  })
+
   it('never leaves a placeholder unfilled for any kind with empty meta', () => {
     const kinds: RunEventKind[] = [
       'search',

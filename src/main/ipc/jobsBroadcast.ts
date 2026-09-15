@@ -4,6 +4,8 @@ import type { JobRecord } from '@shared/types/job'
 import type {
   CaptchaDetectedPayload,
   CaptchaResolvedPayload,
+  SearchChallengePayload,
+  SearchChallengeResolvedPayload,
   BrowserDownloadProgressPayload,
   BrowserSetupStatusPayload
 } from '@shared/types/ipcEvents'
@@ -14,7 +16,8 @@ import {
   clearPermissionRequestNotification,
   notifyForJobUpdate,
   notifyForPermissionRequest,
-  notifyForVerification
+  notifyForVerification,
+  notifyForSearchVerification
 } from '../notificationService'
 
 let webContentsRef: WebContents | null = null
@@ -139,6 +142,19 @@ export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void 
 export function broadcastCaptchaResolved(payload: CaptchaResolvedPayload): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {
     webContentsRef.send(IPC.browserControl.onCaptchaResolved, payload)
+  }
+}
+
+export function broadcastSearchChallengeDetected(payload: SearchChallengePayload): void {
+  notifyForSearchVerification(payload)
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.browserControl.onSearchChallengeDetected, payload)
+  }
+}
+
+export function broadcastSearchChallengeResolved(payload: SearchChallengeResolvedPayload): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.browserControl.onSearchChallengeResolved, payload)
   }
 }
 

@@ -477,6 +477,22 @@ describe('browserController: attaching to a running browser', () => {
     expect(launchMock).not.toHaveBeenCalled()
   })
 
+  it('launches its own window instead when asked to, and only for an unreachable endpoint', async () => {
+    connectOverCDPMock.mockRejectedValue(new Error('browserType.connectOverCDP: connect ECONNREFUSED 127.0.0.1:9222'))
+    launchMock.mockResolvedValueOnce(createFakeBrowser())
+    const headed = await openHeadedBrowser({ whenUnreachable: 'launch' })
+    expect(headed.browser).toBeTruthy()
+    expect(launchMock).toHaveBeenCalledWith(expect.objectContaining({ headless: false }))
+
+    // A browser that answered but exposes no profile is a different failure
+    // and still surfaces: the setting is misconfigured, not merely off.
+    launchMock.mockClear()
+    const fake = createFakeAttachedBrowser({ defaultContext: false })
+    connectOverCDPMock.mockResolvedValue(fake.browser)
+    await expect(openHeadedBrowser({ whenUnreachable: 'launch' })).rejects.toThrow('exposes no profile to attach to')
+    expect(launchMock).not.toHaveBeenCalled()
+  })
+
   it('disconnects and fails when the attached browser has no default profile', async () => {
     const fake = createFakeAttachedBrowser({ defaultContext: false })
     connectOverCDPMock.mockResolvedValue(fake.browser)

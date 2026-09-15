@@ -33,7 +33,8 @@ Notable changes to Applyer are documented here. This project follows
   application browser. Prosple sits behind Cloudflare's managed challenge, which turns
   away every headless browser and lets the same page through a visible window within
   seconds; so when a search comes back challenged, the page is opened in the application
-  browser (or the attached one, when Settings > Browser attaches to your own), a banner
+  browser (or the attached one, when Settings > Browser attaches to your own and it is
+  running; a search falls back to Applyer's own window when it is not), a banner
   above the board says which site is waiting and a desktop notification goes out under the
   existing "verification required" switch, and the search resumes as soon as the challenge
   clears, by itself or with your click; Skip gives that one site up for this search and the

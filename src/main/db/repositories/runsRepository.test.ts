@@ -21,6 +21,7 @@ import {
   listRuns,
   loadRunEvents,
   normalizeLabel,
+  RUN_EVENTS_FOLD_LIMIT,
   renameRun
 } from './runsRepository'
 import { queueJob } from './jobsRepository'
@@ -109,7 +110,8 @@ describe('events', () => {
     insertRunEvent({ runId: run.id, kind: 'job_queued', source: 'indeed' })
     insertRunEvent({ runId: run.id, kind: 'tool_call', meta: { tool: 'search_jobs' } })
 
-    expect(loadRunEvents(run.id).map((event) => event.kind)).toEqual(['search', 'job_queued', 'tool_call'])
+    expect(loadRunEvents(run.id)).toMatchObject({ truncated: false, limit: RUN_EVENTS_FOLD_LIMIT })
+    expect(loadRunEvents(run.id).events.map((event) => event.kind)).toEqual(['search', 'job_queued', 'tool_call'])
 
     const page = listRunEvents({ runId: run.id, limit: 2 })
     expect(page.total).toBe(3)
@@ -145,7 +147,7 @@ describe('events', () => {
     testDb.insert(runEvents).values({ runId: run.id, kind: 'from_the_future', createdAt: stamp }).run()
     insertRunEvent({ runId: run.id, kind: 'tool_call', meta: { tool: 'search_jobs' } })
 
-    expect(loadRunEvents(run.id).map((e) => e.kind)).toEqual(['search', 'job_queued', 'tool_call'])
+    expect(loadRunEvents(run.id).events.map((e) => e.kind)).toEqual(['search', 'job_queued', 'tool_call'])
 
     // Paging by the number of rows handed back must not overlap or skip:
     // the unknown rows are not counted towards the offset either.
@@ -157,10 +159,23 @@ describe('events', () => {
     expect(second.items.map((e) => e.kind)).toEqual(['search'])
   })
 
+  it('folds only the oldest events up to the limit and says when there were more', () => {
+    const run = createRun()
+    insertRunEvent({ runId: run.id, kind: 'search' })
+    insertRunEvent({ runId: run.id, kind: 'job_queued' })
+    insertRunEvent({ runId: run.id, kind: 'tool_call' })
+    const capped = loadRunEvents(run.id, 2)
+    expect(capped.events.map((e) => e.kind)).toEqual(['search', 'job_queued'])
+    expect(capped).toMatchObject({ truncated: true, limit: 2 })
+    // Exactly at the limit is not truncated.
+    expect(loadRunEvents(run.id, 3)).toMatchObject({ truncated: false, limit: 3 })
+    expect(loadRunEvents(run.id, 3).events).toHaveLength(3)
+  })
+
   it('treats malformed meta as absent', () => {
     const run = createRun()
     testDb.insert(runEvents).values({ runId: run.id, kind: 'search', meta: [1, 2] as never, createdAt: new Date().toISOString() }).run()
-    expect(loadRunEvents(run.id)[0]?.meta).toBeNull()
+    expect(loadRunEvents(run.id).events[0]?.meta).toBeNull()
   })
 
   it('deletes events with their run', () => {

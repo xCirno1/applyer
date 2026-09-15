@@ -132,7 +132,7 @@ describe('searchJobsTool', () => {
         sourceOutcomes: { indeed: { results: 1, blocked: false, warned: false }, seek: { results: 0, blocked: false, warned: true } }
       })
       await searchJobsTool({ query: 'engineer', location: 'Sydney', remote: undefined, jobType: undefined, sources: undefined, country: 'au', limit: undefined })
-      const [event] = loadRunEvents(run.id)
+      const [event] = loadRunEvents(run.id).events
       expect(event).toMatchObject({
         kind: 'search',
         meta: {
@@ -152,7 +152,7 @@ describe('searchJobsTool', () => {
       const run = createRun()
       searchJobs.mockRejectedValue(new Error('boom'))
       await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
-      expect(loadRunEvents(run.id)[0]).toMatchObject({ kind: 'search', meta: { failed: true, results: 0, warnings: ['Error: boom'] } })
+      expect(loadRunEvents(run.id).events[0]).toMatchObject({ kind: 'search', meta: { failed: true, results: 0, warnings: ['Error: boom'] } })
     })
 
     it('records nothing when no run is in progress', async () => {

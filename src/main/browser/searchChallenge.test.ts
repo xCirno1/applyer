@@ -71,6 +71,8 @@ describe('searchThroughChallenge', () => {
     expect(s.goto).toHaveBeenCalledWith(request.url, expect.objectContaining({ waitUntil: 'domcontentloaded' }))
     expect(s.waitForSelector).toHaveBeenCalledWith(request.waitFor, expect.anything())
     expect(request.read).toHaveBeenCalledWith(s.page)
+    // An attached browser that is not running must not cost the site.
+    expect(mocks.openHeadedBrowser).toHaveBeenCalledWith({ whenUnreachable: 'launch' })
     expect(mocks.broadcastDetected).not.toHaveBeenCalled()
     expect(mocks.recordRunEvent).not.toHaveBeenCalled()
     expect(s.close).toHaveBeenCalledWith(s.page)

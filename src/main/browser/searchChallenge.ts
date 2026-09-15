@@ -85,7 +85,10 @@ export function searchThroughChallenge<T>(
 
 async function runChallenge<T>(request: SearchChallengeRequest<T>, timeoutMs: number): Promise<SearchChallengeOutcome<T>> {
   const { source, host, url, waitFor, read } = request
-  const headed = await openHeadedBrowser()
+  // Any visible window will do: nothing here needs the user's signed-in
+  // profile, so an attached browser that is not running is not a reason to
+  // give the site up.
+  const headed = await openHeadedBrowser({ whenUnreachable: 'launch' })
   let page: Page | null = null
   try {
     page = await headed.newPage()

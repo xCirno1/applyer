@@ -1,5 +1,6 @@
 import { newHeadlessContext } from '../browserController'
 import { detectCaptcha } from '../captchaDetector'
+import { readSearchPage } from '../searchPage'
 import { htmlToPlainText, sanitizeDescriptionHtml } from '../htmlContent'
 import type { AggregatorSearchParams, AggregatorSearchResult, JobDetailsOutcome, JobSearchResultItem } from '../types'
 
@@ -13,23 +14,15 @@ interface RawLinkedInCard {
 
 /** LinkedIn is one worldwide site; the country setting has no edition to pick, so `location` is the only narrowing. */
 export async function searchLinkedIn({ query, location, limit }: AggregatorSearchParams): Promise<AggregatorSearchResult> {
-  const context = await newHeadlessContext()
-  try {
-    const page = await context.newPage()
-    const params = new URLSearchParams({ keywords: query })
-    if (location) params.set('location', location)
+  const params = new URLSearchParams({ keywords: query })
+  if (location) params.set('location', location)
 
-    await page.goto(`https://www.linkedin.com/jobs/search/?${params.toString()}`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 20000
-    })
-
-    const captcha = await detectCaptcha(page)
-    if (captcha.blocked) {
-      return { results: [], blocked: true, warning: `linkedin: blocked by a verification challenge (${captcha.reason})` }
-    }
-
-    const cards = await page.evaluate((): RawLinkedInCard[] => {
+  const outcome = await readSearchPage({
+    source: 'linkedin',
+    host: 'www.linkedin.com',
+    url: `https://www.linkedin.com/jobs/search/?${params.toString()}`,
+    read: (page) =>
+      page.evaluate((): RawLinkedInCard[] => {
       const items: RawLinkedInCard[] = []
       document.querySelectorAll('.job-search-card').forEach((el) => {
         const urn = el.getAttribute('data-entity-urn')
@@ -42,24 +35,23 @@ export async function searchLinkedIn({ query, location, limit }: AggregatorSearc
       })
       return items
     })
+  })
+  if (outcome.status === 'blocked') return { results: [], blocked: true, warning: outcome.warning }
 
-    const results: JobSearchResultItem[] = cards
-      .filter((c): c is RawLinkedInCard & { id: string; title: string; company: string } => !!c.id && !!c.title && !!c.company)
-      .slice(0, limit)
-      .map((c) => ({
-        title: c.title,
-        company: c.company,
-        location: c.location,
-        url: `https://www.linkedin.com/jobs/view/${c.id}`,
-        source: 'linkedin',
-        postedAt: c.listedAt ?? undefined,
-        snippet: ''
-      }))
+  const results: JobSearchResultItem[] = outcome.value
+    .filter((c): c is RawLinkedInCard & { id: string; title: string; company: string } => !!c.id && !!c.title && !!c.company)
+    .slice(0, limit)
+    .map((c) => ({
+      title: c.title,
+      company: c.company,
+      location: c.location,
+      url: `https://www.linkedin.com/jobs/view/${c.id}`,
+      source: 'linkedin',
+      postedAt: c.listedAt ?? undefined,
+      snippet: ''
+    }))
 
-    return { results, blocked: false }
-  } finally {
-    await context.close()
-  }
+  return { results, blocked: false }
 }
 
 export async function fetchLinkedInJobDetails(url: string): Promise<JobDetailsOutcome> {

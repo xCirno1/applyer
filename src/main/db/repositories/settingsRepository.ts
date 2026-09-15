@@ -39,6 +39,7 @@ const NOTIFICATION_LOCALE_KEY = 'notification_locale'
 const AGENT_PERMISSIONS_KEY = 'agent_permissions'
 const RESUME_SETTINGS_KEY = 'resume_settings'
 const SEARCH_COUNTRY_KEY = 'search_country'
+const SEARCH_CHALLENGE_FALLBACK_KEY = 'search_challenge_fallback'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -219,6 +220,21 @@ export function getSearchCountry(): SearchCountry {
 
 export function setSearchCountry(country: SearchCountry): void {
   setSetting(SEARCH_COUNTRY_KEY, country)
+}
+
+/**
+ * Whether a search a site refuses to answer headless is retried in the
+ * application browser with the user asked to clear the challenge (see
+ * `browser/searchChallenge.ts`). On unless turned off: the sites that do
+ * this (Prosple) never answer any other way, and the window only opens
+ * once a search has actually been refused.
+ */
+export function getSearchChallengeFallback(): boolean {
+  return getSetting(SEARCH_CHALLENGE_FALLBACK_KEY) !== '0'
+}
+
+export function setSearchChallengeFallback(enabled: boolean): void {
+  setSetting(SEARCH_CHALLENGE_FALLBACK_KEY, enabled ? '1' : '0')
 }
 
 /**

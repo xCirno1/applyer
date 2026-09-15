@@ -16,6 +16,7 @@ import {
   clearPermissionRequestNotification,
   contentForJobUpdate,
   contentForPermissionRequest,
+  contentForSearchVerification,
   contentForVerification,
   notifyForPermissionRequest,
   testNotificationContent
@@ -101,6 +102,28 @@ describe('notification content', () => {
       title: 'Verification required',
       body: 'Platform Engineer at Acme needs your attention in the browser window.'
     })
+  })
+
+  it('names the site, not a job, when a search is waiting on a challenge', () => {
+    expect(
+      contentForSearchVerification({ taskId: 'search-1', source: 'prosple', host: 'au.prosple.com' }, preferences())
+    ).toEqual({
+      title: 'Verification required',
+      body: 'Prosple (au.prosple.com) wants a verification challenge solved before it answers a job search. It is open in the browser window.'
+    })
+    expect(
+      contentForSearchVerification({ taskId: 'search-1', source: 'prosple', host: 'au.prosple.com' }, preferences(), 'id')
+    ).toEqual({
+      title: 'Verifikasi diperlukan',
+      body: 'Prosple (au.prosple.com) meminta tantangan verifikasi diselesaikan sebelum menjawab pencarian lowongan. Halamannya terbuka di jendela browser.'
+    })
+    // Shares the verification switch rather than having one of its own.
+    expect(
+      contentForSearchVerification(
+        { taskId: 'search-1', source: 'prosple', host: 'au.prosple.com' },
+        preferences({ verificationRequired: false })
+      )
+    ).toBeNull()
   })
 
   it('provides representative content for every settings-page test action', () => {

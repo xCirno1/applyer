@@ -1,5 +1,4 @@
-import { newHeadlessContext } from '../browserController'
-import { detectCaptcha } from '../captchaDetector'
+import { readSearchPage } from '../searchPage'
 import { aggregatorHost } from '@shared/types/jobSource'
 import { extractProspleEmployer, extractProspleSearchCards, type ProspleCard } from './dom/prosple'
 import { readPostingPage } from './postingPage'
@@ -17,18 +16,17 @@ import type { AggregatorSearchParams, AggregatorSearchResult, JobDetailsOutcome,
  * employer segment is the fallback for the company name when the card does
  * not link to the employer's profile.
  *
- * Prosple sits behind Cloudflare's bot challenge, which answers a headless
- * browser (Playwright's headless shell and Chromium's new headless mode
- * alike) with a "Just a moment..." interstitial and a 403. The captcha
- * detector recognises that page, so a search reports itself as blocked
- * rather than as empty, and the selectors below are the best reading of
- * the site's structure available without a page to check them against.
- * A posting URL still routes here so that a challenge-free fetch (or a
- * future headed/attached-browser path) gets the right adapter.
+ * Prosple sits behind Cloudflare's managed challenge, which answers a
+ * headless browser (Playwright's headless shell and Chromium's new
+ * headless mode alike, with or without a real-looking user agent, and
+ * even carrying a clearance cookie a real window earned) with a "Just a
+ * moment..." interstitial and a 403, and clears the same page in a visible
+ * window within seconds. So a Prosple search is, in practice, always the
+ * challenge fallback in `searchPage.ts`: the headless attempt reports
+ * blocked, the page is opened in the application browser, and the user is
+ * asked to look at it while it clears. The selectors below were checked
+ * against the live site through that window.
  */
-
-const NAVIGATION_TIMEOUT_MS = 20000
-const SETTLE_TIMEOUT_MS = 8000
 
 const POSTING_PATH = /\/graduate-employers\/([^/]+)\/jobs-internships\/[^/?#]+/
 
@@ -78,40 +76,33 @@ export async function searchProsple(params: AggregatorSearchParams): Promise<Agg
     return { results: [], blocked: false, warning: `prosple: no edition for country "${params.country}"` }
   }
 
-  const context = await newHeadlessContext()
-  try {
-    const page = await context.newPage()
-    const keywords = [params.query, params.location].filter(Boolean).join(' ')
-    const search = new URLSearchParams({ keywords })
+  const keywords = [params.query, params.location].filter(Boolean).join(' ')
+  const search = new URLSearchParams({ keywords })
 
-    await page.goto(`https://${host}/search-jobs?${search.toString()}`, {
-      waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT_MS
-    })
-    await page.waitForSelector('a[href*="/jobs-internships/"]', { timeout: SETTLE_TIMEOUT_MS }).catch(() => undefined)
-
-    const captcha = await detectCaptcha(page)
-    if (captcha.blocked) {
-      return { results: [], blocked: true, warning: `prosple: blocked by a verification challenge (${captcha.reason})` }
+  const outcome = await readSearchPage({
+    source: 'prosple',
+    host,
+    url: `https://${host}/search-jobs?${search.toString()}`,
+    waitFor: 'a[href*="/jobs-internships/"]',
+    read: async (page) => {
+      const cards = await page.evaluate(extractProspleSearchCards, null)
+      return cards
+        .map((card) => prospleCardToResult(card, host))
+        .filter((item): item is JobSearchResultItem => item !== null)
+        .slice(0, params.limit)
     }
+  })
+  if (outcome.status === 'blocked') return { results: [], blocked: true, warning: outcome.warning }
 
-    const cards = await page.evaluate(extractProspleSearchCards, null)
-    const results = cards
-      .map((card) => prospleCardToResult(card, host))
-      .filter((item): item is JobSearchResultItem => item !== null)
-      .slice(0, params.limit)
-
-    if (results.length === 0) {
-      return {
-        results,
-        blocked: false,
-        warning: `prosple: no listings matched on ${host} (or the page layout was not recognised)`
-      }
+  const results = outcome.value
+  if (results.length === 0) {
+    return {
+      results,
+      blocked: false,
+      warning: `prosple: no listings matched on ${host} (or the page layout was not recognised)`
     }
-    return { results, blocked: false }
-  } finally {
-    await context.close()
   }
+  return { results, blocked: false }
 }
 
 export async function fetchProspleJobDetails(url: string): Promise<JobDetailsOutcome> {

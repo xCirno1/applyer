@@ -1,0 +1,232 @@
+{
+  "title": "Sesi",
+  "header": {
+    "start": "Mulai sesi",
+    "stop": "Hentikan sesi",
+    "inProgress": "Sedang berjalan",
+    "ended": "Selesai",
+    "elapsed": "Berlangsung",
+    "events_other": "{{count}} kejadian",
+    "pick": "Sesi yang ditampilkan",
+    "defaultName": "Sesi #{{sequence}}",
+    "current": "sedang berjalan",
+    "showOlder_other": "Tampilkan sesi lama ({{count}} lagi)",
+    "rename": "Ganti nama sesi ini",
+    "nameLabel": "Nama sesi",
+    "namePlaceholder": "Beri nama sesi ini",
+    "delete": "Hapus sesi ini",
+    "deleteTitle": "Hapus sesi ini?",
+    "deleteMessage": "Statistik dan lini masanya dihapus permanen. Pekerjaan, pengecualian, dan semua hal lain yang diamati sesi ini tetap seperti semula.",
+    "started": "Dimulai {{when}}",
+    "startedToast": "Sesi dimulai. Semua yang dilakukan agen mulai sekarang akan dihitung.",
+    "stoppedToast": "Sesi dihentikan.",
+    "renamedToast": "Nama sesi diganti.",
+    "deletedToast": "Sesi dihapus.",
+    "startHint": "Mulai sesi sebelum memberi tugas ke agen dan hentikan setelah tugas selesai; semua yang terjadi di antaranya dihitung."
+  },
+  "empty": {
+    "title": "Tidak ada sesi yang berjalan",
+    "body": "Mulai sesi sebelum memberi tugas ke agen dan hentikan setelah tugas selesai. Semua yang dilakukan agen di antaranya dihitung di sini: pencarian per situs, pekerjaan yang diantrekan, formulir yang diisi, tantangan verifikasi, kegagalan, dan lainnya.",
+    "history": "Sesi sebelumnya dapat dipilih dari daftar di atas."
+  },
+  "groups": {
+    "overview": "Ringkasan",
+    "searches": "Pencarian",
+    "sources": "Per sumber",
+    "pipeline": "Alur",
+    "forms": "Formulir",
+    "challenges": "Tantangan",
+    "resumes": "Resume dan profil",
+    "tools": "Alat agen",
+    "timeline": "Lini masa"
+  },
+  "overview": {
+    "duration": "Durasi",
+    "events": "Kejadian",
+    "eventsPerHour": "Kejadian per jam",
+    "firstEvent": "Kejadian pertama",
+    "lastEvent": "Kejadian terakhir",
+    "none": "Belum ada",
+    "tips": {
+      "eventsPerHour": "Jumlah pengamatan dibagi jumlah jam sesi berjalan; ukuran kasar seberapa sibuk agen."
+    }
+  },
+  "foldLimit": {
+    "title": "Statistik berhenti lebih awal.",
+    "body": "Angka-angka ini mencakup {{folded}} kejadian pertama dari {{total}} kejadian sesi ini; kejadian berikutnya ada di linimasa tetapi tidak dihitung di sini. Hentikan sesi ini dan mulai yang baru agar penghitungan berlanjut."
+  },
+  "searches": {
+    "total": "Pencarian",
+    "failed": "Gagal",
+    "results": "Hasil",
+    "empty": "Kosong",
+    "distinct": "Kueri berbeda",
+    "blocked": "Jawaban terblokir",
+    "avgResults": "Hasil per pencarian",
+    "avgDuration": "Waktu per pencarian",
+    "recent": "Kueri terbaru",
+    "anywhere": "di mana saja",
+    "resultCount_other": "{{count}} hasil",
+    "tips": {
+      "results": "Hasil setelah duplikat antar situs dihapus; tabel per sumber menghitung apa yang dikembalikan tiap situs sendiri.",
+      "blocked": "Pencarian yang dijawab situs dengan tantangan verifikasi, bukan daftar lowongan.",
+      "distinct": "Teks kueri yang berbeda, mengabaikan huruf besar kecil."
+    }
+  },
+  "sources": {
+    "source": "Sumber",
+    "searches": "Pencarian",
+    "results": "Hasil",
+    "blocked": "Terblokir",
+    "warned": "Peringatan",
+    "read": "Dibaca",
+    "queued": "Diantrekan",
+    "filled": "Diisi",
+    "submitted": "Dikirim",
+    "failed": "Gagal",
+    "excluded": "Dikecualikan",
+    "empty": "Belum ada sumber yang tersentuh di sesi ini.",
+    "tips": {
+      "searches": "Pencarian yang menjangkau situs ini.",
+      "results": "Baris yang dikembalikan situs, sebelum duplikat antar situs dihapus.",
+      "blocked": "Pencarian yang dijawab situs dengan tantangan verifikasi.",
+      "warned": "Pencarian di mana situs memberi peringatan: tidak ada yang cocok, tata letak tidak dikenali, atau papan yang tidak bisa diambil.",
+      "read": "Lowongan yang dibaca lengkap dengan get_job_details.",
+      "queued": "Pekerjaan dari situs ini yang dimasukkan agen ke papan.",
+      "filled": "Formulir lamaran yang diisi, penuh atau sebagian, ditambah pekerjaan yang ditandai terisi secara manual.",
+      "submitted": "Pekerjaan dari situs ini yang Anda tandai Dikirim.",
+      "failed": "Pekerjaan dari situs ini yang berpindah ke Gagal.",
+      "excluded": "Lowongan dari situs ini yang ditambahkan ke daftar pengecualian."
+    }
+  },
+  "pipeline": {
+    "queued": "Diantrekan",
+    "queueExisting": "Sudah ada di papan",
+    "queueExcluded": "Ditolak karena dikecualikan",
+    "submitted": "Dikirim",
+    "failed": "Gagal",
+    "markedFilled": "Ditandai terisi manual",
+    "retried": "Dicoba ulang",
+    "unqueued": "Dikeluarkan dari antrean",
+    "removed": "Dihapus",
+    "excludedByUser": "Dikecualikan oleh Anda",
+    "excludedByAgent": "Dikecualikan oleh agen",
+    "matchScore": "Skor kecocokan",
+    "matchScoreValue": "rata-rata {{avg}}, {{min}} sampai {{max}}",
+    "failureReasons": "Alasan kegagalan",
+    "tips": {
+      "queueExisting": "Panggilan queue_job untuk lowongan yang sudah ada di papan.",
+      "queueExcluded": "Panggilan queue_job yang ditolak karena lowongan ada di daftar pengecualian.",
+      "matchScore": "Skor yang diberikan agen untuk pekerjaan yang diantrekan, dari 100."
+    }
+  },
+  "forms": {
+    "inspected": "Formulir diperiksa",
+    "attempts": "Percobaan pengisian",
+    "filled": "Terisi",
+    "partiallyFilled": "Terisi sebagian",
+    "edited": "Diubah",
+    "failed": "Gagal",
+    "permissionDenied": "Izin ditolak",
+    "noSession": "Tidak ada formulir terbuka",
+    "buttons": "Tombol diklik",
+    "buttonsFailed": "Klik tombol gagal",
+    "fields": "Kolom terisi",
+    "fieldsSkipped": "Kolom dilewati",
+    "tips": {
+      "inspected": "Panggilan inspect_application yang membuka formulir.",
+      "attempts": "Setiap panggilan fill_application dan edit_application, apa pun hasilnya.",
+      "permissionDenied": "Percobaan yang dihentikan karena agen tidak punya izin yang belum Anda berikan.",
+      "noSession": "Percobaan tanpa formulir lamaran yang terbuka; agen harus memeriksa dulu."
+    }
+  },
+  "challenges": {
+    "paused": "Tantangan ditemui",
+    "resolved": "Diselesaikan oleh Anda",
+    "reasons": "Per jenis",
+    "tips": {
+      "paused": "Berapa kali situs menampilkan tantangan verifikasi saat formulir dibuka, menjeda pekerjaan sampai Anda menyelesaikannya."
+    }
+  },
+  "resumes": {
+    "attachedVariant": "Resume khusus dilampirkan",
+    "attachedMaster": "Resume utama dilampirkan",
+    "variantsSaved": "Varian ditulis",
+    "assigned": "Varian ditetapkan",
+    "unassigned": "Varian dilepas",
+    "masterSaved": "Resume utama disimpan",
+    "profileUpdates": "Pembaruan profil",
+    "boardsAdded": "Papan perusahaan ditambahkan",
+    "boardChecks": "Pemeriksaan papan",
+    "boardsChecked": "Papan diperiksa",
+    "boardPostings": "Lowongan di papan"
+  },
+  "tools": {
+    "calls": "Panggilan",
+    "errors": "Galat",
+    "time": "Waktu dalam alat",
+    "tool": "Alat",
+    "avg": "Rata-rata",
+    "empty": "Belum ada panggilan alat di sesi ini.",
+    "tips": {
+      "calls": "Setiap panggilan agen ke alat Applyer melalui MCP.",
+      "errors": "Panggilan yang dijawab dengan galat, termasuk yang ditolak."
+    }
+  },
+  "timeline": {
+    "empty": "Belum ada yang tercatat di sesi ini.",
+    "showToolCalls": "Tampilkan panggilan alat",
+    "count_other": "{{count}} entri"
+  },
+  "events": {
+    "search": "Mencari \"{{query}}\" {{where}}: {{results}}",
+    "searchFailed": "Pencarian \"{{query}}\" gagal",
+    "job_details": "Membaca lowongan di {{source}}",
+    "job_details_blocked": "Lowongan di {{source}} dijawab dengan tantangan",
+    "job_details_not_found": "Lowongan di {{source}} tidak bisa dibaca",
+    "job_details_failed": "Membaca lowongan di {{source}} gagal",
+    "job_queued": "Mengantrekan {{job}} dari {{source}}",
+    "job_queue_existing": "{{job}} sudah ada di papan",
+    "job_queue_excluded": "Menolak mengantrekan lowongan yang dikecualikan dari {{source}}",
+    "form_inspected": "Memeriksa formulir untuk {{job}}",
+    "form_inspected_failed": "Tidak bisa memeriksa formulir untuk {{job}}",
+    "form_filled": "Mengisi formulir untuk {{job}} ({{status}})",
+    "button_clicked": "Mengklik \"{{label}}\" pada {{job}}",
+    "button_clicked_failed": "Klik tombol gagal pada {{job}}",
+    "captcha_paused": "{{job}} dijeda karena tantangan verifikasi",
+    "captcha_resolved": "{{job}} dilanjutkan setelah tantangan",
+    "captcha_paused_search": "Pencarian di {{source}} terhenti pada tantangan verifikasi",
+    "captcha_resolved_search": "Pencarian di {{source}} dilanjutkan setelah tantangan",
+    "job_failed": "{{job}} gagal: {{reason}}",
+    "job_submitted": "{{job}} ditandai Dikirim",
+    "job_marked_filled": "{{job}} ditandai Terisi secara manual",
+    "job_retried": "{{job}} dicoba ulang",
+    "job_unqueued": "{{job}} dikeluarkan dari antrean",
+    "job_removed": "{{job}} dihapus dari papan",
+    "job_excluded": "Mengecualikan lowongan dari {{source}} ({{by}})",
+    "resume_attached": "Melampirkan resume {{kind}} ke {{job}}",
+    "resume_variant_saved": "Menyimpan varian resume \"{{name}}\"",
+    "resume_assigned": "Menetapkan \"{{name}}\" ke {{job}}",
+    "resume_unassigned": "Melepas varian resume dari {{job}}",
+    "resume_master_saved": "Menyimpan resume utama",
+    "profile_updated": "Memperbarui profil: {{fields}}",
+    "company_board_added": "Mulai melacak papan {{source}}",
+    "company_boards_checked": "Memeriksa {{checked}} papan perusahaan: {{postings}} lowongan",
+    "tool_call": "{{tool}}",
+    "tool_call_error": "{{tool}} dijawab dengan galat",
+    "jobAt": "{{title}} di {{company}}",
+    "unknownJob": "sebuah pekerjaan",
+    "byUser": "oleh Anda",
+    "byAgent": "oleh agen",
+    "tailored": "khusus",
+    "master": "utama",
+    "status": {
+      "filled": "terisi",
+      "partially_filled": "terisi sebagian",
+      "edited": "diubah",
+      "failed": "gagal",
+      "permission_denied": "izin ditolak",
+      "no_active_session": "tidak ada formulir terbuka"
+    }
+  }
+}

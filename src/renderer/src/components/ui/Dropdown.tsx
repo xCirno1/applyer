@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { useEffect, useRef, useState, type ReactElement, type ReactNode } from 'react'
 
 export interface DropdownOption {
   value: string
@@ -17,6 +17,12 @@ interface DropdownProps {
   size?: 'sm' | 'md'
   disabled?: boolean
   className?: string
+  /**
+   * Rendered under the option list, inside the floating panel, for a list
+   * that is only the first page of something longer (a "show older" button).
+   * Clicking inside it keeps the panel open, so the list can grow in place.
+   */
+  footer?: ReactNode
 }
 
 const VIEWPORT_MARGIN = 8
@@ -47,13 +53,15 @@ export default function Dropdown({
   ariaLabel,
   size = 'md',
   disabled = false,
-  className = ''
+  className = '',
+  footer
 }: DropdownProps): ReactElement {
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [highlight, setHighlight] = useState(0)
   const [pos, setPos] = useState<{ top: number; left: number; width: number; flip: boolean } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLUListElement>(null)
 
   const selected = options.find((o) => o.value === value) ?? null
@@ -87,7 +95,7 @@ export default function Dropdown({
     const onPointerDown = (e: PointerEvent): void => {
       const target = e.target as Node
       if (rootRef.current?.contains(target)) return
-      if (listRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
       setOpen(false)
     }
     document.addEventListener('pointerdown', onPointerDown)
@@ -176,9 +184,8 @@ export default function Dropdown({
       </button>
 
       {open && pos && (
-        <ul
-          ref={listRef}
-          role="listbox"
+        <div
+          ref={panelRef}
           style={{
             position: 'fixed',
             top: pos.top,
@@ -186,27 +193,30 @@ export default function Dropdown({
             width: pos.width,
             transform: pos.flip ? 'translateY(-100%)' : undefined
           }}
-          className="z-50 max-h-56 overflow-y-auto border border-border bg-canvas-raised py-1 shadow-pop"
+          className="z-50 border border-border bg-canvas-raised shadow-pop"
         >
-          {options.map((opt, i) => {
-            const isSelected = opt.value === value
-            return (
-              <li key={opt.value} role="option" aria-selected={isSelected} data-index={i}>
-                <button
-                  type="button"
-                  onClick={() => choose(i)}
-                  onPointerMove={() => setHighlight(i)}
-                  className={`flex w-full cursor-pointer items-center justify-between gap-2 px-2.5 py-1.5 text-left text-[12px] ${
-                    highlight === i ? 'bg-canvas-soft' : ''
-                  } ${isSelected ? 'text-text' : 'text-text-muted'}`}
-                >
-                  <span className="truncate">{opt.label}</span>
-                  {isSelected && <CheckIcon />}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+          <ul ref={listRef} role="listbox" className="max-h-56 overflow-y-auto py-1">
+            {options.map((opt, i) => {
+              const isSelected = opt.value === value
+              return (
+                <li key={opt.value} role="option" aria-selected={isSelected} data-index={i}>
+                  <button
+                    type="button"
+                    onClick={() => choose(i)}
+                    onPointerMove={() => setHighlight(i)}
+                    className={`flex w-full cursor-pointer items-center justify-between gap-2 px-2.5 py-1.5 text-left text-[12px] ${
+                      highlight === i ? 'bg-canvas-soft' : ''
+                    } ${isSelected ? 'text-text' : 'text-text-muted'}`}
+                  >
+                    <span className="truncate">{opt.label}</span>
+                    {isSelected && <CheckIcon />}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+          {footer && <div className="border-t border-border-soft">{footer}</div>}
+        </div>
       )}
     </div>
   )

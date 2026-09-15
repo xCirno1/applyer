@@ -1,4 +1,6 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import { recordRunEvent } from '../runs/runTracker'
 import { APP_VERSION } from '@shared/version'
 import {
   searchJobsShape,
@@ -41,6 +43,30 @@ import { saveResumeVariantTool } from './tools/saveResumeVariant'
 import { assignResumeTool } from './tools/assignResume'
 import { deleteResumeVariantTool } from './tools/deleteResumeVariant'
 
+/**
+ * Every tool call lands one `tool_call` event on the run in progress (see
+ * `runs/runTracker.ts`), with the tool's name, whether it answered with an
+ * error and how long it took. This is the only place that sees every call,
+ * so the agent's activity is counted here once rather than inside each
+ * tool; the tools themselves record what they did, not that they ran.
+ */
+function observed<Args>(
+  tool: string,
+  handler: (args: Args) => CallToolResult | Promise<CallToolResult>
+): (args: Args) => Promise<CallToolResult> {
+  return async (args) => {
+    const startedAt = Date.now()
+    try {
+      const result = await handler(args)
+      recordRunEvent('tool_call', { meta: { tool, isError: result.isError === true, durationMs: Date.now() - startedAt } })
+      return result
+    } catch (err) {
+      recordRunEvent('tool_call', { meta: { tool, isError: true, durationMs: Date.now() - startedAt } })
+      throw err
+    }
+  }
+}
+
 export function createApplyerMcpServer(): McpServer {
   const server = new McpServer({ name: 'applyer', version: APP_VERSION })
 
@@ -53,7 +79,7 @@ export function createApplyerMcpServer(): McpServer {
         'Pass `includeDocumentText: true` to also get the text extracted from each of those documents. That is how you read the resume the user uploaded to Applyer without needing a file path, e.g. when they ask you to fill in a profile they left blank. Leave it off otherwise: it is a lot of text, and matching and form-filling do not need it.',
       inputSchema: getProfileShape
     },
-    getProfileTool
+    observed('get_profile', getProfileTool)
   )
 
   server.registerTool(
@@ -67,7 +93,7 @@ export function createApplyerMcpServer(): McpServer {
         "Only write what the user's own materials or instructions support: never invent a skill, salary, or location to fill a gap, and leave a field out if you are unsure.",
       inputSchema: updateProfileShape
     },
-    updateProfileTool
+    observed('update_profile', updateProfileTool)
   )
 
   server.registerTool(
@@ -77,10 +103,11 @@ export function createApplyerMcpServer(): McpServer {
       description:
         'Searches for job postings matching a query. Two kinds of source. The aggregators run a keyword search across every company: indeed, linkedin, seek (Australia and New Zealand), jora (worldwide, re-lists other boards), prosple (graduate programs and internships, Asia-Pacific) and remotive (remote-only roles). ' +
         'The ATS providers greenhouse/lever/ashby/workday instead search the company boards the user tracks (see add_company_board / list_company_boards); those have no cross-company search endpoint, so their coverage is exactly the tracked list and asking for them with nothing tracked returns a warning saying so. ' +
-        'Most aggregators are one site per country: the country in Settings > Job search picks the edition (au.indeed.com, seek.co.nz), `country` overrides it for one call, and an aggregator with no edition in that country is skipped (with a warning if you asked for it by name). Defaults to every source. Returns short snippets, not full descriptions.',
+        'Most aggregators are one site per country: the country in Settings > Job search picks the edition (au.indeed.com, seek.co.nz), `country` overrides it for one call, and an aggregator with no edition in that country is skipped (with a warning if you asked for it by name). Defaults to every source. Returns short snippets, not full descriptions. ' +
+        'A site that answers with a verification challenge (Prosple always does) is retried in a visible browser window with the user asked to clear it, so the call can take up to two minutes per such site; a warning names any site that stayed blocked, and the other sites still answer.',
       inputSchema: searchJobsShape
     },
-    searchJobsTool
+    observed('search_jobs', searchJobsTool)
   )
 
   server.registerTool(
@@ -91,7 +118,7 @@ export function createApplyerMcpServer(): McpServer {
         'Fetches the full description, location, and application info for a single job posting URL. Routes to the right source automatically (Greenhouse/Lever/Ashby/Remotive use their public APIs; LinkedIn/Indeed/Seek/Jora/Prosple/Workday/generic sites are read via a headless browser). May return a "blocked" status if the site presents a verification challenge.',
       inputSchema: getJobDetailsShape
     },
-    getJobDetailsTool
+    observed('get_job_details', getJobDetailsTool)
   )
 
   server.registerTool(
@@ -102,7 +129,7 @@ export function createApplyerMcpServer(): McpServer {
         "Adds a job posting to the user's task board in the Queued state, so they can review it in the app. Call this after you've decided a job is a good match. Deduplicated by URL — calling this again for the same URL is safe and just reports it as already existing.",
       inputSchema: queueJobShape
     },
-    queueJobTool
+    observed('queue_job', queueJobTool)
   )
 
   server.registerTool(
@@ -112,7 +139,7 @@ export function createApplyerMcpServer(): McpServer {
       description: "Lists jobs already on the user's task board, optionally filtered by status. Useful for checking what's already been queued before searching again.",
       inputSchema: listJobsShape
     },
-    listJobsTool
+    observed('list_jobs', listJobsTool)
   )
 
   server.registerTool(
@@ -123,7 +150,7 @@ export function createApplyerMcpServer(): McpServer {
         'Marks a queued or filled job as Failed with a reason tag (e.g. "captcha_verification", "login_required", "expired_listing", or any new lowercase_snake_case tag — unrecognized tags are registered automatically). Use this when you cannot proceed with a job for some reason.',
       inputSchema: flagFailureShape
     },
-    flagFailureTool
+    observed('flag_failure', flagFailureTool)
   )
 
   server.registerTool(
@@ -134,7 +161,7 @@ export function createApplyerMcpServer(): McpServer {
         'Opens and retains a visible application form for a Queued job, then returns every supported field and explicitly recognized navigation button on the current visible step with opaque IDs. Fields include semantic labels, raw name/placeholder/autocomplete hints, control type, current value, required state, and available options. storedDocuments lists the documents a file field may name (`resume`, `cover_letter`); a resume entry with source `variant` or `master` means the structured resume will be rendered and attached instead of an upload. Password, hidden-step, arbitrary action, and final-action controls are omitted. A retained multi-step fill stays Queued and in fill mode across pages, including later document-upload steps. A Filled job can only re-inspect its original still-open form for editing. Labels and hints are context only and must never be used as identifiers. Inspection never changes the page or submits the application.',
       inputSchema: inspectApplicationShape
     },
-    inspectApplicationTool
+    observed('inspect_application', inspectApplicationTool)
   )
 
   server.registerTool(
@@ -145,7 +172,7 @@ export function createApplyerMcpServer(): McpServer {
         'With the user\'s Press application buttons permission, clicks one visible, enabled navigation-like button in the retained application window using a buttonId from the latest inspect_application result. Only Next, Continue, Proceed, Back, or Previous labels are listed, but a site may attach an arbitrary or irreversible script to any button, so the permission is disabled by default. Every inspected buttonId is consumed by a click and clicks are serialized, so inspect again afterward. Native form submission is blocked while the click is dispatched, but site scripts can use other mechanisms. This tool never marks the Applyer job Submitted.',
       inputSchema: clickApplicationButtonShape
     },
-    clickApplicationButtonTool
+    observed('click_application_button', clickApplicationButtonTool)
   )
 
   server.registerTool(
@@ -156,7 +183,7 @@ export function createApplyerMcpServer(): McpServer {
         'Fills only the fieldId/value pairs supplied from the latest inspect_application result. For a file field, the value `resume` attaches the resume variant assigned to the job when there is one (see assign_resume and save_resume_variant), otherwise the master or the original upload per the user\'s setting; the inspect result\'s storedDocuments says which. By default it returns partially_filled and keeps the job Queued so later pages, including document-upload steps, remain fillable. Set finalStep to true only when every application page is complete and the retained form is ready for user review; that moves the job to Filled but never clicks or submits the ATS form. An empty answers list is accepted only for finalStep true, for a fieldless final review page. Never target a field by label. Use option values exactly as inspected. If permission is disabled, Applyer asks the user before changing the form.',
       inputSchema: fillApplicationShape
     },
-    fillApplicationTool
+    observed('fill_application', fillApplicationTool)
   )
 
   server.registerTool(
@@ -167,7 +194,7 @@ export function createApplyerMcpServer(): McpServer {
         'Updates only fieldId/value pairs from a fresh inspection of the original visible form retained for a Filled job. Labels are semantic context only. It never opens a replacement session, changes document attachments, clicks buttons, advances the form, or submits it. The user reviews every changed answer before submitting.',
       inputSchema: editApplicationShape
     },
-    editApplicationTool
+    observed('edit_application', editApplicationTool)
   )
 
   server.registerTool(
@@ -180,7 +207,7 @@ export function createApplyerMcpServer(): McpServer {
         "Do NOT call this on your own judgment just because you think a job is a bad match — for that, simply don't queue it. Excluding is a standing, permanent instruction from the user, not a quality filter you apply yourself.",
       inputSchema: excludeJobShape
     },
-    excludeJobTool
+    observed('exclude_job', excludeJobTool)
   )
 
   server.registerTool(
@@ -194,7 +221,7 @@ export function createApplyerMcpServer(): McpServer {
         'Use this when the user names companies they want watched, or when you have found the board of a company they are interested in. Adding a board is a standing instruction that costs one request per search, so add companies the user actually wants, not every company you come across.',
       inputSchema: addCompanyBoardShape
     },
-    addCompanyBoardTool
+    observed('add_company_board', addCompanyBoardTool)
   )
 
   server.registerTool(
@@ -205,7 +232,7 @@ export function createApplyerMcpServer(): McpServer {
         "Lists the company ATS boards search_jobs will fetch, with the result of each one's last fetch (open roles, or the error if it stopped answering). Check this before adding boards to avoid duplicates, and to explain why a greenhouse/lever/ashby/workday search returned nothing.",
       inputSchema: listCompanyBoardsShape
     },
-    listCompanyBoardsTool
+    observed('list_company_boards', listCompanyBoardsTool)
   )
 
   server.registerTool(
@@ -218,7 +245,7 @@ export function createApplyerMcpServer(): McpServer {
         "If no master exists the result says so and explains how to build one from the uploaded resume with set_master_resume. Call this before save_resume_variant (the variant must reuse the master's section, entry and group ids) and before assign_resume (to see which variants exist).",
       inputSchema: getResumeShape
     },
-    getResumeTool
+    observed('get_resume', getResumeTool)
   )
 
   server.registerTool(
@@ -233,7 +260,7 @@ export function createApplyerMcpServer(): McpServer {
         "A contact's `value` is the visible text (the email, the phone number, or a short name like \"LinkedIn\" when `url` carries the full link, which prints as a hyperlink). An entry's `meta` is the location, printed under the dates. Group labels print with the template's own separator, so leave the trailing colon out.",
       inputSchema: setMasterResumeShape
     },
-    setMasterResumeTool
+    observed('set_master_resume', setMasterResumeTool)
   )
 
   server.registerTool(
@@ -249,7 +276,7 @@ export function createApplyerMcpServer(): McpServer {
         'Tell the user what you changed; they review the diff against the master in Applyer before the application is submitted.',
       inputSchema: saveResumeVariantShape
     },
-    saveResumeVariantTool
+    observed('save_resume_variant', saveResumeVariantTool)
   )
 
   server.registerTool(
@@ -261,7 +288,7 @@ export function createApplyerMcpServer(): McpServer {
         'Prefer this over writing a new variant when one of the existing variants already fits the posting (get_resume lists them with the jobs using each). The result says what will now be attached and whether the variant is stale against the current master.',
       inputSchema: assignResumeShape
     },
-    assignResumeTool
+    observed('assign_resume', assignResumeTool)
   )
 
   server.registerTool(
@@ -272,7 +299,7 @@ export function createApplyerMcpServer(): McpServer {
         'Deletes a resume variant by name. Every job that used it goes back to the default attachment (the master or the original upload), and the result says how many jobs that affected. Use it when the user asks to discard a variant; to take a variant off one job without deleting it, use assign_resume with no variantName instead.',
       inputSchema: deleteResumeVariantShape
     },
-    deleteResumeVariantTool
+    observed('delete_resume_variant', deleteResumeVariantTool)
   )
 
   return server

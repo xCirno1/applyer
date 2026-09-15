@@ -7,6 +7,21 @@ Notable changes to Applyer are documented here. This project follows
 
 ### Added
 
+- Run statistics (the Runs screen on the left rail). Start a run before handing the agent a task and
+  stop it when the task is done; everything the app observes in between is counted, per
+  site: searches and what each site returned (or whether it answered with a challenge),
+  postings read, jobs queued with their match scores, forms inspected and filled (fields
+  filled and skipped, permission refusals, buttons clicked), verification challenges hit
+  and resolved, jobs submitted, failed (by reason), retried, unqueued, removed and
+  excluded, resumes attached and variants written, profile and company-board changes,
+  and every MCP tool call with its duration. The numbers are folded from a per-run event
+  log rather than kept as counters, so a run survives an app restart, past runs can be
+  reopened, renamed and deleted (the run picker reads the history a page at a time, so
+  the oldest run stays reachable), and a timeline lists what happened in order. The
+  statistics fold the first 20,000 events of a run; a run left going past that says so on
+  the screen (the timeline and event count still cover everything) rather than showing
+  figures that quietly stopped moving. A search now
+  also reports what each source returned before cross-source dedupe (`sourceOutcomes`).
 - Four more job sources for `search_jobs` and `get_job_details`: Seek (Australia and
   New Zealand), Jora (Seek's worldwide aggregator), Prosple (graduate programs and
   internships across Asia-Pacific), and Remotive (remote-only roles, read through its
@@ -16,9 +31,19 @@ Notable changes to Applyer are documented here. This project follows
   source also returned is dropped in favour of the original, since Jora only re-lists
   what other boards publish. Posting pages are read from their schema.org `JobPosting`
   markup first and from the site's own layout second, so a redesign degrades a source
-  rather than breaking it. Seek and Jora were checked against the live sites; Prosple
-  answers a headless browser with a Cloudflare challenge, which now reports itself as
-  "blocked by a verification challenge" rather than as an empty result.
+  rather than breaking it. Seek, Jora and Prosple were checked against the live sites.
+- A job search a site refuses to answer from the hidden browser is retried in the
+  application browser. Prosple sits behind Cloudflare's managed challenge, which turns
+  away every headless browser and lets the same page through a visible window within
+  seconds; so when a search comes back challenged, the page is opened in the application
+  browser (or the attached one, when Settings > Browser attaches to your own and it is
+  running; a search falls back to Applyer's own window when it is not), a banner
+  above the board says which site is waiting and a desktop notification goes out under the
+  existing "verification required" switch, and the search resumes as soon as the challenge
+  clears, by itself or with your click; Skip gives that one site up for this search and the
+  others carry on. The window stays open two minutes at most, so the agent's tool call still
+  answers. A switch under Settings > Job search turns the retry off, in which case the site
+  is reported as blocked, as before. The run timeline lists these pauses per site.
 - A job search country (Settings > Job search). Indeed, Jora, Seek and Prosple are one
   site per country, each with its own listings, and every search used to hit the US
   edition; the setting picks the edition (`au.indeed.com`, `nz.seek.com`), the settings
@@ -92,8 +117,8 @@ Notable changes to Applyer are documented here. This project follows
   before it can be turned on.
 - Cloudflare's current "Just a moment..." interstitial (randomised element ids, a
   Turnstile widget smaller than the old size gate) is now recognised as a challenge, so a
-  search on a site behind it (Prosple, for one) reports itself as blocked instead of as
-  "no listings matched".
+  search on a site behind it (Prosple, for one) is retried in the application browser
+  instead of coming back as "no listings matched".
 
 ## [1.0.0] - 2026-09-11
 

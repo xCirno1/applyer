@@ -17,6 +17,8 @@
   "invalidExport": "File ini bukan hasil ekspor Applyer.",
   "autoStartReviewRequired": "Tinjau dan setujui perintah otomatis yang diimpor sebelum melanjutkan.",
   "jobNotFound": "Lowongan tidak ditemukan.",
+  "runNotFound": "Sesi tidak ditemukan.",
+  "noActiveRun": "Tidak ada sesi yang sedang berjalan.",
   "jobNotQueued": "Lowongan tidak ditemukan atau sudah tidak ada di Antre.",
   "jobNotCompleted": "Lowongan tidak ditemukan atau sudah tidak berstatus Terisi atau Terkirim.",
   "illegalTransition": "Lowongan itu sudah tidak berstatus {{from}}, jadi tidak bisa dipindah ke {{to}}.",

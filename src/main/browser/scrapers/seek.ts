@@ -1,6 +1,6 @@
 import { newHeadlessContext } from '../browserController'
 import { detectCaptcha } from '../captchaDetector'
-import { aggregatorHost } from '@shared/types/jobSource'
+import { SEARCH_COUNTRY_TIME_ZONES, aggregatorHost } from '@shared/types/jobSource'
 import { extractSeekSearchCards, type SeekCard } from './dom/seek'
 import { relativeListingDate } from './listingDate'
 import { readPostingPage } from './postingPage'
@@ -33,9 +33,14 @@ export function canonicalSeekJobUrl(host: string, id: string): string {
  * needs. The URL is built on the host that was searched, so a result from
  * the NZ site links to the NZ site.
  */
-export function seekCardToResult(card: SeekCard, host: string, now: Date = new Date()): JobSearchResultItem | null {
+export function seekCardToResult(
+  card: SeekCard,
+  host: string,
+  now: Date = new Date(),
+  timeZone: string = 'UTC'
+): JobSearchResultItem | null {
   if (!card.id || !card.title || !card.company || !/^\d+$/.test(card.id)) return null
-  const postedAt = relativeListingDate(card.listed, now)
+  const postedAt = relativeListingDate(card.listed, now, timeZone)
   return {
     title: card.title,
     company: card.company,
@@ -81,7 +86,7 @@ export async function searchSeek(params: AggregatorSearchParams): Promise<Aggreg
     const seen = new Set<string>()
     const results: JobSearchResultItem[] = []
     for (const card of cards) {
-      const item = seekCardToResult(card, landedHost, now)
+      const item = seekCardToResult(card, landedHost, now, SEARCH_COUNTRY_TIME_ZONES[params.country])
       if (!item || seen.has(item.url)) continue
       seen.add(item.url)
       results.push(item)

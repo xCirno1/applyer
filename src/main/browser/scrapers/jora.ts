@@ -1,6 +1,6 @@
 import { newHeadlessContext } from '../browserController'
 import { detectCaptcha } from '../captchaDetector'
-import { aggregatorHost } from '@shared/types/jobSource'
+import { SEARCH_COUNTRY_TIME_ZONES, aggregatorHost } from '@shared/types/jobSource'
 import { extractJoraSearchCards, type JoraCard } from './dom/jora'
 import { relativeListingDate } from './listingDate'
 import { readPostingPage } from './postingPage'
@@ -44,11 +44,16 @@ export function canonicalJoraJobUrl(href: string, host: string): string | null {
   return `https://${parsed.hostname}${parsed.pathname}`
 }
 
-export function joraCardToResult(card: JoraCard, host: string, now: Date = new Date()): JobSearchResultItem | null {
+export function joraCardToResult(
+  card: JoraCard,
+  host: string,
+  now: Date = new Date(),
+  timeZone: string = 'UTC'
+): JobSearchResultItem | null {
   if (!card.href || !card.title || !card.company) return null
   const url = canonicalJoraJobUrl(card.href, host)
   if (!url) return null
-  const postedAt = relativeListingDate(card.listed, now)
+  const postedAt = relativeListingDate(card.listed, now, timeZone)
   return {
     title: card.title,
     company: card.company,
@@ -89,7 +94,7 @@ export async function searchJora(params: AggregatorSearchParams): Promise<Aggreg
     const seen = new Set<string>()
     const results: JobSearchResultItem[] = []
     for (const card of cards) {
-      const item = joraCardToResult(card, host, now)
+      const item = joraCardToResult(card, host, now, SEARCH_COUNTRY_TIME_ZONES[params.country])
       if (!item || seen.has(item.url)) continue
       seen.add(item.url)
       results.push(item)

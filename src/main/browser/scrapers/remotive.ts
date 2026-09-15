@@ -3,6 +3,7 @@ import { normalizeText, queryTerms, rankPostings } from '../ats/matching'
 import type { AtsPosting } from '../ats/types'
 import { htmlToPlainText, sanitizeDescriptionHtml } from '../htmlContent'
 import { fetchGenericJobDetails } from './generic'
+import { isNavigableUrl } from '@shared/url'
 import type { AggregatorSearchParams, AggregatorSearchResult, JobDetailsOutcome, JobSearchResultItem } from '../types'
 
 /**
@@ -30,8 +31,18 @@ const API_URL = 'https://remotive.com/api/remote-jobs'
 const SNIPPET_CHARS = 240
 /** Six hours is four fetches a day, the ceiling Remotive's notice asks for. */
 const FEED_TTL_MS = 6 * 60 * 60 * 1000
-/** A feed that failed to load is retried sooner than a good one is refreshed, but not on every call. */
+/**
+ * A feed that failed to load is retried sooner than a good one is refreshed,
+ * but each further failure waits twice as long, up to the ordinary TTL:
+ * 5, 10, 20, 40, 80, 160, 320 minutes, then 6 hours. A day of an endpoint
+ * answering 429 costs about ten requests, not one per search.
+ */
 const FEED_ERROR_TTL_MS = 5 * 60 * 1000
+
+export function feedErrorTtlMs(failures: number): number {
+  const doublings = Math.max(0, Math.min(failures - 1, 31))
+  return Math.min(FEED_TTL_MS, FEED_ERROR_TTL_MS * 2 ** doublings)
+}
 
 export interface RemotiveJob {
   id: number
@@ -56,11 +67,15 @@ function optionalString(value: unknown): string | null {
 
 /**
  * The jobs in an API response that are well-formed enough to use. A posting
- * missing its id, URL, title or company is skipped rather than failing the
- * whole feed; the API is public and its shape is not ours to rely on.
+ * missing its id, URL, title or company, or whose URL is not somewhere a
+ * browser can go, is skipped rather than failing the whole feed; the API is
+ * public and its shape is not ours to rely on. A response with no `jobs`
+ * array at all is null, not an empty feed: an error envelope or a changed
+ * shape must surface as a warning, not be cached for six hours as "no
+ * postings match anything".
  */
-export function parseRemotiveJobs(data: unknown): RemotiveJob[] {
-  if (!isRecord(data) || !Array.isArray(data.jobs)) return []
+export function parseRemotiveJobs(data: unknown): RemotiveJob[] | null {
+  if (!isRecord(data) || !Array.isArray(data.jobs)) return null
   const jobs: RemotiveJob[] = []
   for (const entry of data.jobs) {
     if (!isRecord(entry)) continue
@@ -68,7 +83,7 @@ export function parseRemotiveJobs(data: unknown): RemotiveJob[] {
     const url = optionalString(entry.url)
     const title = optionalString(entry.title)
     const company = optionalString(entry.company_name)
-    if (id === null || !url || !title || !company) continue
+    if (id === null || !url || !title || !company || !isNavigableUrl(url)) continue
     jobs.push({
       id,
       url,
@@ -88,8 +103,10 @@ export function parseRemotiveJobs(data: unknown): RemotiveJob[] {
 interface FeedCache {
   fetchedAt: number
   jobs: RemotiveJob[]
-  /** Set when the last fetch failed; the cache then expires after `FEED_ERROR_TTL_MS` instead. */
+  /** Set when the last fetch failed; the cache then expires after `feedErrorTtlMs(failures)` instead. */
   error: string | null
+  /** Fetches that have failed in a row, for the backoff; zero after a good one. */
+  failures: number
 }
 
 let feedCache: FeedCache | null = null
@@ -101,11 +118,14 @@ export function resetRemotiveFeedCache(): void {
   feedInFlight = null
 }
 
-async function loadFeed(now: number): Promise<FeedCache> {
+async function loadFeed(now: number, previousFailures: number): Promise<FeedCache> {
+  const failed = (error: string): FeedCache => ({ fetchedAt: now, jobs: [], error, failures: previousFailures + 1 })
   const outcome = await fetchAtsJson(API_URL)
-  if (outcome.status === 'not_found') return { fetchedAt: now, jobs: [], error: 'the API endpoint was not found' }
-  if (outcome.status === 'error') return { fetchedAt: now, jobs: [], error: outcome.message }
-  return { fetchedAt: now, jobs: parseRemotiveJobs(outcome.data), error: null }
+  if (outcome.status === 'not_found') return failed('the API endpoint was not found')
+  if (outcome.status === 'error') return failed(outcome.message)
+  const jobs = parseRemotiveJobs(outcome.data)
+  if (jobs === null) return failed('the API answered with an unexpected shape (no jobs list)')
+  return { fetchedAt: now, jobs, error: null, failures: 0 }
 }
 
 /**
@@ -116,11 +136,11 @@ async function loadFeed(now: number): Promise<FeedCache> {
  */
 async function getFeed(now: number = Date.now()): Promise<FeedCache> {
   if (feedCache) {
-    const ttl = feedCache.error ? FEED_ERROR_TTL_MS : FEED_TTL_MS
+    const ttl = feedCache.error ? feedErrorTtlMs(feedCache.failures) : FEED_TTL_MS
     if (now - feedCache.fetchedAt < ttl) return feedCache
   }
   if (!feedInFlight) {
-    feedInFlight = loadFeed(now)
+    feedInFlight = loadFeed(now, feedCache?.failures ?? 0)
       .then((cache) => {
         feedCache = cache
         return cache

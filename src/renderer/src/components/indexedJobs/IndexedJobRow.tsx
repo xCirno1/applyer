@@ -6,9 +6,15 @@ import { JOB_SOURCE_LABELS } from '@shared/types/jobSource'
 import Tag from '../ui/Tag'
 import { useJobsStore } from '../../state/jobsStore'
 
-/** The brand name for a known source; an unknown one (an older build's id, a hand-imported row) shows as stored. */
+/**
+ * The brand name for a known source; an unknown one (an older build's id, a
+ * hand-imported row) shows as stored. An own-property check, not `in`: the
+ * id is imported data, and `"__proto__" in {}` is true.
+ */
 function sourceLabel(source: string): string {
-  return source in JOB_SOURCE_LABELS ? JOB_SOURCE_LABELS[source as keyof typeof JOB_SOURCE_LABELS] : source
+  return Object.prototype.hasOwnProperty.call(JOB_SOURCE_LABELS, source)
+    ? JOB_SOURCE_LABELS[source as keyof typeof JOB_SOURCE_LABELS]
+    : source
 }
 
 // One card in `IndexedJobsList`'s default ("comfortable") view, laid out in a

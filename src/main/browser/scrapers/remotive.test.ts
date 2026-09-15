@@ -4,13 +4,15 @@ const fetchGenericJobDetails = vi.fn()
 vi.mock('./generic', () => ({ fetchGenericJobDetails: (...args: unknown[]) => fetchGenericJobDetails(...args) }))
 
 import {
+  feedErrorTtlMs,
   fetchRemotiveJobDetails,
   parseRemotiveJobId,
   parseRemotiveJobs,
   rankByLocation,
   resetRemotiveFeedCache,
   searchRemotive,
-  searchRemotiveFeed
+  searchRemotiveFeed,
+  type RemotiveJob
 } from './remotive'
 
 const originalFetch = global.fetch
@@ -41,6 +43,13 @@ function apiJob(overrides: Record<string, unknown> = {}): Record<string, unknown
   }
 }
 
+/** A well-formed response's jobs; the tests for the malformed case call `parseRemotiveJobs` directly. */
+function feed(data: unknown): RemotiveJob[] {
+  const jobs = parseRemotiveJobs(data)
+  if (jobs === null) throw new Error('test feed is malformed')
+  return jobs
+}
+
 function respondWith(body: unknown, status = 200): ReturnType<typeof vi.fn> {
   const spy = vi.fn(async () => new Response(JSON.stringify(body), { status }))
   global.fetch = spy as unknown as typeof fetch
@@ -49,11 +58,14 @@ function respondWith(body: unknown, status = 200): ReturnType<typeof vi.fn> {
 
 describe('parseRemotiveJobs', () => {
   it('reads well-formed postings and skips the rest', () => {
-    const jobs = parseRemotiveJobs({
+    const jobs = feed({
       jobs: [
         apiJob(),
         apiJob({ id: 'x' }),
         apiJob({ url: '' }),
+        apiJob({ url: 'javascript:alert(1)' }),
+        apiJob({ url: 'file:' + '//' + '/etc/hosts' }),
+        apiJob({ url: '/remote-jobs/relative-1' }),
         apiJob({ title: null }),
         apiJob({ company_name: undefined }),
         'nonsense',
@@ -76,15 +88,29 @@ describe('parseRemotiveJobs', () => {
     expect(jobs[1]).toMatchObject({ id: 2, salary: null, location: null, descriptionHtml: '', tags: [], category: null })
   })
 
-  it('returns nothing for a response of the wrong shape', () => {
-    expect(parseRemotiveJobs(null)).toEqual([])
-    expect(parseRemotiveJobs({ jobs: 'x' })).toEqual([])
-    expect(parseRemotiveJobs([])).toEqual([])
+  it('tells a response of the wrong shape apart from an empty feed', () => {
+    expect(parseRemotiveJobs(null)).toBeNull()
+    expect(parseRemotiveJobs({ jobs: 'x' })).toBeNull()
+    expect(parseRemotiveJobs([])).toBeNull()
+    expect(parseRemotiveJobs({ error: 'rate limited' })).toBeNull()
+    expect(parseRemotiveJobs({ jobs: [] })).toEqual([])
+  })
+})
+
+describe('feedErrorTtlMs', () => {
+  it('doubles from five minutes up to the ordinary TTL and stays there', () => {
+    expect(feedErrorTtlMs(1)).toBe(5 * 60 * 1000)
+    expect(feedErrorTtlMs(2)).toBe(10 * 60 * 1000)
+    expect(feedErrorTtlMs(6)).toBe(160 * 60 * 1000)
+    expect(feedErrorTtlMs(7)).toBe(320 * 60 * 1000)
+    expect(feedErrorTtlMs(8)).toBe(6 * 60 * 60 * 1000)
+    expect(feedErrorTtlMs(100)).toBe(6 * 60 * 60 * 1000)
+    expect(feedErrorTtlMs(0)).toBe(5 * 60 * 1000)
   })
 })
 
 describe('rankByLocation', () => {
-  const jobs = parseRemotiveJobs({
+  const jobs = feed({
     jobs: [
       apiJob({ id: 1, candidate_required_location: 'USA only' }),
       apiJob({ id: 2, candidate_required_location: 'Australia' }),
@@ -104,7 +130,7 @@ describe('rankByLocation', () => {
 })
 
 describe('searchRemotiveFeed', () => {
-  const jobs = parseRemotiveJobs({
+  const jobs = feed({
     jobs: [
       apiJob({ id: 1, title: 'Marketing Manager', category: 'Marketing', tags: ['seo'] }),
       apiJob({ id: 2, title: 'Backend Engineer', category: 'Software Development', tags: ['go'] }),
@@ -124,7 +150,7 @@ describe('searchRemotiveFeed', () => {
   it('applies the location preference after ranking', () => {
     expect(searchRemotiveFeed(jobs, 'backend', 'Australia').map((job) => job.id)).toEqual([2, 4, 3])
     expect(searchRemotiveFeed(jobs, 'backend', 'USA').map((job) => job.id)).toEqual([2, 3, 4])
-    const usOnly = parseRemotiveJobs({
+    const usOnly = feed({
       jobs: [apiJob({ id: 5, title: 'Backend', candidate_required_location: 'USA only' }), apiJob({ id: 6, title: 'Backend' })]
     })
     expect(searchRemotiveFeed(usOnly, 'backend', 'Europe').map((job) => job.id)).toEqual([6, 5])
@@ -202,6 +228,60 @@ describe('searchRemotive', () => {
 
     await searchRemotive({ query: 'x', limit: 2, country: 'us' })
     expect(spy).toHaveBeenCalledTimes(1)
+    vi.setSystemTime(new Date('2026-09-14T00:05:01Z'))
+    await searchRemotive({ query: 'x', limit: 2, country: 'us' })
+    expect(spy).toHaveBeenCalledTimes(2)
+  })
+
+  it('waits longer after each failure in a row, so a broken endpoint is not called per search', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-14T00:00:00Z'))
+    const spy = respondWith({}, 500)
+    await searchRemotive({ query: 'x', limit: 2, country: 'us' })
+    vi.setSystemTime(new Date('2026-09-14T00:05:01Z'))
+    await searchRemotive({ query: 'x', limit: 2, country: 'us' })
+    expect(spy).toHaveBeenCalledTimes(2)
+    // Five more minutes is no longer enough after the second failure.
+    vi.setSystemTime(new Date('2026-09-14T00:10:02Z'))
+    await searchRemotive({ query: 'x', limit: 2, country: 'us' })
+    expect(spy).toHaveBeenCalledTimes(2)
+    vi.setSystemTime(new Date('2026-09-14T00:15:02Z'))
+    await searchRemotive({ query: 'x', limit: 2, country: 'us' })
+    expect(spy).toHaveBeenCalledTimes(3)
+  })
+
+  it('resets the backoff once the feed loads again', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-14T00:00:00Z'))
+    const spy = respondWith({}, 500)
+    await searchRemotive({ query: 'x', limit: 2, country: 'us' })
+    vi.setSystemTime(new Date('2026-09-14T00:05:01Z'))
+    respondWith({ jobs: [apiJob()] })
+    const good = await searchRemotive({ query: 'backend', limit: 2, country: 'us' })
+    expect(good.results).toHaveLength(1)
+    expect(spy).toHaveBeenCalledTimes(1)
+    // A good feed is kept for the ordinary six hours, not retried on the error clock.
+    vi.setSystemTime(new Date('2026-09-14T03:00:00Z'))
+    await searchRemotive({ query: 'backend', limit: 2, country: 'us' })
+    vi.setSystemTime(new Date('2026-09-14T06:05:02Z'))
+    respondWith({}, 500)
+    const failedAgain = await searchRemotive({ query: 'backend', limit: 2, country: 'us' })
+    expect(failedAgain.warning).toMatch(/^remotive: /)
+    // First failure after a success: back to the five-minute wait.
+    vi.setSystemTime(new Date('2026-09-14T06:10:03Z'))
+    const retrySpy = respondWith({ jobs: [apiJob()] })
+    await searchRemotive({ query: 'backend', limit: 2, country: 'us' })
+    expect(retrySpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats a successful answer without a jobs list as a failure, not an empty feed', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-09-14T00:00:00Z'))
+    const spy = respondWith({ error: 'rate limited' })
+    const outcome = await searchRemotive({ query: 'x', limit: 2, country: 'us' })
+    expect(outcome.results).toEqual([])
+    expect(outcome.warning).toMatch(/unexpected shape/)
+    // Retried on the error clock, not kept for six hours.
     vi.setSystemTime(new Date('2026-09-14T00:05:01Z'))
     await searchRemotive({ query: 'x', limit: 2, country: 'us' })
     expect(spy).toHaveBeenCalledTimes(2)

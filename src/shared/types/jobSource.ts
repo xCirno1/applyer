@@ -99,6 +99,34 @@ export type SearchCountry = (typeof SEARCH_COUNTRIES)[number]
 /** The edition the app searched before the setting existed, so an unset preference changes nothing. */
 export const DEFAULT_SEARCH_COUNTRY: SearchCountry = 'us'
 
+/**
+ * The calendar an edition prints its "listed 3d ago" phrases against. A
+ * card says "Today" in the site's own day, not the reader's and not UTC, so
+ * turning that phrase into a date needs the site's zone: at 08:00 in Sydney
+ * UTC is still yesterday. One zone per country is enough for a phrase with
+ * day resolution; the countries here that span several zones (US, Canada,
+ * Australia) get the one their listings are mostly stamped in.
+ */
+export const SEARCH_COUNTRY_TIME_ZONES: Record<SearchCountry, string> = {
+  us: 'America/New_York',
+  ca: 'America/Toronto',
+  gb: 'Europe/London',
+  ie: 'Europe/Dublin',
+  au: 'Australia/Sydney',
+  nz: 'Pacific/Auckland',
+  sg: 'Asia/Singapore',
+  my: 'Asia/Kuala_Lumpur',
+  ph: 'Asia/Manila',
+  id: 'Asia/Jakarta',
+  in: 'Asia/Kolkata',
+  hk: 'Asia/Hong_Kong',
+  ae: 'Asia/Dubai',
+  za: 'Africa/Johannesburg',
+  de: 'Europe/Berlin',
+  fr: 'Europe/Paris',
+  nl: 'Europe/Amsterdam'
+}
+
 export function isSearchCountry(value: unknown): value is SearchCountry {
   return typeof value === 'string' && (SEARCH_COUNTRIES as readonly string[]).includes(value)
 }

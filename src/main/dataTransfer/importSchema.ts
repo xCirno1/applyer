@@ -10,6 +10,7 @@ import {
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTransfer'
 import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
+import { SEARCH_COUNTRIES } from '@shared/types/jobSource'
 import { isValidBoardDescriptor } from '../browser/ats/providers'
 import { sanitizeDescriptionHtml } from '../browser/htmlContent'
 import { appError, type AppError } from '@shared/types/errorCodes'
@@ -186,7 +187,8 @@ const settingsDataSchema = z.object({
       jobFilled: z.boolean(),
       jobFailed: z.boolean()
     })
-    .optional()
+    .optional(),
+  searchCountry: z.enum(SEARCH_COUNTRIES).optional()
 })
 
 /**

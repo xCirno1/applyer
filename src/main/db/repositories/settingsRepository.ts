@@ -19,6 +19,7 @@ import {
   type RemoteBrowserSettings
 } from '@shared/types/remoteBrowser'
 import { DEFAULT_RESUME_SETTINGS, type ResumeSettings } from '@shared/types/resume'
+import { DEFAULT_SEARCH_COUNTRY, isSearchCountry, type SearchCountry } from '@shared/types/jobSource'
 import {
   DENIED_AGENT_PERMISSIONS,
   DEFAULT_AGENT_PERMISSIONS,
@@ -37,6 +38,7 @@ const NOTIFICATION_PREFERENCES_KEY = 'notification_preferences'
 const NOTIFICATION_LOCALE_KEY = 'notification_locale'
 const AGENT_PERMISSIONS_KEY = 'agent_permissions'
 const RESUME_SETTINGS_KEY = 'resume_settings'
+const SEARCH_COUNTRY_KEY = 'search_country'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -203,6 +205,20 @@ export function getNotificationLocale(): NotificationLocale {
 
 export function setNotificationLocale(locale: NotificationLocale): void {
   setSetting(NOTIFICATION_LOCALE_KEY, locale)
+}
+
+/**
+ * Which national edition of each job aggregator `search_jobs` hits (see
+ * `@shared/types/jobSource`). Unset or unrecognised falls back to the US
+ * edition, which is what every search used before the setting existed.
+ */
+export function getSearchCountry(): SearchCountry {
+  const value = getSetting(SEARCH_COUNTRY_KEY)
+  return isSearchCountry(value) ? value : DEFAULT_SEARCH_COUNTRY
+}
+
+export function setSearchCountry(country: SearchCountry): void {
+  setSetting(SEARCH_COUNTRY_KEY, country)
 }
 
 /**

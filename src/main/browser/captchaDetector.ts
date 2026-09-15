@@ -5,11 +5,27 @@ export interface CaptchaCheckResult {
   reason?: string
 }
 
+// Matched against the page title and the first few thousand characters of
+// body text together. "Just a moment..." and "Performing security
+// verification ... verifies you are not a bot" are Cloudflare's current
+// interstitial, whose element ids are randomised per request, so the copy is
+// the stable signal there.
 const CHALLENGE_TEXT_PATTERN =
-  /verify you are human|are you a robot|checking your browser|attention required|unusual traffic|complete the security check|access denied.{0,40}captcha|please verify you are a human/i
+  /verify you are human|are you a robot|checking your browser|attention required|unusual traffic|complete the security check|access denied.{0,40}captcha|please verify you are a human|just a moment\.{0,3}$|performing security verification|verif(?:y|ies|ying) (?:that )?you are (?:not a bot|human)/im
 
 // Selectors for actual challenge widgets/containers (not badges) — existence alone is a signal.
-const CHALLENGE_SELECTORS = ['div.g-recaptcha', '#challenge-form', '#challenge-running', '#px-captcha', '[data-sitekey]']
+// `#challenge-error-text` and `#challenge-stage` are Cloudflare's "Just a moment..."
+// interstitial, which a headless browser sees before (and instead of) the Turnstile iframe
+// the frame check above would catch.
+const CHALLENGE_SELECTORS = [
+  'div.g-recaptcha',
+  '#challenge-form',
+  '#challenge-running',
+  '#challenge-error-text',
+  '#challenge-stage',
+  '#px-captcha',
+  '[data-sitekey]'
+]
 
 // iframe-based signals need the visibility/size gate below: vendors like reCAPTCHA embed a
 // persistent, tiny "protected by..." badge iframe on every page they cover, challenge or not —
@@ -25,6 +41,11 @@ const BADGE_FRAME_URL_PATTERN = /recaptcha\/(?:api2|enterprise)\/anchor/i
 // (checkbox popup, image grid, full-page "checking your browser" interstitial) is meaningfully
 // bigger. Used to tell the two apart without hardcoding every vendor's exact markup.
 const MIN_CHALLENGE_DIMENSION_PX = 100
+
+// Cloudflare Turnstile has no badge: its invisible mode renders nothing, and its visible
+// widget (about 300x65px, so under the size gate) only appears when there is a challenge
+// to pass. A visible Turnstile frame is therefore a challenge whatever its size.
+const SIZELESS_CHALLENGE_FRAME_PATTERN = /challenges\.cloudflare/i
 
 interface SizableElement {
   isVisible(): Promise<boolean>
@@ -50,7 +71,10 @@ export async function detectCaptcha(page: Page): Promise<CaptchaCheckResult> {
     if (BADGE_FRAME_URL_PATTERN.test(url)) continue
     try {
       const element = await frame.frameElement()
-      if (await isVisibleAndChallengeSized(element)) {
+      const shown = SIZELESS_CHALLENGE_FRAME_PATTERN.test(url)
+        ? await element.isVisible()
+        : await isVisibleAndChallengeSized(element)
+      if (shown) {
         return { blocked: true, reason: 'challenge_iframe' }
       }
     } catch {
@@ -82,7 +106,7 @@ export async function detectCaptcha(page: Page): Promise<CaptchaCheckResult> {
   }
 
   const bodyText = await page
-    .evaluate(() => document.body?.innerText?.slice(0, 3000) ?? '')
+    .evaluate(() => `${document.title ?? ''}\n${document.body?.innerText?.slice(0, 3000) ?? ''}`)
     .catch(() => '')
   if (CHALLENGE_TEXT_PATTERN.test(bodyText)) {
     return { blocked: true, reason: 'challenge_text' }

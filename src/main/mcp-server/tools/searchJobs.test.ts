@@ -17,6 +17,7 @@ beforeEach(() => {
 import { searchJobsTool } from './searchJobs'
 import { listActivity } from '../../db/repositories/activityLogRepository'
 import { listIndexedJobs } from '../../db/repositories/indexedJobsRepository'
+import { setSearchCountry } from '../../db/repositories/settingsRepository'
 import type { JobSearchResultItem } from '../../browser/types'
 
 function parse(result: Awaited<ReturnType<typeof searchJobsTool>>): unknown {
@@ -38,9 +39,24 @@ describe('searchJobsTool', () => {
   it('passes args through and returns the outcome as-is', async () => {
     const item = resultItem()
     searchJobs.mockResolvedValue({ results: [item], searchedSources: ['indeed'], warnings: [] })
-    const result = await searchJobsTool({ query: 'engineer', location: undefined, remote: undefined, jobType: undefined, sources: undefined, limit: undefined })
+    const result = await searchJobsTool({ query: 'engineer', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
     expect(parse(result)).toEqual({ results: [item], searchedSources: ['indeed'], warnings: [] })
-    expect(searchJobs).toHaveBeenCalledWith({ query: 'engineer', location: undefined, sources: undefined, limit: 20 })
+    expect(searchJobs).toHaveBeenCalledWith({
+      query: 'engineer',
+      location: undefined,
+      sources: undefined,
+      limit: 20,
+      country: 'us'
+    })
+  })
+
+  it('searches the country from settings unless the call names one', async () => {
+    setSearchCountry('au')
+    searchJobs.mockResolvedValue({ results: [], searchedSources: [], warnings: [] })
+    await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
+    expect(searchJobs).toHaveBeenLastCalledWith(expect.objectContaining({ country: 'au' }))
+    await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: 'nz', limit: undefined })
+    expect(searchJobs).toHaveBeenLastCalledWith(expect.objectContaining({ country: 'nz' }))
   })
 
   it('logs an activity entry summarizing the search', async () => {
@@ -49,7 +65,7 @@ describe('searchJobsTool', () => {
       searchedSources: ['indeed', 'linkedin'],
       warnings: []
     })
-    await searchJobsTool({ query: 'engineer', location: undefined, remote: undefined, jobType: undefined, sources: undefined, limit: undefined })
+    await searchJobsTool({ query: 'engineer', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
     const { entries } = listActivity({})
     expect(entries).toHaveLength(1)
     expect(entries[0]!.message).toContain('2 results')
@@ -61,7 +77,7 @@ describe('searchJobsTool', () => {
       searchedSources: ['indeed'],
       warnings: []
     })
-    await searchJobsTool({ query: 'engineer', location: 'Remote', remote: undefined, jobType: undefined, sources: undefined, limit: undefined })
+    await searchJobsTool({ query: 'engineer', location: 'Remote', remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
 
     const { items, total } = listIndexedJobs({})
     expect(total).toBe(2)
@@ -77,7 +93,7 @@ describe('searchJobsTool', () => {
     const malformed = {} as JobSearchResultItem
     searchJobs.mockResolvedValue({ results: [malformed], searchedSources: ['indeed'], warnings: [] })
 
-    const result = await searchJobsTool({ query: 'engineer', location: undefined, remote: undefined, jobType: undefined, sources: undefined, limit: undefined })
+    const result = await searchJobsTool({ query: 'engineer', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
 
     expect(result.isError).toBeUndefined()
     expect(parse(result)).toEqual({ results: [malformed], searchedSources: ['indeed'], warnings: [] })
@@ -85,20 +101,20 @@ describe('searchJobsTool', () => {
 
   it('returns a plain-text error if the search throws', async () => {
     searchJobs.mockRejectedValue(new Error('all sources down'))
-    const result = await searchJobsTool({ query: 'engineer', location: undefined, remote: undefined, jobType: undefined, sources: undefined, limit: undefined })
+    const result = await searchJobsTool({ query: 'engineer', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
     expect(result.isError).toBe(true)
     expect((result.content[0] as { text: string }).text).toContain('all sources down')
   })
 
   it('defaults limit to SEARCH_JOBS_DEFAULT_LIMIT when not given', async () => {
     searchJobs.mockResolvedValue({ results: [], searchedSources: [], warnings: [] })
-    await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, limit: undefined })
+    await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: undefined })
     expect(searchJobs).toHaveBeenCalledWith(expect.objectContaining({ limit: 20 }))
   })
 
   it('passes through an explicit limit', async () => {
     searchJobs.mockResolvedValue({ results: [], searchedSources: [], warnings: [] })
-    await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, limit: 5 })
+    await searchJobsTool({ query: 'x', location: undefined, remote: undefined, jobType: undefined, sources: undefined, country: undefined, limit: 5 })
     expect(searchJobs).toHaveBeenCalledWith(expect.objectContaining({ limit: 5 }))
   })
 })

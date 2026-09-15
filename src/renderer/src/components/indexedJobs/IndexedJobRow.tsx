@@ -2,8 +2,20 @@ import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import type { IndexedJobRecord } from '@shared/types/indexedJob'
+import { JOB_SOURCE_LABELS } from '@shared/types/jobSource'
 import Tag from '../ui/Tag'
 import { useJobsStore } from '../../state/jobsStore'
+
+/**
+ * The brand name for a known source; an unknown one (an older build's id, a
+ * hand-imported row) shows as stored. An own-property check, not `in`: the
+ * id is imported data, and `"__proto__" in {}` is true.
+ */
+function sourceLabel(source: string): string {
+  return Object.prototype.hasOwnProperty.call(JOB_SOURCE_LABELS, source)
+    ? JOB_SOURCE_LABELS[source as keyof typeof JOB_SOURCE_LABELS]
+    : source
+}
 
 // One card in `IndexedJobsList`'s default ("comfortable") view, laid out in a
 // responsive 1/2/3-column grid by the parent rather than one full-width
@@ -106,7 +118,7 @@ export default function IndexedJobRow({ item, compact = false }: { item: Indexed
 
       <div className="mt-auto flex items-center gap-1.5 pt-1.5">
         <Tag label={matched ? t('row.matched') : t('row.notSelected')} tone={matched ? 'success' : 'neutral'} />
-        {item.source && <span className="truncate text-[11px] text-text-faint">{item.source}</span>}
+        {item.source && <span className="truncate text-[11px] text-text-faint">{sourceLabel(item.source)}</span>}
         <span className="ml-auto shrink-0 text-[11px] text-text-faint">{formatRelativeTime(item.lastSeenAt, t)}</span>
         <a
           href={item.url}

@@ -11,6 +11,7 @@ import ShortcutsSection from './ShortcutsSection'
 import DataSection from './DataSection'
 import DeveloperSection from './DeveloperSection'
 import NotificationsSection from './NotificationsSection'
+import SearchSection from './SearchSection'
 
 // Labels come from the `settings.nav.*` catalog keyed by id, so this list
 // only declares which sections exist and in what order.
@@ -19,6 +20,7 @@ const SECTIONS = [
   'documents',
   'storage',
   'browser',
+  'search',
   'agent',
   'appearance',
   'language',
@@ -62,6 +64,7 @@ export default function SettingsPage({
         {section === 'documents' && <DocumentsSection />}
         {section === 'storage' && <StorageSection />}
         {section === 'browser' && <BrowserSection />}
+        {section === 'search' && <SearchSection />}
         {section === 'agent' && <AgentSection />}
         {section === 'appearance' && <AppearanceSection />}
         {section === 'language' && <LanguageSection />}

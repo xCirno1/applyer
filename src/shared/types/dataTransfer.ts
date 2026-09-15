@@ -6,6 +6,7 @@ import type { IndexedJobsRetention } from './indexedJob'
 import type { AtsProvider } from './companyBoard'
 import type { AppError } from './errorCodes'
 import type { NotificationPreferences } from './notification'
+import type { SearchCountry } from './jobSource'
 import type { ThemeState } from './theme'
 import type { ResumeContent, ResumePageSize, ResumeSettings, ResumeTemplateId, ResumeStyle } from './resume'
 
@@ -59,6 +60,8 @@ export interface ExportSettingsData {
   indexedJobsRetentionDays: IndexedJobsRetention
   /** Optional so bundles written before notification settings existed remain valid. */
   notificationPreferences?: NotificationPreferences
+  /** Optional for the same reason: bundles written before the job search country existed. */
+  searchCountry?: SearchCountry
 }
 
 /** The single JSON round-trip format — the only format `data:import` accepts. */

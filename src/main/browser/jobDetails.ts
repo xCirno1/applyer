@@ -5,6 +5,10 @@ import { fetchAshbyJobDetails } from './scrapers/ashby'
 import { fetchIndeedJobDetails } from './scrapers/indeed'
 import { fetchLinkedInJobDetails } from './scrapers/linkedin'
 import { fetchWorkdayJobDetails } from './scrapers/workday'
+import { fetchSeekJobDetails } from './scrapers/seek'
+import { fetchJoraJobDetails } from './scrapers/jora'
+import { fetchProspleJobDetails } from './scrapers/prosple'
+import { fetchRemotiveJobDetails } from './scrapers/remotive'
 import { fetchGenericJobDetails } from './scrapers/generic'
 import type { JobDetailsOutcome } from './types'
 import { isNavigableUrl } from '@shared/url'
@@ -34,6 +38,14 @@ export async function fetchJobDetails(url: string): Promise<JobDetailsOutcome> {
       return fetchLinkedInJobDetails(url)
     case 'workday':
       return fetchWorkdayJobDetails(url)
+    case 'seek':
+      return fetchSeekJobDetails(url)
+    case 'jora':
+      return fetchJoraJobDetails(url)
+    case 'prosple':
+      return fetchProspleJobDetails(url)
+    case 'remotive':
+      return fetchRemotiveJobDetails(url)
     case 'generic':
       return fetchGenericJobDetails(url)
   }

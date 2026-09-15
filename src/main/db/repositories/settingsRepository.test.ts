@@ -32,7 +32,9 @@ import {
   getNotificationPreferences,
   setNotificationPreferences,
   getNotificationLocale,
-  setNotificationLocale
+  setNotificationLocale,
+  getSearchCountry,
+  setSearchCountry
 } from './settingsRepository'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
@@ -256,6 +258,19 @@ describe('notification locale', () => {
   it('falls back to English for an unrecognized cached locale', () => {
     testDb.insert(appSettings).values({ key: 'notification_locale', value: 'xx' }).run()
     expect(getNotificationLocale()).toBe('en')
+  })
+})
+
+describe('search country', () => {
+  it('defaults to the US edition and round-trips a chosen country', () => {
+    expect(getSearchCountry()).toBe('us')
+    setSearchCountry('au')
+    expect(getSearchCountry()).toBe('au')
+  })
+
+  it('falls back to the default for an unrecognised stored value', () => {
+    testDb.insert(appSettings).values({ key: 'search_country', value: 'xx' }).run()
+    expect(getSearchCountry()).toBe('us')
   })
 })
 

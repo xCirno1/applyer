@@ -4,6 +4,7 @@
     "documents": "Dokumen",
     "storage": "Penyimpanan",
     "browser": "Browser",
+    "search": "Pencarian lowongan",
     "agent": "Agen",
     "appearance": "Tampilan",
     "language": "Bahasa",
@@ -38,6 +39,25 @@
     "saved": "Pengaturan notifikasi disimpan.",
     "loadFailed": "Tidak bisa memuat pengaturan notifikasi.",
     "saveFailed": "Tidak bisa menyimpan pengaturan notifikasi."
+  },
+  "search": {
+    "title": "Pencarian lowongan",
+    "intro": "Kebanyakan situs lowongan punya edisi terpisah per negara dengan daftar lowongannya masing-masing: pencarian di Indeed edisi AS tidak akan melihat lowongan yang dipasang di edisi Indonesia, dan Seek hanya ada di Australia dan Selandia Baru. Pilih negara tempat kamu mencari agar setiap pencarian menuju edisi yang tepat. Agen tetap bisa mencari di negara lain untuk satu pencarian kalau kamu memintanya.",
+    "countryLabel": "Negara",
+    "coverageTitle": "Situs yang dicari untuk {{country}}",
+    "worldwide": "Seluruh dunia",
+    "notAvailable": "Tidak ada edisi di negara ini",
+    "outro": "Papan perusahaan yang kamu pantau (Greenhouse, Lever, Ashby, Workday) tetap dicari apa pun negaranya.",
+    "saved": "Pencarian lowongan akan memakai edisi {{country}}.",
+    "saveFailed": "Tidak dapat menyimpan negara pencarian lowongan.",
+    "sources": {
+      "indeed": "Papan lowongan umum dengan edisi dan indeks terpisah per negara.",
+      "linkedin": "Satu situs untuk seluruh dunia; dipersempit lewat lokasi yang kamu berikan saat mencari, bukan lewat negara.",
+      "seek": "Papan lowongan utama di Australia dan Selandia Baru.",
+      "jora": "Agregator seluruh dunia yang memuat ulang lowongan dari papan dan halaman karier lain. Salinan lowongan yang sudah ditemukan di tempat lain dibuang.",
+      "prosple": "Program lulusan baru, magang, dan posisi tingkat awal di Asia-Pasifik.",
+      "remotive": "Posisi kerja jarak jauh saja, seluruh dunia, dibaca lewat API publiknya."
+    }
   },
   "appearance": {
     "title": "Tampilan",

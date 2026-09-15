@@ -11,7 +11,8 @@ import {
   setAutoStartCommand,
   setIndexedJobsRetentionDays,
   setNotificationPreferences,
-  setResumeSettings
+  setResumeSettings,
+  setSearchCountry
 } from '../db/repositories/settingsRepository'
 
 /**
@@ -81,6 +82,7 @@ export function applyImport(bundle: ExportBundle, selection: ExportSelection): I
     if (bundle.data.settings.notificationPreferences) {
       setNotificationPreferences(bundle.data.settings.notificationPreferences)
     }
+    if (bundle.data.settings.searchCountry) setSearchCountry(bundle.data.settings.searchCountry)
     summary.settings = true
   }
   return summary

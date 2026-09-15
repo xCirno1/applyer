@@ -1,17 +1,24 @@
-import { searchIndeed } from './scrapers/indeed'
-import { searchLinkedIn } from './scrapers/linkedin'
+import { AGGREGATORS, type AggregatorAdapter } from './aggregators'
 import { searchAtsBoards } from './ats/searchAtsBoards'
 import { crossSourceKey, interleaveByBoard } from './ats/matching'
 import { isUrlExcluded } from '../db/repositories/jobExclusionsRepository'
 import { ATS_PROVIDERS, type AtsProvider } from '@shared/types/companyBoard'
+import {
+  DEFAULT_SEARCH_COUNTRY,
+  SEARCHABLE_SOURCES,
+  aggregatorServesCountry,
+  type JobSource,
+  type SearchCountry
+} from '@shared/types/jobSource'
 import type { JobSearchResultItem } from './types'
-import type { JobSource } from './sourceRouter'
 
 export interface SearchJobsParams {
   query: string
   location?: string
   sources?: JobSource[]
   limit: number
+  /** Which national edition of each aggregator to search; the caller resolves the setting. */
+  country?: SearchCountry
 }
 
 export interface SearchJobsOutcome {
@@ -20,69 +27,69 @@ export interface SearchJobsOutcome {
   warnings: string[]
 }
 
-/** Cross-company keyword search, scraped from a rendered page. */
-const AGGREGATOR_SOURCES: JobSource[] = ['indeed', 'linkedin']
-
 /**
- * Per-company ATS boards. None of these has a cross-company search endpoint,
- * so they're searched by fetching the boards of the companies the user (or
- * the agent) asked to track and filtering locally — see
- * `ats/searchAtsBoards.ts`. Asking for one of them with nothing tracked
- * returns a warning saying so rather than silently no results.
+ * Two kinds of source. The aggregators (`AGGREGATORS`) each have a
+ * cross-company keyword search of their own. The ATS providers do not: they
+ * are searched by fetching the boards of the companies the user (or the
+ * agent) asked to track and filtering locally, see `ats/searchAtsBoards.ts`,
+ * and asking for one with nothing tracked returns a warning saying so rather
+ * than silently no results.
  */
-const ATS_SOURCES: JobSource[] = [...ATS_PROVIDERS]
-
-/**
- * `generic` stays out: it's the fallback for an arbitrary careers page and
- * has nothing to enumerate, so `get_job_details` on a specific URL is the
- * only thing that makes sense for it.
- */
-const SEARCHABLE_SOURCES: JobSource[] = [...AGGREGATOR_SOURCES, ...ATS_SOURCES]
+const ATS_SOURCES: readonly JobSource[] = ATS_PROVIDERS
 
 function isAtsSource(source: JobSource): source is AtsProvider {
-  return (ATS_SOURCES as string[]).includes(source)
+  return ATS_SOURCES.includes(source)
 }
 
 export async function searchJobs(params: SearchJobsParams): Promise<SearchJobsOutcome> {
-  const requested = params.sources && params.sources.length > 0 ? params.sources : SEARCHABLE_SOURCES
-  const toSearch = requested.filter((s) => SEARCHABLE_SOURCES.includes(s))
+  const country = params.country ?? DEFAULT_SEARCH_COUNTRY
+  const explicitSources = params.sources && params.sources.length > 0 ? params.sources : null
+  const explicit = explicitSources !== null
+  const requested: readonly JobSource[] = explicitSources ?? SEARCHABLE_SOURCES
   const warnings: string[] = []
 
   for (const source of requested) {
     if (!SEARCHABLE_SOURCES.includes(source)) {
       warnings.push(
-        `${source}: no keyword-search endpoint exists for this source — pass a specific company's job/career-page URL to get_job_details instead.`
+        `${source}: no keyword-search endpoint exists for this source; pass a specific company's job/career-page URL to get_job_details instead.`
       )
+    }
+  }
+
+  // An aggregator with no edition in this country is skipped. That is only
+  // worth a warning when the agent asked for it by name: on a default
+  // "everything" search from, say, Germany, "seek: not available" on every
+  // call would be noise about a site the user never mentioned.
+  const aggregators: AggregatorAdapter[] = []
+  for (const adapter of AGGREGATORS) {
+    if (!requested.includes(adapter.source)) continue
+    if (aggregatorServesCountry(adapter.source, country)) {
+      aggregators.push(adapter)
+    } else if (explicit) {
+      warnings.push(`${adapter.source}: no edition for country "${country}"; change the job search country in Settings or pass a country that it serves.`)
     }
   }
 
   const searchedSources: string[] = []
   // Held per source rather than appended to one list as each finishes, so the
   // final ordering doesn't depend on which network call returned first.
-  let indeedResults: JobSearchResultItem[] = []
-  let linkedinResults: JobSearchResultItem[] = []
+  const aggregatorResults = new Map<JobSource, JobSearchResultItem[]>()
   let atsResults: JobSearchResultItem[] = []
 
   const tasks: Promise<void>[] = []
 
-  if (toSearch.includes('indeed')) {
+  for (const adapter of aggregators) {
     tasks.push(
       (async () => {
-        const result = await searchIndeed(params.query, params.location, params.limit)
-        searchedSources.push('indeed')
+        const result = await adapter.search({
+          query: params.query,
+          location: params.location,
+          limit: params.limit,
+          country
+        })
+        searchedSources.push(adapter.source)
         if (result.warning) warnings.push(result.warning)
-        indeedResults = result.results
-      })()
-    )
-  }
-
-  if (toSearch.includes('linkedin')) {
-    tasks.push(
-      (async () => {
-        const result = await searchLinkedIn(params.query, params.location, params.limit)
-        searchedSources.push('linkedin')
-        if (result.warning) warnings.push(result.warning)
-        linkedinResults = result.results
+        aggregatorResults.set(adapter.source, result.results)
       })()
     )
   }
@@ -90,7 +97,7 @@ export async function searchJobs(params: SearchJobsParams): Promise<SearchJobsOu
   // All four ATS providers go through one call: the work is per *board*, not
   // per provider, so doing it once lets the concurrency cap apply across the
   // whole watchlist instead of four times over.
-  const atsProviders = toSearch.filter(isAtsSource)
+  const atsProviders = requested.filter(isAtsSource)
   if (atsProviders.length > 0) {
     tasks.push(
       (async () => {
@@ -130,20 +137,44 @@ export async function searchJobs(params: SearchJobsParams): Promise<SearchJobsOu
    * works. The two copies have different URLs and no shared id, so company +
    * title + location is the only handle on the fact that they're one job.
    *
-   * Deliberately one-directional — aggregator rows are matched against the
-   * ATS set but never added to it. Two aggregator listings that happen to
-   * share a company, title and location are often genuinely different
-   * requisitions, and collapsing those would hide real postings.
+   * Deliberately one-directional between the ATS set and the aggregators,
+   * and not applied between two aggregators that host their own postings:
+   * two such listings that happen to share a company, title and location
+   * are often genuinely different requisitions, and collapsing those would
+   * hide real postings. The one exception is a re-aggregator (see
+   * `AggregatorAdapter.reaggregates`), whose rows are by definition copies
+   * of something another site published, so its copy loses to any other
+   * source's, including another aggregator's.
    */
-  const atsIdentities = new Set(keptAts.map((r) => crossSourceKey(r.company, r.title, r.location)))
-  const keptAggregators = [...indeedResults, ...linkedinResults].filter(
-    (result) => !atsIdentities.has(crossSourceKey(result.company, result.title, result.location)) && keep(result)
-  )
+  const identity = (r: JobSearchResultItem): string => crossSourceKey(r.company, r.title, r.location)
+  const atsIdentities = new Set(keptAts.map(identity))
+  const hostedIdentities = new Set<string>()
 
-  // Interleaved rather than concatenated: the ATS boards are the precise
-  // source and the aggregators are the broad one, and letting either fill the
-  // whole page defeats the point of running both.
-  const results = interleaveByBoard([keptAts, keptAggregators], params.limit)
+  // Hosting sites are filtered first so that a re-aggregator's rows can be
+  // checked against everything they might be copies of, then the per-source
+  // lists are assembled in registry order so the interleave below is stable.
+  const hostedKept = new Map<JobSource, JobSearchResultItem[]>()
+  for (const adapter of aggregators) {
+    if (adapter.reaggregates) continue
+    const rows = aggregatorResults.get(adapter.source) ?? []
+    const kept = rows.filter((result) => !atsIdentities.has(identity(result)) && keep(result))
+    for (const row of kept) hostedIdentities.add(identity(row))
+    hostedKept.set(adapter.source, kept)
+  }
+  const keptPerAggregator = aggregators.map((adapter) => {
+    if (!adapter.reaggregates) return hostedKept.get(adapter.source) ?? []
+    return (aggregatorResults.get(adapter.source) ?? []).filter((result) => {
+      const key = identity(result)
+      return !atsIdentities.has(key) && !hostedIdentities.has(key) && keep(result)
+    })
+  })
+
+  // Interleaved rather than concatenated, at two levels. The ATS boards are
+  // the precise source and the aggregators are the broad one, so each side
+  // gets half the page; within the aggregator half, the sites take turns so
+  // that the one with the most results does not fill it alone.
+  const aggregatorsMerged = interleaveByBoard(keptPerAggregator, params.limit)
+  const results = interleaveByBoard([keptAts, aggregatorsMerged], params.limit)
 
   return { results, searchedSources, warnings }
 }

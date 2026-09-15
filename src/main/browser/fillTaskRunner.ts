@@ -21,6 +21,7 @@ import {
 } from './formFiller'
 import { openGate, resumeGate, isGateOpen, type GateOutcome } from './captchaGate'
 import { failJob } from '../jobActions'
+import { recordRunEvent } from '../runs/runTracker'
 import { broadcastJobUpdate, broadcastCaptchaDetected, broadcastCaptchaResolved } from '../ipc/jobsBroadcast'
 import { screenshotsDir, tempDir } from '../config/paths'
 import { withStorageWriteLock } from '../storageWriteLock'
@@ -189,6 +190,7 @@ function logResumeAttached(jobId: string, rendered: NonNullable<MaterializedResu
     templateId: rendered.templateId,
     ...(rendered.stale ? { stale: true } : {})
   })
+  recordRunEvent('resume_attached', { jobId, meta: { kind: rendered.kind, templateId: rendered.templateId, stale: rendered.stale } })
 }
 
 function screenshotPathFor(jobId: string, stepIndex: number): string {
@@ -280,6 +282,7 @@ async function continueInspectionAfterCaptcha(
   const updated = getJob(jobId)
   if (updated) broadcastJobUpdate(updated)
   broadcastCaptchaResolved({ taskId, jobId })
+  recordRunEvent('captcha_resolved', { source: updated?.source ?? null, jobId })
 }
 
 async function inspectSession(jobId: string, page: Page): Promise<InspectTaskResult> {
@@ -389,6 +392,7 @@ export async function runInspectTask(jobId: string): Promise<InspectTaskResult> 
     const updated = getJob(jobId)
     if (updated) broadcastJobUpdate(updated)
     broadcastCaptchaDetected({ taskId, jobId, jobTitle: job.title, company: job.company })
+    recordRunEvent('captcha_paused', { source: job.source, jobId, meta: { reason: captcha.reason ?? 'captcha_verification' } })
     await page.bringToFront().catch(() => {})
     continueInspectionAfterCaptcha(taskId, jobId, page, headed).catch((error) => {
       mcpLogger.error(`Application inspection continuation crashed: ${String(error)}`)

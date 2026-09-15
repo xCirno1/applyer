@@ -3,6 +3,7 @@ import type { z } from 'zod'
 import { getProfile, saveProfile } from '../../db/repositories/profileRepository'
 import { isOnboardingCompleted } from '../../db/repositories/settingsRepository'
 import { logActivity } from '../../db/repositories/activityLogRepository'
+import { recordRunEvent } from '../../runs/runTracker'
 import { broadcastProfileChanged } from '../../ipc/jobsBroadcast'
 import { jsonResult, textError } from '../toolResult'
 import { EMPTY_PROFILE, type ProfileFields } from '@shared/types/profile'
@@ -129,6 +130,7 @@ export async function updateProfileTool(args: Args): Promise<CallToolResult> {
 
   logActivity('info', `Agent updated profile: ${changed.join(', ')}`, { fields: changed })
   broadcastProfileChanged()
+  recordRunEvent('profile_updated', { meta: { fields: changed } })
 
   return jsonResult({
     status: 'updated',

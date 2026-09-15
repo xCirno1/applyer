@@ -117,6 +117,18 @@ export function broadcastResumesChanged(): void {
   }
 }
 
+/**
+ * Payload-less. The Runs screen shows the run in progress live, and an event
+ * lands every time the agent does anything, so `runs/runTracker.ts`
+ * coalesces bursts before calling this rather than each caller pacing
+ * itself.
+ */
+export function broadcastRunsChanged(): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.runs.onChanged)
+  }
+}
+
 export function broadcastCaptchaDetected(payload: CaptchaDetectedPayload): void {
   notifyForVerification(payload)
   if (webContentsRef && !webContentsRef.isDestroyed()) {

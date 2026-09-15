@@ -10,6 +10,7 @@ import {
 } from '../../db/repositories/resumeRepository'
 import { getResumeSettings, isOnboardingCompleted } from '../../db/repositories/settingsRepository'
 import { logActivity } from '../../db/repositories/activityLogRepository'
+import { recordRunEvent } from '../../runs/runTracker'
 import { broadcastJobUpdate, broadcastResumesChanged } from '../../ipc/jobsBroadcast'
 import { jsonResult, textError } from '../toolResult'
 import type { assignResumeShape } from '../schemas'
@@ -44,6 +45,7 @@ export async function assignResumeTool(args: Args): Promise<CallToolResult> {
     }
     logActivity('info', `Agent unassigned the resume variant from ${job.title} at ${job.company}`, { jobId: job.id })
     broadcastResumesChanged()
+    recordRunEvent('resume_assigned', { source: job.source, jobId: job.id, meta: { assigned: false } })
     return jsonResult({
       status: 'unassigned',
       jobId: job.id,
@@ -81,6 +83,7 @@ export async function assignResumeTool(args: Args): Promise<CallToolResult> {
     variantId: variant.id
   })
   broadcastResumesChanged()
+  recordRunEvent('resume_assigned', { source: job.source, jobId: job.id, meta: { assigned: true, name: variant.name } })
 
   const stale = isVariantStale(variant)
   return jsonResult({

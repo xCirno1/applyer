@@ -30,6 +30,8 @@ export type ErrorCode =
   | 'invalidExport'
   | 'autoStartReviewRequired'
   | 'jobNotFound'
+  | 'runNotFound'
+  | 'noActiveRun'
   | 'jobNotQueued'
   | 'jobNotCompleted'
   | 'illegalTransition'

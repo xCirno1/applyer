@@ -8,12 +8,15 @@ vi.mock('../../db/index', () => ({ getDb: () => testDb }))
 
 beforeEach(() => {
   testDb = createTestDb().db
+  __resetRunTracker()
 })
 
 import { queueJobTool } from './queueJob'
 import { excludeUrl } from '../../db/repositories/jobExclusionsRepository'
 import { getJobByUrl } from '../../db/repositories/jobsRepository'
 import { listActivity } from '../../db/repositories/activityLogRepository'
+import { createRun, loadRunEvents } from '../../db/repositories/runsRepository'
+import { __resetRunTracker } from '../../runs/runTracker'
 
 function parse(result: Awaited<ReturnType<typeof queueJobTool>>): unknown {
   return JSON.parse((result.content[0] as { text: string }).text)
@@ -102,5 +105,23 @@ describe('queueJobTool', () => {
     const job = getJobByUrl('https://example.com/1')
     expect(job?.description).not.toContain('<script>')
     expect(job?.description).toContain('Real description')
+  })
+
+  describe('run statistics', () => {
+    it('records queued, existing and excluded outcomes with the job source', async () => {
+      const run = createRun()
+      await queueJobTool({ title: 'Engineer', company: 'Acme', url: 'https://au.seek.com/job/1', location: undefined, source: undefined, description: undefined, salaryRange: undefined, matchScore: 85, matchReasons: undefined })
+      await queueJobTool({ title: 'Engineer', company: 'Acme', url: 'https://au.seek.com/job/1', location: undefined, source: undefined, description: undefined, salaryRange: undefined, matchScore: undefined, matchReasons: undefined })
+      excludeUrl({ url: 'https://www.indeed.com/viewjob?jk=2', excludedBy: 'user' })
+      await queueJobTool({ title: 'Other', company: 'Acme', url: 'https://www.indeed.com/viewjob?jk=2', location: undefined, source: undefined, description: undefined, salaryRange: undefined, matchScore: undefined, matchReasons: undefined })
+      const events = loadRunEvents(run.id)
+      expect(events.map((event) => [event.kind, event.source])).toEqual([
+        ['job_queued', 'seek'],
+        ['job_queue_existing', 'seek'],
+        ['job_queue_excluded', 'indeed']
+      ])
+      expect(events[0]?.meta).toEqual({ matchScore: 85 })
+      expect(events[0]?.jobId).toBe(getJobByUrl('https://au.seek.com/job/1')?.id)
+    })
   })
 })

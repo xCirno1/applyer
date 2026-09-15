@@ -7,6 +7,17 @@ Notable changes to Applyer are documented here. This project follows
 
 ### Added
 
+- Run statistics (the Runs screen on the left rail). Start a run before handing the agent a task and
+  stop it when the task is done; everything the app observes in between is counted, per
+  site: searches and what each site returned (or whether it answered with a challenge),
+  postings read, jobs queued with their match scores, forms inspected and filled (fields
+  filled and skipped, permission refusals, buttons clicked), verification challenges hit
+  and resolved, jobs submitted, failed (by reason), retried, unqueued, removed and
+  excluded, resumes attached and variants written, profile and company-board changes,
+  and every MCP tool call with its duration. The numbers are folded from a per-run event
+  log rather than kept as counters, so a run survives an app restart, past runs can be
+  reopened, renamed and deleted, and a timeline lists what happened in order. A search now
+  also reports what each source returned before cross-source dedupe (`sourceOutcomes`).
 - Four more job sources for `search_jobs` and `get_job_details`: Seek (Australia and
   New Zealand), Jora (Seek's worldwide aggregator), Prosple (graduate programs and
   internships across Asia-Pacific), and Remotive (remote-only roles, read through its

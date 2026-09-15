@@ -4,6 +4,7 @@ import { getDb } from '../index'
 import { jobs, runEvents, runs } from '../schema'
 import {
   isRunEventKind,
+  RUN_EVENT_KINDS,
   RUN_LABEL_MAX_LENGTH,
   type ListRunEventsQuery,
   type ListRunEventsResult,
@@ -43,9 +44,21 @@ function toRecord(row: typeof runs.$inferSelect, eventCount: number): RunRecord 
   }
 }
 
+/**
+ * Restricts a query to the kinds this build knows. Rows of another kind
+ * (written by a newer build, or corrupted) must be left out in SQL rather
+ * than after the fact: a row that counts towards LIMIT/OFFSET and `total`
+ * but is then dropped from the page makes the timeline's next offset land
+ * short, so pages overlap or skip.
+ */
+function knownKinds(): SQL<unknown> {
+  return inArray(runEvents.kind, [...RUN_EVENT_KINDS])
+}
+
 function toEvent(row: typeof runEvents.$inferSelect): RunEvent | null {
-  // A kind this build does not know (written by a newer one, or a corrupted
-  // row) is skipped rather than surfaced as something it is not.
+  // Belt and braces with `knownKinds()`: every read filters in SQL, and a
+  // row that slipped past anyway is skipped rather than surfaced as
+  // something it is not.
   if (!isRunEventKind(row.kind)) return null
   const meta = row.meta
   return {
@@ -176,7 +189,7 @@ export function loadRunEvents(runId: string): RunEvent[] {
   const rows = getDb()
     .select()
     .from(runEvents)
-    .where(eq(runEvents.runId, runId))
+    .where(and(eq(runEvents.runId, runId), knownKinds()))
     .orderBy(runEvents.id)
     .limit(RUN_EVENTS_FOLD_LIMIT)
     .all()
@@ -193,11 +206,9 @@ export function listRunEvents(query: ListRunEventsQuery): ListRunEventsResult {
   const db = getDb()
   const limit = Math.min(Math.max(1, query.limit ?? EVENTS_DEFAULT_LIMIT), EVENTS_MAX_LIMIT)
   const offset = Math.max(0, query.offset ?? 0)
-  const conditions: SQL<unknown>[] = [eq(runEvents.runId, query.runId)]
   const kinds = query.kinds?.filter(isRunEventKind) ?? []
   if (query.kinds && kinds.length === 0) return { items: [], total: 0 }
-  if (kinds.length > 0) conditions.push(inArray(runEvents.kind, kinds))
-  const where = and(...conditions)
+  const where = and(eq(runEvents.runId, query.runId), kinds.length > 0 ? inArray(runEvents.kind, kinds) : knownKinds())
 
   const rows = db
     .select({ event: runEvents, jobTitle: jobs.title, jobCompany: jobs.company })

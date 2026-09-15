@@ -32,6 +32,9 @@ export default function RunStatsPage(): ReactElement {
   const active = useRunsStore((s) => s.active)
   const stats = useRunsStore((s) => s.stats)
   const history = useRunsStore((s) => s.history)
+  const historyTotal = useRunsStore((s) => s.historyTotal)
+  const historyLoadingMore = useRunsStore((s) => s.historyLoadingMore)
+  const fetchMoreHistory = useRunsStore((s) => s.fetchMoreHistory)
   const loading = useRunsStore((s) => s.loading)
   const loadedOnce = useRunsStore((s) => s.loadedOnce)
   const acting = useRunsStore((s) => s.acting)
@@ -77,8 +80,11 @@ export default function RunStatsPage(): ReactElement {
         active={active}
         selected={stats?.run ?? null}
         history={history}
+        historyTotal={historyTotal}
+        historyLoadingMore={historyLoadingMore}
         acting={acting}
         onSelect={(runId) => void select(runId)}
+        onLoadMore={() => void fetchMoreHistory()}
         onStart={() => void handleStart()}
         onStop={() => void handleStop()}
         onRename={handleRename}

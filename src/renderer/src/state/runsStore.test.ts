@@ -192,6 +192,58 @@ describe('runsStore', () => {
     expect(state.stats?.run.id).toBe('run-2')
   })
 
+  it('reads older pages of the history on request and keeps them across a refresh', async () => {
+    const page = (from: number, count: number): RunRecord[] =>
+      Array.from({ length: count }, (_, i) => run({ id: `run-${from - i}`, sequence: from - i, endedAt: '2026-09-15T11:00:00.000Z' }))
+    getActive.mockResolvedValue({ run: null, stats: null })
+    list.mockImplementation(async ({ offset = 0 }: { offset?: number }) => ({ items: page(120 - offset, 50), total: 120 }))
+    const { useRunsStore } = await import('./runsStore')
+    await useRunsStore.getState().refresh()
+    expect(useRunsStore.getState().history).toHaveLength(50)
+    expect(useRunsStore.getState().historyTotal).toBe(120)
+
+    await useRunsStore.getState().fetchMoreHistory()
+    expect(list).toHaveBeenLastCalledWith({ limit: 50, offset: 50 })
+    expect(useRunsStore.getState().history).toHaveLength(100)
+    expect(useRunsStore.getState().history[99]?.sequence).toBe(21)
+
+    // A refresh re-reads the newest page only; the older page stays.
+    list.mockClear()
+    await useRunsStore.getState().refresh()
+    expect(list).toHaveBeenCalledTimes(1)
+    expect(list).toHaveBeenCalledWith({ limit: 50 })
+    expect(useRunsStore.getState().history).toHaveLength(100)
+
+    // The last page is short and asking again past the end does nothing.
+    list.mockImplementation(async ({ offset = 0 }: { offset?: number }) => ({ items: page(120 - offset, 20), total: 120 }))
+    await useRunsStore.getState().fetchMoreHistory()
+    expect(useRunsStore.getState().history).toHaveLength(120)
+    list.mockClear()
+    await useRunsStore.getState().fetchMoreHistory()
+    expect(list).not.toHaveBeenCalled()
+  })
+
+  it('does not read two older pages at once', async () => {
+    getActive.mockResolvedValue({ run: null, stats: null })
+    let release: () => void = () => {}
+    list.mockResolvedValueOnce({ items: [run({ id: 'run-2', sequence: 2 }), run({ id: 'run-1', sequence: 1 })], total: 3 })
+    const { useRunsStore } = await import('./runsStore')
+    await useRunsStore.getState().refresh()
+    // The store's page is 50, so the first page above is "short"; pretend
+    // the total says otherwise and hold the next reply open.
+    list.mockImplementationOnce(
+      () => new Promise((resolve) => (release = () => resolve({ items: [run({ id: 'run-0', sequence: 0 })], total: 3 })))
+    )
+    const first = useRunsStore.getState().fetchMoreHistory()
+    expect(useRunsStore.getState().historyLoadingMore).toBe(true)
+    await useRunsStore.getState().fetchMoreHistory()
+    expect(list).toHaveBeenCalledTimes(2)
+    release()
+    await first
+    expect(useRunsStore.getState().historyLoadingMore).toBe(false)
+    expect(useRunsStore.getState().history.map((r) => r.id)).toEqual(['run-2', 'run-1', 'run-0'])
+  })
+
   it('refreshes on the main-process push and unsubscribes cleanly', async () => {
     getActive.mockResolvedValue({ run: null, stats: null })
     const { useRunsStore } = await import('./runsStore')
@@ -201,5 +253,29 @@ describe('runsStore', () => {
     await vi.waitFor(() => expect(getActive).toHaveBeenCalledTimes(1))
     unsubscribe()
     expect(onChangedHandlers).toHaveLength(0)
+  })
+})
+
+describe('keepOlderPages', () => {
+  const ended = '2026-09-15T11:00:00.000Z'
+  const r = (sequence: number, label: string | null = null): RunRecord => run({ id: `run-${sequence}`, sequence, label, endedAt: ended })
+
+  it('puts a full fresh page in front of the older runs already loaded', async () => {
+    const { keepOlderPages } = await import('./runsStore')
+    const loaded = [r(6), r(5), r(4), r(3)]
+    expect(keepOlderPages([r(7), r(6)], loaded, 2).map((x) => x.sequence)).toEqual([7, 6, 5, 4, 3])
+  })
+
+  it('takes the page copy of a run both hold', async () => {
+    const { keepOlderPages } = await import('./runsStore')
+    const merged = keepOlderPages([r(3, 'Renamed'), r(2)], [r(3), r(2), r(1)], 2)
+    expect(merged.map((x) => x.label)).toEqual(['Renamed', null, null])
+    expect(merged).toHaveLength(3)
+  })
+
+  it('treats a short page as the whole history', async () => {
+    const { keepOlderPages } = await import('./runsStore')
+    expect(keepOlderPages([r(3)], [r(3), r(2), r(1)], 2).map((x) => x.sequence)).toEqual([3])
+    expect(keepOlderPages([], [r(1)], 2)).toEqual([])
   })
 })

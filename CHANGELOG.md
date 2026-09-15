@@ -16,7 +16,8 @@ Notable changes to Applyer are documented here. This project follows
   excluded, resumes attached and variants written, profile and company-board changes,
   and every MCP tool call with its duration. The numbers are folded from a per-run event
   log rather than kept as counters, so a run survives an app restart, past runs can be
-  reopened, renamed and deleted, and a timeline lists what happened in order. A search now
+  reopened, renamed and deleted (the run picker reads the history a page at a time, so
+  the oldest run stays reachable), and a timeline lists what happened in order. A search now
   also reports what each source returned before cross-source dedupe (`sourceOutcomes`).
 - Four more job sources for `search_jobs` and `get_job_details`: Seek (Australia and
   New Zealand), Jora (Seek's worldwide aggregator), Prosple (graduate programs and

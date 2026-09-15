@@ -136,12 +136,25 @@ describe('events', () => {
     expect(items.find((e) => e.jobId === 'gone')).toMatchObject({ jobTitle: null, jobCompany: null })
   })
 
-  it('skips rows whose kind this build does not know', () => {
+  it('leaves rows whose kind this build does not know out of the fold, the pages and the total', () => {
     const run = createRun()
-    testDb.insert(runEvents).values({ runId: run.id, kind: 'from_the_future', createdAt: new Date().toISOString() }).run()
+    const stamp = new Date().toISOString()
     insertRunEvent({ runId: run.id, kind: 'search' })
-    expect(loadRunEvents(run.id).map((e) => e.kind)).toEqual(['search'])
-    expect(listRunEvents({ runId: run.id }).items.map((e) => e.kind)).toEqual(['search'])
+    testDb.insert(runEvents).values({ runId: run.id, kind: 'from_the_future', createdAt: stamp }).run()
+    insertRunEvent({ runId: run.id, kind: 'job_queued' })
+    testDb.insert(runEvents).values({ runId: run.id, kind: 'from_the_future', createdAt: stamp }).run()
+    insertRunEvent({ runId: run.id, kind: 'tool_call', meta: { tool: 'search_jobs' } })
+
+    expect(loadRunEvents(run.id).map((e) => e.kind)).toEqual(['search', 'job_queued', 'tool_call'])
+
+    // Paging by the number of rows handed back must not overlap or skip:
+    // the unknown rows are not counted towards the offset either.
+    const first = listRunEvents({ runId: run.id, limit: 2 })
+    expect(first.total).toBe(3)
+    expect(first.items.map((e) => e.kind)).toEqual(['tool_call', 'job_queued'])
+    const second = listRunEvents({ runId: run.id, limit: 2, offset: first.items.length })
+    expect(second.total).toBe(3)
+    expect(second.items.map((e) => e.kind)).toEqual(['search'])
   })
 
   it('treats malformed meta as absent', () => {

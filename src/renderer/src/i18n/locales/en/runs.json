@@ -11,6 +11,8 @@
     "pick": "Run to show",
     "defaultName": "Run #{{sequence}}",
     "current": "in progress",
+    "showOlder_one": "Show older runs ({{count}} more)",
+    "showOlder_other": "Show older runs ({{count}} more)",
     "rename": "Rename this run",
     "nameLabel": "Run name",
     "namePlaceholder": "Name this run",

@@ -10,6 +10,7 @@
     "pick": "Sesi yang ditampilkan",
     "defaultName": "Sesi #{{sequence}}",
     "current": "sedang berjalan",
+    "showOlder_other": "Tampilkan sesi lama ({{count}} lagi)",
     "rename": "Ganti nama sesi ini",
     "nameLabel": "Nama sesi",
     "namePlaceholder": "Beri nama sesi ini",

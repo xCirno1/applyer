@@ -49,7 +49,7 @@ describe('runTracker', () => {
     vi.advanceTimersByTime(300)
     expect(broadcastRunsChanged).toHaveBeenCalledTimes(2)
 
-    expect(loadRunEvents(run.id).map((event) => event.kind)).toEqual(['search', 'tool_call'])
+    expect(loadRunEvents(run.id).events.map((event) => event.kind)).toEqual(['search', 'tool_call'])
     expect(getCurrentRun()).toMatchObject({ id: run.id, label: 'batch', eventCount: 2 })
   })
 
@@ -60,7 +60,7 @@ describe('runTracker', () => {
     expect(stopped?.id).toBe(run.id)
     expect(stopped?.endedAt).toEqual(expect.any(String))
     recordRunEvent('job_queued')
-    expect(loadRunEvents(run.id)).toHaveLength(1)
+    expect(loadRunEvents(run.id).events).toHaveLength(1)
     expect(getCurrentRun()).toBeNull()
   })
 
@@ -72,7 +72,7 @@ describe('runTracker', () => {
     const run = createRun('before restart')
     __resetRunTracker()
     recordRunEvent('job_queued')
-    expect(loadRunEvents(run.id)).toHaveLength(1)
+    expect(loadRunEvents(run.id).events).toHaveLength(1)
   })
 
   it('never throws at a caller when the database is unavailable', () => {
@@ -90,6 +90,6 @@ describe('runTracker', () => {
     recordRunEvent('job_queued')
     dbBroken = false
     recordRunEvent('job_queued')
-    expect(loadRunEvents(run.id)).toHaveLength(1)
+    expect(loadRunEvents(run.id).events).toHaveLength(1)
   })
 })

@@ -29,7 +29,8 @@ const EVENTS_MAX_LIMIT = 200
 /**
  * Ceiling on the rows `loadRunEvents` folds into statistics. A run that
  * long has been left running for days; the fold stays bounded and the
- * timeline (paginated) still shows everything.
+ * timeline (paginated) still shows everything. `loadRunEvents` reports
+ * when the ceiling was hit so the statistics can say they stop short.
  */
 export const RUN_EVENTS_FOLD_LIMIT = 20000
 
@@ -184,21 +185,30 @@ export function insertRunEvent(input: InsertRunEventInput): RunEvent {
   return toEvent(inserted)!
 }
 
-/** Every event of a run in insertion order, capped at `RUN_EVENTS_FOLD_LIMIT`. */
-export function loadRunEvents(runId: string): RunEvent[] {
+export interface LoadedRunEvents {
+  events: RunEvent[]
+  /** True when the run holds more events than `limit`, so `events` is only the oldest `limit` of them. */
+  truncated: boolean
+  limit: number
+}
+
+/** The first `limit` events of a run in insertion order, and whether there were more. */
+export function loadRunEvents(runId: string, limit = RUN_EVENTS_FOLD_LIMIT): LoadedRunEvents {
+  // One row past the limit answers "were there more?" without a second count query.
   const rows = getDb()
     .select()
     .from(runEvents)
     .where(and(eq(runEvents.runId, runId), knownKinds()))
     .orderBy(runEvents.id)
-    .limit(RUN_EVENTS_FOLD_LIMIT)
+    .limit(limit + 1)
     .all()
+  const truncated = rows.length > limit
   const events: RunEvent[] = []
-  for (const row of rows) {
+  for (const row of rows.slice(0, limit)) {
     const event = toEvent(row)
     if (event) events.push(event)
   }
-  return events
+  return { events, truncated, limit }
 }
 
 /** A page of a run's timeline, newest first, with the job each event names when it still exists. */

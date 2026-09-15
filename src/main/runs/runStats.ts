@@ -75,7 +75,21 @@ function round(value: number, places = 1): number {
   return Math.round(value * factor) / factor
 }
 
-export function computeRunStats(run: RunRecord, events: RunEvent[], now: Date = new Date()): RunStats {
+export interface FoldWindow {
+  limit: number
+  truncated: boolean
+}
+
+/**
+ * `window` says how the events were read (see `loadRunEvents`); when it is
+ * left out the events are taken to be the whole run.
+ */
+export function computeRunStats(
+  run: RunRecord,
+  events: RunEvent[],
+  now: Date = new Date(),
+  window: FoldWindow = { limit: events.length, truncated: false }
+): RunStats {
   const sources = new Map<string, RunSourceStats>()
   const sourceFor = (name: string | null): RunSourceStats | null => {
     if (!name) return null
@@ -348,6 +362,9 @@ export function computeRunStats(run: RunRecord, events: RunEvent[], now: Date = 
 
   return {
     run,
+    foldedEvents: events.length,
+    foldLimit: window.limit,
+    foldTruncated: window.truncated,
     durationMs,
     eventsPerHour,
     firstEventAt: events[0]?.createdAt ?? null,

@@ -51,6 +51,10 @@
       "eventsPerHour": "Jumlah pengamatan dibagi jumlah jam sesi berjalan; ukuran kasar seberapa sibuk agen."
     }
   },
+  "foldLimit": {
+    "title": "Statistik berhenti lebih awal.",
+    "body": "Angka-angka ini mencakup {{folded}} kejadian pertama dari {{total}} kejadian sesi ini; kejadian berikutnya ada di linimasa tetapi tidak dihitung di sini. Hentikan sesi ini dan mulai yang baru agar penghitungan berlanjut."
+  },
   "searches": {
     "total": "Pencarian",
     "failed": "Gagal",

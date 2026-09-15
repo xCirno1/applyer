@@ -32,6 +32,7 @@ const now = new Date('2026-09-15T12:00:00.000Z')
 describe('computeRunStats', () => {
   it('folds an empty run into zeros and the elapsed time', () => {
     const stats = computeRunStats(run, [], now)
+    expect(stats).toMatchObject({ foldedEvents: 0, foldLimit: 0, foldTruncated: false })
     expect(stats.durationMs).toBe(2 * 3_600_000)
     expect(stats.eventsPerHour).toBe(0)
     expect(stats.firstEventAt).toBeNull()
@@ -274,5 +275,14 @@ describe('computeRunStats', () => {
     expect(stats.pipeline.matchScore.count).toBe(0)
     expect(stats.fills).toMatchObject({ attempts: 1, filled: 0, fieldsFilled: 0 })
     expect(stats.tools.byTool[0]).toMatchObject({ tool: 'unknown', avgDurationMs: 0 })
+  })
+})
+
+describe('computeRunStats fold window', () => {
+  it('reports how many events the figures cover and whether the run holds more', () => {
+    const events = [event('search'), event('search')]
+    const stats = computeRunStats(run, events, now, { limit: 2, truncated: true })
+    expect(stats.searches.total).toBe(2)
+    expect(stats).toMatchObject({ foldedEvents: 2, foldLimit: 2, foldTruncated: true })
   })
 })

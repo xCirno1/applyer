@@ -53,6 +53,10 @@
       "eventsPerHour": "Recorded observations divided by hours the run has been going; a rough measure of how busy the agent was."
     }
   },
+  "foldLimit": {
+    "title": "Statistics stop short.",
+    "body": "The figures cover the first {{folded}} of this run's {{total}} events; later ones are in the timeline but not counted here. Stop this run and start a new one to keep counting."
+  },
   "searches": {
     "total": "Searches",
     "failed": "Failed",

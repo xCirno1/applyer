@@ -18,7 +18,8 @@ import type { RunRecord, RunStats } from '@shared/types/run'
 const runNotFound = { ok: false, error: appError('runNotFound') } as const
 
 function statsFor(run: RunRecord): RunStats {
-  return computeRunStats(run, loadRunEvents(run.id))
+  const loaded = loadRunEvents(run.id)
+  return computeRunStats(run, loaded.events, new Date(), { limit: loaded.limit, truncated: loaded.truncated })
 }
 
 export function registerRunsIpc(): void {

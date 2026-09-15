@@ -114,7 +114,7 @@ describe('queueJobTool', () => {
       await queueJobTool({ title: 'Engineer', company: 'Acme', url: 'https://au.seek.com/job/1', location: undefined, source: undefined, description: undefined, salaryRange: undefined, matchScore: undefined, matchReasons: undefined })
       excludeUrl({ url: 'https://www.indeed.com/viewjob?jk=2', excludedBy: 'user' })
       await queueJobTool({ title: 'Other', company: 'Acme', url: 'https://www.indeed.com/viewjob?jk=2', location: undefined, source: undefined, description: undefined, salaryRange: undefined, matchScore: undefined, matchReasons: undefined })
-      const events = loadRunEvents(run.id)
+      const events = loadRunEvents(run.id).events
       expect(events.map((event) => [event.kind, event.source])).toEqual([
         ['job_queued', 'seek'],
         ['job_queue_existing', 'seek'],

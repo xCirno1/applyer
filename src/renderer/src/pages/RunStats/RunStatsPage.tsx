@@ -6,6 +6,7 @@ import SourceTable from '../../components/runStats/SourceTable'
 import ToolTable from '../../components/runStats/ToolTable'
 import { StatGrid, StatGroup, StatRow } from '../../components/runStats/StatGroup'
 import { formatDuration, formatMillis } from '../../components/runStats/runFormat'
+import Callout from '../../components/ui/Callout'
 import Skeleton from '../../components/ui/Skeleton'
 import { useToast } from '../../components/ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
@@ -126,6 +127,13 @@ function StatsColumns({ stats, refreshing }: { stats: RunStats; refreshing: bool
   return (
     <div className={`flex h-full min-h-0 ${refreshing ? 'opacity-90' : ''}`}>
       <StatGrid>
+        {stats.foldTruncated && (
+          <div className="col-span-full bg-canvas-inset px-3 py-1.5">
+            <Callout tone="warning" title={t('foldLimit.title')}>
+              {t('foldLimit.body', { folded: format.number(stats.foldedEvents), total: format.number(stats.run.eventCount) })}
+            </Callout>
+          </div>
+        )}
         <StatGroup title={t('groups.overview')}>
           <StatRow label={t('overview.duration')} value={formatDuration(stats.durationMs)} />
           <StatRow label={t('overview.events')} value={stats.run.eventCount} />

@@ -265,6 +265,17 @@ export interface RunToolStats {
 
 export interface RunStats {
   run: RunRecord
+  /**
+   * How many events the figures below were folded from, and whether that
+   * is fewer than the run holds. The fold reads at most `foldLimit` events
+   * (the oldest first) so a run left going for days stays bounded; past
+   * that, later events are in the timeline and `run.eventCount` but not in
+   * the statistics, and the screen says so rather than showing figures
+   * that quietly stopped moving.
+   */
+  foldedEvents: number
+  foldLimit: number
+  foldTruncated: boolean
   /** Milliseconds from start to end, or to now for a run in progress. */
   durationMs: number
   /** Events per hour of run time, a rough "how busy was the agent". */

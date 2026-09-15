@@ -1,5 +1,19 @@
-export type JobSource = 'greenhouse' | 'lever' | 'ashby' | 'workday' | 'linkedin' | 'indeed' | 'generic'
+import type { JobSource } from '@shared/types/jobSource'
 
+export type { JobSource }
+
+/** `hostname` is `domain` itself or a subdomain of it; `evil-domain.com` and `domain.com.evil` are neither. */
+function isHostUnder(hostname: string, domain: string): boolean {
+  return hostname === domain || hostname.endsWith(`.${domain}`)
+}
+
+/**
+ * Which adapter a URL belongs to. National editions of the aggregators are
+ * subdomains (`au.indeed.com`, `uk.jora.com`, `nz.prosple.com`), so those are
+ * matched by domain rather than by an exact hostname. Seek's older
+ * per-country domains are kept alongside `seek.com` since links to them are
+ * still everywhere and still resolve.
+ */
 export function detectSource(url: string): JobSource {
   let hostname: string
   try {
@@ -23,8 +37,20 @@ export function detectSource(url: string): JobSource {
   if (hostname === 'www.linkedin.com' || hostname === 'linkedin.com') {
     return 'linkedin'
   }
-  if (hostname === 'www.indeed.com' || hostname === 'indeed.com') {
+  if (isHostUnder(hostname, 'indeed.com')) {
     return 'indeed'
+  }
+  if (isHostUnder(hostname, 'seek.com') || isHostUnder(hostname, 'seek.com.au') || isHostUnder(hostname, 'seek.co.nz')) {
+    return 'seek'
+  }
+  if (isHostUnder(hostname, 'jora.com')) {
+    return 'jora'
+  }
+  if (isHostUnder(hostname, 'prosple.com')) {
+    return 'prosple'
+  }
+  if (isHostUnder(hostname, 'remotive.com') || isHostUnder(hostname, 'remotive.io')) {
+    return 'remotive'
   }
   return 'generic'
 }

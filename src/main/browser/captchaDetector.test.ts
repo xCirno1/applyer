@@ -144,6 +144,13 @@ describe('detectCaptcha', () => {
     await expect(detectCaptcha(page)).resolves.toEqual({ blocked: true, reason: 'challenge_selector' })
   })
 
+  it("detects Cloudflare's \"Just a moment\" interstitial before its widget has rendered", async () => {
+    // What a headless browser gets from a Cloudflare-fronted site: a 403 with a
+    // bare page whose only markup is the challenge container, no iframe yet.
+    const { page } = fakePage({ locators: { '#challenge-error-text': { count: 1 } }, bodyText: 'Just a moment...' })
+    await expect(detectCaptcha(page)).resolves.toEqual({ blocked: true, reason: 'challenge_selector' })
+  })
+
   it('swallows a selector evaluation error and keeps checking rather than failing the whole check', async () => {
     const { page } = fakePage({
       locators: {

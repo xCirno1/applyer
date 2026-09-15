@@ -9,7 +9,18 @@ const CHALLENGE_TEXT_PATTERN =
   /verify you are human|are you a robot|checking your browser|attention required|unusual traffic|complete the security check|access denied.{0,40}captcha|please verify you are a human/i
 
 // Selectors for actual challenge widgets/containers (not badges) — existence alone is a signal.
-const CHALLENGE_SELECTORS = ['div.g-recaptcha', '#challenge-form', '#challenge-running', '#px-captcha', '[data-sitekey]']
+// `#challenge-error-text` and `#challenge-stage` are Cloudflare's "Just a moment..."
+// interstitial, which a headless browser sees before (and instead of) the Turnstile iframe
+// the frame check above would catch.
+const CHALLENGE_SELECTORS = [
+  'div.g-recaptcha',
+  '#challenge-form',
+  '#challenge-running',
+  '#challenge-error-text',
+  '#challenge-stage',
+  '#px-captcha',
+  '[data-sitekey]'
+]
 
 // iframe-based signals need the visibility/size gate below: vendors like reCAPTCHA embed a
 // persistent, tiny "protected by..." badge iframe on every page they cover, challenge or not —

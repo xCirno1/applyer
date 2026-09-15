@@ -4,6 +4,7 @@
     "documents": "Documents",
     "storage": "Storage",
     "browser": "Browser",
+    "search": "Job search",
     "agent": "Agent",
     "appearance": "Appearance",
     "language": "Language",
@@ -38,6 +39,25 @@
     "saved": "Notification settings saved.",
     "loadFailed": "Could not load notification settings.",
     "saveFailed": "Could not save notification settings."
+  },
+  "search": {
+    "title": "Job search",
+    "intro": "Most job sites are one site per country, each with its own listings: a search on the US edition of Indeed never sees a job posted to the Australian one, and Seek only exists in Australia and New Zealand. Pick where you are looking so every search goes to the right edition. The agent can still search another country for a single query when you ask it to.",
+    "countryLabel": "Country",
+    "coverageTitle": "Sites searched for {{country}}",
+    "worldwide": "Worldwide",
+    "notAvailable": "No edition in this country",
+    "outro": "Company boards you track (Greenhouse, Lever, Ashby, Workday) are searched regardless of country.",
+    "saved": "Job searches will use the {{country}} editions.",
+    "saveFailed": "Could not save the job search country.",
+    "sources": {
+      "indeed": "General job board with a separate edition and index per country.",
+      "linkedin": "One worldwide site; narrowed by the location you give the search, not by country.",
+      "seek": "The main job board in Australia and New Zealand.",
+      "jora": "Worldwide aggregator that re-lists postings from other boards and career pages. Copies of jobs found elsewhere are dropped.",
+      "prosple": "Graduate programs, internships and entry-level roles across Asia-Pacific.",
+      "remotive": "Remote-only roles, worldwide, read through its public API."
+    }
   },
   "appearance": {
     "title": "Appearance",

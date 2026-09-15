@@ -128,7 +128,9 @@ export const IPC = {
     getNotificationPreferences: 'settings:getNotificationPreferences',
     setNotificationPreferences: 'settings:setNotificationPreferences',
     setNotificationLocale: 'settings:setNotificationLocale',
-    testNotification: 'settings:testNotification'
+    testNotification: 'settings:testNotification',
+    getSearchCountry: 'settings:getSearchCountry',
+    setSearchCountry: 'settings:setSearchCountry'
   },
   storageLocation: {
     getStatus: 'storageLocation:getStatus',

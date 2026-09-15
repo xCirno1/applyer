@@ -1,7 +1,7 @@
 import { newHeadlessContext } from '../browserController'
 import { detectCaptcha } from '../captchaDetector'
 import { htmlToPlainText, sanitizeDescriptionHtml } from '../htmlContent'
-import type { JobDetailsOutcome, JobSearchResultItem } from '../types'
+import type { AggregatorSearchParams, AggregatorSearchResult, JobDetailsOutcome, JobSearchResultItem } from '../types'
 
 interface RawLinkedInCard {
   id: string | null
@@ -11,17 +11,8 @@ interface RawLinkedInCard {
   listedAt?: string | null
 }
 
-export interface LinkedInSearchResult {
-  results: JobSearchResultItem[]
-  blocked: boolean
-  warning?: string
-}
-
-export async function searchLinkedIn(
-  query: string,
-  location: string | undefined,
-  limit: number
-): Promise<LinkedInSearchResult> {
+/** LinkedIn is one worldwide site; the country setting has no edition to pick, so `location` is the only narrowing. */
+export async function searchLinkedIn({ query, location, limit }: AggregatorSearchParams): Promise<AggregatorSearchResult> {
   const context = await newHeadlessContext()
   try {
     const page = await context.newPage()

@@ -22,6 +22,8 @@ import {
   getIndexedJobsRetentionDays,
   getNotificationPreferences,
   getResumeSettings,
+  getSearchCountry,
+  setSearchCountry,
   setStorageMode
 } from '../db/repositories/settingsRepository'
 import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
@@ -272,7 +274,8 @@ describe('applyImport', () => {
             permissionRequired: false,
             jobFilled: false,
             jobFailed: true
-          }
+          },
+          searchCountry: 'nz'
         }
       }),
       { ...NO_SELECTION, settings: true }
@@ -280,6 +283,7 @@ describe('applyImport', () => {
     expect(result.settings).toBe(true)
     expect(getAutoStartCommand()).toBe('claude')
     expect(getIndexedJobsRetentionDays()).toBe(14)
+    expect(getSearchCountry()).toBe('nz')
     expect(getNotificationPreferences()).toEqual({
       enabled: false,
       verificationRequired: true,
@@ -289,13 +293,15 @@ describe('applyImport', () => {
     })
   })
 
-  it('keeps current notification preferences when importing an older settings bundle', () => {
+  it('keeps current notification preferences and search country when importing an older settings bundle', () => {
+    setSearchCountry('au')
     const before = getNotificationPreferences()
     applyImport(bundle({ settings: { autoStartCommand: 'codex', indexedJobsRetentionDays: 60 } }), {
       ...NO_SELECTION,
       settings: true
     })
     expect(getNotificationPreferences()).toEqual(before)
+    expect(getSearchCountry()).toBe('au')
   })
 
   it('imports company boards when selected and present', () => {

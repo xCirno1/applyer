@@ -1,7 +1,8 @@
 import { newHeadlessContext } from '../browserController'
 import { detectCaptcha } from '../captchaDetector'
 import { htmlToPlainText, sanitizeDescriptionHtml } from '../htmlContent'
-import type { JobDetailsOutcome, JobSearchResultItem } from '../types'
+import { aggregatorHost } from '@shared/types/jobSource'
+import type { AggregatorSearchParams, AggregatorSearchResult, JobDetailsOutcome, JobSearchResultItem } from '../types'
 
 interface RawIndeedCard {
   jk: string | null
@@ -11,20 +12,26 @@ interface RawIndeedCard {
   snippet?: string
 }
 
-export interface IndeedSearchResult {
-  results: JobSearchResultItem[]
-  blocked: boolean
-  warning?: string
-}
+/**
+ * Indeed is one site per country, each with its own index, so the search
+ * goes to the edition for the configured country (`au.indeed.com`,
+ * `uk.indeed.com`); a result's URL is built on the same host so that
+ * `get_job_details` lands on the edition that has the posting.
+ */
+export async function searchIndeed(params: AggregatorSearchParams): Promise<AggregatorSearchResult> {
+  const host = aggregatorHost('indeed', params.country)
+  if (!host) {
+    return { results: [], blocked: false, warning: `indeed: no edition for country "${params.country}"` }
+  }
+  const { query, location, limit } = params
 
-export async function searchIndeed(query: string, location: string | undefined, limit: number): Promise<IndeedSearchResult> {
   const context = await newHeadlessContext()
   try {
     const page = await context.newPage()
-    const params = new URLSearchParams({ q: query })
-    if (location) params.set('l', location)
+    const search = new URLSearchParams({ q: query })
+    if (location) search.set('l', location)
 
-    await page.goto(`https://www.indeed.com/jobs?${params.toString()}`, {
+    await page.goto(`https://${host}/jobs?${search.toString()}`, {
       waitUntil: 'domcontentloaded',
       timeout: 20000
     })
@@ -57,7 +64,7 @@ export async function searchIndeed(query: string, location: string | undefined, 
         title: c.title,
         company: c.company,
         location: c.location,
-        url: `https://www.indeed.com/viewjob?jk=${c.jk}`,
+        url: `https://${host}/viewjob?jk=${c.jk}`,
         source: 'indeed',
         snippet: c.snippet ?? ''
       }))

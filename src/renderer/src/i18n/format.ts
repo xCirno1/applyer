@@ -22,6 +22,7 @@ const OPTIONS: Record<FormatterKind, Intl.DateTimeFormatOptions> = {
 
 const dateCache = new Map<string, Intl.DateTimeFormat>()
 const numberCache = new Map<string, Intl.NumberFormat>()
+const regionCache = new Map<string, Intl.DisplayNames>()
 
 function dateFormatter(locale: string, kind: FormatterKind): Intl.DateTimeFormat {
   const key = `${locale}:${kind}`
@@ -56,6 +57,30 @@ export function formatNumber(value: number, locale: string): string {
   return Number.isFinite(value) ? numberFormatter(locale).format(value) : String(value)
 }
 
+function regionNames(locale: string): Intl.DisplayNames {
+  let names = regionCache.get(locale)
+  if (!names) {
+    names = new Intl.DisplayNames([locale], { type: 'region' })
+    regionCache.set(locale, names)
+  }
+  return names
+}
+
+/**
+ * A country's name in the active language from its ISO 3166-1 code ("de"
+ * into "Germany", or "Jerman" in Indonesian), so the job search country
+ * list needs no catalog entry per country. Falls back to the upper-cased
+ * code for one the runtime's CLDR data does not know.
+ */
+export function formatCountryName(code: string, locale: string): string {
+  const region = code.toUpperCase()
+  try {
+    return regionNames(locale).of(region) ?? region
+  } catch {
+    return region
+  }
+}
+
 export interface Formatters {
   /** "12 Mar 2026" */
   date: (iso: string) => string
@@ -64,6 +89,8 @@ export interface Formatters {
   /** "12 Mar 2026, 14:07" */
   dateTime: (iso: string) => string
   number: (value: number) => string
+  /** "Australia" */
+  country: (code: string) => string
 }
 
 /** The formatters bound to whichever locale i18next is currently using. */
@@ -76,7 +103,8 @@ export function useFormatters(): Formatters {
       date: (iso: string) => formatIsoDate(iso, locale, 'date'),
       time: (iso: string) => formatIsoDate(iso, locale, 'time'),
       dateTime: (iso: string) => formatIsoDate(iso, locale, 'dateTime'),
-      number: (value: number) => formatNumber(value, locale)
+      number: (value: number) => formatNumber(value, locale),
+      country: (code: string) => formatCountryName(code, locale)
     }),
     [locale]
   )

@@ -2,11 +2,19 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const searchIndeed = vi.fn()
 const searchLinkedIn = vi.fn()
+const searchSeek = vi.fn()
+const searchJora = vi.fn()
+const searchProsple = vi.fn()
+const searchRemotive = vi.fn()
 const searchAtsBoards = vi.fn()
 const isUrlExcluded = vi.fn()
 
 vi.mock('./scrapers/indeed', () => ({ searchIndeed: (...args: unknown[]) => searchIndeed(...args) }))
 vi.mock('./scrapers/linkedin', () => ({ searchLinkedIn: (...args: unknown[]) => searchLinkedIn(...args) }))
+vi.mock('./scrapers/seek', () => ({ searchSeek: (...args: unknown[]) => searchSeek(...args) }))
+vi.mock('./scrapers/jora', () => ({ searchJora: (...args: unknown[]) => searchJora(...args) }))
+vi.mock('./scrapers/prosple', () => ({ searchProsple: (...args: unknown[]) => searchProsple(...args) }))
+vi.mock('./scrapers/remotive', () => ({ searchRemotive: (...args: unknown[]) => searchRemotive(...args) }))
 vi.mock('./ats/searchAtsBoards', () => ({ searchAtsBoards: (...args: unknown[]) => searchAtsBoards(...args) }))
 vi.mock('../db/repositories/jobExclusionsRepository', () => ({
   isUrlExcluded: (...args: unknown[]) => isUrlExcluded(...args)
@@ -20,9 +28,11 @@ function result(url: string, source: JobSource = 'indeed', overrides: Partial<Jo
   return { title: `Job at ${url}`, company: 'Acme', url, source, snippet: '', ...overrides }
 }
 
+const empty = { results: [], blocked: false }
+const aggregatorMocks = [searchIndeed, searchLinkedIn, searchSeek, searchJora, searchProsple, searchRemotive]
+
 beforeEach(() => {
-  searchIndeed.mockReset().mockResolvedValue({ results: [], blocked: false })
-  searchLinkedIn.mockReset().mockResolvedValue({ results: [], blocked: false })
+  for (const mock of aggregatorMocks) mock.mockReset().mockResolvedValue(empty)
   searchAtsBoards
     .mockReset()
     .mockResolvedValue({ results: [], warnings: [], searchedBoards: 0, searchedProviders: [] })
@@ -30,10 +40,10 @@ beforeEach(() => {
 })
 
 describe('searchJobs', () => {
-  it('searches the aggregators and the tracked company boards when no sources are given', async () => {
-    await searchJobs({ query: 'engineer', limit: 20 })
-    expect(searchIndeed).toHaveBeenCalledWith('engineer', undefined, 20)
-    expect(searchLinkedIn).toHaveBeenCalledWith('engineer', undefined, 20)
+  it('searches every aggregator with an edition in the country plus the tracked boards when no sources are given', async () => {
+    await searchJobs({ query: 'engineer', limit: 20, country: 'au' })
+    const expected = { query: 'engineer', location: undefined, limit: 20, country: 'au' }
+    for (const mock of aggregatorMocks) expect(mock).toHaveBeenCalledWith(expected)
     expect(searchAtsBoards).toHaveBeenCalledWith({
       query: 'engineer',
       location: undefined,
@@ -42,10 +52,33 @@ describe('searchJobs', () => {
     })
   })
 
+  it('defaults to the US edition when no country is given, as the app always did', async () => {
+    await searchJobs({ query: 'engineer', limit: 20 })
+    expect(searchIndeed).toHaveBeenCalledWith(expect.objectContaining({ country: 'us' }))
+  })
+
+  it('silently skips an aggregator with no edition in the country on a default search', async () => {
+    const outcome = await searchJobs({ query: 'engineer', limit: 20, country: 'us' })
+    expect(searchSeek).not.toHaveBeenCalled()
+    expect(searchProsple).not.toHaveBeenCalled()
+    expect(searchIndeed).toHaveBeenCalled()
+    expect(searchJora).toHaveBeenCalled()
+    expect(outcome.warnings).toEqual([])
+    expect(outcome.searchedSources).not.toContain('seek')
+  })
+
+  it('warns when an aggregator asked for by name has no edition in the country', async () => {
+    const outcome = await searchJobs({ query: 'engineer', sources: ['seek'], limit: 20, country: 'us' })
+    expect(searchSeek).not.toHaveBeenCalled()
+    expect(outcome.warnings).toEqual([expect.stringContaining('seek: no edition for country "us"')])
+    expect(outcome.searchedSources).toEqual([])
+  })
+
   it('only searches requested sources when a subset is given', async () => {
     await searchJobs({ query: 'engineer', sources: ['indeed'], limit: 20 })
     expect(searchIndeed).toHaveBeenCalled()
     expect(searchLinkedIn).not.toHaveBeenCalled()
+    expect(searchJora).not.toHaveBeenCalled()
     expect(searchAtsBoards).not.toHaveBeenCalled()
   })
 
@@ -134,7 +167,7 @@ describe('searchJobs', () => {
     expect(outcome.results.map((r) => r.source)).toEqual(['greenhouse'])
   })
 
-  it('keeps two aggregator listings that merely look alike — they are often separate requisitions', async () => {
+  it('keeps two hosting aggregators\' listings that merely look alike, since they are often separate requisitions', async () => {
     const shared = { title: 'Backend Engineer', company: 'Acme', location: 'Berlin' }
     searchIndeed.mockResolvedValue({ results: [result('https://indeed.com/1', 'indeed', shared)], blocked: false })
     searchLinkedIn.mockResolvedValue({
@@ -144,6 +177,35 @@ describe('searchJobs', () => {
 
     const outcome = await searchJobs({ query: 'engineer', limit: 20 })
     expect(outcome.results).toHaveLength(2)
+  })
+
+  it("drops a re-aggregator's copy of a posting another aggregator also returned", async () => {
+    const shared = { title: 'Backend Engineer', company: 'Acme', location: 'Sydney' }
+    searchSeek.mockResolvedValue({ results: [result('https://www.seek.com.au/job/1', 'seek', shared)], blocked: false })
+    searchJora.mockResolvedValue({ results: [result('https://au.jora.com/job/x-1', 'jora', shared)], blocked: false })
+
+    const outcome = await searchJobs({ query: 'engineer', limit: 20, country: 'au' })
+    expect(outcome.results.map((r) => r.source)).toEqual(['seek'])
+  })
+
+  it("drops a re-aggregator's copy of a posting found on a company board", async () => {
+    const shared = { title: 'Backend Engineer', company: 'Acme', location: 'Sydney' }
+    searchAtsBoards.mockResolvedValue({
+      results: [result('https://jobs.lever.co/acme/1', 'lever', shared)],
+      warnings: [],
+      searchedBoards: 1,
+      searchedProviders: ['lever']
+    })
+    searchJora.mockResolvedValue({ results: [result('https://au.jora.com/job/x-1', 'jora', shared)], blocked: false })
+
+    const outcome = await searchJobs({ query: 'engineer', limit: 20, country: 'au' })
+    expect(outcome.results.map((r) => r.source)).toEqual(['lever'])
+  })
+
+  it("keeps a re-aggregator's posting that no other source returned", async () => {
+    searchJora.mockResolvedValue({ results: [result('https://au.jora.com/job/only-here-1', 'jora')], blocked: false })
+    const outcome = await searchJobs({ query: 'engineer', limit: 20, country: 'au' })
+    expect(outcome.results.map((r) => r.source)).toEqual(['jora'])
   })
 
   it('interleaves board and aggregator results so neither fills the whole page', async () => {
@@ -166,6 +228,22 @@ describe('searchJobs', () => {
 
     const outcome = await searchJobs({ query: 'engineer', limit: 4 })
     expect(outcome.results.map((r) => r.source)).toEqual(['greenhouse', 'indeed', 'greenhouse', 'indeed'])
+  })
+
+  it('takes turns between aggregators so the one with the most results does not fill the page', async () => {
+    searchIndeed.mockResolvedValue({
+      results: [
+        result('https://in/1', 'indeed', { title: 'A' }),
+        result('https://in/2', 'indeed', { title: 'B' }),
+        result('https://in/3', 'indeed', { title: 'C' })
+      ],
+      blocked: false
+    })
+    searchSeek.mockResolvedValue({ results: [result('https://sk/1', 'seek', { title: 'D' })], blocked: false })
+    searchRemotive.mockResolvedValue({ results: [result('https://rm/1', 'remotive', { title: 'E' })], blocked: false })
+
+    const outcome = await searchJobs({ query: 'engineer', limit: 4, country: 'au' })
+    expect(outcome.results.map((r) => r.url)).toEqual(['https://in/1', 'https://sk/1', 'https://rm/1', 'https://in/2'])
   })
 
   it('produces the same ordering regardless of which source returns first', async () => {

@@ -32,8 +32,9 @@ Applyer pairs an embedded terminal with a live application board. Connect an
 research job sites, score matches, organize the pipeline, and prepare forms in a visible
 browser. Final submission stays with you.
 
-- **Search with context** across LinkedIn and Indeed, plus public Greenhouse, Lever,
-  Ashby, and Workday boards.
+- **Search with context** across Indeed, LinkedIn, Seek, Jora, Prosple, and Remotive
+  (each in the national edition for your country), plus public Greenhouse, Lever, Ashby,
+  and Workday boards.
 - **Work from a real pipeline** with queued, filled, submitted, and failed states,
   exclusions, filters, bulk actions, notifications, and a searchable audit trail.
 - **Draft multi-page applications** through inspected fields and permission-gated

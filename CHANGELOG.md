@@ -7,6 +7,29 @@ Notable changes to Applyer are documented here. This project follows
 
 ### Added
 
+- Four more job sources for `search_jobs` and `get_job_details`: Seek (Australia and
+  New Zealand), Jora (Seek's worldwide aggregator), Prosple (graduate programs and
+  internships across Asia-Pacific), and Remotive (remote-only roles, read through its
+  public API rather than a browser; the feed is downloaded at most a few times a day, as
+  the API's terms ask, and every search is answered from that copy). Every search interleaves the sites so the one with
+  the most results does not fill the page, and a Jora copy of a posting that any other
+  source also returned is dropped in favour of the original, since Jora only re-lists
+  what other boards publish. Posting pages are read from their schema.org `JobPosting`
+  markup first and from the site's own layout second, so a redesign degrades a source
+  rather than breaking it. Seek and Jora were checked against the live sites; Prosple
+  answers a headless browser with a Cloudflare challenge, which now reports itself as
+  "blocked by a verification challenge" rather than as an empty result.
+- A job search country (Settings > Job search). Indeed, Jora, Seek and Prosple are one
+  site per country, each with its own listings, and every search used to hit the US
+  edition; the setting picks the edition (`au.indeed.com`, `seek.co.nz`), the settings
+  page shows which sites a search from that country reaches, and the agent can pass
+  `country` to `search_jobs` to look somewhere else for one query. The country travels
+  with export/import alongside the other settings. Job URLs from any national edition
+  of Indeed, Jora or Prosple now route to the right adapter instead of the generic
+  fallback.
+- The source filters on the board and the Indexed Jobs page list every searchable
+  source, and indexed rows show the source's name rather than its id.
+
 - Named, reusable resume variants. A new Resume Variants screen holds the master
   resume as structured content (free-form sections, each with one of four layouts),
   three built-in templates, and any number of named variants ("Backend-focused",

@@ -75,7 +75,9 @@ export function createApplyerMcpServer(): McpServer {
     {
       title: 'Search for jobs',
       description:
-        'Searches for job postings matching a query. Two kinds of source: LinkedIn and Indeed run a keyword search across every company, while greenhouse/lever/ashby/workday search the company boards the user tracks (see add_company_board / list_company_boards) — those providers have no cross-company search endpoint, so their coverage is exactly the tracked list and asking for them with nothing tracked returns a warning saying so. Defaults to all of them. Returns short snippets, not full descriptions.',
+        'Searches for job postings matching a query. Two kinds of source. The aggregators run a keyword search across every company: indeed, linkedin, seek (Australia and New Zealand), jora (worldwide, re-lists other boards), prosple (graduate programs and internships, Asia-Pacific) and remotive (remote-only roles). ' +
+        'The ATS providers greenhouse/lever/ashby/workday instead search the company boards the user tracks (see add_company_board / list_company_boards); those have no cross-company search endpoint, so their coverage is exactly the tracked list and asking for them with nothing tracked returns a warning saying so. ' +
+        'Most aggregators are one site per country: the country in Settings > Job search picks the edition (au.indeed.com, seek.co.nz), `country` overrides it for one call, and an aggregator with no edition in that country is skipped (with a warning if you asked for it by name). Defaults to every source. Returns short snippets, not full descriptions.',
       inputSchema: searchJobsShape
     },
     searchJobsTool
@@ -86,7 +88,7 @@ export function createApplyerMcpServer(): McpServer {
     {
       title: 'Get full job posting details',
       description:
-        'Fetches the full description, location, and application info for a single job posting URL. Routes to the right source automatically (Greenhouse/Lever/Ashby use their public APIs; LinkedIn/Indeed/Workday/generic sites are read via a headless browser). May return a "blocked" status if the site presents a verification challenge.',
+        'Fetches the full description, location, and application info for a single job posting URL. Routes to the right source automatically (Greenhouse/Lever/Ashby/Remotive use their public APIs; LinkedIn/Indeed/Seek/Jora/Prosple/Workday/generic sites are read via a headless browser). May return a "blocked" status if the site presents a verification challenge.',
       inputSchema: getJobDetailsShape
     },
     getJobDetailsTool

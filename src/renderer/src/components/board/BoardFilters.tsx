@@ -3,23 +3,16 @@ import { useTranslation } from 'react-i18next'
 import { useJobsStore } from '../../state/jobsStore'
 import Dropdown from '../ui/Dropdown'
 import type { JobSortOrder } from '@shared/types/job'
+import { JOB_SOURCE_LABELS, SEARCHABLE_SOURCES } from '@shared/types/jobSource'
 
 // Search (debounced)/source/sort controls above the board, backed by
 // `jobsStore`'s `filters` state — changing any of them refetches all four
 // columns from the server (filtering isn't done client-side).
 //
 // Job-board brand names are proper nouns and stay untranslated; only the
-// two synthetic entries ("All sources", "Other") get a string.
-const SOURCE_BRANDS = ['greenhouse', 'lever', 'ashby', 'workday', 'linkedin', 'indeed'] as const
-
-const SOURCE_BRAND_LABELS: Record<(typeof SOURCE_BRANDS)[number], string> = {
-  greenhouse: 'Greenhouse',
-  lever: 'Lever',
-  ashby: 'Ashby',
-  workday: 'Workday',
-  linkedin: 'LinkedIn',
-  indeed: 'Indeed'
-}
+// two synthetic entries ("All sources", "Other") get a string. The list is
+// the shared one so a source added to the search shows up here without a
+// second edit.
 
 export default function BoardFilters(): ReactElement {
   const { t } = useTranslation('board')
@@ -40,7 +33,10 @@ export default function BoardFilters(): ReactElement {
 
   const sourceOptions = [
     { value: '', label: t('filters.allSources') },
-    ...SOURCE_BRANDS.map((value) => ({ value, label: SOURCE_BRAND_LABELS[value] })),
+    ...SEARCHABLE_SOURCES.filter((value) => value !== 'generic').map((value) => ({
+      value,
+      label: JOB_SOURCE_LABELS[value as Exclude<typeof value, 'generic'>]
+    })),
     { value: 'generic', label: t('filters.otherSource') }
   ]
 

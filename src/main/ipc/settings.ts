@@ -12,7 +12,9 @@ import {
   getAgentPermissions,
   setAgentPermissions,
   getSearchCountry,
-  setSearchCountry
+  setSearchCountry,
+  getSearchChallengeFallback,
+  setSearchChallengeFallback
 } from '../db/repositories/settingsRepository'
 import { isSearchCountry, type SearchCountry } from '@shared/types/jobSource'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
@@ -20,6 +22,7 @@ import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/do
 import { rewriteResumeStorageMode } from '../db/repositories/resumeRepository'
 import { isEncryptionAvailable } from '../db/encryption'
 import { logActivity } from '../db/repositories/activityLogRepository'
+import { enabledPayload } from './payloadSchemas'
 import { computeStorageStats } from '../storageStats'
 import type { StorageMode } from '@shared/types/profile'
 import type { AutoStartCommand } from '@shared/types/ipcEvents'
@@ -197,6 +200,20 @@ export function registerSettingsIpc(): void {
       setSearchCountry(country)
       logActivity('info', `Job search country set to ${country.toUpperCase()}`)
       return { ok: true, country }
+    } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
+  })
+
+  ipcMain.handle(IPC.settings.getSearchChallengeFallback, (): boolean => getSearchChallengeFallback())
+
+  ipcMain.handle(IPC.settings.setSearchChallengeFallback, (_event, payload: unknown) => {
+    const parsed = enabledPayload.safeParse(payload)
+    if (!parsed.success) return { ok: false, error: appError('unexpected') }
+    try {
+      setSearchChallengeFallback(parsed.data.enabled)
+      logActivity('info', `Search challenge fallback ${parsed.data.enabled ? 'enabled' : 'disabled'}`)
+      return { ok: true }
     } catch (err) {
       return { ok: false, error: unexpectedError(err) }
     }

@@ -28,9 +28,18 @@ Notable changes to Applyer are documented here. This project follows
   source also returned is dropped in favour of the original, since Jora only re-lists
   what other boards publish. Posting pages are read from their schema.org `JobPosting`
   markup first and from the site's own layout second, so a redesign degrades a source
-  rather than breaking it. Seek and Jora were checked against the live sites; Prosple
-  answers a headless browser with a Cloudflare challenge, which now reports itself as
-  "blocked by a verification challenge" rather than as an empty result.
+  rather than breaking it. Seek, Jora and Prosple were checked against the live sites.
+- A job search a site refuses to answer from the hidden browser is retried in the
+  application browser. Prosple sits behind Cloudflare's managed challenge, which turns
+  away every headless browser and lets the same page through a visible window within
+  seconds; so when a search comes back challenged, the page is opened in the application
+  browser (or the attached one, when Settings > Browser attaches to your own), a banner
+  above the board says which site is waiting and a desktop notification goes out under the
+  existing "verification required" switch, and the search resumes as soon as the challenge
+  clears, by itself or with your click; Skip gives that one site up for this search and the
+  others carry on. The window stays open two minutes at most, so the agent's tool call still
+  answers. A switch under Settings > Job search turns the retry off, in which case the site
+  is reported as blocked, as before. The run timeline lists these pauses per site.
 - A job search country (Settings > Job search). Indeed, Jora, Seek and Prosple are one
   site per country, each with its own listings, and every search used to hit the US
   edition; the setting picks the edition (`au.indeed.com`, `nz.seek.com`), the settings
@@ -104,8 +113,8 @@ Notable changes to Applyer are documented here. This project follows
   before it can be turned on.
 - Cloudflare's current "Just a moment..." interstitial (randomised element ids, a
   Turnstile widget smaller than the old size gate) is now recognised as a challenge, so a
-  search on a site behind it (Prosple, for one) reports itself as blocked instead of as
-  "no listings matched".
+  search on a site behind it (Prosple, for one) is retried in the application browser
+  instead of coming back as "no listings matched".
 
 ## [1.0.0] - 2026-09-11
 

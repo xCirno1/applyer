@@ -14,6 +14,8 @@ import {
   type UploadDocumentRequest,
   type CaptchaDetectedPayload,
   type CaptchaResolvedPayload,
+  type SearchChallengePayload,
+  type SearchChallengeResolvedPayload,
   type BrowserDownloadProgressPayload,
   type BrowserSetupStatusPayload,
   type BrowserPreference,
@@ -343,6 +345,17 @@ const browserControlApi = {
     const listener = (_event: Electron.IpcRendererEvent, payload: CaptchaResolvedPayload): void => callback(payload)
     ipcRenderer.on(IPC.browserControl.onCaptchaResolved, listener)
     return () => ipcRenderer.removeListener(IPC.browserControl.onCaptchaResolved, listener)
+  },
+  onSearchChallengeDetected: (callback: (payload: SearchChallengePayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: SearchChallengePayload): void => callback(payload)
+    ipcRenderer.on(IPC.browserControl.onSearchChallengeDetected, listener)
+    return () => ipcRenderer.removeListener(IPC.browserControl.onSearchChallengeDetected, listener)
+  },
+  onSearchChallengeResolved: (callback: (payload: SearchChallengeResolvedPayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: SearchChallengeResolvedPayload): void =>
+      callback(payload)
+    ipcRenderer.on(IPC.browserControl.onSearchChallengeResolved, listener)
+    return () => ipcRenderer.removeListener(IPC.browserControl.onSearchChallengeResolved, listener)
   }
 }
 
@@ -438,7 +451,10 @@ const settingsApi = {
     ipcRenderer.invoke(IPC.settings.setNotificationLocale, { locale }),
   getSearchCountry: (): Promise<SearchCountry> => ipcRenderer.invoke(IPC.settings.getSearchCountry),
   setSearchCountry: (country: SearchCountry): Promise<{ ok: boolean; country?: SearchCountry; error?: AppError }> =>
-    ipcRenderer.invoke(IPC.settings.setSearchCountry, { country })
+    ipcRenderer.invoke(IPC.settings.setSearchCountry, { country }),
+  getSearchChallengeFallback: (): Promise<boolean> => ipcRenderer.invoke(IPC.settings.getSearchChallengeFallback),
+  setSearchChallengeFallback: (enabled: boolean): Promise<{ ok: boolean; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setSearchChallengeFallback, { enabled })
 }
 
 const storageLocationApi = {

@@ -5,7 +5,16 @@ interface NotificationMessage {
   body: (jobTitle: string, company: string) => string
 }
 
-type NotificationCatalog = Record<NotificationTestKind, NotificationMessage> & {
+/**
+ * `searchVerificationRequired` is the job-less sibling of
+ * `verificationRequired` (a search, not an application, is waiting on a
+ * challenge); its body takes the site's name and host in the two slots.
+ * It is not a `NotificationTestKind` because it shares the
+ * `verificationRequired` preference rather than having a switch of its own.
+ */
+export type NotificationMessageKind = NotificationTestKind | 'searchVerificationRequired'
+
+type NotificationCatalog = Record<NotificationMessageKind, NotificationMessage> & {
   testJobTitle: string
   testCompany: string
 }
@@ -15,6 +24,10 @@ export const NOTIFICATION_CATALOGS: Record<NotificationLocale, NotificationCatal
     verificationRequired: {
       title: 'Verification required',
       body: (jobTitle, company) => `${jobTitle} at ${company} needs your attention in the browser window.`
+    },
+    searchVerificationRequired: {
+      title: 'Verification required',
+      body: (site, host) => `${site} (${host}) wants a verification challenge solved before it answers a job search. It is open in the browser window.`
     },
     permissionRequired: {
       title: 'Agent permission required',
@@ -36,6 +49,10 @@ export const NOTIFICATION_CATALOGS: Record<NotificationLocale, NotificationCatal
       title: 'Verifikasi diperlukan',
       body: (jobTitle, company) => `${jobTitle} di ${company} perlu perhatianmu di jendela browser.`
     },
+    searchVerificationRequired: {
+      title: 'Verifikasi diperlukan',
+      body: (site, host) => `${site} (${host}) meminta tantangan verifikasi diselesaikan sebelum menjawab pencarian lowongan. Halamannya terbuka di jendela browser.`
+    },
     permissionRequired: {
       title: 'Izin agen diperlukan',
       body: (jobTitle, company) => `Agen menunggu izin untuk melanjutkan lamaran ${jobTitle} di ${company}.`
@@ -55,7 +72,7 @@ export const NOTIFICATION_CATALOGS: Record<NotificationLocale, NotificationCatal
 
 export function notificationMessage(
   locale: NotificationLocale,
-  kind: NotificationTestKind,
+  kind: NotificationMessageKind,
   jobTitle: string,
   company: string
 ): { title: string; body: string } {

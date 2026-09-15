@@ -1,5 +1,5 @@
 import { createContext, useContext } from 'react'
-import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
+import type { CaptchaDetectedPayload, SearchChallengePayload } from '@shared/types/ipcEvents'
 
 // Context split into its own file so CaptchaAlertProvider.tsx stays a
 // component-only export (required for Fast Refresh) — see that file's doc
@@ -8,11 +8,14 @@ import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
 export interface CaptchaAlertContextValue {
   blockedJobIds: Set<string>
   pending: CaptchaDetectedPayload[]
+  /** Searches waiting on a site's challenge in the application browser; no job to point at, so only the banner shows them. */
+  pendingSearches: SearchChallengePayload[]
 }
 
 export const CaptchaAlertContext = createContext<CaptchaAlertContextValue>({
   blockedJobIds: new Set(),
-  pending: []
+  pending: [],
+  pendingSearches: []
 })
 
 export function useBlockedJobIds(): Set<string> {

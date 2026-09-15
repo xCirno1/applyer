@@ -195,6 +195,8 @@
     "button_clicked_failed": "Button click failed on {{job}}",
     "captcha_paused": "{{job}} paused on a verification challenge",
     "captcha_resolved": "{{job}} resumed after the challenge",
+    "captcha_paused_search": "A search on {{source}} paused on a verification challenge",
+    "captcha_resolved_search": "The search on {{source}} resumed after the challenge",
     "job_failed": "{{job}} failed: {{reason}}",
     "job_submitted": "{{job}} marked Submitted",
     "job_marked_filled": "{{job}} marked Filled by hand",

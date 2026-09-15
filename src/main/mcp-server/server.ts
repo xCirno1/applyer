@@ -103,7 +103,8 @@ export function createApplyerMcpServer(): McpServer {
       description:
         'Searches for job postings matching a query. Two kinds of source. The aggregators run a keyword search across every company: indeed, linkedin, seek (Australia and New Zealand), jora (worldwide, re-lists other boards), prosple (graduate programs and internships, Asia-Pacific) and remotive (remote-only roles). ' +
         'The ATS providers greenhouse/lever/ashby/workday instead search the company boards the user tracks (see add_company_board / list_company_boards); those have no cross-company search endpoint, so their coverage is exactly the tracked list and asking for them with nothing tracked returns a warning saying so. ' +
-        'Most aggregators are one site per country: the country in Settings > Job search picks the edition (au.indeed.com, seek.co.nz), `country` overrides it for one call, and an aggregator with no edition in that country is skipped (with a warning if you asked for it by name). Defaults to every source. Returns short snippets, not full descriptions.',
+        'Most aggregators are one site per country: the country in Settings > Job search picks the edition (au.indeed.com, seek.co.nz), `country` overrides it for one call, and an aggregator with no edition in that country is skipped (with a warning if you asked for it by name). Defaults to every source. Returns short snippets, not full descriptions. ' +
+        'A site that answers with a verification challenge (Prosple always does) is retried in a visible browser window with the user asked to clear it, so the call can take up to two minutes per such site; a warning names any site that stayed blocked, and the other sites still answer.',
       inputSchema: searchJobsShape
     },
     observed('search_jobs', searchJobsTool)

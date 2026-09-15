@@ -83,6 +83,7 @@ export const browserPreferencePayload = z.object({
 })
 export const respondInstallPayload = z.object({ accept: z.boolean() })
 export const allowLocalAddressesPayload = z.object({ allowed: z.boolean() })
+export const enabledPayload = z.object({ enabled: z.boolean() })
 
 /**
  * The endpoint is stored and later handed to Playwright's `connectOverCDP` as-is, so it

@@ -15,7 +15,8 @@
     "allSources": "All sources",
     "otherSource": "Other",
     "sortNewest": "Newest first",
-    "sortMatch": "Best match first"
+    "sortMatch": "Best match first",
+    "searchSettings": "Job search settings: which country and sites a search reaches"
   },
   "card": {
     "select": "Select job",

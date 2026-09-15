@@ -21,9 +21,11 @@ Notable changes to Applyer are documented here. This project follows
   "blocked by a verification challenge" rather than as an empty result.
 - A job search country (Settings > Job search). Indeed, Jora, Seek and Prosple are one
   site per country, each with its own listings, and every search used to hit the US
-  edition; the setting picks the edition (`au.indeed.com`, `seek.co.nz`), the settings
+  edition; the setting picks the edition (`au.indeed.com`, `nz.seek.com`), the settings
   page shows which sites a search from that country reaches, and the agent can pass
-  `country` to `search_jobs` to look somewhere else for one query. The country travels
+  `country` to `search_jobs` to look somewhere else for one query. A gear beside the
+  board's source filter opens that section, since the filter strip is where someone
+  wondering why a site never shows up is looking. The country travels
   with export/import alongside the other settings. Job URLs from any national edition
   of Indeed, Jora or Prosple now route to the right adapter instead of the generic
   fallback.

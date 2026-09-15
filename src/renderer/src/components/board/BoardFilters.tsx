@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useJobsStore } from '../../state/jobsStore'
 import Dropdown from '../ui/Dropdown'
+import Tooltip from '../ui/Tooltip'
+import { useOpenSettings } from '../../providers/SettingsNavContext'
 import type { JobSortOrder } from '@shared/types/job'
 import { JOB_SOURCE_LABELS, SEARCHABLE_SOURCES } from '@shared/types/jobSource'
 
@@ -13,11 +15,17 @@ import { JOB_SOURCE_LABELS, SEARCHABLE_SOURCES } from '@shared/types/jobSource'
 // two synthetic entries ("All sources", "Other") get a string. The list is
 // the shared one so a source added to the search shows up here without a
 // second edit.
+//
+// The gear beside the source filter opens Settings > Search. The filter
+// narrows the board to jobs that came from a site; which sites a search
+// reaches at all is the country setting, and this strip is where someone
+// wondering why Seek never shows up is looking.
 
 export default function BoardFilters(): ReactElement {
   const { t } = useTranslation('board')
   const filters = useJobsStore((s) => s.filters)
   const setFilters = useJobsStore((s) => s.setFilters)
+  const openSettings = useOpenSettings()
   const [searchDraft, setSearchDraft] = useState(filters.search)
 
   // Debounced so we don't refetch all four columns on every keystroke.
@@ -61,6 +69,21 @@ export default function BoardFilters(): ReactElement {
         value={filters.source ?? ''}
         onChange={(v) => setFilters({ source: v || null })}
       />
+      {openSettings && (
+        <Tooltip label={t('filters.searchSettings')}>
+          <button
+            type="button"
+            onClick={() => openSettings('search')}
+            aria-label={t('filters.searchSettings')}
+            className="flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+          </button>
+        </Tooltip>
+      )}
       <Dropdown
         size="sm"
         className="w-40"

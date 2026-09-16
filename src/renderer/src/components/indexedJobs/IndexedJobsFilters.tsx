@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useIndexedJobsStore } from '../../state/indexedJobsStore'
 import Dropdown from '../ui/Dropdown'
 import type { IndexedJobMatchFilter } from '@shared/types/indexedJob'
+import { JOB_SOURCE_LABELS, SEARCHABLE_SOURCES } from '@shared/types/jobSource'
 
 // Filter/search controls above `IndexedJobsList`. The far-right compact-mode
 // toggle (`indexedJobsStore.compact`) is the one control here that changes
@@ -37,16 +38,15 @@ export default function IndexedJobsFilters(): ReactElement {
   }, [searchDraft])
 
   // Every source name here is a proper noun and stays untranslated. The four
-  // ATS providers appear because a search now indexes company boards too, so
+  // ATS providers appear because a search indexes company boards too, so
   // filtering to one of them answers "what did my own watchlist turn up?".
+  // The list is the shared one, so every searchable source is offered.
   const sourceOptions = [
     { value: '', label: t('filters.allSources') },
-    { value: 'linkedin', label: 'LinkedIn' },
-    { value: 'indeed', label: 'Indeed' },
-    { value: 'greenhouse', label: 'Greenhouse' },
-    { value: 'lever', label: 'Lever' },
-    { value: 'ashby', label: 'Ashby' },
-    { value: 'workday', label: 'Workday' }
+    ...SEARCHABLE_SOURCES.filter((value) => value !== 'generic').map((value) => ({
+      value,
+      label: JOB_SOURCE_LABELS[value as Exclude<typeof value, 'generic'>]
+    }))
   ]
 
   const matchOptions: { value: IndexedJobMatchFilter; label: string }[] = [

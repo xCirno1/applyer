@@ -78,6 +78,7 @@ import type {
   NotificationPreferences,
   NotificationTestKind
 } from '@shared/types/notification'
+import type { SearchCountry } from '@shared/types/jobSource'
 import type {
   StorageLocationStatus,
   StorageLocationValidation,
@@ -426,7 +427,10 @@ const settingsApi = {
   testNotification: (kind: NotificationTestKind): Promise<{ ok: boolean; error?: AppError }> =>
     ipcRenderer.invoke(IPC.settings.testNotification, { kind }),
   setNotificationLocale: (locale: NotificationLocale): Promise<{ ok: boolean; error?: AppError }> =>
-    ipcRenderer.invoke(IPC.settings.setNotificationLocale, { locale })
+    ipcRenderer.invoke(IPC.settings.setNotificationLocale, { locale }),
+  getSearchCountry: (): Promise<SearchCountry> => ipcRenderer.invoke(IPC.settings.getSearchCountry),
+  setSearchCountry: (country: SearchCountry): Promise<{ ok: boolean; country?: SearchCountry; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setSearchCountry, { country })
 }
 
 const storageLocationApi = {

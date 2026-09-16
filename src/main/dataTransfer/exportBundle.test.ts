@@ -15,7 +15,7 @@ import { upsertIndexedJobs, listAllIndexedJobs } from '../db/repositories/indexe
 import { excludeUrl } from '../db/repositories/jobExclusionsRepository'
 import { addCompanyBoard, recordCompanyBoardFetch } from '../db/repositories/companyBoardsRepository'
 import { saveProfile } from '../db/repositories/profileRepository'
-import { setAutoStartCommand, setNotificationPreferences, setResumeSettings, setStorageMode } from '../db/repositories/settingsRepository'
+import { setAutoStartCommand, setNotificationPreferences, setResumeSettings, setSearchCountry, setStorageMode } from '../db/repositories/settingsRepository'
 import { assignVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
 import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
 import { jobsToCsv, companyBoardsToCsv, indexedJobsToCsv } from './csv'
@@ -180,6 +180,7 @@ describe('buildExportBundle', () => {
       jobFilled: true,
       jobFailed: false
     })
+    setSearchCountry('au')
     const bundle = buildExportBundle({ ...allDomainsSelected(false), settings: true }, testTheme)
     expect(bundle.data.settings).toEqual({
       autoStartCommand: 'claude',
@@ -190,7 +191,8 @@ describe('buildExportBundle', () => {
         permissionRequired: true,
         jobFilled: true,
         jobFailed: false
-      }
+      },
+      searchCountry: 'au'
     })
   })
 

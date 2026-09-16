@@ -2,29 +2,31 @@ import { useEffect, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useJobsStore } from '../../state/jobsStore'
 import Dropdown from '../ui/Dropdown'
+import Tooltip from '../ui/Tooltip'
+import { useOpenSettings } from '../../providers/SettingsNavContext'
 import type { JobSortOrder } from '@shared/types/job'
+import { JOB_SOURCE_LABELS, SEARCHABLE_SOURCES } from '@shared/types/jobSource'
 
 // Search (debounced)/source/sort controls above the board, backed by
 // `jobsStore`'s `filters` state — changing any of them refetches all four
 // columns from the server (filtering isn't done client-side).
 //
 // Job-board brand names are proper nouns and stay untranslated; only the
-// two synthetic entries ("All sources", "Other") get a string.
-const SOURCE_BRANDS = ['greenhouse', 'lever', 'ashby', 'workday', 'linkedin', 'indeed'] as const
-
-const SOURCE_BRAND_LABELS: Record<(typeof SOURCE_BRANDS)[number], string> = {
-  greenhouse: 'Greenhouse',
-  lever: 'Lever',
-  ashby: 'Ashby',
-  workday: 'Workday',
-  linkedin: 'LinkedIn',
-  indeed: 'Indeed'
-}
+// two synthetic entries ("All sources", "Other") get a string. The list is
+// the shared one so a source added to the search shows up here without a
+// second edit.
+//
+// The globe at the far end of the strip opens Settings > Search. The source
+// filter narrows the board to jobs that came from a site; which sites a
+// search reaches at all is the country setting, and this strip is where
+// someone wondering why Seek never shows up is looking. It sits apart from
+// the filters, on the right, because it is not one of them.
 
 export default function BoardFilters(): ReactElement {
   const { t } = useTranslation('board')
   const filters = useJobsStore((s) => s.filters)
   const setFilters = useJobsStore((s) => s.setFilters)
+  const openSettings = useOpenSettings()
   const [searchDraft, setSearchDraft] = useState(filters.search)
 
   // Debounced so we don't refetch all four columns on every keystroke.
@@ -40,7 +42,10 @@ export default function BoardFilters(): ReactElement {
 
   const sourceOptions = [
     { value: '', label: t('filters.allSources') },
-    ...SOURCE_BRANDS.map((value) => ({ value, label: SOURCE_BRAND_LABELS[value] })),
+    ...SEARCHABLE_SOURCES.filter((value) => value !== 'generic').map((value) => ({
+      value,
+      label: JOB_SOURCE_LABELS[value as Exclude<typeof value, 'generic'>]
+    })),
     { value: 'generic', label: t('filters.otherSource') }
   ]
 
@@ -73,6 +78,21 @@ export default function BoardFilters(): ReactElement {
         value={filters.sortBy}
         onChange={(v) => setFilters({ sortBy: v as JobSortOrder })}
       />
+      {openSettings && (
+        <Tooltip label={t('filters.searchSettings')}>
+          <button
+            type="button"
+            onClick={() => openSettings('search')}
+            aria-label={t('filters.searchSettings')}
+            className="ml-auto flex h-6 w-6 cursor-pointer items-center justify-center text-text-muted hover:text-text"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+              <path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18" stroke="currentColor" strokeWidth="1.8" />
+            </svg>
+          </button>
+        </Tooltip>
+      )}
     </div>
   )
 }

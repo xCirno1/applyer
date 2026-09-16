@@ -91,6 +91,7 @@ The *why* for each component — behavioral quirks, the bugs a given approach wa
 | `Collapsible` | `ui/Collapsible.tsx` |
 | `WorkspaceDock` / `ShellDock` | `workspace/WorkspaceDock.tsx`, `workspace/ShellDock.tsx` |
 | `terminalBridge.ts` / `TerminalInputContext` | `terminal/terminalBridge.ts`, `providers/TerminalInputContext.ts` |
+| `SettingsNavContext` / `useOpenSettings` | `providers/SettingsNavContext.ts` (open a Settings section from a rail screen; the board's filter strip uses it for Settings > Search) |
 | `Menu` / `MenuBar` | `ui/Menu.tsx` |
 | `ContextMenu` | `ui/ContextMenu.tsx` |
 | `AppMenuBar` | `workspace/AppMenuBar.tsx` |

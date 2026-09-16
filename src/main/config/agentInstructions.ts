@@ -32,10 +32,15 @@ app's local job-tracking database and a real browser:
   A user who skipped the profile during setup and uploaded only a resume is
   exactly the case this exists for. Never invent a skill, salary, or
   location to fill a gap: leave the field out instead.
-- \`search_jobs\`: search job postings by keyword. LinkedIn and Indeed search
-  across every company; \`greenhouse\`/\`lever\`/\`ashby\`/\`workday\` instead
-  search the company boards the user tracks, since those providers have no
-  cross-company search endpoint of their own.
+- \`search_jobs\`: search job postings by keyword. The aggregators search
+  across every company: \`indeed\`, \`linkedin\`, \`seek\` (Australia and New
+  Zealand), \`jora\` (worldwide), \`prosple\` (graduate programs and
+  internships, Asia-Pacific) and \`remotive\` (remote-only roles).
+  \`greenhouse\`/\`lever\`/\`ashby\`/\`workday\` instead search the company
+  boards the user tracks, since those providers have no cross-company
+  search endpoint of their own. Most aggregators are one site per country;
+  the user's country (Settings > Job search) picks the edition, and
+  \`country\` overrides it for one call when they ask about somewhere else.
 - \`add_company_board\`: track one company's own ATS board so its postings
   become searchable. Worth doing for companies that run a Greenhouse/Lever/
   Ashby/Workday board and never post to LinkedIn or Indeed, which is common

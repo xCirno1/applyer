@@ -5,6 +5,7 @@ import {
 } from '@shared/constants'
 import { getSettings } from '@shared/settings'
 import { isNavigableUrl } from '@shared/url'
+import { JOB_SOURCES, SEARCH_COUNTRIES } from '@shared/types/jobSource'
 import {
   resumeContentSchema,
   resumePageSizeSchema,
@@ -28,7 +29,8 @@ const navigableUrl = z
   .trim()
   .refine(isNavigableUrl, 'must be an http:// or https:// URL')
 
-const jobSourceEnum = z.enum(['greenhouse', 'lever', 'ashby', 'workday', 'linkedin', 'indeed', 'generic'])
+const jobSourceEnum = z.enum(JOB_SOURCES)
+const searchCountryEnum = z.enum(SEARCH_COUNTRIES)
 const jobStatusEnum = z.enum(['queued', 'filled', 'submitted', 'failed'])
 const remotePreferenceEnum = z.enum(['remote', 'hybrid', 'onsite', 'no_preference'])
 
@@ -38,6 +40,8 @@ export const searchJobsShape = {
   remote: z.boolean().optional(),
   jobType: z.enum(['full_time', 'part_time', 'contract', 'internship']).optional(),
   sources: z.array(jobSourceEnum).optional(),
+  /** Overrides the Settings > Job search country for this one call. */
+  country: searchCountryEnum.optional(),
   limit: z.number().int().min(1).max(SEARCH_JOBS_MAX_LIMIT).optional()
 }
 

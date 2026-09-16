@@ -109,6 +109,16 @@ describe('validateExportBundle', () => {
       }).ok
     ).toBe(false)
   })
+
+  it('accepts a known search country and rejects an unknown one', () => {
+    const settings = { autoStartCommand: '', indexedJobsRetentionDays: 30 }
+    expect(validateExportBundle({ ...validBundle(), data: { settings: { ...settings, searchCountry: 'au' } } }).ok).toBe(
+      true
+    )
+    expect(validateExportBundle({ ...validBundle(), data: { settings: { ...settings, searchCountry: 'xx' } } }).ok).toBe(
+      false
+    )
+  })
 })
 
 describe('validateExportBundle: resumes and variant names', () => {

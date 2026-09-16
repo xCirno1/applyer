@@ -1,5 +1,25 @@
 import type { JobSource } from './sourceRouter'
 import type { ApplyMethod } from '@shared/types/job'
+import type { SearchCountry } from '@shared/types/jobSource'
+
+/** What every aggregator's search receives; the country picks the national edition (see `@shared/types/jobSource`). */
+export interface AggregatorSearchParams {
+  query: string
+  location?: string
+  limit: number
+  country: SearchCountry
+}
+
+/**
+ * What every aggregator's search returns. A blocked or failed search is a
+ * value with a warning, never a throw: one site's captcha must not fail a
+ * search that four other sites answered.
+ */
+export interface AggregatorSearchResult {
+  results: JobSearchResultItem[]
+  blocked: boolean
+  warning?: string
+}
 
 export interface JobSearchResultItem {
   title: string

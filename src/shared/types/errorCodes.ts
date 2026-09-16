@@ -48,6 +48,8 @@ export type ErrorCode =
   // Attaching to a running browser over its remote-debugging port (Settings > Browser).
   | 'invalidRemoteBrowserEndpoint'
   | 'remoteBrowserUnreachable'
+  // Which national edition of the job aggregators to search (Settings > Job search).
+  | 'invalidSearchCountry'
   // Company ATS boards (adding, resolving and tracking a company's own board).
   | 'boardInputRequired'
   | 'boardNotFound'

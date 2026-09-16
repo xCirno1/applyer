@@ -15,8 +15,23 @@ describe('detectSource', () => {
     ['https://linkedin.com/jobs/view/123', 'linkedin'],
     ['https://www.indeed.com/viewjob?jk=abc', 'indeed'],
     ['https://indeed.com/viewjob?jk=abc', 'indeed'],
+    ['https://au.indeed.com/viewjob?jk=abc', 'indeed'],
+    ['https://uk.indeed.com/jobs?q=x', 'indeed'],
+    ['https://au.seek.com/job/12345678', 'seek'],
+    ['https://nz.seek.com/software-engineer-jobs/in-All-Auckland', 'seek'],
+    ['https://www.seek.com.au/job/12345678', 'seek'],
+    ['https://www.seek.co.nz/job/12345678', 'seek'],
+    ['https://seek.com.au/jobs?keywords=x', 'seek'],
+    ['https://au.jora.com/job/Engineer-abc123', 'jora'],
+    ['https://uk.jora.com/j?q=x', 'jora'],
+    ['https://au.prosple.com/graduate-employers/acme/jobs-internships/grad-program', 'prosple'],
+    ['https://remotive.com/remote-jobs/software-dev/backend-engineer-123', 'remotive'],
+    ['https://www.remotive.io/remote-jobs/x', 'remotive'],
     ['https://example.com/careers/123', 'generic'],
-    ['https://boards.greenhouse.io.evil.com/acme/jobs/123', 'generic']
+    ['https://boards.greenhouse.io.evil.com/acme/jobs/123', 'generic'],
+    ['https://notindeed.com/viewjob', 'generic'],
+    ['https://seek.com.au.evil.com/job/1', 'generic'],
+    ['https://jora.com.evil.com/job/1', 'generic']
   ] as const)('classifies %s as %s', (url, expected) => {
     expect(detectSource(url)).toBe(expected)
   })

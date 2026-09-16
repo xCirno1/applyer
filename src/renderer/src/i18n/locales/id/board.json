@@ -15,7 +15,8 @@
     "allSources": "Semua sumber",
     "otherSource": "Lainnya",
     "sortNewest": "Terbaru dulu",
-    "sortMatch": "Paling cocok dulu"
+    "sortMatch": "Paling cocok dulu",
+    "searchSettings": "Pengaturan pencarian kerja: negara dan situs yang dijangkau pencarian"
   },
   "card": {
     "select": "Pilih lowongan",

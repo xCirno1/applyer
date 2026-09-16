@@ -3,6 +3,7 @@ import type { z } from 'zod'
 import { searchJobs } from '../../browser/jobSearch'
 import { logActivity } from '../../db/repositories/activityLogRepository'
 import { upsertIndexedJobs } from '../../db/repositories/indexedJobsRepository'
+import { getSearchCountry } from '../../db/repositories/settingsRepository'
 import { broadcastIndexedJobsChanged } from '../../ipc/jobsBroadcast'
 import { jsonResult, textError } from '../toolResult'
 import type { searchJobsShape } from '../schemas'
@@ -12,15 +13,18 @@ type Args = { [K in keyof typeof searchJobsShape]: z.infer<(typeof searchJobsSha
 
 export async function searchJobsTool(args: Args): Promise<CallToolResult> {
   try {
+    const country = args.country ?? getSearchCountry()
     const outcome = await searchJobs({
       query: args.query,
       location: args.location,
       sources: args.sources,
-      limit: args.limit ?? SEARCH_JOBS_DEFAULT_LIMIT
+      limit: args.limit ?? SEARCH_JOBS_DEFAULT_LIMIT,
+      country
     })
 
     logActivity('info', `search_jobs "${args.query}" -> ${outcome.results.length} results`, {
-      sources: outcome.searchedSources
+      sources: outcome.searchedSources,
+      country
     })
 
     if (outcome.results.length > 0) {

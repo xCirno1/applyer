@@ -10,8 +10,11 @@ import {
   setNotificationPreferences,
   setNotificationLocale,
   getAgentPermissions,
-  setAgentPermissions
+  setAgentPermissions,
+  getSearchCountry,
+  setSearchCountry
 } from '../db/repositories/settingsRepository'
+import { isSearchCountry, type SearchCountry } from '@shared/types/jobSource'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
 import { rewriteResumeStorageMode } from '../db/repositories/resumeRepository'
@@ -180,6 +183,23 @@ export function registerSettingsIpc(): void {
     return sendTestNotification(kind)
       ? { ok: true }
       : { ok: false, error: appError('notificationsUnsupported') }
+  })
+
+  ipcMain.handle(IPC.settings.getSearchCountry, (): SearchCountry => getSearchCountry())
+
+  ipcMain.handle(IPC.settings.setSearchCountry, (_event, payload: unknown) => {
+    const country =
+      typeof payload === 'object' && payload !== null ? (payload as { country?: unknown }).country : undefined
+    if (!isSearchCountry(country)) {
+      return { ok: false, error: appError('invalidSearchCountry') }
+    }
+    try {
+      setSearchCountry(country)
+      logActivity('info', `Job search country set to ${country.toUpperCase()}`)
+      return { ok: true, country }
+    } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
   })
 
   ipcMain.handle(IPC.settings.setNotificationLocale, (_event, payload: unknown) => {

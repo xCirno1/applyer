@@ -58,6 +58,19 @@ describe('searchJobsShape', () => {
     expect(searchJobsSchema.safeParse({ query: 'x', sources: ['monster'] }).success).toBe(false)
   })
 
+  it('accepts every registered source, including the newer aggregators', () => {
+    expect(
+      searchJobsSchema.safeParse({ query: 'x', sources: ['seek', 'jora', 'prosple', 'remotive', 'indeed', 'lever'] })
+        .success
+    ).toBe(true)
+  })
+
+  it('accepts a known country override and rejects an unknown or uppercase one', () => {
+    expect(searchJobsSchema.safeParse({ query: 'x', country: 'au' }).success).toBe(true)
+    expect(searchJobsSchema.safeParse({ query: 'x', country: 'AU' }).success).toBe(false)
+    expect(searchJobsSchema.safeParse({ query: 'x', country: 'xx' }).success).toBe(false)
+  })
+
   it('rejects a limit outside [1, 50]', () => {
     expect(searchJobsSchema.safeParse({ query: 'x', limit: 0 }).success).toBe(false)
     expect(searchJobsSchema.safeParse({ query: 'x', limit: 51 }).success).toBe(false)

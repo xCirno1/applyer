@@ -12,7 +12,8 @@ import {
   getAutoStartCommand,
   getIndexedJobsRetentionDays,
   getNotificationPreferences,
-  getResumeSettings
+  getResumeSettings,
+  getSearchCountry
 } from '../db/repositories/settingsRepository'
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
 import type { ExportCompanyBoard, ExportJobRecord, ExportResumesData } from '@shared/types/dataTransfer'
@@ -88,7 +89,8 @@ export function buildExportBundle(selection: ExportSelection, theme: ThemeState)
     data.settings = {
       autoStartCommand: getAutoStartCommand(),
       indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
-      notificationPreferences: getNotificationPreferences()
+      notificationPreferences: getNotificationPreferences(),
+      searchCountry: getSearchCountry()
     }
   }
   if (selection.theme) data.theme = theme
@@ -138,7 +140,8 @@ export function computeExportSizes(theme: ThemeState): ExportSizes {
   const settings = {
     autoStartCommand: getAutoStartCommand(),
     indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
-    notificationPreferences: getNotificationPreferences()
+    notificationPreferences: getNotificationPreferences(),
+    searchCountry: getSearchCountry()
   }
 
   const empty = bundleJsonBytes({})

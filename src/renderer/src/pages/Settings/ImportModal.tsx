@@ -20,10 +20,11 @@ const DOMAIN_KEYS = {
   profile: 'data.domainProfile',
   resumes: 'data.domainResumes',
   settings: 'data.domainSettings',
-  theme: 'data.domainTheme'
+  theme: 'data.domainTheme',
+  chats: 'data.domainChats'
 } as const satisfies Record<ExportDomain, string>
 
-const DOMAIN_ORDER: ExportDomain[] = [
+const DOMAIN_ORDER = [
   'jobs',
   'indexedJobs',
   'exclusions',
@@ -31,13 +32,14 @@ const DOMAIN_ORDER: ExportDomain[] = [
   'profile',
   'resumes',
   'settings',
-  'theme'
-]
+  'theme',
+  'chats'
+] as const satisfies readonly ExportDomain[]
 
 const OVERWRITE_DOMAINS: ExportDomain[] = ['profile', 'resumes', 'settings', 'theme']
 
-/** The rest are merged into what's already there, so their hint counts rows rather than warning about a replacement. */
-const MERGE_DOMAINS: ExportDomain[] = ['jobs', 'indexedJobs', 'exclusions', 'companyBoards']
+/** The rest are merged into what's already there, so their hint counts rows rather than warning about a replacement. Chats join this group even though there's no merge key to dedupe on: every imported session is simply appended, never overwriting one already here. */
+const MERGE_DOMAINS: ExportDomain[] = ['jobs', 'indexedJobs', 'exclusions', 'companyBoards', 'chats']
 
 function domainCount(domain: ExportDomain, counts: ImportDomainCounts): number | undefined {
   return counts[domain]
@@ -138,6 +140,7 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
       parts.push(t('data.companyBoardsAdded', { count: result.summary.companyBoards.imported }))
     if (result.summary.profile) parts.push(t('data.profileUpdated'))
     if (result.summary.resumes) parts.push(t('data.resumesAdded', { count: result.summary.resumes.imported }))
+    if (result.summary.chats) parts.push(t('data.chatsAdded', { count: result.summary.chats.imported }))
     if (result.summary.resumeAssignments) {
       const { linked, unresolved } = result.summary.resumeAssignments
       if (linked > 0) parts.push(t('data.resumeAssignmentsLinked', { count: linked }))

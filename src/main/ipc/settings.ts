@@ -20,6 +20,7 @@ import { isSearchCountry, type SearchCountry } from '@shared/types/jobSource'
 import { getProfile, saveProfile, hasProfile } from '../db/repositories/profileRepository'
 import { listDocuments, rewriteDocumentStorageMode } from '../db/repositories/documentsRepository'
 import { rewriteResumeStorageMode } from '../db/repositories/resumeRepository'
+import { rewriteChatStorageMode } from '../db/repositories/chatRepository'
 import { isEncryptionAvailable } from '../db/encryption'
 import { logActivity } from '../db/repositories/activityLogRepository'
 import { enabledPayload } from './payloadSchemas'
@@ -70,6 +71,7 @@ export function registerSettingsIpc(): void {
         await rewriteDocumentStorageMode(doc.id, mode)
       }
       rewriteResumeStorageMode(mode)
+      rewriteChatStorageMode(mode)
       rewriteScreenshotStorageMode(mode)
       setLogStorageMode(mode)
 

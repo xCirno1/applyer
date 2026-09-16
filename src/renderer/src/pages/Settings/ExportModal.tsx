@@ -21,10 +21,13 @@ const DOMAIN_KEYS = {
   profile: { label: 'data.domainProfile', hint: 'data.domainProfileHint' },
   resumes: { label: 'data.domainResumes', hint: 'data.domainResumesHint' },
   settings: { label: 'data.domainSettings', hint: 'data.domainSettingsHint' },
-  theme: { label: 'data.domainTheme', hint: 'data.domainThemeHint' }
+  theme: { label: 'data.domainTheme', hint: 'data.domainThemeHint' },
+  chats: { label: 'data.domainChats', hint: 'data.domainChatsHint' }
 } as const satisfies Record<ExportDomain, { label: string; hint: string }>
 
-const DOMAIN_ORDER: ExportDomain[] = [
+// Not `ExportDomain[]`, kept to a literal tuple (via `satisfies`) so it
+// stays exactly the domains `ExportSizes` has a required entry for.
+const DOMAIN_ORDER = [
   'jobs',
   'indexedJobs',
   'exclusions',
@@ -32,8 +35,9 @@ const DOMAIN_ORDER: ExportDomain[] = [
   'profile',
   'resumes',
   'settings',
-  'theme'
-]
+  'theme',
+  'chats'
+] as const satisfies readonly ExportDomain[]
 
 export default function ExportModal({ open, onClose }: { open: boolean; onClose: () => void }): ReactElement | null {
   const { t } = useTranslation('settings')

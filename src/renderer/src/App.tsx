@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactElement, type ReactNode } from 'react'
+import { useState, useEffect, useCallback, useRef, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import logo from './assets/logo.png'
 import WorkspacePage from './pages/Workspace/WorkspacePage'
@@ -25,8 +25,11 @@ import AppMenuBar from './components/workspace/AppMenuBar'
 import DevBuildTag from './components/navigation/DevBuildTag'
 import { useWorkspaceLayout } from './components/workspace/useWorkspaceLayout'
 import ShellDock from './components/workspace/ShellDock'
-import type { DockScreen } from './components/workspace/workspaceLayout'
+import { CHAT_MAX_PX, CHAT_MIN_PX, chatPanelAvailable, type DockScreen } from './components/workspace/workspaceLayout'
+import ResizeHandle from './components/ui/ResizeHandle'
+import ChatPanel from './components/chat/ChatPanel'
 import { pasteIntoTerminal } from './components/terminal/terminalBridge'
+import { insertIntoChat } from './components/chat/chatBridge'
 import { TerminalInputContext } from './providers/TerminalInputContext'
 import { SettingsNavContext } from './providers/SettingsNavContext'
 import CaptchaAlertProvider from './providers/CaptchaAlertProvider'
@@ -37,6 +40,8 @@ import { useShortcutHandler } from './providers/ShortcutsContext'
 import { useJobsStore } from './state/jobsStore'
 import { useProfileStore } from './state/profileStore'
 import { useResumesStore } from './state/resumesStore'
+import { useAgentModeStore } from './state/agentModeStore'
+import { useChatStore } from './state/chatStore'
 import { syncUnsavedChangesToMain } from './state/unsavedChangesStore'
 import ConfirmDialog from './components/ui/ConfirmDialog'
 import { useErrorMessage } from './i18n/formatError'
@@ -88,6 +93,7 @@ function ScreenBoundary({ label, children }: { label: string; children: ReactNod
 function MainShell(): ReactElement {
   const { t } = useTranslation('workspace')
   const toast = useToast()
+  const errorMessage = useErrorMessage()
   const [screen, setScreen] = useState<Screen>('workspace')
   const [settingsSection, setSettingsSection] = useState<SectionId>('profile')
   const [exportOpen, setExportOpen] = useState(false)
@@ -111,6 +117,28 @@ function MainShell(): ReactElement {
   // board's "tailored" tags read the variant list, so the subscription lives
   // here and not on the page.
   useEffect(() => subscribeToResumeUpdates(), [subscribeToResumeUpdates])
+
+  // Which surface drives job automation (the dock's Terminal tab for a CLI
+  // agent, the chat panel on the right for an in-app OpenRouter one)
+  // follows this one setting; the chat sessions themselves are a separate
+  // subscription since they persist independently of which mode is active.
+  const mode = useAgentModeStore((s) => s.mode)
+  const agentModeLastError = useAgentModeStore((s) => s.lastError)
+  const clearAgentModeError = useAgentModeStore((s) => s.clearError)
+  const subscribeToAgentMode = useAgentModeStore((s) => s.subscribe)
+  const subscribeToChat = useChatStore((s) => s.subscribe)
+  useEffect(() => subscribeToAgentMode(), [subscribeToAgentMode])
+  useEffect(() => subscribeToChat(), [subscribeToChat])
+  // A failed mode switch reverts itself in the store; this is only the
+  // toast explaining why, same "AppError sitting in state until a mounted
+  // component surfaces it" shape as `StartupWarningToast` below.
+  useEffect(() => {
+    if (!agentModeLastError) return
+    toast.error(errorMessage(agentModeLastError))
+    clearAgentModeError()
+    // Fires once per distinct error value, same reasoning as StartupWarningToast.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [agentModeLastError])
 
   // Closing the window over unsaved edits: main holds the close back and
   // asks here, since the dialog has to be the app's own (no native prompts)
@@ -136,7 +164,16 @@ function MainShell(): ReactElement {
   // menu, settings — can span the full window width, above the icon rail,
   // the same way VS Code's menu bar spans full width above its activity
   // bar rather than being indented past it.
-  const { layout, setSidebarVisible, setDockVisible, setDockTab, setSidebarWidth, setDockHeight } = useWorkspaceLayout()
+  const {
+    layout,
+    setSidebarVisible,
+    setDockVisible,
+    setDockTab,
+    setSidebarWidth,
+    setDockHeight,
+    setChatVisible,
+    setChatWidth
+  } = useWorkspaceLayout(mode)
 
   // The dock is one instance under all four rail screens, but each screen
   // remembers whether it is showing; every toggle here is for the screen the
@@ -144,25 +181,50 @@ function MainShell(): ReactElement {
   const dockScreen: DockScreen = screen === 'settings' ? 'workspace' : screen
   const dockVisible = layout.dockVisible[dockScreen]
 
-  const showTerminalTab = (): void => {
+  // The chat panel only exists in `openrouter` mode; `layout.chatVisible`
+  // is the user's own show/hide on top of that, remembered across modes so
+  // switching to CLI and back doesn't forget it.
+  const chatAvailable = chatPanelAvailable(mode)
+  const chatShowing = chatAvailable && layout.chatVisible
+
+  // The region the chat panel shares with the rail screens, measured for
+  // `clampChatWidth` so a drag can't push the screens under their minimum.
+  const shellRowRef = useRef<HTMLDivElement>(null)
+  const handleChatResize = useCallback(
+    (next: number) => setChatWidth(next, shellRowRef.current?.clientWidth),
+    [setChatWidth]
+  )
+
+  // "Show the agent": the chat panel in `openrouter` mode, the dock's
+  // Terminal tab otherwise (and while `mode` hasn't loaded yet, same as
+  // `visibleDockTabs`' null case).
+  const showAgentSurface = useCallback((): void => {
+    if (chatAvailable) {
+      setChatVisible(true)
+      return
+    }
     setDockVisible(dockScreen, true)
     setDockTab('terminal')
-  }
+  }, [chatAvailable, dockScreen, setChatVisible, setDockVisible, setDockTab])
 
-  // "Send to terminal" from the resume prompts: show the dock here, switch
-  // to the Terminal tab, type the sentence (the user still presses Enter).
+  // "Send to the agent" from the resume prompts and the job modal: reveal
+  // whichever surface is driving job automation right now and hand the
+  // text to it (the user still presses Enter/Send).
   const sendToTerminal = useCallback(
     (text: string): void => {
-      setDockVisible(dockScreen, true)
-      setDockTab('terminal')
-      if (!pasteIntoTerminal(text)) toast.error(t('topBar.terminalUnavailable'))
+      showAgentSurface()
+      const delivered = chatAvailable ? insertIntoChat(text) : pasteIntoTerminal(text)
+      if (!delivered) toast.error(t(chatAvailable ? 'topBar.chatUnavailable' : 'topBar.terminalUnavailable'))
     },
-    [dockScreen, setDockVisible, setDockTab, toast, t]
+    [showAgentSurface, chatAvailable, toast, t]
   )
 
   useShortcutHandler('view.toggleOverview', () => setSidebarVisible(!layout.sidebarVisible))
   useShortcutHandler('view.toggleConsole', () => setDockVisible(dockScreen, !dockVisible))
-  useShortcutHandler('dock.showTerminal', showTerminalTab)
+  useShortcutHandler('view.toggleChat', () => {
+    if (chatAvailable) setChatVisible(!layout.chatVisible)
+  })
+  useShortcutHandler('dock.showTerminal', showAgentSurface)
   useShortcutHandler('dock.showLogs', () => {
     setDockVisible(dockScreen, true)
     setDockTab('logs')
@@ -198,7 +260,10 @@ function MainShell(): ReactElement {
                     onToggleSidebar={() => setSidebarVisible(!layout.sidebarVisible)}
                     dockVisible={dockVisible}
                     onToggleDock={() => setDockVisible(dockScreen, !dockVisible)}
-                    onShowTerminalTab={showTerminalTab}
+                    chatAvailable={chatAvailable}
+                    chatVisible={layout.chatVisible}
+                    onToggleChat={() => setChatVisible(!layout.chatVisible)}
+                    onShowTerminalTab={showAgentSurface}
                   />
                   <div className="ml-auto flex items-center gap-1.5">
                     <DevBuildTag />
@@ -220,11 +285,12 @@ function MainShell(): ReactElement {
                     </button>
                   </div>
                 </header>
-                <div className="flex min-h-0 flex-1">
+                <div ref={shellRowRef} className="flex min-h-0 flex-1">
                   <IconRail active={screen === 'settings' ? 'workspace' : screen} onSelect={setScreen} />
                   <div className="min-h-0 min-w-0 flex-1">
                     <ShellDock
                       layout={layout}
+                      mode={mode}
                       visible={dockVisible}
                       setDockTab={setDockTab}
                       setDockHeight={setDockHeight}
@@ -255,6 +321,31 @@ function MainShell(): ReactElement {
                         </ScreenBoundary>
                       </div>
                     </ShellDock>
+                  </div>
+                  {/* The chat panel stays mounted in every mode (CSS
+                    visibility, like the rail screens above): it owns each
+                    session's streaming state and its composer draft, both
+                    of which a remount on a mode switch would drop. */}
+                  {chatShowing && (
+                    <ResizeHandle
+                      orientation="vertical"
+                      value={layout.chatWidth}
+                      min={CHAT_MIN_PX}
+                      max={CHAT_MAX_PX}
+                      invert
+                      label={t('resizeChat')}
+                      onResize={handleChatResize}
+                    />
+                  )}
+                  <div
+                    className={`shrink-0 overflow-hidden border-l border-border ${chatShowing ? '' : 'hidden'}`}
+                    style={{ width: chatShowing ? layout.chatWidth : 0 }}
+                  >
+                    <ChatPanel
+                      active={chatShowing && screen !== 'settings'}
+                      onHide={() => setChatVisible(false)}
+                      onOpenSettings={() => openSettings('agent')}
+                    />
                   </div>
                 </div>
               </div>

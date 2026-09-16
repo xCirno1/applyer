@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, type ReactElement, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { AgentMode } from '@shared/types/agentMode'
 import ResizeHandle from '../ui/ResizeHandle'
 import WorkspaceDock from './WorkspaceDock'
 import { DOCK_MAX_PX, DOCK_MIN_PX } from './workspaceLayout'
@@ -16,6 +17,7 @@ import type { WorkspaceLayoutController } from './useWorkspaceLayout'
  * `WorkspaceDock` would kill the pty sessions inside `TerminalGroup`.
  */
 interface ShellDockProps extends Pick<WorkspaceLayoutController, 'layout' | 'setDockTab' | 'setDockHeight'> {
+  mode: AgentMode | null
   visible: boolean
   onHide: () => void
   children: ReactNode
@@ -23,6 +25,7 @@ interface ShellDockProps extends Pick<WorkspaceLayoutController, 'layout' | 'set
 
 export default function ShellDock({
   layout,
+  mode,
   visible,
   setDockTab,
   setDockHeight,
@@ -66,7 +69,7 @@ export default function ShellDock({
         className={`shrink-0 overflow-hidden border-t border-border ${visible ? '' : 'hidden'}`}
         style={{ height: visible ? layout.dockHeight : 0 }}
       >
-        <WorkspaceDock tab={layout.dockTab} onTabChange={setDockTab} onHide={onHide} />
+        <WorkspaceDock tab={layout.dockTab} mode={mode} onTabChange={setDockTab} onHide={onHide} />
       </div>
     </div>
   )

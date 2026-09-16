@@ -20,6 +20,7 @@ import enWorkspace from './locales/en/workspace.json'
 import enErrors from './locales/en/errors.json'
 import enResumes from './locales/en/resumes.json'
 import enRuns from './locales/en/runs.json'
+import enChat from './locales/en/chat.json'
 
 import idCommon from './locales/id/common.json'
 import idBoard from './locales/id/board.json'
@@ -30,6 +31,7 @@ import idWorkspace from './locales/id/workspace.json'
 import idErrors from './locales/id/errors.json'
 import idResumes from './locales/id/resumes.json'
 import idRuns from './locales/id/runs.json'
+import idChat from './locales/id/chat.json'
 
 import { FALLBACK_LOCALE, readStoredLocale, resolveLocale, systemLanguages } from './locale'
 
@@ -45,7 +47,8 @@ export const resources = {
     workspace: enWorkspace,
     errors: enErrors,
     resumes: enResumes,
-    runs: enRuns
+    runs: enRuns,
+    chat: enChat
   },
   id: {
     common: idCommon,
@@ -56,7 +59,8 @@ export const resources = {
     workspace: idWorkspace,
     errors: idErrors,
     resumes: idResumes,
-    runs: idRuns
+    runs: idRuns,
+    chat: idChat
   }
 } as const
 
@@ -65,7 +69,7 @@ i18n.use(initReactI18next).init({
   lng: resolveLocale(readStoredLocale(), systemLanguages()),
   fallbackLng: FALLBACK_LOCALE,
   defaultNS,
-  ns: ['common', 'board', 'settings', 'onboarding', 'indexedJobs', 'workspace', 'errors', 'resumes', 'runs'],
+  ns: ['common', 'board', 'settings', 'onboarding', 'indexedJobs', 'workspace', 'errors', 'resumes', 'runs', 'chat'],
   interpolation: {
     // React escapes interpolated values on render already; letting i18next
     // escape them too would double-encode apostrophes in job titles and

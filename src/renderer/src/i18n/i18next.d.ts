@@ -17,6 +17,7 @@ import type enWorkspace from './locales/en/workspace.json'
 import type enErrors from './locales/en/errors.json'
 import type enResumes from './locales/en/resumes.json'
 import type enRuns from './locales/en/runs.json'
+import type enChat from './locales/en/chat.json'
 
 declare module 'i18next' {
   interface CustomTypeOptions {
@@ -32,6 +33,7 @@ declare module 'i18next' {
       errors: typeof enErrors
       resumes: typeof enResumes
       runs: typeof enRuns
+      chat: typeof enChat
     }
   }
 }

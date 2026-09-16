@@ -6,11 +6,17 @@ import {
   SIDEBAR_MAX_PX,
   DOCK_MIN_PX,
   DOCK_MAX_PX,
+  CHAT_MIN_PX,
+  CHAT_MAX_PX,
   DEFAULT_WORKSPACE_LAYOUT,
+  chatPanelAvailable,
+  clampChatWidth,
   clampSidebarWidth,
   clampDockHeight,
+  coerceDockTab,
   parseWorkspaceLayout,
   readStoredWorkspaceLayout,
+  visibleDockTabs,
   writeStoredWorkspaceLayout
 } from './workspaceLayout'
 
@@ -79,9 +85,24 @@ describe('parseWorkspaceLayout', () => {
       dockVisible: { workspace: false, indexedJobs: true, resumes: false, runs: true },
       sidebarWidth: 300,
       dockHeight: 200,
-      dockTab: 'logs'
+      dockTab: 'logs',
+      chatVisible: false,
+      chatWidth: 360
     }
     expect(parseWorkspaceLayout(layout)).toEqual(layout)
+  })
+
+  it('treats a stored dockTab of chat (from before the chat left the dock) as a bad value', () => {
+    const result = parseWorkspaceLayout({ dockTab: 'chat', chatVisible: true })
+    expect(result.dockTab).toBe(DEFAULT_WORKSPACE_LAYOUT.dockTab)
+    expect(result.chatVisible).toBe(true)
+  })
+
+  it('falls back for a missing or non-boolean chatVisible and clamps chatWidth', () => {
+    expect(parseWorkspaceLayout({}).chatVisible).toBe(DEFAULT_WORKSPACE_LAYOUT.chatVisible)
+    expect(parseWorkspaceLayout({ chatVisible: 'yes' }).chatVisible).toBe(DEFAULT_WORKSPACE_LAYOUT.chatVisible)
+    expect(parseWorkspaceLayout({ chatWidth: 10 }).chatWidth).toBe(CHAT_MIN_PX)
+    expect(parseWorkspaceLayout({ chatWidth: 99999 }).chatWidth).toBe(CHAT_MAX_PX)
   })
 
   it('applies a legacy boolean dockVisible to every screen', () => {
@@ -120,6 +141,55 @@ describe('parseWorkspaceLayout', () => {
   it('coerces numeric strings for width/height', () => {
     const result = parseWorkspaceLayout({ sidebarWidth: '300' })
     expect(result.sidebarWidth).toBe(300)
+  })
+})
+
+describe('clampChatWidth', () => {
+  it('clamps to [CHAT_MIN_PX, CHAT_MAX_PX]', () => {
+    expect(clampChatWidth(10)).toBe(CHAT_MIN_PX)
+    expect(clampChatWidth(5000)).toBe(CHAT_MAX_PX)
+    expect(clampChatWidth(400)).toBe(400)
+  })
+
+  it('caps the ceiling so the rail screens keep their minimum width', () => {
+    expect(clampChatWidth(700, 1000)).toBe(520)
+  })
+
+  it('prefers CHAT_MIN_PX over an impossibly tight ceiling', () => {
+    expect(clampChatWidth(400, 500)).toBe(CHAT_MIN_PX)
+  })
+})
+
+describe('chatPanelAvailable', () => {
+  it('only exists in openrouter mode', () => {
+    expect(chatPanelAvailable('openrouter')).toBe(true)
+    expect(chatPanelAvailable('cli')).toBe(false)
+    expect(chatPanelAvailable(null)).toBe(false)
+  })
+})
+
+describe('visibleDockTabs', () => {
+  it('shows only Logs in openrouter mode, since the chat is its own panel', () => {
+    expect(visibleDockTabs('openrouter')).toEqual(['logs'])
+  })
+
+  it('shows Terminal + Logs in cli mode', () => {
+    expect(visibleDockTabs('cli')).toEqual(['terminal', 'logs'])
+  })
+
+  it('behaves like cli mode while the mode has not loaded yet, so nothing flickers', () => {
+    expect(visibleDockTabs(null)).toEqual(['terminal', 'logs'])
+  })
+})
+
+describe('coerceDockTab', () => {
+  it('keeps a tab that is already visible', () => {
+    expect(coerceDockTab('logs', 'cli')).toBe('logs')
+    expect(coerceDockTab('logs', 'openrouter')).toBe('logs')
+  })
+
+  it('falls back to the first visible tab when the current one disappeared', () => {
+    expect(coerceDockTab('terminal', 'openrouter')).toBe('logs')
   })
 })
 

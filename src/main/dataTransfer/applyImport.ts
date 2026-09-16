@@ -6,11 +6,16 @@ import { importCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { boardKeyOf, isValidBoardDescriptor } from '../browser/ats/providers'
 import { saveProfile } from '../db/repositories/profileRepository'
 import { importResumes, linkVariantsByName } from '../db/repositories/resumeRepository'
+import { importChatSessions } from '../db/repositories/chatRepository'
+import { broadcastChatEvent } from '../ipc/chatBroadcast'
+import { broadcastAgentModeChanged } from '../openrouter/broadcast'
 import type { ExportJobRecord, ExportResumesData } from '@shared/types/dataTransfer'
 import {
+  setAgentMode,
   setAutoStartCommand,
   setIndexedJobsRetentionDays,
   setNotificationPreferences,
+  setOpenRouterSettings,
   setResumeSettings,
   setSearchCountry
 } from '../db/repositories/settingsRepository'
@@ -83,7 +88,25 @@ export function applyImport(bundle: ExportBundle, selection: ExportSelection): I
       setNotificationPreferences(bundle.data.settings.notificationPreferences)
     }
     if (bundle.data.settings.searchCountry) setSearchCountry(bundle.data.settings.searchCountry)
+    if (bundle.data.settings.agentMode) {
+      setAgentMode(bundle.data.settings.agentMode)
+      // The shell keeps the mode in its own store and only hears the IPC
+      // handler's push (`settings:setAgentMode`); a direct repository write
+      // has to push the same way or the dock stays on the old surface.
+      broadcastAgentModeChanged(bundle.data.settings.agentMode)
+    }
+    if (bundle.data.settings.openrouter) setOpenRouterSettings(bundle.data.settings.openrouter)
     summary.settings = true
+  }
+  // Append-only: chats are never merged against or replace existing
+  // sessions (unlike jobs/exclusions/boards, a chat has no natural key to
+  // merge on), so every import just adds whatever the bundle carries.
+  if (selection.chats && bundle.data.chats) {
+    const imported = importChatSessions(bundle.data.chats)
+    // The chat store loads its list once on subscribe; each new session is
+    // pushed as `session_updated`, which it folds in as an insert.
+    for (const session of imported) broadcastChatEvent({ type: 'session_updated', session: { ...session, busy: false } })
+    summary.chats = { imported: imported.length, skipped: bundle.data.chats.length - imported.length }
   }
   return summary
 }

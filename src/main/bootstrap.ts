@@ -25,6 +25,11 @@ import { registerClipboardIpc } from './ipc/clipboard'
 import { registerDataTransferIpc } from './ipc/dataTransfer'
 import { registerStorageLocationIpc } from './ipc/storageLocation'
 import { registerJobsBroadcastTarget } from './ipc/jobsBroadcast'
+import { registerChatBroadcastTarget } from './ipc/chatBroadcast'
+import { registerChatIpc } from './ipc/chat'
+import { registerOpenRouterBroadcastTarget } from './openrouter/broadcast'
+import { registerOpenRouterIpc } from './ipc/openrouter'
+import { recoverInterruptedTurns } from './openrouter/agentRunner'
 import {
   activeStorageRoot,
   fallbackToDefaultStorageAfterOpenFailure,
@@ -66,7 +71,7 @@ function installCrashHandlers(): void {
 }
 
 /**
- * A window, plus the two module-level references that have to point at
+ * A window, plus the module-level references that have to point at
  * whichever one is current. Neither *registers* anything — the IPC handlers
  * behind them are registered once per process in `initializeApp` — so this is
  * safe to call again for the replacement window macOS asks for on `activate`.
@@ -76,6 +81,8 @@ function openMainWindow(): BrowserWindow {
   closeGuard.attach(window)
   setTerminalTarget(window.webContents)
   registerJobsBroadcastTarget(window.webContents)
+  registerChatBroadcastTarget(window.webContents)
+  registerOpenRouterBroadcastTarget(window.webContents)
   return window
 }
 
@@ -160,6 +167,9 @@ function initializeApp(): void {
   registerDataTransferIpc()
   registerStorageLocationIpc()
   registerTerminalIpc()
+  registerChatIpc()
+  registerOpenRouterIpc()
+  recoverInterruptedTurns()
 
   // No-op if storage-location recovery is currently needed — started once
   // the user resolves it, from the recovery IPC handlers instead.

@@ -52,6 +52,30 @@ export type ErrorCode =
   | 'remoteBrowserUnreachable'
   // Which national edition of the job aggregators to search (Settings > Job search).
   | 'invalidSearchCountry'
+  // OpenRouter agent mode: OAuth PKCE connection, the model catalog, and streaming a chat turn.
+  | 'openrouterNotConnected'
+  // A stored key OpenRouter answers 401 to: deleted or expired on their side, so the app still "has" a key that no longer works.
+  | 'openrouterKeyRejected'
+  | 'openrouterAuthInProgress'
+  | 'openrouterAuthNotWaiting'
+  | 'openrouterAuthFailed'
+  | 'openrouterInvalidCode'
+  | 'openrouterKeychainUnavailable'
+  | 'openrouterRequestFailed'
+  | 'openrouterRateLimited'
+  | 'openrouterInsufficientCredits'
+  | 'openrouterModelUnavailable'
+  | 'openrouterStreamError'
+  // In-app chat sessions (OpenRouter mode's dock tab).
+  | 'chatSessionNotFound'
+  | 'chatSessionBusy'
+  | 'chatSessionNotBusy'
+  | 'chatMessageTooLong'
+  | 'chatToolApprovalNotWaiting'
+  | 'chatTitleTooLong'
+  // Agent mode (cli vs openrouter) and its settings.
+  | 'invalidAgentMode'
+  | 'invalidOpenRouterSettings'
   // Company ATS boards (adding, resolving and tracking a company's own board).
   | 'boardInputRequired'
   | 'boardNotFound'

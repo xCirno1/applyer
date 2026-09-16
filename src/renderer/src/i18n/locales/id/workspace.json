@@ -19,6 +19,7 @@
     "retryAllFailed": "Coba Lagi Semua yang Gagal",
     "overview": "Ringkasan",
     "console": "Konsol",
+    "chat": "Obrolan",
     "keyboardShortcuts": "Pintasan Keyboard",
     "about": "Tentang Applyer"
   },
@@ -50,7 +51,8 @@
   "topBar": {
     "settings": "Pengaturan",
     "backToWorkspace": "Kembali ke workspace",
-    "terminalUnavailable": "Terminal tidak tersedia saat ini. Salin prompt saja."
+    "terminalUnavailable": "Terminal tidak tersedia saat ini. Salin prompt saja.",
+    "chatUnavailable": "Obrolan tidak tersedia saat ini. Salin prompt saja."
   },
   "permissionPrompt": {
     "title": "Izin agen diperlukan",
@@ -132,10 +134,12 @@
     "view.toggleConsole": "Tampilkan/sembunyikan dock konsol",
     "dock.showTerminal": "Buka tab terminal",
     "dock.showLogs": "Buka tab log aktivitas",
+    "view.toggleChat": "Tampilkan/sembunyikan panel obrolan",
     "app.toggleSettings": "Buka/tutup pengaturan"
   },
   "resizeOverview": "Ubah ukuran panel ringkasan",
   "resizeDock": "Ubah ukuran dock konsol",
+  "resizeChat": "Ubah ukuran panel obrolan",
   "closeGuard": {
     "title": "Tunggu, ada perubahan yang belum disimpan",
     "message": "Resume yang sedang kamu sunting punya perubahan yang belum disimpan. Tetap tutup dan buang perubahannya?",

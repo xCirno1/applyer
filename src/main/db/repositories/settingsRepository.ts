@@ -26,6 +26,8 @@ import {
   isAgentPermissions,
   type AgentPermissions
 } from '@shared/types/agentPermissions'
+import { DEFAULT_AGENT_MODE, isAgentMode, type AgentMode } from '@shared/types/agentMode'
+import { DEFAULT_OPENROUTER_SETTINGS, parseOpenRouterSettings, type OpenRouterSettings } from '@shared/types/openrouter'
 
 const STORAGE_MODE_KEY = 'storage_mode'
 const ONBOARDING_COMPLETED_KEY = 'onboarding_completed'
@@ -40,6 +42,9 @@ const AGENT_PERMISSIONS_KEY = 'agent_permissions'
 const RESUME_SETTINGS_KEY = 'resume_settings'
 const SEARCH_COUNTRY_KEY = 'search_country'
 const SEARCH_CHALLENGE_FALLBACK_KEY = 'search_challenge_fallback'
+const OPENROUTER_API_KEY_KEY = 'openrouter_api_key'
+const AGENT_MODE_KEY = 'agent_mode'
+const OPENROUTER_SETTINGS_KEY = 'openrouter_settings'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -266,4 +271,63 @@ export function setResumeSettings(settings: ResumeSettings): void {
     RESUME_SETTINGS_KEY,
     JSON.stringify({ fallbackAttachment: settings.fallbackAttachment, autoTailor: settings.autoTailor })
   )
+}
+
+/**
+ * The OpenRouter API key, stored exactly as `openrouter/keyStore.ts` hands
+ * it over (already run through `writeSecureField`/`readSecureField`, so
+ * this repository never sees the plaintext key or decides how it is
+ * protected). Kept as its own row rather than folded into a JSON blob like
+ * the other settings above, so a lookup or a clear never has to parse
+ * anything.
+ */
+export function getOpenRouterApiKeyRaw(): string | null {
+  return getSetting(OPENROUTER_API_KEY_KEY)
+}
+
+export function setOpenRouterApiKeyRaw(value: string): void {
+  setSetting(OPENROUTER_API_KEY_KEY, value)
+}
+
+export function clearOpenRouterApiKey(): void {
+  getDb().delete(appSettings).where(eq(appSettings.key, OPENROUTER_API_KEY_KEY)).run()
+}
+
+/** Which agent drives the dock: the CLI terminal or the in-app OpenRouter chat. Unknown/corrupt falls back to the CLI, the mode every existing install is already in. */
+export function getAgentMode(): AgentMode {
+  const value = getSetting(AGENT_MODE_KEY)
+  return isAgentMode(value) ? value : DEFAULT_AGENT_MODE
+}
+
+export function setAgentMode(mode: AgentMode): void {
+  setSetting(AGENT_MODE_KEY, mode)
+}
+
+function freshDefaultOpenRouterSettings(): OpenRouterSettings {
+  return {
+    modelId: DEFAULT_OPENROUTER_SETTINGS.modelId,
+    reasoningEffort: DEFAULT_OPENROUTER_SETTINGS.reasoningEffort,
+    toolApproval: { askFor: [...DEFAULT_OPENROUTER_SETTINGS.toolApproval.askFor] }
+  }
+}
+
+/**
+ * Model choice, reasoning effort and tool-approval policy for OpenRouter
+ * mode. Delegates the actual per-field fallback to `parseOpenRouterSettings`
+ * (shared with the import-bundle path) rather than repeating it here, so a
+ * malformed row degrades field by field instead of resetting the whole
+ * record; same reasoning as `getResumeSettings` above.
+ */
+export function getOpenRouterSettings(): OpenRouterSettings {
+  const value = getSetting(OPENROUTER_SETTINGS_KEY)
+  if (!value) return freshDefaultOpenRouterSettings()
+  try {
+    return parseOpenRouterSettings(JSON.parse(value))
+  } catch {
+    return freshDefaultOpenRouterSettings()
+  }
+}
+
+export function setOpenRouterSettings(settings: OpenRouterSettings): void {
+  setSetting(OPENROUTER_SETTINGS_KEY, JSON.stringify(settings))
 }

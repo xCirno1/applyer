@@ -1,0 +1,142 @@
+{
+  "panel": {
+    "title": "Chat",
+    "newChat": "New chat",
+    "showSessions": "Sessions",
+    "backToChat": "Back to the chat",
+    "settings": "Agent settings",
+    "hide": "Hide chat panel"
+  },
+  "sessions": {
+    "heading": "Sessions",
+    "listLabel": "Chat sessions",
+    "search": "Search sessions",
+    "searchPlaceholder": "Search by title…",
+    "empty": "No chats yet.",
+    "noMatches": "No sessions match your search.",
+    "messageCount_one": "{{count}} message",
+    "messageCount_other": "{{count}} messages",
+    "working": "Working…",
+    "rename": "Rename",
+    "renameLabel": "Rename \"{{title}}\"",
+    "delete": "Delete",
+    "deleteLabel": "Delete \"{{title}}\"",
+    "atMax": "{{count}} chats open (limit reached)",
+    "deleteConfirmTitle": "Delete this chat?",
+    "deleteConfirmMessage": "\"{{title}}\" has messages. Deleting it removes the session and its history.",
+    "deleteConfirmAction": "Delete chat"
+  },
+  "welcome": {
+    "title": "Applyer agent",
+    "subtitle": "Find jobs, tailor your resume, and fill applications from here. The agent uses the same tools as the CLI agent, and asks before changing anything you told it to ask about.",
+    "startersHeading": "Try asking",
+    "starterFindJobs": "Find new jobs that match my profile",
+    "starterFillProfile": "Read my uploaded resume and fill in my profile",
+    "starterTailor": "Tailor my resume for the jobs in the queue"
+  },
+  "message": {
+    "you": "You",
+    "assistant": "Assistant",
+    "thinking": "Thinking…",
+    "tokens": "{{prompt}} in / {{completion}} out"
+  },
+  "reasoning": {
+    "label": "Reasoning",
+    "thinking": "Thinking…"
+  },
+  "toolCall": {
+    "arguments": "Arguments",
+    "result": "Result",
+    "error": "Failed",
+    "denied": "Denied",
+    "cancelled": "Cancelled",
+    "showAll": "Show all",
+    "showLess": "Show less",
+    "expand": "Show details for {{tool}}",
+    "collapse": "Hide details for {{tool}}",
+    "viewLabel": "How to show {{section}}",
+    "viewReadable": "Readable",
+    "viewJson": "JSON"
+  },
+  "payload": {
+    "yes": "Yes",
+    "no": "No",
+    "none": "None",
+    "nothing": "Nothing to show.",
+    "more_one": "{{count}} more",
+    "more_other": "{{count}} more",
+    "noRows": "No entries.",
+    "jobGone": "That job is no longer on the board.",
+    "openJob": "Open job",
+    "openPosting": "Open posting",
+    "column": {
+      "title": "Title",
+      "company": "Company",
+      "location": "Location",
+      "source": "Source",
+      "status": "Status",
+      "matchScore": "Match",
+      "failure": "Failure",
+      "field": "Field",
+      "kind": "Kind",
+      "required": "Required",
+      "value": "Value",
+      "salary": "Salary"
+    }
+  },
+  "approval": {
+    "title": "Allow \"{{tool}}\"?",
+    "allowOnce": "Allow once",
+    "allowAlways": "Allow always",
+    "allowAlwaysHint": "Removes this tool from the ask list in Settings > Agent, so it won't ask again.",
+    "deny": "Deny"
+  },
+  "thread": {
+    "loadEarlier": "Load earlier messages",
+    "jumpToLatest": "Jump to latest"
+  },
+  "composer": {
+    "label": "Message",
+    "placeholder": "Ask the agent…",
+    "hint": "Enter to send, Shift+Enter for a new line",
+    "charCount": "{{count}} / {{max}}",
+    "send": "Send",
+    "sendHint": "Send (Enter)",
+    "stop": "Stop",
+    "stopHint": "Stop (Esc)"
+  },
+  "model": {
+    "label": "Model",
+    "change": "Change model for this chat",
+    "searchLabel": "Search models",
+    "searchPlaceholder": "Search by name or id…",
+    "loadFailed": "Could not load the model list.",
+    "noMatches": "No models match your search.",
+    "moreMatches_one": "{{count}} more match. Keep typing to narrow it down.",
+    "moreMatches_other": "{{count}} more matches. Keep typing to narrow it down.",
+    "free": "Free",
+    "effort": "Reasoning effort",
+    "effortUnsupported": "This model reports no reasoning effort levels.",
+    "changed": "This chat now uses {{model}}.",
+    "changeFailed": "Could not change the model.",
+    "effortSaved": "Reasoning effort set to {{effort}}.",
+    "effortFailed": "Could not save the reasoning effort."
+  },
+  "status": {
+    "connected": "Connected",
+    "connectedAs": "Connected as {{label}}",
+    "notConnected": "Not connected",
+    "cost": "{{cost}} this chat",
+    "approvals_one": "{{count}} tool asks first",
+    "approvals_other": "{{count}} tools ask first",
+    "approvalsNone": "No tools ask first",
+    "approvalsHint": "Data-changing tools that ask for your approval before running. Change the list in Settings > Agent.",
+    "keyRejected": "Key rejected"
+  },
+  "emptyState": {
+    "notConnected": "Connect an OpenRouter account to start chatting with the agent.",
+    "noModel": "Choose a model in Settings > Agent to start chatting.",
+    "openSettings": "Open Settings > Agent",
+    "keyRejected": "OpenRouter rejected the stored key. Reconnect in Settings > Agent to keep chatting."
+  }
+}

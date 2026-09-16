@@ -9,6 +9,9 @@ import type { NotificationPreferences } from './notification'
 import type { SearchCountry } from './jobSource'
 import type { ThemeState } from './theme'
 import type { ResumeContent, ResumePageSize, ResumeSettings, ResumeTemplateId, ResumeStyle } from './resume'
+import type { AgentMode } from './agentMode'
+import type { OpenRouterSettings } from './openrouter'
+import type { ChatMessage } from './chat'
 
 /**
  * Bumped whenever the export bundle shape changes in a way older imports can't
@@ -28,6 +31,7 @@ export type ExportDomain =
   | 'resumes'
   | 'settings'
   | 'theme'
+  | 'chats'
 
 export const ALL_EXPORT_DOMAINS: ExportDomain[] = [
   'jobs',
@@ -37,7 +41,8 @@ export const ALL_EXPORT_DOMAINS: ExportDomain[] = [
   'profile',
   'resumes',
   'settings',
-  'theme'
+  'theme',
+  'chats'
 ]
 
 export type ExportSelection = Record<ExportDomain, boolean>
@@ -51,7 +56,8 @@ export function allDomainsSelected(value = true): ExportSelection {
     profile: value,
     resumes: value,
     settings: value,
-    theme: value
+    theme: value,
+    chats: value
   }
 }
 
@@ -62,6 +68,15 @@ export interface ExportSettingsData {
   notificationPreferences?: NotificationPreferences
   /** Optional for the same reason: bundles written before the job search country existed. */
   searchCountry?: SearchCountry
+  /** Optional for the same reason: bundles written before OpenRouter agent mode existed. */
+  agentMode?: AgentMode
+  /**
+   * The API key is NEVER exported (it lives only in the OS keychain, or as an
+   * explicit plaintext opt-in that a bundle must not carry). Only the
+   * non-secret picks: which model, how much reasoning, and which tools ask
+   * for inline approval.
+   */
+  openrouter?: Pick<OpenRouterSettings, 'modelId' | 'reasoningEffort' | 'toolApproval'>
 }
 
 /** The single JSON round-trip format — the only format `data:import` accepts. */
@@ -77,6 +92,8 @@ export interface ExportBundle {
     profile?: ProfileFields | null
     resumes?: ExportResumesData
     settings?: ExportSettingsData
+    /** Optional so bundles written before OpenRouter chat sessions existed remain valid. */
+    chats?: ExportChatSession[]
     /**
      * Unlike every other domain, never read or written by the main process —
      * it lives in the renderer's localStorage (see renderer/src/theme/theme.ts),
@@ -178,6 +195,23 @@ export interface ExportIndexedJob {
   seenCount: number
 }
 
+/**
+ * A chat session as exported: the conversation content, with none of the
+ * per-install identity (`id`, `busy`, `totalCostUsd` is re-derived from the
+ * imported messages' `usage`) that a fresh import would need to regenerate
+ * anyway. Messages keep only the fields another install's UI actually
+ * renders; `toolCallId` travels so a `tool` message still resolves back to
+ * the assistant tool call it answered after ids are re-minted on import.
+ */
+export interface ExportChatSession {
+  title: string
+  modelId: string
+  createdAt: string
+  messages: Array<
+    Pick<ChatMessage, 'role' | 'content' | 'reasoning' | 'toolCalls' | 'toolCallId' | 'modelId' | 'usage' | 'createdAt'>
+  >
+}
+
 /** CSV is export-only (a single flat table), never a round-trip import source. */
 export type CsvTable = 'jobs' | 'indexedJobs' | 'exclusions' | 'companyBoards'
 
@@ -196,6 +230,7 @@ export interface ExportSizes {
   resumes: { json: number }
   settings: { json: number }
   theme: { json: number }
+  chats: { json: number }
   /** Fixed bytes of the bundle wrapper itself (schemaVersion/exportedAt/appVersion/`data: {}`) — present once whenever any domain is included in a JSON export, on top of the per-domain sizes above. */
   wrapperBytes: number
 }
@@ -206,11 +241,18 @@ export interface ExportSizes {
  * `JSON.stringify` inserts a `,` between each key present in `data`, so N
  * selected domains need N-1 extra separator bytes beyond their individually
  * measured marginal sizes.
+ *
+ * Every domain in `ALL_EXPORT_DOMAINS` now has a required entry in `sizes`
+ * (main always computes all of them), but the `sizes[d] !== undefined` guard
+ * stays here defensively: a domain missing from `sizes` is excluded from N
+ * entirely, not counted as a zero-byte domain, since main only ever writes a
+ * `data` key for a domain it actually sized and counting an unsized one
+ * would add a phantom separator byte the real bundle never has.
  */
 export function totalJsonBytes(sizes: ExportSizes, selection: ExportSelection): number {
-  const domains = ALL_EXPORT_DOMAINS.filter((d) => selection[d])
+  const domains = ALL_EXPORT_DOMAINS.filter((d) => selection[d] && sizes[d] !== undefined)
   if (domains.length === 0) return 0
-  const sum = domains.reduce((total, d) => total + sizes[d].json, 0)
+  const sum = domains.reduce((total, d) => total + (sizes[d]?.json ?? 0), 0)
   return sizes.wrapperBytes + sum + (domains.length - 1)
 }
 
@@ -231,6 +273,7 @@ export interface ImportDomainCounts {
   resumes?: number
   settings?: number
   theme?: number
+  chats?: number
 }
 
 export interface ImportPickResult {
@@ -262,6 +305,8 @@ export interface ImportSummary {
    */
   resumeAssignments?: { linked: number; unresolved: number }
   settings?: boolean
+  /** `skipped` is a session whose model or content failed validation. */
+  chats?: { imported: number; skipped: number }
   // No `theme` here: `applyImport` (main process) never touches that domain
   // — it's the renderer that reads `bundle.data.theme` off the same
   // `ImportApplyResult` and applies it via `ThemeContext.importTheme` once

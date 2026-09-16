@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, uniqueIndex, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, real, uniqueIndex, index } from 'drizzle-orm/sqlite-core'
 import { sql } from 'drizzle-orm'
 
 const nowIso = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`
@@ -270,4 +270,62 @@ export const runEvents = sqliteTable(
     createdAt: text('created_at').notNull().default(nowIso)
   },
   (table) => [index('run_events_run_id_idx').on(table.runId, table.id)]
+)
+
+/**
+ * A chat session (see `shared/types/chat.ts`): OpenRouter mode's dock tab
+ * equivalent of a terminal tab. `totalCostUsd` is a running sum maintained
+ * by the repository as messages carry usage, not derived on read, since the
+ * session list renders it on every poll and re-summing every message's
+ * `usage` JSON each time would cost more than it's worth.
+ */
+export const chatSessions = sqliteTable('chat_sessions', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  modelId: text('model_id').notNull(),
+  createdAt: text('created_at').notNull().default(nowIso),
+  updatedAt: text('updated_at').notNull(),
+  totalCostUsd: real('total_cost_usd').notNull().default(0)
+})
+
+/**
+ * One message of a chat session. `seq` is a monotonic per-session counter
+ * (assigned by the repository, never the database) rather than relying on
+ * `createdAt` or the autoincrement id for ordering: two messages written in
+ * the same millisecond must still page deterministically, and `before` in
+ * `ListChatMessagesQuery` pages strictly by this column.
+ *
+ * `content`, `reasoning`, `reasoningDetails` and `toolCalls` are secure
+ * fields (profile data can appear in tool arguments/results, and reasoning
+ * text can restate whatever the user pasted), written through
+ * `writeSecureField`/`readSecureField` exactly like `resumeMaster`'s
+ * `securePayload`. `usage` and `error` are plain JSON: token counts and a
+ * failed turn's error code carry nothing personal.
+ */
+export const chatMessages = sqliteTable(
+  'chat_messages',
+  {
+    id: text('id').primaryKey(),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => chatSessions.id, { onDelete: 'cascade' }),
+    seq: integer('seq').notNull(),
+    role: text('role', { enum: ['user', 'assistant', 'tool'] }).notNull(),
+    content: text('content').notNull(),
+    reasoning: text('reasoning'),
+    reasoningDetails: text('reasoning_details'),
+    toolCalls: text('tool_calls'),
+    toolCallId: text('tool_call_id'),
+    modelId: text('model_id'),
+    // Plain text, parsed by hand in the repository rather than drizzle's
+    // `{ mode: 'json' }`, since a hand-edited or otherwise malformed cell must
+    // become `null` with a logged warning, not throw out of a read.
+    usage: text('usage'),
+    error: text('error'),
+    createdAt: text('created_at').notNull().default(nowIso)
+  },
+  (table) => [
+    uniqueIndex('chat_messages_session_seq_unique').on(table.sessionId, table.seq),
+    index('chat_messages_session_id_idx').on(table.sessionId, table.id)
+  ]
 )

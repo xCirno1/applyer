@@ -34,10 +34,19 @@ import {
   getNotificationLocale,
   setNotificationLocale,
   getSearchCountry,
-  setSearchCountry
+  setSearchCountry,
+  getOpenRouterApiKeyRaw,
+  setOpenRouterApiKeyRaw,
+  clearOpenRouterApiKey,
+  getAgentMode,
+  setAgentMode,
+  getOpenRouterSettings,
+  setOpenRouterSettings
 } from './settingsRepository'
 import { INDEXED_JOBS_RETENTION_DEFAULT_DAYS } from '@shared/constants'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
+import { DEFAULT_AGENT_MODE } from '@shared/types/agentMode'
+import { DEFAULT_OPENROUTER_SETTINGS, DEFAULT_TOOL_APPROVAL_ASK_FOR } from '@shared/types/openrouter'
 
 describe('storage mode', () => {
   it('defaults to null (unset)', () => {
@@ -282,5 +291,90 @@ describe('settings are independent keys', () => {
     expect(getStorageMode()).toBe('encrypted')
     expect(isOnboardingCompleted()).toBe(true)
     expect(getAutoStartCommand()).toBe('codex')
+  })
+})
+
+describe('openrouter API key row', () => {
+  it('has no key by default', () => {
+    expect(getOpenRouterApiKeyRaw()).toBeNull()
+  })
+
+  it('round-trips a raw stored value verbatim (encryption is the callers job)', () => {
+    setOpenRouterApiKeyRaw('enc:v1:whatever-keystore-wrote')
+    expect(getOpenRouterApiKeyRaw()).toBe('enc:v1:whatever-keystore-wrote')
+  })
+
+  it('clears the key without touching other settings', () => {
+    setOpenRouterApiKeyRaw('some-raw-value')
+    setAutoStartCommand('codex')
+    clearOpenRouterApiKey()
+    expect(getOpenRouterApiKeyRaw()).toBeNull()
+    expect(getAutoStartCommand()).toBe('codex')
+  })
+
+  it('clearing when nothing is stored is a no-op, not an error', () => {
+    expect(() => clearOpenRouterApiKey()).not.toThrow()
+    expect(getOpenRouterApiKeyRaw()).toBeNull()
+  })
+})
+
+describe('agent mode', () => {
+  it('defaults to the CLI mode', () => {
+    expect(getAgentMode()).toBe(DEFAULT_AGENT_MODE)
+    expect(getAgentMode()).toBe('cli')
+  })
+
+  it('round-trips a chosen mode', () => {
+    setAgentMode('openrouter')
+    expect(getAgentMode()).toBe('openrouter')
+    setAgentMode('cli')
+    expect(getAgentMode()).toBe('cli')
+  })
+
+  it('falls back to the default for an unrecognized stored value', () => {
+    testDb.insert(appSettings).values({ key: 'agent_mode', value: 'not-a-real-mode' }).run()
+    expect(getAgentMode()).toBe(DEFAULT_AGENT_MODE)
+  })
+})
+
+describe('openrouter settings', () => {
+  it('defaults to the shared defaults', () => {
+    expect(getOpenRouterSettings()).toEqual(DEFAULT_OPENROUTER_SETTINGS)
+  })
+
+  it('returns a fresh copy each time so a caller mutating the result cannot corrupt the default', () => {
+    const first = getOpenRouterSettings()
+    first.toolApproval.askFor.push('mutated')
+    expect(getOpenRouterSettings().toolApproval.askFor).toEqual([...DEFAULT_TOOL_APPROVAL_ASK_FOR])
+  })
+
+  it('round-trips a chosen model, reasoning effort and tool approval policy', () => {
+    const settings = {
+      modelId: 'openai/gpt-5',
+      reasoningEffort: 'high' as const,
+      toolApproval: { askFor: ['queue_job'] }
+    }
+    setOpenRouterSettings(settings)
+    expect(getOpenRouterSettings()).toEqual(settings)
+  })
+
+  it('falls back to defaults field by field when the stored JSON is malformed', () => {
+    testDb.insert(appSettings).values({ key: 'openrouter_settings', value: '{not json' }).run()
+    expect(getOpenRouterSettings()).toEqual(DEFAULT_OPENROUTER_SETTINGS)
+  })
+
+  it('falls back to defaults field by field when the stored value is valid JSON but the wrong shape', () => {
+    testDb
+      .insert(appSettings)
+      .values({
+        key: 'openrouter_settings',
+        value: JSON.stringify({ modelId: 'kept/model', reasoningEffort: 'not-a-real-effort' })
+      })
+      .run()
+    expect(getOpenRouterSettings()).toEqual({
+      modelId: 'kept/model',
+      reasoningEffort: DEFAULT_OPENROUTER_SETTINGS.reasoningEffort,
+      toolApproval: DEFAULT_OPENROUTER_SETTINGS.toolApproval
+    })
   })
 })

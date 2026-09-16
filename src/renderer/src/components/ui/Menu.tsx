@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactEleme
 
 export type MenuEntry =
   | { type: 'action'; key: string; label: string; shortcut?: string; onSelect: () => void; disabled?: boolean }
-  | { type: 'checkbox'; key: string; label: string; checked: boolean; onToggle: () => void; shortcut?: string }
+  | { type: 'checkbox'; key: string; label: string; checked: boolean; onToggle: () => void; shortcut?: string; disabled?: boolean }
   | { type: 'separator'; key: string }
 
 /**
@@ -36,7 +36,7 @@ export function MenuList({
           >
             <button
               type="button"
-              disabled={item.type === 'action' && item.disabled}
+              disabled={item.disabled}
               onClick={(e) => {
                 // ContextMenu renders inline (fixed-positioned, not
                 // portaled) as a DOM descendant of whatever triggered it —

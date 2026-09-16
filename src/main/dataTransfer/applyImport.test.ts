@@ -6,8 +6,14 @@ import type * as schema from '../db/schema'
 let testDb: ReturnType<typeof drizzle<typeof schema>>
 vi.mock('../db/index', () => ({ getDb: () => testDb }))
 
+const broadcasts = vi.hoisted(() => ({ chatEvent: vi.fn(), agentMode: vi.fn() }))
+vi.mock('../ipc/chatBroadcast', () => ({ broadcastChatEvent: broadcasts.chatEvent }))
+vi.mock('../openrouter/broadcast', () => ({ broadcastAgentModeChanged: broadcasts.agentMode }))
+
 beforeEach(() => {
   testDb = createTestDb().db
+  broadcasts.chatEvent.mockReset()
+  broadcasts.agentMode.mockReset()
 })
 
 import { applyImport, requiresAutoStartReview } from './applyImport'
@@ -17,12 +23,17 @@ import { listAllIndexedJobs, upsertIndexedJobs } from '../db/repositories/indexe
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { getProfile } from '../db/repositories/profileRepository'
 import { listAllVariants, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
+import { listChatSessions } from '../db/repositories/chatRepository'
 import {
+  getAgentMode,
   getAutoStartCommand,
   getIndexedJobsRetentionDays,
   getNotificationPreferences,
+  getOpenRouterSettings,
   getResumeSettings,
   getSearchCountry,
+  setAgentMode,
+  setOpenRouterSettings,
   setSearchCountry,
   setStorageMode
 } from '../db/repositories/settingsRepository'
@@ -293,6 +304,40 @@ describe('applyImport', () => {
     })
   })
 
+  it('imports agent mode and OpenRouter settings when present', () => {
+    const result = applyImport(
+      bundle({
+        settings: {
+          autoStartCommand: '',
+          indexedJobsRetentionDays: 30,
+          agentMode: 'openrouter',
+          openrouter: { modelId: 'openai/gpt-5', reasoningEffort: 'high', toolApproval: { askFor: ['queue_job'] } }
+        }
+      }),
+      { ...NO_SELECTION, settings: true }
+    )
+    expect(result.settings).toBe(true)
+    expect(getAgentMode()).toBe('openrouter')
+    // The shell's mode store only hears pushes, so the import pushes too.
+    expect(broadcasts.agentMode).toHaveBeenCalledWith('openrouter')
+    expect(getOpenRouterSettings()).toEqual({
+      modelId: 'openai/gpt-5',
+      reasoningEffort: 'high',
+      toolApproval: { askFor: ['queue_job'] }
+    })
+  })
+
+  it('keeps the current agent mode and OpenRouter settings when importing a bundle written before they existed', () => {
+    setAgentMode('openrouter')
+    setOpenRouterSettings({ modelId: 'existing/model', reasoningEffort: 'low', toolApproval: { askFor: [] } })
+    applyImport(bundle({ settings: { autoStartCommand: 'codex', indexedJobsRetentionDays: 60 } }), {
+      ...NO_SELECTION,
+      settings: true
+    })
+    expect(getAgentMode()).toBe('openrouter')
+    expect(getOpenRouterSettings()).toEqual({ modelId: 'existing/model', reasoningEffort: 'low', toolApproval: { askFor: [] } })
+  })
+
   it('keeps current notification preferences and search country when importing an older settings bundle', () => {
     setSearchCountry('au')
     const before = getNotificationPreferences()
@@ -402,5 +447,71 @@ describe('applyImport', () => {
     expect(result).toEqual({})
     expect(listAllJobs()).toHaveLength(0)
     expect(listAllExclusions()).toHaveLength(0)
+  })
+
+  it('imports chats when selected and present, reporting skipped for a malformed session', () => {
+    setStorageMode('plaintext')
+    const result = applyImport(
+      bundle({
+        chats: [
+          {
+            title: 'Good',
+            modelId: 'openai/gpt-5',
+            createdAt: '2020-01-01T00:00:00.000Z',
+            messages: [
+              {
+                role: 'user',
+                content: 'hi',
+                reasoning: null,
+                toolCalls: null,
+                toolCallId: null,
+                modelId: null,
+                usage: null,
+                createdAt: '2020-01-01T00:00:00.000Z'
+              }
+            ]
+          },
+          {
+            title: 'Bad',
+            modelId: 'openai/gpt-5',
+            createdAt: '2020-01-01T00:00:00.000Z',
+            messages: [
+              {
+                role: 'not-a-role',
+                content: 'hi',
+                reasoning: null,
+                toolCalls: null,
+                toolCallId: null,
+                modelId: null,
+                usage: null,
+                createdAt: '2020-01-01T00:00:00.000Z'
+              }
+            ]
+          }
+        ] as ExportBundle['data']['chats']
+      }),
+      { ...NO_SELECTION, chats: true }
+    )
+    expect(result.chats).toEqual({ imported: 1, skipped: 1 })
+    const [stored] = listChatSessions()
+    expect(stored?.title).toBe('Good')
+    // An open chat panel learns of the new session the same way it learns of any other.
+    expect(broadcasts.chatEvent).toHaveBeenCalledTimes(1)
+    expect(broadcasts.chatEvent).toHaveBeenCalledWith({ type: 'session_updated', session: { ...stored, busy: false } })
+  })
+
+  it('does not import chats when not selected, and never deletes an existing session', () => {
+    setStorageMode('plaintext')
+    const withOne = applyImport(
+      bundle({
+        chats: [{ title: 'Kept', modelId: 'm', createdAt: '2020-01-01T00:00:00.000Z', messages: [] }] as ExportBundle['data']['chats']
+      }),
+      { ...NO_SELECTION, chats: true }
+    )
+    expect(withOne.chats).toEqual({ imported: 1, skipped: 0 })
+
+    const result = applyImport(bundle({ chats: [] }), NO_SELECTION)
+    expect(result.chats).toBeUndefined()
+    expect(listChatSessions()).toHaveLength(1)
   })
 })

@@ -1,33 +1,37 @@
 import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { AgentMode } from '@shared/types/agentMode'
 import TerminalGroup from '../terminal/TerminalGroup'
 import LogsPage from '../../pages/Logs/LogsPage'
-import type { DockTab } from './workspaceLayout'
+import { visibleDockTabs, type DockTab } from './workspaceLayout'
 import AgentPermissionsMenu from '../terminal/AgentPermissionsMenu'
 
-const TAB_IDS: DockTab[] = ['terminal', 'logs']
-
-// The bottom dock: terminal (itself a `TerminalGroup` of one or more
-// concurrent sessions) and activity log as tabs of one height-constrained
-// region rather than two full pages, since only one is being read at a time.
-// Both stay mounted across tab switches (CSS visibility, not conditional
-// render) — each terminal owns a live pty session that a remount would kill,
-// and keeping Logs alongside it means switching back doesn't re-fetch.
+// The bottom dock: in `cli` mode, terminal (itself a `TerminalGroup` of one
+// or more concurrent sessions) and activity log; in `openrouter` mode only
+// the activity log, since that mode's agent lives in `chat/ChatPanel` on
+// the right instead (`visibleDockTabs`). Both bodies (`TerminalGroup`,
+// `LogsPage`) stay mounted across every tab and mode switch (CSS
+// visibility, not conditional render): a terminal owns a live pty session
+// a remount would kill, and keeping Logs alongside it means switching back
+// to it doesn't re-fetch.
 export default function WorkspaceDock({
   tab,
+  mode,
   onTabChange,
   onHide
 }: {
   tab: DockTab
+  mode: AgentMode | null
   onTabChange: (tab: DockTab) => void
   onHide: () => void
 }): ReactElement {
   const { t } = useTranslation('workspace')
+  const tabIds = visibleDockTabs(mode)
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-canvas-inset">
       <div className="flex h-7 shrink-0 items-center gap-1 border-b border-border-soft bg-canvas px-2">
-        {TAB_IDS.map((id) => (
+        {tabIds.map((id) => (
           <button
             key={id}
             onClick={() => onTabChange(id)}

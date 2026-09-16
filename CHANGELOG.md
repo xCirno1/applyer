@@ -7,6 +7,28 @@ Notable changes to Applyer are documented here. This project follows
 
 ### Added
 
+- An OpenRouter agent mode as an alternative to a CLI. Connect an OpenRouter account
+  (authorization happens in your browser, no API key typed in; the key is stored with
+  your OS keychain), pick any tool-capable model from OpenRouter's catalog (defaulting to
+  `deepseek/deepseek-v4.1-flash`), and chat with an in-app agent that calls the same MCP
+  tools a CLI's terminal agent calls, in-process rather than over stdio. Settings > Agent
+  (also the onboarding agent step) chooses between CLI and OpenRouter mode: the choice is
+  exclusive but never destructive, so the dock's Terminal tab and the chat panel swap
+  without either losing its state, a terminal's scrollback or a chat's sessions, when you
+  switch back and forth. The chat lives in a resizable panel on the right of every screen
+  (View > Chat, or its shortcut, hides and shows it), with a session list (new, rename,
+  delete, search), a per-chat model switch and reasoning effort next to the input, starter
+  requests on an empty chat, and a status line with the connection, the chat's cost, and
+  how many tools ask before running. A reply streams with its reasoning trace collapsed by
+  default, renders as markdown, lists each tool call as a row that opens into its
+  arguments and result (readable by default: job lists and form fields as tables, a job
+  reference as a link onto the board, everything else as labelled rows, with a per-section
+  switch to the raw JSON and a Copy button), and pauses on an inline Allow/Deny before
+  running a data-changing tool, configurable per tool in Settings > Agent; "Allow always"
+  also releases the rest of that batch, and Stop pressed while a tool runs ends the turn
+  as soon as it returns instead of starting another model round. Chat history is stored
+  locally, encrypted per the storage-mode setting like the rest of the app's data, and is
+  included in export/import.
 - Run statistics (the Runs screen on the left rail). Start a run before handing the agent a task and
   stop it when the task is done; everything the app observes in between is counted, per
   site: searches and what each site returned (or whether it answered with a challenge),
@@ -119,6 +141,13 @@ Notable changes to Applyer are documented here. This project follows
   Turnstile widget smaller than the old size gate) is now recognised as a challenge, so a
   search on a site behind it (Prosple, for one) is retried in the application browser
   instead of coming back as "no listings matched".
+
+### Changed
+
+- `edit_application` works on a Queued job too, not only a Filled one. A fill in
+  progress whose earlier answer was wrong is corrected in place on the current step; the
+  job stays Queued, attachments are untouched, and the fill carries on to its final step
+  as before. A Filled job's original form is edited exactly as it was.
 
 ## [1.0.0] - 2026-09-11
 

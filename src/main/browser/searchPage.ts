@@ -60,4 +60,3 @@ function describe(err: unknown): string {
   const message = err instanceof Error ? err.message : String(err)
   return message.split('\n', 1)[0]?.trim() || 'unknown error'
 }
-

@@ -277,15 +277,34 @@ export interface HeadedBrowser {
   close(page: Page | null): Promise<void>
 }
 
+export interface HeadedBrowserOptions {
+  /**
+   * What to do when "attach to a running browser" is on but that browser cannot be
+   * reached. `fail` (the default) throws `RemoteBrowserUnreachableError`: the user chose
+   * their own signed-in browser for an application, and a signed-out window Applyer
+   * launched instead would surprise them mid-form. `launch` opens Applyer's own window
+   * instead, for work that gains nothing from the user's profile (a job search waiting on
+   * a site's challenge only needs a visible window, any visible window).
+   */
+  whenUnreachable?: 'fail' | 'launch'
+}
+
 /**
  * Used for anything interactive (login, filling a form): a real, visible window the user can
  * watch and take over. Either a fresh isolated window Applyer launches, or, when Settings >
  * Browser has "attach to a running browser" on, a new tab in the user's own already-running
  * browser (see `shared/types/remoteBrowser.ts` for why and what that trades away).
  */
-export async function openHeadedBrowser(): Promise<HeadedBrowser> {
+export async function openHeadedBrowser({ whenUnreachable = 'fail' }: HeadedBrowserOptions = {}): Promise<HeadedBrowser> {
   const remote = getRemoteBrowserSettings()
-  if (remote.enabled) return attachHeadedBrowser(remote.endpoint)
+  if (remote.enabled) {
+    try {
+      return await attachHeadedBrowser(remote.endpoint)
+    } catch (err) {
+      if (whenUnreachable === 'fail' || !(err instanceof RemoteBrowserUnreachableError)) throw err
+      appLogger.warn(`${err.message} Opening Applyer's own browser window for this instead.`)
+    }
+  }
 
   const browser = await launchWithResolution(false)
   const context = await browser.newContext({

@@ -14,6 +14,8 @@ import {
   type UploadDocumentRequest,
   type CaptchaDetectedPayload,
   type CaptchaResolvedPayload,
+  type SearchChallengePayload,
+  type SearchChallengeResolvedPayload,
   type BrowserDownloadProgressPayload,
   type BrowserSetupStatusPayload,
   type BrowserPreference,
@@ -33,6 +35,14 @@ import type {
   ResumeStyle
 } from '@shared/types/resume'
 import type { ListActivityQuery, ListActivityResult } from '@shared/types/activity'
+import type {
+  ListRunEventsQuery,
+  ListRunEventsResult,
+  ListRunsQuery,
+  ListRunsResult,
+  RunRecord,
+  RunStats
+} from '@shared/types/run'
 import type { ExclusionRecord, ListExclusionsQuery, ListExclusionsResult } from '@shared/types/exclusion'
 import type {
   BoardCsvImportOptions,
@@ -335,6 +345,17 @@ const browserControlApi = {
     const listener = (_event: Electron.IpcRendererEvent, payload: CaptchaResolvedPayload): void => callback(payload)
     ipcRenderer.on(IPC.browserControl.onCaptchaResolved, listener)
     return () => ipcRenderer.removeListener(IPC.browserControl.onCaptchaResolved, listener)
+  },
+  onSearchChallengeDetected: (callback: (payload: SearchChallengePayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: SearchChallengePayload): void => callback(payload)
+    ipcRenderer.on(IPC.browserControl.onSearchChallengeDetected, listener)
+    return () => ipcRenderer.removeListener(IPC.browserControl.onSearchChallengeDetected, listener)
+  },
+  onSearchChallengeResolved: (callback: (payload: SearchChallengeResolvedPayload) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, payload: SearchChallengeResolvedPayload): void =>
+      callback(payload)
+    ipcRenderer.on(IPC.browserControl.onSearchChallengeResolved, listener)
+    return () => ipcRenderer.removeListener(IPC.browserControl.onSearchChallengeResolved, listener)
   }
 }
 
@@ -430,7 +451,10 @@ const settingsApi = {
     ipcRenderer.invoke(IPC.settings.setNotificationLocale, { locale }),
   getSearchCountry: (): Promise<SearchCountry> => ipcRenderer.invoke(IPC.settings.getSearchCountry),
   setSearchCountry: (country: SearchCountry): Promise<{ ok: boolean; country?: SearchCountry; error?: AppError }> =>
-    ipcRenderer.invoke(IPC.settings.setSearchCountry, { country })
+    ipcRenderer.invoke(IPC.settings.setSearchCountry, { country }),
+  getSearchChallengeFallback: (): Promise<boolean> => ipcRenderer.invoke(IPC.settings.getSearchChallengeFallback),
+  setSearchChallengeFallback: (enabled: boolean): Promise<{ ok: boolean; error?: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setSearchChallengeFallback, { enabled })
 }
 
 const storageLocationApi = {
@@ -457,6 +481,28 @@ const storageLocationApi = {
 
 const logsApi = {
   list: (query: ListActivityQuery): Promise<ListActivityResult> => ipcRenderer.invoke(IPC.logs.list, query)
+}
+
+type RunResult = { ok: true; run: RunRecord } | { ok: false; error: AppError }
+type RunWithStatsResult = { ok: true; run: RunRecord; stats: RunStats } | { ok: false; error: AppError }
+
+const runsApi = {
+  getActive: (): Promise<{ run: RunRecord | null; stats: RunStats | null }> => ipcRenderer.invoke(IPC.runs.getActive),
+  start: (label?: string | null): Promise<RunWithStatsResult> => ipcRenderer.invoke(IPC.runs.start, { label: label ?? null }),
+  stop: (): Promise<RunWithStatsResult> => ipcRenderer.invoke(IPC.runs.stop),
+  list: (query: ListRunsQuery): Promise<ListRunsResult> => ipcRenderer.invoke(IPC.runs.list, query),
+  get: (runId: string): Promise<RunResult> => ipcRenderer.invoke(IPC.runs.get, { runId }),
+  getStats: (runId: string): Promise<{ ok: true; stats: RunStats } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.runs.getStats, { runId }),
+  listEvents: (query: ListRunEventsQuery): Promise<ListRunEventsResult> => ipcRenderer.invoke(IPC.runs.listEvents, query),
+  rename: (runId: string, label: string | null): Promise<RunResult> => ipcRenderer.invoke(IPC.runs.rename, { runId, label }),
+  delete: (runId: string): Promise<{ ok: true } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.runs.delete, { runId }),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.runs.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.runs.onChanged, listener)
+  }
 }
 
 const appApi = {
@@ -508,6 +554,7 @@ const api = {
   settings: settingsApi,
   storageLocation: storageLocationApi,
   logs: logsApi,
+  runs: runsApi,
   app: appApi,
   data: dataApi
 }

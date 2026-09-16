@@ -50,6 +50,11 @@
     "outro": "Papan perusahaan yang kamu pantau (Greenhouse, Lever, Ashby, Workday) tetap dicari apa pun negaranya.",
     "saved": "Pencarian lowongan akan memakai edisi {{country}}.",
     "saveFailed": "Tidak dapat menyimpan negara pencarian lowongan.",
+    "challengeFallback": "Saat sebuah situs menolak pencarian tanpa jendela, buka di browser aplikasi dan minta saya menyelesaikan tantangan verifikasinya",
+    "challengeFallbackHint": "Beberapa situs (misalnya Prosple) selalu menjawab browser tersembunyi Applyer dengan tantangan, tetapi meloloskan halaman yang sama di jendela yang terlihat dalam beberapa detik. Jika aktif, pencarian yang ditolak akan membuka halamannya di browser aplikasi (atau browser yang kamu sambungkan) dan sebuah spanduk memintamu melihatnya; jika nonaktif, situs itu dilaporkan terblokir dan situs lain tetap berjalan.",
+    "challengeFallbackSaved": "Pencarian yang ditolak akan dibuka di browser aplikasi.",
+    "challengeFallbackOff": "Pencarian yang ditolak akan dilaporkan sebagai terblokir.",
+    "challengeFallbackSaveFailed": "Pengaturan tidak dapat disimpan.",
     "sources": {
       "indeed": "Papan lowongan umum dengan edisi dan indeks terpisah per negara.",
       "linkedin": "Satu situs untuk seluruh dunia; dipersempit lewat lokasi yang kamu berikan saat mencari, bukan lewat negara.",

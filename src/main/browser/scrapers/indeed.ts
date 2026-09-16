@@ -1,5 +1,6 @@
 import { newHeadlessContext } from '../browserController'
 import { detectCaptcha } from '../captchaDetector'
+import { readSearchPage } from '../searchPage'
 import { htmlToPlainText, sanitizeDescriptionHtml } from '../htmlContent'
 import { aggregatorHost } from '@shared/types/jobSource'
 import type { AggregatorSearchParams, AggregatorSearchResult, JobDetailsOutcome, JobSearchResultItem } from '../types'
@@ -25,23 +26,15 @@ export async function searchIndeed(params: AggregatorSearchParams): Promise<Aggr
   }
   const { query, location, limit } = params
 
-  const context = await newHeadlessContext()
-  try {
-    const page = await context.newPage()
-    const search = new URLSearchParams({ q: query })
-    if (location) search.set('l', location)
+  const search = new URLSearchParams({ q: query })
+  if (location) search.set('l', location)
 
-    await page.goto(`https://${host}/jobs?${search.toString()}`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 20000
-    })
-
-    const captcha = await detectCaptcha(page)
-    if (captcha.blocked) {
-      return { results: [], blocked: true, warning: `indeed: blocked by a verification challenge (${captcha.reason})` }
-    }
-
-    const cards = await page.evaluate((): RawIndeedCard[] => {
+  const outcome = await readSearchPage({
+    source: 'indeed',
+    host,
+    url: `https://${host}/jobs?${search.toString()}`,
+    read: (page) =>
+      page.evaluate((): RawIndeedCard[] => {
       const items: RawIndeedCard[] = []
       document.querySelectorAll('[data-jk]').forEach((el) => {
         const node = el.closest('.job_seen_beacon') ?? el.closest('.cardOutline') ?? el.closest('li') ?? el.parentElement
@@ -56,23 +49,22 @@ export async function searchIndeed(params: AggregatorSearchParams): Promise<Aggr
       })
       return items
     })
+  })
+  if (outcome.status === 'blocked') return { results: [], blocked: true, warning: outcome.warning }
 
-    const results: JobSearchResultItem[] = cards
-      .filter((c): c is RawIndeedCard & { jk: string; title: string; company: string } => !!c.jk && !!c.title && !!c.company)
-      .slice(0, limit)
-      .map((c) => ({
-        title: c.title,
-        company: c.company,
-        location: c.location,
-        url: `https://${host}/viewjob?jk=${c.jk}`,
-        source: 'indeed',
-        snippet: c.snippet ?? ''
-      }))
+  const results: JobSearchResultItem[] = outcome.value
+    .filter((c): c is RawIndeedCard & { jk: string; title: string; company: string } => !!c.jk && !!c.title && !!c.company)
+    .slice(0, limit)
+    .map((c) => ({
+      title: c.title,
+      company: c.company,
+      location: c.location,
+      url: `https://${host}/viewjob?jk=${c.jk}`,
+      source: 'indeed',
+      snippet: c.snippet ?? ''
+    }))
 
-    return { results, blocked: false }
-  } finally {
-    await context.close()
-  }
+  return { results, blocked: false }
 }
 
 export async function fetchIndeedJobDetails(url: string): Promise<JobDetailsOutcome> {

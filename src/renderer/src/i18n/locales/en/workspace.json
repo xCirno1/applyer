@@ -46,7 +46,8 @@
   "rail": {
     "jobBoard": "Job Board",
     "discovery": "Job Discovery",
-    "resumes": "Resume Variants"
+    "resumes": "Resume Variants",
+    "runs": "Runs"
   },
   "topBar": {
     "settings": "Settings",

@@ -1,0 +1,236 @@
+{
+  "title": "Run",
+  "header": {
+    "start": "Start run",
+    "stop": "Stop run",
+    "inProgress": "In progress",
+    "ended": "Ended",
+    "elapsed": "Elapsed",
+    "events_one": "{{count}} event",
+    "events_other": "{{count}} events",
+    "pick": "Run to show",
+    "defaultName": "Run #{{sequence}}",
+    "current": "in progress",
+    "showOlder_one": "Show older runs ({{count}} more)",
+    "showOlder_other": "Show older runs ({{count}} more)",
+    "rename": "Rename this run",
+    "nameLabel": "Run name",
+    "namePlaceholder": "Name this run",
+    "delete": "Delete this run",
+    "deleteTitle": "Delete this run?",
+    "deleteMessage": "Its statistics and timeline are removed for good. The jobs, exclusions and everything else the run observed stay as they are.",
+    "started": "Started {{when}}",
+    "startedToast": "Run started. Everything the agent does from now on is counted.",
+    "stoppedToast": "Run stopped.",
+    "renamedToast": "Run renamed.",
+    "deletedToast": "Run deleted.",
+    "startHint": "Start a run before handing the agent a task and stop it when the task is done; everything in between is counted."
+  },
+  "empty": {
+    "title": "No run in progress",
+    "body": "Start a run before handing the agent a task and stop it when the task is done. Everything the agent does in between is counted here: searches per site, jobs queued, forms filled, challenges hit, failures and more.",
+    "history": "Past runs can be picked from the list above."
+  },
+  "groups": {
+    "overview": "Overview",
+    "searches": "Searches",
+    "sources": "By source",
+    "pipeline": "Pipeline",
+    "forms": "Forms",
+    "challenges": "Challenges",
+    "resumes": "Resumes and profile",
+    "tools": "Agent tools",
+    "timeline": "Timeline"
+  },
+  "overview": {
+    "duration": "Duration",
+    "events": "Events",
+    "eventsPerHour": "Events per hour",
+    "firstEvent": "First event",
+    "lastEvent": "Last event",
+    "none": "None yet",
+    "tips": {
+      "eventsPerHour": "Recorded observations divided by hours the run has been going; a rough measure of how busy the agent was."
+    }
+  },
+  "foldLimit": {
+    "title": "Statistics stop short.",
+    "body": "The figures cover the first {{folded}} of this run's {{total}} events; later ones are in the timeline but not counted here. Stop this run and start a new one to keep counting."
+  },
+  "searches": {
+    "total": "Searches",
+    "failed": "Failed",
+    "results": "Results",
+    "empty": "Empty",
+    "distinct": "Distinct queries",
+    "blocked": "Blocked answers",
+    "avgResults": "Results per search",
+    "avgDuration": "Time per search",
+    "recent": "Recent queries",
+    "anywhere": "anywhere",
+    "resultCount_one": "{{count}} result",
+    "resultCount_other": "{{count}} results",
+    "tips": {
+      "results": "Results after duplicates across sites were removed; the per-source table counts what each site returned on its own.",
+      "blocked": "Searches where a site answered with a verification challenge instead of listings.",
+      "distinct": "Different query texts, ignoring case."
+    }
+  },
+  "sources": {
+    "source": "Source",
+    "searches": "Searches",
+    "results": "Results",
+    "blocked": "Blocked",
+    "warned": "Warned",
+    "read": "Read",
+    "queued": "Queued",
+    "filled": "Filled",
+    "submitted": "Submitted",
+    "failed": "Failed",
+    "excluded": "Excluded",
+    "empty": "No source has been touched in this run yet.",
+    "tips": {
+      "searches": "Searches that reached this site.",
+      "results": "Rows the site returned, before duplicates across sites were removed.",
+      "blocked": "Searches the site answered with a verification challenge.",
+      "warned": "Searches where the site came back with a warning: nothing matched, an unrecognised layout, or a board that could not be fetched.",
+      "read": "Postings read in full with get_job_details.",
+      "queued": "Jobs from this site the agent put on the board.",
+      "filled": "Application forms filled, in full or in part, plus jobs marked filled by hand.",
+      "submitted": "Jobs from this site you marked Submitted.",
+      "failed": "Jobs from this site that moved to Failed.",
+      "excluded": "Postings from this site added to the exclusion list."
+    }
+  },
+  "pipeline": {
+    "queued": "Queued",
+    "queueExisting": "Already on the board",
+    "queueExcluded": "Refused as excluded",
+    "submitted": "Submitted",
+    "failed": "Failed",
+    "markedFilled": "Marked filled by hand",
+    "retried": "Retried",
+    "unqueued": "Unqueued",
+    "removed": "Removed",
+    "excludedByUser": "Excluded by you",
+    "excludedByAgent": "Excluded by the agent",
+    "matchScore": "Match score",
+    "matchScoreValue": "{{avg}} avg, {{min}} to {{max}}",
+    "failureReasons": "Failure reasons",
+    "tips": {
+      "queueExisting": "queue_job calls for a posting that was already on the board.",
+      "queueExcluded": "queue_job calls refused because the posting is on the exclusion list.",
+      "matchScore": "The scores the agent gave the jobs it queued, out of 100."
+    }
+  },
+  "forms": {
+    "inspected": "Forms inspected",
+    "attempts": "Fill attempts",
+    "filled": "Filled",
+    "partiallyFilled": "Partially filled",
+    "edited": "Edited",
+    "failed": "Failed",
+    "permissionDenied": "Permission denied",
+    "noSession": "No open form",
+    "buttons": "Buttons clicked",
+    "buttonsFailed": "Button failures",
+    "fields": "Fields filled",
+    "fieldsSkipped": "Fields skipped",
+    "tips": {
+      "inspected": "inspect_application calls that opened a form.",
+      "attempts": "Every fill_application and edit_application call, whatever it returned.",
+      "permissionDenied": "Attempts stopped because the agent lacked a permission you had not granted.",
+      "noSession": "Attempts made without an application form open; the agent has to inspect first."
+    }
+  },
+  "challenges": {
+    "paused": "Challenges hit",
+    "resolved": "Resolved by you",
+    "reasons": "By kind",
+    "tips": {
+      "paused": "Times a site showed a verification challenge while a form was being opened, pausing the job until you cleared it."
+    }
+  },
+  "resumes": {
+    "attachedVariant": "Tailored resumes attached",
+    "attachedMaster": "Master resumes attached",
+    "variantsSaved": "Variants written",
+    "assigned": "Variants assigned",
+    "unassigned": "Variants unassigned",
+    "masterSaved": "Master resume saved",
+    "profileUpdates": "Profile updates",
+    "boardsAdded": "Company boards added",
+    "boardChecks": "Board checks",
+    "boardsChecked": "Boards checked",
+    "boardPostings": "Postings on boards"
+  },
+  "tools": {
+    "calls": "Calls",
+    "errors": "Errors",
+    "time": "Time in tools",
+    "tool": "Tool",
+    "avg": "Avg",
+    "empty": "No tool calls in this run yet.",
+    "tips": {
+      "calls": "Every call the agent made to an Applyer tool through MCP.",
+      "errors": "Calls that answered with an error, including refused ones."
+    }
+  },
+  "timeline": {
+    "empty": "Nothing recorded in this run yet.",
+    "showToolCalls": "Show tool calls",
+    "count_one": "{{count}} entry",
+    "count_other": "{{count}} entries"
+  },
+  "events": {
+    "search": "Searched \"{{query}}\" {{where}}: {{results}}",
+    "searchFailed": "Search \"{{query}}\" failed",
+    "job_details": "Read a posting on {{source}}",
+    "job_details_blocked": "A posting on {{source}} answered with a challenge",
+    "job_details_not_found": "A posting on {{source}} could not be read",
+    "job_details_failed": "Reading a posting on {{source}} failed",
+    "job_queued": "Queued {{job}} from {{source}}",
+    "job_queue_existing": "{{job}} was already on the board",
+    "job_queue_excluded": "Refused to queue an excluded posting from {{source}}",
+    "form_inspected": "Inspected the form for {{job}}",
+    "form_inspected_failed": "Could not inspect the form for {{job}}",
+    "form_filled": "Filled the form for {{job}} ({{status}})",
+    "button_clicked": "Clicked \"{{label}}\" on {{job}}",
+    "button_clicked_failed": "Button click failed on {{job}}",
+    "captcha_paused": "{{job}} paused on a verification challenge",
+    "captcha_resolved": "{{job}} resumed after the challenge",
+    "captcha_paused_search": "A search on {{source}} paused on a verification challenge",
+    "captcha_resolved_search": "The search on {{source}} resumed after the challenge",
+    "job_failed": "{{job}} failed: {{reason}}",
+    "job_submitted": "{{job}} marked Submitted",
+    "job_marked_filled": "{{job}} marked Filled by hand",
+    "job_retried": "{{job}} retried",
+    "job_unqueued": "{{job}} unqueued",
+    "job_removed": "{{job}} removed from the board",
+    "job_excluded": "Excluded a posting from {{source}} ({{by}})",
+    "resume_attached": "Attached the {{kind}} resume to {{job}}",
+    "resume_variant_saved": "Saved the resume variant \"{{name}}\"",
+    "resume_assigned": "Assigned \"{{name}}\" to {{job}}",
+    "resume_unassigned": "Unassigned the resume variant from {{job}}",
+    "resume_master_saved": "Saved the master resume",
+    "profile_updated": "Updated the profile: {{fields}}",
+    "company_board_added": "Started tracking a {{source}} board",
+    "company_boards_checked": "Checked {{checked}} company boards: {{postings}} postings",
+    "tool_call": "{{tool}}",
+    "tool_call_error": "{{tool}} answered with an error",
+    "jobAt": "{{title}} at {{company}}",
+    "unknownJob": "a job",
+    "byUser": "by you",
+    "byAgent": "by the agent",
+    "tailored": "tailored",
+    "master": "master",
+    "status": {
+      "filled": "filled",
+      "partially_filled": "partially filled",
+      "edited": "edited",
+      "failed": "failed",
+      "permission_denied": "permission denied",
+      "no_active_session": "no open form"
+    }
+  }
+}

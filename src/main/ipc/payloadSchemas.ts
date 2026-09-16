@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { RUN_EVENT_KINDS, RUN_LABEL_MAX_LENGTH } from '@shared/types/run'
 import { ALL_EXPORT_DOMAINS } from '@shared/types/dataTransfer'
 import { checkRemoteBrowserEndpoint } from '@shared/types/remoteBrowser'
 import {
@@ -82,6 +83,7 @@ export const browserPreferencePayload = z.object({
 })
 export const respondInstallPayload = z.object({ accept: z.boolean() })
 export const allowLocalAddressesPayload = z.object({ allowed: z.boolean() })
+export const enabledPayload = z.object({ enabled: z.boolean() })
 
 /**
  * The endpoint is stored and later handed to Playwright's `connectOverCDP` as-is, so it
@@ -154,6 +156,17 @@ export const listIndexedJobsQuerySchema = z.object({
 export const listExclusionsQuerySchema = z.object({ search, limit, offset })
 
 export const listCompanyBoardsQuerySchema = z.object({ search, limit, offset })
+
+export const runIdPayload = z.object({ runId: id })
+export const startRunPayload = z.object({ label: z.string().max(RUN_LABEL_MAX_LENGTH).nullable().optional() })
+export const renameRunPayload = z.object({ runId: id, label: z.string().max(RUN_LABEL_MAX_LENGTH).nullable() })
+export const listRunsQuerySchema = z.object({ limit, offset })
+export const listRunEventsQuerySchema = z.object({
+  runId: id,
+  kinds: z.array(z.enum(RUN_EVENT_KINDS)).optional().catch(undefined),
+  limit,
+  offset
+})
 
 export const listActivityQuerySchema = z.object({
   jobId: z.string().optional().catch(undefined),

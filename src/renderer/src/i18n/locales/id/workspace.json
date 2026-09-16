@@ -44,7 +44,8 @@
   "rail": {
     "jobBoard": "Papan Lowongan",
     "discovery": "Penemuan Lowongan",
-    "resumes": "Varian Resume"
+    "resumes": "Varian Resume",
+    "runs": "Sesi"
   },
   "topBar": {
     "settings": "Pengaturan",

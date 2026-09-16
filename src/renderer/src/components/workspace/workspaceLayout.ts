@@ -17,8 +17,8 @@ export type DockTab = 'terminal' | 'logs'
  * showing* is remembered per screen, since a tall resume preview and a
  * kanban board want different amounts of the window.
  */
-export type DockScreen = 'workspace' | 'indexedJobs' | 'resumes'
-export const DOCK_SCREENS: readonly DockScreen[] = ['workspace', 'indexedJobs', 'resumes']
+export type DockScreen = 'workspace' | 'indexedJobs' | 'resumes' | 'runs'
+export const DOCK_SCREENS: readonly DockScreen[] = ['workspace', 'indexedJobs', 'resumes', 'runs']
 
 export interface WorkspaceLayout {
   sidebarVisible: boolean
@@ -43,7 +43,7 @@ const MIN_BOARD_HEIGHT_PX = 200
 
 export const DEFAULT_WORKSPACE_LAYOUT: WorkspaceLayout = {
   sidebarVisible: true,
-  dockVisible: { workspace: true, indexedJobs: true, resumes: true },
+  dockVisible: { workspace: true, indexedJobs: true, resumes: true, runs: true },
   sidebarWidth: 260,
   dockHeight: 280,
   dockTab: 'terminal'
@@ -81,7 +81,7 @@ function isDockTab(value: unknown): value is DockTab {
  */
 function parseDockVisible(value: unknown): Record<DockScreen, boolean> {
   if (typeof value === 'boolean') {
-    return { workspace: value, indexedJobs: value, resumes: value }
+    return { workspace: value, indexedJobs: value, resumes: value, runs: value }
   }
   const record = value && typeof value === 'object' && !Array.isArray(value) ? (value as Record<string, unknown>) : {}
   const result = { ...DEFAULT_WORKSPACE_LAYOUT.dockVisible }

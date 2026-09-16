@@ -14,6 +14,7 @@ import {
 } from './db/repositories/companyBoardsRepository'
 import { broadcastCompanyBoardFetched, broadcastCompanyBoardsChanged } from './ipc/jobsBroadcast'
 import { logActivity } from './db/repositories/activityLogRepository'
+import { recordRunEvent } from './runs/runTracker'
 import type {
   AtsProvider,
   BoardCsvImportSummary,
@@ -100,6 +101,10 @@ export async function addBoard(request: AddBoardRequest): Promise<AddBoardOutcom
       addedBy: request.addedBy
     })
     broadcastCompanyBoardsChanged()
+    recordRunEvent('company_board_added', {
+      source: resolved.descriptor.provider,
+      meta: { provider: resolved.descriptor.provider, by: request.addedBy, jobCount: resolved.jobCount }
+    })
   }
 
   return {
@@ -177,11 +182,13 @@ export async function fetchBoardsNow(ids: readonly string[]): Promise<BoardFetch
   })
 
   const failed = results.filter((result) => result.status !== 'ok').length
+  const postings = results.reduce((total, result) => total + result.jobCount, 0)
   logActivity('info', `Checked ${results.length} company board(s)`, {
     boards: results.length,
     failed,
-    roles: results.reduce((total, result) => total + result.jobCount, 0)
+    roles: postings
   })
+  recordRunEvent('company_boards_checked', { meta: { checked: results.length, failed, postings } })
 
   // A reconciliation, not the primary signal: the per-board pushes above have
   // already updated each row, and this catches anything that missed them — a

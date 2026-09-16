@@ -142,6 +142,10 @@
     "cancel": "Batal",
     "resuming": "Melanjutkan \"{{title}}\"…",
     "movedToFailed": "\"{{title}}\" dipindahkan ke Gagal.",
-    "stillBlocked": "Masih kena blokir. Selesaikan dulu verifikasinya di jendela browser."
+    "stillBlocked": "Masih kena blokir. Selesaikan dulu verifikasinya di jendela browser.",
+    "searchMessage": "<1>{{site}}</1> ({{host}}) meminta tantangan verifikasi diselesaikan sebelum menjawab pencarian lowongan. Selesaikan di jendela browser yang terbuka; kebanyakan selesai sendiri dalam beberapa detik.",
+    "searchResuming": "Membaca hasil {{site}}…",
+    "searchSkipped": "{{site}} dilewati untuk pencarian ini.",
+    "skipSource": "Lewati situs ini"
   }
 }

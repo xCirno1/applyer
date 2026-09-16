@@ -4,7 +4,8 @@ import { appLogger } from '../logger'
 export type GateOutcome = 'resolved' | 'cancelled'
 
 interface PendingGate {
-  jobId: string
+  /** The job whose fill is waiting, or null for a search waiting on a site's challenge. */
+  jobId: string | null
   page: Page
   resolve: (outcome: GateOutcome) => void
   timeoutHandle: ReturnType<typeof setTimeout>
@@ -17,11 +18,14 @@ const pending = new Map<string, PendingGate>()
 /**
  * Opens a gate that resolves when the user clicks Resume/Cancel (via
  * resumeGate/cancelGate) or the timeout elapses (treated as a cancel).
- * The caller is responsible for actually waiting on the returned promise —
- * critically, from a detached background task, never from the MCP tool
- * call itself, which must return immediately when a captcha is hit.
+ * The caller is responsible for actually waiting on the returned promise.
+ * A fill waits from a detached background task, never from the MCP tool
+ * call itself, which must return immediately when a captcha is hit (the
+ * job is parked as paused). A search has no job to park, so
+ * `searchChallenge.ts` waits inside the tool call instead, with a timeout
+ * a fraction of this one.
  */
-export function openGate(taskId: string, jobId: string, page: Page, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<GateOutcome> {
+export function openGate(taskId: string, jobId: string | null, page: Page, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<GateOutcome> {
   return new Promise((resolve) => {
     const timeoutHandle = setTimeout(() => {
       pending.delete(taskId)

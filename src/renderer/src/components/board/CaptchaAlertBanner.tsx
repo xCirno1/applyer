@@ -4,16 +4,23 @@ import Button from '../ui/Button'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
 import { callIpc } from '../../lib/ipcCall'
-import type { CaptchaDetectedPayload } from '@shared/types/ipcEvents'
+import { JOB_SOURCE_LABELS } from '@shared/types/jobSource'
+import type { CaptchaDetectedPayload, SearchChallengePayload } from '@shared/types/ipcEvents'
 
 // Full-width banner rows (one per pending challenge) shown above the board
 // when `fill_application` hits a verification challenge — Resume (re-checks
 // the challenge is actually cleared before resolving) / Cancel (fails the
-// job as `captcha_verification`) per row. Driven by `CaptchaAlertProvider`,
-// not self-subscribing — see providers/CaptchaAlertProvider.tsx.
+// job as `captcha_verification`) per row. A second kind of row is a job
+// search a site refused to answer headless, now open in the application
+// browser waiting for its challenge to clear (`main/browser/searchChallenge.ts`);
+// same two buttons on the same gate, but Cancel only gives that one source
+// up for this search rather than failing anything. Driven by
+// `CaptchaAlertProvider`, not self-subscribing — see
+// providers/CaptchaAlertProvider.tsx.
 
 interface CaptchaAlertBannerProps {
   pending: CaptchaDetectedPayload[]
+  pendingSearches: SearchChallengePayload[]
   onRemove: (taskId: string) => void
 }
 
@@ -80,13 +87,75 @@ function CaptchaAlertRow({ item, onRemove }: { item: CaptchaDetectedPayload; onR
   )
 }
 
-export default function CaptchaAlertBanner({ pending, onRemove }: CaptchaAlertBannerProps): ReactElement | null {
-  if (pending.length === 0) return null
+function SearchChallengeRow({ item, onRemove }: { item: SearchChallengePayload; onRemove: (taskId: string) => void }): ReactElement {
+  const { t } = useTranslation('board')
+  const toast = useToast()
+  const errorMessage = useErrorMessage()
+  const [busy, setBusy] = useState<'resume' | 'cancel' | null>(null)
+  const site = JOB_SOURCE_LABELS[item.source]
+
+  const handleResume = async (): Promise<void> => {
+    setBusy('resume')
+    const result = await callIpc(
+      'browserControl.resumeTask',
+      () => window.api.browserControl.resumeTask(item.taskId),
+      { ok: false }
+    )
+    setBusy(null)
+    if (result.ok) {
+      onRemove(item.taskId)
+      toast.success(t('captcha.searchResuming', { site }))
+    } else {
+      toast.error(result.error ? errorMessage(result.error) : t('captcha.stillBlocked'))
+    }
+  }
+
+  const handleCancel = async (): Promise<void> => {
+    setBusy('cancel')
+    const result = await callIpc(
+      'browserControl.cancelTask',
+      () => window.api.browserControl.cancelTask(item.taskId),
+      { ok: false }
+    )
+    setBusy(null)
+    if (result.ok) {
+      onRemove(item.taskId)
+      toast.info(t('captcha.searchSkipped', { site }))
+    }
+  }
+
+  return (
+    <div className="flex h-8 items-center justify-between gap-3 border-b border-warning/40 bg-canvas-soft px-3">
+      <span className="text-[12px] text-text">
+        <Trans
+          t={t}
+          i18nKey="captcha.searchMessage"
+          values={{ site, host: item.host }}
+          components={{ 1: <span className="font-medium" /> }}
+        />
+      </span>
+      <div className="flex shrink-0 gap-1.5">
+        <Button size="sm" variant="primary" onClick={handleResume} loading={busy === 'resume'}>
+          {t('captcha.resume')}
+        </Button>
+        <Button size="sm" variant="ghost" onClick={handleCancel} loading={busy === 'cancel'}>
+          {t('captcha.skipSource')}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+export default function CaptchaAlertBanner({ pending, pendingSearches, onRemove }: CaptchaAlertBannerProps): ReactElement | null {
+  if (pending.length === 0 && pendingSearches.length === 0) return null
 
   return (
     <div className="flex flex-col">
       {pending.map((item) => (
         <CaptchaAlertRow key={item.taskId} item={item} onRemove={onRemove} />
+      ))}
+      {pendingSearches.map((item) => (
+        <SearchChallengeRow key={item.taskId} item={item} onRemove={onRemove} />
       ))}
     </div>
   )

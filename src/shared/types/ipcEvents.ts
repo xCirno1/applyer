@@ -1,3 +1,5 @@
+import type { AggregatorSource } from './jobSource'
+
 /** Channel names shared between preload and renderer for typed IPC. */
 export const IPC = {
   terminal: {
@@ -92,7 +94,9 @@ export const IPC = {
     resumeTask: 'browser:resumeTask',
     cancelTask: 'browser:cancelTask',
     onCaptchaDetected: 'browser:captchaDetected',
-    onCaptchaResolved: 'browser:captchaResolved'
+    onCaptchaResolved: 'browser:captchaResolved',
+    onSearchChallengeDetected: 'browser:searchChallengeDetected',
+    onSearchChallengeResolved: 'browser:searchChallengeResolved'
   },
   agentPermissions: {
     listPending: 'agentPermissions:listPending',
@@ -130,7 +134,9 @@ export const IPC = {
     setNotificationLocale: 'settings:setNotificationLocale',
     testNotification: 'settings:testNotification',
     getSearchCountry: 'settings:getSearchCountry',
-    setSearchCountry: 'settings:setSearchCountry'
+    setSearchCountry: 'settings:setSearchCountry',
+    getSearchChallengeFallback: 'settings:getSearchChallengeFallback',
+    setSearchChallengeFallback: 'settings:setSearchChallengeFallback'
   },
   storageLocation: {
     getStatus: 'storageLocation:getStatus',
@@ -144,6 +150,19 @@ export const IPC = {
   },
   logs: {
     list: 'logs:list'
+  },
+  runs: {
+    getActive: 'runs:getActive',
+    start: 'runs:start',
+    stop: 'runs:stop',
+    list: 'runs:list',
+    get: 'runs:get',
+    getStats: 'runs:getStats',
+    listEvents: 'runs:listEvents',
+    rename: 'runs:rename',
+    delete: 'runs:delete',
+    /** Main to renderer, payload-less: the active run gained events or a run started/stopped/changed. */
+    onChanged: 'runs:changed'
   },
   data: {
     exportJson: 'data:exportJson',
@@ -255,6 +274,23 @@ export interface CaptchaDetectedPayload {
 export interface CaptchaResolvedPayload {
   taskId: string
   jobId: string
+}
+
+/**
+ * A job search that a site answered with a verification challenge and that
+ * is now waiting in the application browser for the challenge to clear
+ * (see `main/browser/searchChallenge.ts`). `taskId` is what Resume/Cancel
+ * address, the same gate the job-level captcha alerts use.
+ */
+export interface SearchChallengePayload {
+  taskId: string
+  source: AggregatorSource
+  /** The edition being searched, `au.prosple.com`, so the banner can say which site to look for. */
+  host: string
+}
+
+export interface SearchChallengeResolvedPayload {
+  taskId: string
 }
 
 export interface BrowserDownloadProgressPayload {

@@ -14,7 +14,7 @@ export async function flagFailureTool(args: Args): Promise<CallToolResult> {
   }
 
   try {
-    const updated = failJob(args.jobId, args.reasonTag, args.message)
+    const updated = failJob(args.jobId, args.reasonTag, args.message, 'agent')
     return jsonResult({ jobId: updated.id, status: updated.status })
   } catch (err) {
     if (err instanceof IllegalTransitionError) {

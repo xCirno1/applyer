@@ -4,6 +4,7 @@ import logo from './assets/logo.png'
 import WorkspacePage from './pages/Workspace/WorkspacePage'
 import IndexedJobsPage from './pages/IndexedJobs/IndexedJobsPage'
 import ResumesPage, { type ResumesTab } from './pages/Resumes/ResumesPage'
+import RunStatsPage from './pages/RunStats/RunStatsPage'
 import SettingsPage, { type SectionId } from './pages/Settings/SettingsPage'
 import OnboardingFlow from './pages/Onboarding/OnboardingFlow'
 import StorageRecoveryFlow from './pages/StorageRecovery/StorageRecoveryFlow'
@@ -137,7 +138,7 @@ function MainShell(): ReactElement {
   // bar rather than being indented past it.
   const { layout, setSidebarVisible, setDockVisible, setDockTab, setSidebarWidth, setDockHeight } = useWorkspaceLayout()
 
-  // The dock is one instance under all three rail screens, but each screen
+  // The dock is one instance under all four rail screens, but each screen
   // remembers whether it is showing; every toggle here is for the screen the
   // user is looking at (Settings has no dock, so it counts as the workspace).
   const dockScreen: DockScreen = screen === 'settings' ? 'workspace' : screen
@@ -178,13 +179,14 @@ function MainShell(): ReactElement {
         <TerminalInputContext.Provider value={sendToTerminal}>
           <SettingsNavContext.Provider value={openSettings}>
             <main className="min-h-0 flex-1">
-              {/* The three rail screens stay mounted even while another is
+              {/* The four rail screens stay mounted even while another is
                 showing (or Settings is open): the shell-level dock below them
                 owns the terminal's live pty session, Workspace owns the jobs
-                live-update subscription, and Indexed Jobs owns its own, all of
-                which a remount would kill/drop. Toggled via `hidden` rather
-                than conditional rendering for that reason. Settings mounts
-                fresh each visit since it holds no state worth preserving. */}
+                live-update subscription, Indexed Jobs and Runs own their own,
+                all of which a remount would kill/drop. Toggled via `hidden`
+                rather than conditional rendering for that reason. Settings
+                mounts fresh each visit since it holds no state worth
+                preserving. */}
               <div className={screen !== 'settings' ? 'flex h-full flex-col' : 'hidden'}>
                 <header className="flex h-nav shrink-0 items-center gap-2 border-b border-border bg-canvas px-3">
                   <img src={logo} alt="Applyer" className="h-5 w-5 shrink-0" draggable={false} />
@@ -245,6 +247,11 @@ function MainShell(): ReactElement {
                       <div className={screen === 'resumes' ? 'h-full' : 'hidden'}>
                         <ScreenBoundary label="ResumesPage">
                           <ResumesPage requestedTab={resumesTabRequest} />
+                        </ScreenBoundary>
+                      </div>
+                      <div className={screen === 'runs' ? 'h-full' : 'hidden'}>
+                        <ScreenBoundary label="RunStatsPage">
+                          <RunStatsPage />
                         </ScreenBoundary>
                       </div>
                     </ShellDock>

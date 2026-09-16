@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import Checkbox from '../../components/ui/Checkbox'
 import Select from '../../components/ui/Select'
 import Skeleton from '../../components/ui/Skeleton'
 import Tooltip from '../../components/ui/Tooltip'
@@ -25,6 +26,10 @@ import {
  * question the picker raises: "so which sites does a search from here
  * actually reach?", naming the hostname per site so a user who knows
  * `uk.indeed.com` from `www.indeed.com` can see which one they are getting.
+ * Under it, the challenge fallback switch: whether a site that refuses the
+ * hidden browser gets the page opened in the application browser with the
+ * user asked to clear it (`main/browser/searchChallenge.ts`), the only way
+ * Prosple answers at all.
  *
  * Saved on change, like the other single-field sections; the previous value
  * is restored on a failed save so the picker never shows a country the
@@ -37,10 +42,36 @@ export default function SearchSection(): ReactElement {
   const { country: countryName } = useFormatters()
   const [country, setCountry] = useState<SearchCountry | null>(null)
   const [saving, setSaving] = useState(false)
+  const [challengeFallback, setChallengeFallback] = useState<boolean | null>(null)
+  const [savingFallback, setSavingFallback] = useState(false)
 
   useEffect(() => {
     void callIpc('settings.getSearchCountry', () => window.api.settings.getSearchCountry(), 'us').then(setCountry)
+    void callIpc(
+      'settings.getSearchChallengeFallback',
+      () => window.api.settings.getSearchChallengeFallback(),
+      true
+    ).then(setChallengeFallback)
   }, [])
+
+  const handleFallbackChange = async (enabled: boolean): Promise<void> => {
+    if (challengeFallback === null) return
+    const previous = challengeFallback
+    setChallengeFallback(enabled)
+    setSavingFallback(true)
+    const result = await callIpc(
+      'settings.setSearchChallengeFallback',
+      () => window.api.settings.setSearchChallengeFallback(enabled),
+      { ok: false }
+    )
+    setSavingFallback(false)
+    if (result.ok) {
+      toast.success(t(enabled ? 'search.challengeFallbackSaved' : 'search.challengeFallbackOff'))
+    } else {
+      setChallengeFallback(previous)
+      toast.error(result.error ? errorMessage(result.error) : t('search.challengeFallbackSaveFailed'))
+    }
+  }
 
   const options = useMemo(
     () =>
@@ -118,6 +149,19 @@ export default function SearchSection(): ReactElement {
             </table>
             <p className="text-[11px] text-text-faint">{t('search.outro')}</p>
           </div>
+
+          {challengeFallback === null ? (
+            <Skeleton className="h-10 w-full" />
+          ) : (
+            <Checkbox
+              id="search-challenge-fallback"
+              label={t('search.challengeFallback')}
+              hint={t('search.challengeFallbackHint')}
+              checked={challengeFallback}
+              onChange={(enabled) => void handleFallbackChange(enabled)}
+              disabled={savingFallback}
+            />
+          )}
         </>
       )}
     </div>

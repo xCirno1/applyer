@@ -14,7 +14,7 @@
   [![Electron 43](https://img.shields.io/badge/Electron-43-47848f?logo=electron&logoColor=white)](package.json)
   [![Security policy](https://img.shields.io/badge/security-policy-16a34a.svg)](SECURITY.md)
 
-  [Download v1.0](https://github.com/xCirno1/applyer/releases/latest) ·
+  [Download latest](https://github.com/xCirno1/applyer/releases/latest) ·
   [Security](SECURITY.md) ·
   [Contributing](CONTRIBUTING.md)
 </div>
@@ -50,13 +50,12 @@ browser. Final submission stays with you.
 - **Keep your workflow yours** with movable local storage, JSON/CSV import and export,
   custom appearance, keyboard shortcuts, and English or Indonesian UI.
 
-## What changed in v1.0
+## What's new
 
-The first public release brings cross-platform packages, complete optional data
-encryption, company-board discovery, multi-step application inspection and editing,
-explicit agent permissions, hardened import/export and IPC boundaries, and a release
-pipeline that publishes SHA-256 checksums with every build. See the
-[changelog](CHANGELOG.md) for the concise release record.
+The latest release adds an in-app OpenRouter agent as an alternative to a CLI, per-run
+statistics, four additional job sources (Seek, Jora, Prosple, and Remotive) with
+country-aware search, and named resume variants with an in-app editor and PDF export.
+See the [changelog](CHANGELOG.md) for the concise release record.
 
 ## Security and control
 
@@ -94,7 +93,7 @@ You also need an installed and authenticated MCP-capable agent CLI, or an OpenRo
 account you can connect from inside the app instead. The first launch guides you through
 your profile, documents, storage mode, and agent connection.
 
-> **Release integrity:** v1.0 packages are not yet code-signed or notarized, so macOS and
+> **Release integrity:** Release packages are not yet code-signed or notarized, so macOS and
 > Windows may show an identity warning and Windows may scan the app on first launch.
 > Verify your download against the release's `SHA256SUMS.txt`. Never install an Applyer
 > binary obtained from an unofficial mirror.
@@ -157,10 +156,6 @@ npm run package:mac         # dmg + zip (macOS host)
 npm run package:win         # installer + portable exe
 npm run package:all -- --dry-run
 ```
-
-The `release-test` branch runs the complete Linux/macOS/Windows packaging matrix without
-publishing. A version-matching tag such as `v1.0.0` publishes the checksummed artifacts as
-a GitHub Release.
 
 ### Repository map
 

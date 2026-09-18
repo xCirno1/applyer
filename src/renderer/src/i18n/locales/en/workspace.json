@@ -19,6 +19,7 @@
     "retryAllFailed": "Retry All Failed",
     "overview": "Overview",
     "console": "Console",
+    "chat": "Chat",
     "keyboardShortcuts": "Keyboard Shortcuts",
     "about": "About Applyer"
   },
@@ -52,7 +53,8 @@
   "topBar": {
     "settings": "Settings",
     "backToWorkspace": "Back to workspace",
-    "terminalUnavailable": "The terminal is not available right now. Copy the prompt instead."
+    "terminalUnavailable": "The terminal is not available right now. Copy the prompt instead.",
+    "chatUnavailable": "The chat is not available right now. Copy the prompt instead."
   },
   "permissionPrompt": {
     "title": "Agent permission required",
@@ -136,10 +138,12 @@
     "view.toggleConsole": "Toggle console dock",
     "dock.showTerminal": "Show terminal tab",
     "dock.showLogs": "Show activity log tab",
+    "view.toggleChat": "Toggle chat panel",
     "app.toggleSettings": "Open/close settings"
   },
   "resizeOverview": "Resize overview panel",
   "resizeDock": "Resize console dock",
+  "resizeChat": "Resize chat panel",
   "closeGuard": {
     "title": "Hold up, unsaved changes",
     "message": "A resume you were editing has changes that have not been saved. Close anyway and lose them?",

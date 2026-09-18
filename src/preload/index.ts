@@ -117,6 +117,22 @@ import type {
   AgentPermissions
 } from '@shared/types/agentPermissions'
 import type { RemoteBrowserProbe, RemoteBrowserSettings } from '@shared/types/remoteBrowser'
+import type { AgentMode } from '@shared/types/agentMode'
+import type {
+  OpenRouterAuthStatus,
+  OpenRouterConnection,
+  OpenRouterModelCatalog,
+  OpenRouterSettings,
+  StartOpenRouterAuthOptions
+} from '@shared/types/openrouter'
+import type {
+  ChatSession,
+  ChatStreamEvent,
+  ListChatMessagesQuery,
+  ListChatMessagesResult,
+  PendingToolApproval,
+  ToolApprovalDecision
+} from '@shared/types/chat'
 
 function settingsFromArguments(argv: readonly string[]): ApplyerSettings | undefined {
   const prefix = '--applyer-settings='
@@ -454,7 +470,79 @@ const settingsApi = {
     ipcRenderer.invoke(IPC.settings.setSearchCountry, { country }),
   getSearchChallengeFallback: (): Promise<boolean> => ipcRenderer.invoke(IPC.settings.getSearchChallengeFallback),
   setSearchChallengeFallback: (enabled: boolean): Promise<{ ok: boolean; error?: AppError }> =>
-    ipcRenderer.invoke(IPC.settings.setSearchChallengeFallback, { enabled })
+    ipcRenderer.invoke(IPC.settings.setSearchChallengeFallback, { enabled }),
+  getAgentMode: (): Promise<AgentMode> => ipcRenderer.invoke(IPC.settings.getAgentMode),
+  setAgentMode: (mode: AgentMode): Promise<{ ok: true; mode: AgentMode } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.settings.setAgentMode, { mode }),
+  onAgentModeChanged: (callback: (mode: AgentMode) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, mode: AgentMode): void => callback(mode)
+    ipcRenderer.on(IPC.settings.onAgentModeChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.settings.onAgentModeChanged, listener)
+  }
+}
+
+const openrouterApi = {
+  getConnection: (): Promise<OpenRouterConnection> => ipcRenderer.invoke(IPC.openrouter.getConnection),
+  startAuth: (
+    options?: StartOpenRouterAuthOptions
+  ): Promise<{ ok: true; authUrl: string } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.openrouter.startAuth, options),
+  cancelAuth: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.openrouter.cancelAuth),
+  submitAuthCode: (codeOrUrl: string): Promise<{ ok: true } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.openrouter.submitAuthCode, { codeOrUrl }),
+  disconnect: (): Promise<{ ok: true } | { ok: false; error: AppError }> => ipcRenderer.invoke(IPC.openrouter.disconnect),
+  refreshConnection: (): Promise<OpenRouterConnection> => ipcRenderer.invoke(IPC.openrouter.refreshConnection),
+  listModels: (
+    options?: { refresh?: boolean }
+  ): Promise<{ ok: true; catalog: OpenRouterModelCatalog } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.openrouter.listModels, options),
+  getSettings: (): Promise<OpenRouterSettings> => ipcRenderer.invoke(IPC.openrouter.getSettings),
+  setSettings: (
+    settings: OpenRouterSettings
+  ): Promise<{ ok: true; settings: OpenRouterSettings } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.openrouter.setSettings, settings),
+  onAuthStatus: (callback: (status: OpenRouterAuthStatus) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, status: OpenRouterAuthStatus): void => callback(status)
+    ipcRenderer.on(IPC.openrouter.onAuthStatus, listener)
+    return () => ipcRenderer.removeListener(IPC.openrouter.onAuthStatus, listener)
+  }
+}
+
+const chatApi = {
+  listSessions: (): Promise<ChatSession[]> => ipcRenderer.invoke(IPC.chat.listSessions),
+  createSession: (
+    input?: { title?: string }
+  ): Promise<{ ok: true; session: ChatSession } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.chat.createSession, input),
+  renameSession: (
+    sessionId: string,
+    title: string
+  ): Promise<{ ok: true; session: ChatSession } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.chat.renameSession, { sessionId, title }),
+  deleteSession: (sessionId: string): Promise<{ ok: true } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.chat.deleteSession, { sessionId }),
+  setSessionModel: (
+    sessionId: string,
+    modelId: string
+  ): Promise<{ ok: true; session: ChatSession } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.chat.setSessionModel, { sessionId, modelId }),
+  listMessages: (query: ListChatMessagesQuery): Promise<ListChatMessagesResult> =>
+    ipcRenderer.invoke(IPC.chat.listMessages, query),
+  send: (sessionId: string, text: string): Promise<{ ok: true; messageId: string } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.chat.send, { sessionId, text }),
+  stop: (sessionId: string): Promise<{ ok: true } | { ok: false; error: AppError }> =>
+    ipcRenderer.invoke(IPC.chat.stop, { sessionId }),
+  respondToolApproval: (input: {
+    sessionId: string
+    toolCallId: string
+    decision: ToolApprovalDecision
+  }): Promise<{ ok: true } | { ok: false; error: AppError }> => ipcRenderer.invoke(IPC.chat.respondToolApproval, input),
+  listPendingApprovals: (): Promise<PendingToolApproval[]> => ipcRenderer.invoke(IPC.chat.listPendingApprovals),
+  onEvent: (callback: (event: ChatStreamEvent) => void): (() => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, event: ChatStreamEvent): void => callback(event)
+    ipcRenderer.on(IPC.chat.onEvent, listener)
+    return () => ipcRenderer.removeListener(IPC.chat.onEvent, listener)
+  }
 }
 
 const storageLocationApi = {
@@ -552,6 +640,8 @@ const api = {
   agentPermissions: agentPermissionsApi,
   browserSetup: browserSetupApi,
   settings: settingsApi,
+  openrouter: openrouterApi,
+  chat: chatApi,
   storageLocation: storageLocationApi,
   logs: logsApi,
   runs: runsApi,

@@ -15,5 +15,7 @@ export interface StorageStats {
     documents: number
     resumeVariants: number
     activityLogEntries: number
+    chatSessions: number
+    chatMessages: number
   }
 }

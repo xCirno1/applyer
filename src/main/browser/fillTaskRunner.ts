@@ -337,7 +337,7 @@ async function inspectSession(jobId: string, page: Page): Promise<InspectTaskRes
       message:
         mode === 'edit'
           ? 'Use edit_application with fieldId/value pairs from this visible step. If the field to edit is on an earlier step, click a listed Back or Previous button with click_application_button, then inspect again; repeat until the field is visible. Submit controls are never listed. Labels are context only. Attachments cannot be changed while editing.'
-          : 'Use fill_application with fieldId/value pairs from this visible step. Leave finalStep false while more application pages remain; set it true only when every page is complete and the form is ready for user review. Use click_application_button with a buttonId to navigate, then inspect again. Submit controls are never listed. Labels are context only. For a file field, use resume or cover_letter only when that stored document is listed.'
+          : 'Use fill_application with fieldId/value pairs from this visible step. Leave finalStep false while more application pages remain; set it true only when every page is complete and the form is ready for user review. To correct an answer already on this step, edit_application changes it without touching attachments or the final step. Use click_application_button with a buttonId to navigate, then inspect again. Submit controls are never listed. Labels are context only. For a file field, use resume or cover_letter only when that stored document is listed.'
     }
   } catch (error) {
     return { status: 'failed', jobId, reasonTag: 'other', message: `Could not inspect the open application form: ${String(error)}` }
@@ -564,26 +564,33 @@ async function applyAnswers(
     }
     const completedFinalStep = !edit && finalStep && result.skippedFields.length === 0 &&
       result.filledFields.length === answers.length
-    const { screenshotPath, screenshotPaths, job } = await withStorageWriteLock(async () => {
+    const { screenshotPath, screenshotPaths, job, settled } = await withStorageWriteLock(async () => {
       const session = activeApplicationSessions.get(jobId)
       if (!session || session.page !== page) throw new Error('The retained application session was lost.')
+      const current = getJob(jobId)
+      if (!current) throw new Error(`Job not found: ${jobId}`)
       const capturedPath = await captureScreenshot(page, jobId, session)
       const capturedPaths = session.screenshotPaths.filter((path): path is string => !!path)
-      const updated = edit
+      // "Settled": the form is in its reviewed state (a Filled job edited,
+      // or a fill's final step completed), so the old screenshots go and
+      // the session moves to edit mode. An edit to a still-Queued job is
+      // neither: the fill goes on from where it was.
+      const editingFilled = edit && current.status === 'filled'
+      const settled = editingFilled || completedFinalStep
+      const updated = editingFilled
         ? refreshFilled(jobId, { screenshotPath: capturedPath, screenshotPaths: capturedPaths })
         : completedFinalStep
           ? setFilled(jobId, { screenshotPath: capturedPath, screenshotPaths: capturedPaths })
-          : getJob(jobId)
-      if (!updated) throw new Error(`Job not found: ${jobId}`)
-      if (edit || completedFinalStep) {
+          : current
+      if (settled) {
         for (const obsoletePath of session.obsoleteScreenshotPaths) {
           if (!capturedPaths.includes(obsoletePath)) removeFile(obsoletePath)
         }
         session.obsoleteScreenshotPaths = []
       }
-      return { screenshotPath: capturedPath, screenshotPaths: capturedPaths, job: updated }
+      return { screenshotPath: capturedPath, screenshotPaths: capturedPaths, job: updated, settled }
     })
-    if (edit || completedFinalStep) {
+    if (settled) {
       const session = activeApplicationSessions.get(jobId)
       if (session?.page === page) session.phase = 'edit'
     }
@@ -631,17 +638,26 @@ async function runAnswerTask(
   const job = getJob(jobId)
   if (!job) return { status: 'failed', jobId, reasonTag: 'other', message: 'Job not found.' }
   const session = getActiveSession(jobId)
-  const expected = edit ? 'filled' : 'queued'
-  if (job.status !== expected) {
-    return { status: 'failed', jobId, reasonTag: 'other', message: `Job is not in the ${edit ? 'Filled' : 'Queued'} state (currently: ${job.status}).` }
+  // Editing is allowed mid-fill too: a Queued job whose earlier answers
+  // need correcting is edited in place, without the fill path's
+  // attachment handling or its finalStep bookkeeping, and stays Queued.
+  const editable = edit ? job.status === 'filled' || job.status === 'queued' : job.status === 'queued'
+  if (!editable) {
+    return {
+      status: 'failed',
+      jobId,
+      reasonTag: 'other',
+      message: `Job is not in the ${edit ? 'Queued or Filled' : 'Queued'} state (currently: ${job.status}).`
+    }
   }
   if (!session) {
     return {
       status: 'no_active_session',
       jobId,
-      message: edit
-        ? 'The original application window is no longer open. Open the job yourself and make changes there.'
-        : 'No inspected application window is open. Call inspect_application first.'
+      message:
+        job.status === 'filled'
+          ? 'The original application window is no longer open. Open the job yourself and make changes there.'
+          : 'No inspected application window is open. Call inspect_application first.'
     }
   }
   if (!edit && answers.length === 0 && !finalStep) {
@@ -668,7 +684,7 @@ async function runAnswerTask(
         status: 'permission_denied',
         jobId,
         requiredPermissions: authorization.deniedPermissions,
-        message: `The user denied this permission request or it timed out. The open form was not changed and the job remains ${edit ? 'Filled' : 'Queued'}.`
+        message: `The user denied this permission request or it timed out. The open form was not changed and the job remains ${job.status === 'filled' ? 'Filled' : 'Queued'}.`
       }
     }
     return applyAnswers(jobId, session.page, answers, authorization.permissions, edit, finalStep)

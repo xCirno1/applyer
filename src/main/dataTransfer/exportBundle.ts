@@ -8,15 +8,18 @@ import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { getProfile } from '../db/repositories/profileRepository'
 import { getMasterResume, listAllVariants, listVariantSummaries } from '../db/repositories/resumeRepository'
+import { listAllChatSessionsForExport } from '../db/repositories/chatRepository'
 import {
+  getAgentMode,
   getAutoStartCommand,
   getIndexedJobsRetentionDays,
   getNotificationPreferences,
+  getOpenRouterSettings,
   getResumeSettings,
   getSearchCountry
 } from '../db/repositories/settingsRepository'
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
-import type { ExportCompanyBoard, ExportJobRecord, ExportResumesData } from '@shared/types/dataTransfer'
+import type { ExportCompanyBoard, ExportJobRecord, ExportResumesData, ExportSettingsData } from '@shared/types/dataTransfer'
 import type { CompanyBoardRecord } from '@shared/types/companyBoard'
 
 /**
@@ -39,6 +42,26 @@ function toExportBoard(board: CompanyBoardRecord): ExportCompanyBoard {
 
 function exportableCompanyBoards(): ExportCompanyBoard[] {
   return listAllCompanyBoards().map(toExportBoard)
+}
+
+/**
+ * Shared by `buildExportBundle` and `computeExportSizes` so the settings
+ * domain's shape can't drift between what actually gets exported and what
+ * the Export modal's size preview measures. `agentMode` and `openrouter`
+ * ride in the same domain as the rest of settings rather than their own:
+ * they are exactly that, a settings choice, and the API key itself is
+ * never part of `getOpenRouterSettings()` in the first place (see
+ * `keyStore.ts`), so there is nothing secret here to leave out.
+ */
+function exportableSettings(): ExportSettingsData {
+  return {
+    autoStartCommand: getAutoStartCommand(),
+    indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
+    notificationPreferences: getNotificationPreferences(),
+    searchCountry: getSearchCountry(),
+    agentMode: getAgentMode(),
+    openrouter: getOpenRouterSettings()
+  }
 }
 
 /** Content plus the attachment settings; timestamps and ids are regenerated on import (see `ExportResumesData`). */
@@ -85,15 +108,9 @@ export function buildExportBundle(selection: ExportSelection, theme: ThemeState)
   if (selection.companyBoards) data.companyBoards = exportableCompanyBoards()
   if (selection.profile) data.profile = getProfile()
   if (selection.resumes) data.resumes = exportableResumes()
-  if (selection.settings) {
-    data.settings = {
-      autoStartCommand: getAutoStartCommand(),
-      indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
-      notificationPreferences: getNotificationPreferences(),
-      searchCountry: getSearchCountry()
-    }
-  }
+  if (selection.settings) data.settings = exportableSettings()
   if (selection.theme) data.theme = theme
+  if (selection.chats) data.chats = listAllChatSessionsForExport()
   return { schemaVersion: EXPORT_SCHEMA_VERSION, exportedAt: new Date().toISOString(), appVersion: app.getVersion(), data }
 }
 
@@ -137,12 +154,8 @@ export function computeExportSizes(theme: ThemeState): ExportSizes {
   const companyBoards = exportableCompanyBoards()
   const profile = getProfile()
   const resumes = exportableResumes()
-  const settings = {
-    autoStartCommand: getAutoStartCommand(),
-    indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
-    notificationPreferences: getNotificationPreferences(),
-    searchCountry: getSearchCountry()
-  }
+  const settings = exportableSettings()
+  const chats = listAllChatSessionsForExport()
 
   const empty = bundleJsonBytes({})
   return {
@@ -163,6 +176,7 @@ export function computeExportSizes(theme: ThemeState): ExportSizes {
     resumes: { json: bundleJsonBytes({ resumes }) - empty },
     settings: { json: bundleJsonBytes({ settings }) - empty },
     theme: { json: bundleJsonBytes({ theme }) - empty },
+    chats: { json: bundleJsonBytes({ chats }) - empty },
     wrapperBytes: empty
   }
 }

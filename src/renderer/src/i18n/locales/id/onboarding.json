@@ -36,6 +36,7 @@
     "mcpTerm": "MCP",
     "mcpTooltip": "Model Context Protocol, cara standar sebuah agen coding memanggil aplikasi lain.",
     "agentNoteAfter": ". Claude Code, Codex, atau apa pun yang mendukungnya bisa dipakai.",
+    "agentNoteOpenRouter": "Tidak mau pakai CLI? Sambungkan akun OpenRouter saja dan mengobrol dengan agen langsung di dalam aplikasi ini.",
     "languagePrompt": "Silakan pilih bahasamu",
     "getStarted": "Mulai"
   },
@@ -99,12 +100,15 @@
     "explainerAfter": ", jadi agenmu bisa memanggil aplikasi ini sama seperti memanggil tool lain.",
     "noneDetected": "Tidak ada CLI agen yang didukung di komputer ini. Pasang Claude Code atau Codex, lalu sambungkan nanti lewat Pengaturan > Agen.",
     "detectFailed": "Tidak bisa memeriksa CLI agen yang terpasang. Kamu bisa menyambungkannya nanti lewat Pengaturan > Agen.",
-    "optionalNote": "Bagian ini boleh dilewati dan dikerjakan nanti di Pengaturan > Agen. Sisa aplikasinya tetap jalan."
+    "optionalNote": "Bagian ini boleh dilewati dan dikerjakan nanti di Pengaturan > Agen. Sisa aplikasinya tetap jalan.",
+    "modeChangeFailed": "Tidak bisa mengubah mode agen.",
+    "openrouterNotConnectedYet": "Chat tidak akan berfungsi sampai kamu menyambungkan akun OpenRouter. Bisa dilakukan sekarang di atas, atau nanti lewat Pengaturan > Agen."
   },
   "ready": {
     "title": "Semua sudah siap.",
     "titleNamed": "Semua sudah siap, {{name}}.",
     "intro": "Applyer siap dipakai. Buka panel Terminal, jalankan agenmu, lalu berikan kalimat di bawah ini.",
+    "introChat": "Applyer siap dipakai. Panel obrolan ada di sisi kanan workspace; berikan agen kalimat di bawah ini.",
     "summaryLabel": "Yang sudah disiapkan",
     "summary": {
       "profile": "Profil",
@@ -116,10 +120,12 @@
       "storage": "Penyimpanan",
       "agent": "Agen",
       "agentPending": "Sambungkan nanti di Pengaturan",
+      "openrouterPending": "Sambungkan nanti di Pengaturan",
       "unknown": "Tidak diketahui"
     },
     "firstPromptLabel": "Coba ini dulu",
     "firstPromptCaption": "Tempel kalimat ini ke agenmu di panel Terminal.",
+    "firstPromptCaptionChat": "Tempel kalimat ini ke agenmu di panel obrolan.",
     "prompts": {
       "fromResume": "Baca resume yang saya unggah ke Applyer, isi profil saya dari situ, lalu cari lowongan yang cocok dan antrekan yang bagus.",
       "roleSearch": "Carikan saya posisi {{role}} yang cocok dengan profil saya, lalu antrekan yang layak dilamar.",

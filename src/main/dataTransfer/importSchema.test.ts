@@ -438,3 +438,119 @@ describe('validateExportBundle — theme', () => {
     expect(validateExportBundle({ ...validBundle(), data: {} }).ok).toBe(true)
   })
 })
+
+describe('validateExportBundle: agent mode and OpenRouter settings', () => {
+  const baseSettings = { autoStartCommand: '', indexedJobsRetentionDays: 30 }
+
+  it('accepts a known agent mode and rejects an unknown one', () => {
+    expect(
+      validateExportBundle({ ...validBundle(), data: { settings: { ...baseSettings, agentMode: 'openrouter' } } }).ok
+    ).toBe(true)
+    expect(
+      validateExportBundle({ ...validBundle(), data: { settings: { ...baseSettings, agentMode: 'terminal' } } }).ok
+    ).toBe(false)
+  })
+
+  it('accepts well-formed OpenRouter settings and rejects a malformed reasoning effort or tool list', () => {
+    const openrouter = { modelId: 'deepseek/deepseek-v4.1-flash', reasoningEffort: 'high', toolApproval: { askFor: ['queue_job'] } }
+    expect(validateExportBundle({ ...validBundle(), data: { settings: { ...baseSettings, openrouter } } }).ok).toBe(true)
+    expect(
+      validateExportBundle({
+        ...validBundle(),
+        data: { settings: { ...baseSettings, openrouter: { ...openrouter, reasoningEffort: 'extreme' } } }
+      }).ok
+    ).toBe(false)
+    expect(
+      validateExportBundle({
+        ...validBundle(),
+        data: { settings: { ...baseSettings, openrouter: { ...openrouter, toolApproval: { askFor: [1, 2] } } } }
+      }).ok
+    ).toBe(false)
+  })
+
+  it('is optional, a bundle with no agent mode or OpenRouter settings is still valid', () => {
+    expect(validateExportBundle({ ...validBundle(), data: { settings: baseSettings } }).ok).toBe(true)
+  })
+})
+
+describe('validateExportBundle: chats', () => {
+  function chatSession(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      title: 'Untitled',
+      modelId: 'deepseek/deepseek-v4.1-flash',
+      createdAt: '2020-01-01T00:00:00.000Z',
+      messages: [
+        {
+          role: 'user',
+          content: 'Find me backend jobs',
+          reasoning: null,
+          toolCalls: null,
+          toolCallId: null,
+          modelId: null,
+          usage: null,
+          createdAt: '2020-01-01T00:00:00.000Z'
+        },
+        {
+          role: 'assistant',
+          content: 'On it.',
+          reasoning: 'Thinking about it',
+          toolCalls: [
+            {
+              id: 'call-1',
+              name: 'search_jobs',
+              arguments: '{"query":"backend"}',
+              status: 'done',
+              result: 'ok',
+              isError: false,
+              durationMs: 500
+            }
+          ],
+          toolCallId: null,
+          modelId: 'deepseek/deepseek-v4.1-flash',
+          usage: { promptTokens: 10, completionTokens: 20, costUsd: 0.001 },
+          createdAt: '2020-01-01T00:00:01.000Z'
+        }
+      ],
+      ...overrides
+    }
+  }
+
+  it('accepts a well-formed chat session', () => {
+    const result = validateExportBundle({ ...validBundle(), data: { chats: [chatSession()] } })
+    expect(result.ok).toBe(true)
+  })
+
+  it('is optional, a bundle with no chats domain is still valid', () => {
+    expect(validateExportBundle({ ...validBundle(), data: {} }).ok).toBe(true)
+  })
+
+  it('rejects a session with an empty modelId', () => {
+    expect(validateExportBundle({ ...validBundle(), data: { chats: [chatSession({ modelId: '' })] } }).ok).toBe(false)
+  })
+
+  it('rejects a message with an unknown role', () => {
+    const session = chatSession()
+    const messages = session.messages as Array<Record<string, unknown>>
+    messages[0] = { ...messages[0], role: 'system' }
+    expect(validateExportBundle({ ...validBundle(), data: { chats: [session] } }).ok).toBe(false)
+  })
+
+  it('rejects a tool call with an unknown status', () => {
+    const session = chatSession()
+    const messages = session.messages as Array<Record<string, unknown>>
+    const toolCalls = messages[1]!.toolCalls as Array<Record<string, unknown>>
+    toolCalls[0] = { ...toolCalls[0], status: 'bogus' }
+    expect(validateExportBundle({ ...validBundle(), data: { chats: [session] } }).ok).toBe(false)
+  })
+
+  it('drops unknown fields on a message rather than rejecting the session', () => {
+    const session = chatSession()
+    const messages = session.messages as Array<Record<string, unknown>>
+    messages[0] = { ...messages[0], id: 'should-be-dropped', sessionId: 'should-be-dropped' }
+    const result = validateExportBundle({ ...validBundle(), data: { chats: [session] } })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.bundle.data.chats?.[0]?.messages[0]).not.toHaveProperty('id')
+    expect(result.bundle.data.chats?.[0]?.messages[0]).not.toHaveProperty('sessionId')
+  })
+})

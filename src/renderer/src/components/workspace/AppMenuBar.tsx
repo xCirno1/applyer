@@ -33,6 +33,9 @@ export default function AppMenuBar({
   onToggleSidebar,
   dockVisible,
   onToggleDock,
+  chatAvailable,
+  chatVisible,
+  onToggleChat,
   onShowTerminalTab
 }: {
   onOpenSettings: (section?: SectionId) => void
@@ -42,6 +45,10 @@ export default function AppMenuBar({
   onToggleSidebar: () => void
   dockVisible: boolean
   onToggleDock: () => void
+  /** False in CLI mode, where there is no chat panel to show; the item stays listed but disabled so the shortcut is still discoverable. */
+  chatAvailable: boolean
+  chatVisible: boolean
+  onToggleChat: () => void
   onShowTerminalTab: () => void
 }): ReactElement {
   const { t } = useTranslation('workspace')
@@ -169,6 +176,15 @@ export default function AppMenuBar({
       checked: dockVisible,
       onToggle: onToggleDock,
       shortcut: shortcutLabel('view.toggleConsole')
+    },
+    {
+      type: 'checkbox',
+      key: 'chat',
+      label: t('menu.chat'),
+      checked: chatAvailable && chatVisible,
+      disabled: !chatAvailable,
+      onToggle: onToggleChat,
+      shortcut: shortcutLabel('view.toggleChat')
     }
   ]
 

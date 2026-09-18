@@ -137,6 +137,38 @@ describe('runEditTask', () => {
     })
   })
 
+  it('corrects an answer on a Queued job mid-fill without leaving fill mode or changing its state', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    setAgentPermissions({ autoCompleteFields: true, autoUploadDocuments: false, autoPressButtons: false })
+    retainablePage([
+      { fieldId: 'field-email', selector: '#email', label: 'Email', control: 'input', required: true, currentValue: '' }
+    ])
+    await expect(runInspectTask(job.id)).resolves.toMatchObject({ status: 'inspected', mode: 'fill' })
+    await expect(runFillTask(job.id, [{ fieldId: 'field-email', value: 'jnae@example.com' }])).resolves.toMatchObject({
+      status: 'partially_filled'
+    })
+
+    await expect(runEditTask(job.id, [{ fieldId: 'field-email', value: 'jane@example.com' }])).resolves.toMatchObject({
+      status: 'edited',
+      jobId: job.id,
+      filledFields: expect.arrayContaining([expect.any(String)])
+    })
+    expect(getJob(job.id)?.status).toBe('queued')
+    // Still a fill in progress: later pages and the final step remain reachable.
+    await expect(runInspectTask(job.id)).resolves.toMatchObject({ status: 'inspected', mode: 'fill' })
+    await expect(runFillTask(job.id, [], true)).resolves.toMatchObject({ status: 'filled' })
+    expect(getJob(job.id)?.status).toBe('filled')
+  })
+
+  it('asks for inspection first when editing a Queued job with no retained window', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    await expect(runEditTask(job.id, [{ fieldId: 'field-email', value: 'jane@example.com' }])).resolves.toEqual({
+      status: 'no_active_session',
+      jobId: job.id,
+      message: 'No inspected application window is open. Call inspect_application first.'
+    })
+  })
+
   it('refuses to edit a submitted job even if a stale browser session existed', async () => {
     const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
     setFilled(job.id)

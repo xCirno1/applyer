@@ -11,6 +11,9 @@ import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTransfer'
 import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
 import { SEARCH_COUNTRIES } from '@shared/types/jobSource'
+import { isAgentMode, type AgentMode } from '@shared/types/agentMode'
+import { isReasoningEffort, type ReasoningEffort } from '@shared/types/openrouter'
+import { isChatRole, isChatToolCallStatus, type ChatRole, type ChatToolCallStatus } from '@shared/types/chat'
 import { isValidBoardDescriptor } from '../browser/ats/providers'
 import { sanitizeDescriptionHtml } from '../browser/htmlContent'
 import { appError, type AppError } from '@shared/types/errorCodes'
@@ -188,7 +191,58 @@ const settingsDataSchema = z.object({
       jobFailed: z.boolean()
     })
     .optional(),
-  searchCountry: z.enum(SEARCH_COUNTRIES).optional()
+  searchCountry: z.enum(SEARCH_COUNTRIES).optional(),
+  // Optional: bundles written before OpenRouter agent mode existed remain valid.
+  agentMode: z.custom<AgentMode>(isAgentMode).optional(),
+  // The API key never rides in a bundle, only the non-secret picks.
+  openrouter: z
+    .object({
+      modelId: z.string().min(1),
+      reasoningEffort: z.custom<ReasoningEffort>(isReasoningEffort),
+      toolApproval: z.object({ askFor: z.array(z.string()) })
+    })
+    .optional()
+})
+
+const chatToolCallSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  arguments: z.string(),
+  status: z.custom<ChatToolCallStatus>(isChatToolCallStatus),
+  result: z.string().nullable(),
+  isError: z.boolean(),
+  durationMs: z.number().nullable()
+})
+
+const chatUsageSchema = z.object({
+  promptTokens: z.number(),
+  completionTokens: z.number(),
+  costUsd: z.number().nullable()
+})
+
+/**
+ * `id`/`sessionId` are absent by design: both are minted on import, same as
+ * every other domain here. `error` and `reasoningDetails` are absent too:
+ * a bundle is a clean transcript, not a resume point for an interrupted
+ * turn, and OpenRouter's opaque `reasoning_details` blocks are meaningless
+ * once detached from the request they were produced for.
+ */
+const exportChatMessageSchema = z.object({
+  role: z.custom<ChatRole>(isChatRole),
+  content: z.string(),
+  reasoning: z.string().nullable(),
+  toolCalls: z.array(chatToolCallSchema).nullable(),
+  toolCallId: z.string().nullable(),
+  modelId: z.string().nullable(),
+  usage: chatUsageSchema.nullable(),
+  createdAt: z.string()
+})
+
+const exportChatSessionSchema = z.object({
+  title: z.string(),
+  modelId: z.string().min(1),
+  createdAt: z.string(),
+  messages: z.array(exportChatMessageSchema)
 })
 
 /**
@@ -229,7 +283,8 @@ const exportBundleSchema = z.object({
     profile: profileFieldsSchema.nullable().optional(),
     resumes: resumesDataSchema.optional(),
     settings: settingsDataSchema.optional(),
-    theme: themeStateSchema.optional()
+    theme: themeStateSchema.optional(),
+    chats: z.array(exportChatSessionSchema).optional()
   })
 })
 

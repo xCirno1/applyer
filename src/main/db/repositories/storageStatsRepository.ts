@@ -1,6 +1,16 @@
 import { sql } from 'drizzle-orm'
 import { getDb } from '../index'
-import { jobs, indexedJobs, jobExclusions, companyBoards, documents, activityLog, resumeVariants } from '../schema'
+import {
+  jobs,
+  indexedJobs,
+  jobExclusions,
+  companyBoards,
+  documents,
+  activityLog,
+  resumeVariants,
+  chatSessions,
+  chatMessages
+} from '../schema'
 
 export interface StorageRowCounts {
   jobs: number
@@ -10,6 +20,8 @@ export interface StorageRowCounts {
   documents: number
   resumeVariants: number
   activityLogEntries: number
+  chatSessions: number
+  chatMessages: number
 }
 
 export function getStorageRowCounts(): StorageRowCounts {
@@ -23,6 +35,8 @@ export function getStorageRowCounts(): StorageRowCounts {
       | typeof documents
       | typeof resumeVariants
       | typeof activityLog
+      | typeof chatSessions
+      | typeof chatMessages
   ): number =>
     db.select({ count: sql<number>`count(*)` }).from(table).get()?.count ?? 0
 
@@ -33,6 +47,8 @@ export function getStorageRowCounts(): StorageRowCounts {
     companyBoards: count(companyBoards),
     documents: count(documents),
     resumeVariants: count(resumeVariants),
-    activityLogEntries: count(activityLog)
+    activityLogEntries: count(activityLog),
+    chatSessions: count(chatSessions),
+    chatMessages: count(chatMessages)
   }
 }

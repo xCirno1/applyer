@@ -208,7 +208,9 @@ export default function StorageSection(): ReactElement {
                   ['countCompanyBoards', stats.counts.companyBoards],
                   ['countDocuments', stats.counts.documents],
                   ['countResumeVariants', stats.counts.resumeVariants],
-                  ['countActivityLog', stats.counts.activityLogEntries]
+                  ['countActivityLog', stats.counts.activityLogEntries],
+                  ['countChatSessions', stats.counts.chatSessions],
+                  ['countChatMessages', stats.counts.chatMessages]
                 ] as const
               ).map(([key, count]) => (
                 <div key={key} className="flex min-w-0 items-center justify-between gap-2">

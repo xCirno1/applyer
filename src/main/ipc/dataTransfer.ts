@@ -155,7 +155,8 @@ export function registerDataTransferIpc(): void {
           ? (bundle.data.resumes.master ? 1 : 0) + bundle.data.resumes.variants.length
           : undefined,
         settings: bundle.data.settings ? 1 : undefined,
-        theme: bundle.data.theme ? 1 : undefined
+        theme: bundle.data.theme ? 1 : undefined,
+        chats: bundle.data.chats?.length
       }
     }
   })

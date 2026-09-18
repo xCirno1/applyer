@@ -28,7 +28,8 @@ https://github.com/user-attachments/assets/c18e05b0-cf45-47c5-b748-ee69cec799bb
 Applyer pairs an embedded terminal with a live application board. Connect an
 [MCP](https://modelcontextprotocol.io/)-capable CLI such as
 [Claude Code](https://claude.com/product/claude-code) or
-[Codex](https://github.com/openai/codex), describe the roles you want, and let the agent
+[Codex](https://github.com/openai/codex), or connect an OpenRouter account and chat with
+Applyer's built-in agent instead, describe the roles you want, and let the agent
 research job sites, score matches, organize the pipeline, and prepare forms in a visible
 browser. Final submission stays with you.
 
@@ -63,7 +64,8 @@ Trust is a product boundary, not a slogan:
 
 - **Local-first data.** Applyer has no hosted account or application-data backend.
   Profiles, documents, job history, screenshots, and logs stay in the storage location
-  you choose. Network traffic goes to job sites and to the provider used by your agent CLI.
+  you choose. Network traffic goes to job sites and, depending on which agent mode is
+  active, to the provider used by your agent CLI or to OpenRouter.
 - **Encryption you control.** Encrypted mode covers the SQLite database and files, with
   keys protected by the operating-system keychain. Plaintext mode remains an explicit
   choice. The recovery model is documented in [Encryption and local data](docs/encryption.md).
@@ -88,8 +90,9 @@ Download the artifact for your operating system from
 | macOS | `.dmg`, zipped `.app` |
 | Windows | per-user NSIS installer, portable `.exe` |
 
-You also need an installed and authenticated MCP-capable agent CLI. The first launch
-guides you through your profile, documents, storage mode, and agent connection.
+You also need an installed and authenticated MCP-capable agent CLI, or an OpenRouter
+account you can connect from inside the app instead. The first launch guides you through
+your profile, documents, storage mode, and agent connection.
 
 > **Release integrity:** v1.0 packages are not yet code-signed or notarized, so macOS and
 > Windows may show an identity warning and Windows may scan the app on first launch.
@@ -126,6 +129,18 @@ offers these capabilities:
 
 Every profile write and application action is visible in the Activity Log. Verification
 challenges pause the workflow for you instead of being bypassed.
+
+### OpenRouter mode
+
+Instead of a CLI, connect an OpenRouter account: authorization happens in your browser
+(no API key typed in), and the key is stored with your OS keychain. Pick any tool-capable
+model from OpenRouter's catalog, defaulting to `deepseek/deepseek-v4.1-flash`. The same
+MCP tools above run in-process, driven by a chat panel on the right of the workspace
+rather than a terminal: sessions you can search, rename and delete, a model switch per
+chat next to the input, and each tool call shown as a row that opens into its arguments
+and result. Data-changing tools ask for approval inline in the chat by default,
+configurable in Settings > Agent. Chat history is local, encrypted per your storage
+setting, and included in export/import along with the rest of your data.
 
 ## Development
 

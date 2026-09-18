@@ -143,3 +143,41 @@ export const RESUME_MAX_ITEMS_PER_SECTION = settings.dangerousResumeMaxItemsPerS
 export const RESUME_MAX_BULLETS_PER_ENTRY = settings.dangerousResumeMaxBulletsPerEntry
 /** Longest single string: a bullet, a `text` section body, a title. */
 export const RESUME_MAX_TEXT_CHARS = settings.dangerousResumeMaxTextChars
+
+/**
+ * Every tool the MCP server registers (`src/main/mcp-server/server.ts`),
+ * grouped by what it does to the user's data. This is what the OpenRouter
+ * chat mode's tool-approval editor lists: a checkbox per tool, grouped
+ * "Reads" / "Writes" / "Form actions" so a user can ask to be prompted
+ * before the ones that change something without wading through all 19 as a
+ * flat list.
+ *
+ * 'read' never changes anything. 'form' changes a job application page in
+ * the browser (also gated by Settings' agent permissions, independent of
+ * this policy). Everything else is 'write': it changes profile, resume, job
+ * board, or company board state.
+ *
+ * Kept in sync with `server.ts` by `constants.test.ts`, which greps that
+ * file for every registered tool name.
+ */
+export const APPLYER_MCP_TOOLS: ReadonlyArray<{ name: string; kind: 'read' | 'write' | 'form' }> = [
+  { name: 'get_profile', kind: 'read' },
+  { name: 'update_profile', kind: 'write' },
+  { name: 'search_jobs', kind: 'read' },
+  { name: 'get_job_details', kind: 'read' },
+  { name: 'queue_job', kind: 'write' },
+  { name: 'list_jobs', kind: 'read' },
+  { name: 'flag_failure', kind: 'write' },
+  { name: 'inspect_application', kind: 'form' },
+  { name: 'click_application_button', kind: 'form' },
+  { name: 'fill_application', kind: 'form' },
+  { name: 'edit_application', kind: 'form' },
+  { name: 'exclude_job', kind: 'write' },
+  { name: 'add_company_board', kind: 'write' },
+  { name: 'list_company_boards', kind: 'read' },
+  { name: 'get_resume', kind: 'read' },
+  { name: 'set_master_resume', kind: 'write' },
+  { name: 'save_resume_variant', kind: 'write' },
+  { name: 'assign_resume', kind: 'write' },
+  { name: 'delete_resume_variant', kind: 'write' }
+]

@@ -1,5 +1,6 @@
 // The main workspace arrangement: which panels are showing and how big the
-// two resizable regions (the pipeline sidebar, the terminal/logs dock) are.
+// three resizable regions (the pipeline sidebar, the terminal/logs dock, the
+// chat panel on the right) are.
 //
 // This is a per-browser preference, not view state, so it lives in
 // localStorage rather than component state that resets on remount — a reader
@@ -8,6 +9,8 @@
 //
 // Deliberately no React here: the clamping/parsing rules are what's worth
 // getting right, and they don't need a DOM to exercise.
+
+import { DEFAULT_AGENT_MODE, type AgentMode } from '@shared/types/agentMode'
 
 export type DockTab = 'terminal' | 'logs'
 
@@ -28,6 +31,14 @@ export interface WorkspaceLayout {
   /** Terminal/logs dock height in px. */
   dockHeight: number
   dockTab: DockTab
+  /**
+   * The OpenRouter chat panel on the right. One flag for every screen
+   * (unlike `dockVisible`): the chat is a conversation the user keeps
+   * going while moving between screens, so it stays where it is.
+   */
+  chatVisible: boolean
+  /** Chat panel width in px. */
+  chatWidth: number
 }
 
 export const WORKSPACE_LAYOUT_STORAGE_KEY = 'workspace:layout:v1'
@@ -36,17 +47,23 @@ export const SIDEBAR_MIN_PX = 200
 export const SIDEBAR_MAX_PX = 440
 export const DOCK_MIN_PX = 120
 export const DOCK_MAX_PX = 640
+export const CHAT_MIN_PX = 300
+export const CHAT_MAX_PX = 720
 
 /** Floor on what the board keeps when a neighbour is dragged toward it. */
 const MIN_BOARD_WIDTH_PX = 360
 const MIN_BOARD_HEIGHT_PX = 200
+/** What the rail screens keep beside the chat panel: a board column and a bit of overview. */
+const MIN_SCREEN_WIDTH_PX = 480
 
 export const DEFAULT_WORKSPACE_LAYOUT: WorkspaceLayout = {
   sidebarVisible: true,
   dockVisible: { workspace: true, indexedJobs: true, resumes: true, runs: true },
   sidebarWidth: 260,
   dockHeight: 280,
-  dockTab: 'terminal'
+  dockTab: 'terminal',
+  chatVisible: true,
+  chatWidth: 400
 }
 
 function clampBetween(value: number, min: number, max: number): number {
@@ -69,8 +86,39 @@ export function clampDockHeight(height: number, available?: number): number {
   return Math.round(clampBetween(height, DOCK_MIN_PX, ceiling))
 }
 
+export function clampChatWidth(width: number, available?: number): number {
+  const ceiling = Number.isFinite(available)
+    ? Math.min(CHAT_MAX_PX, (available as number) - MIN_SCREEN_WIDTH_PX)
+    : CHAT_MAX_PX
+  return Math.round(clampBetween(width, CHAT_MIN_PX, ceiling))
+}
+
 function isDockTab(value: unknown): value is DockTab {
   return value === 'terminal' || value === 'logs'
+}
+
+/**
+ * Which dock tabs exist in a given agent mode. The Terminal tab is the CLI
+ * agent's, so it follows `AgentMode` (see `shared/types/agentMode.ts`); in
+ * `openrouter` mode the agent lives in the chat panel on the right instead,
+ * and the dock is left with Logs alone. `null` (the mode hasn't loaded from
+ * main yet) behaves like `DEFAULT_AGENT_MODE`, so a dock that mounts before
+ * the mode read resolves never flashes a tab strip that's about to change a
+ * moment later.
+ */
+export function visibleDockTabs(mode: AgentMode | null): DockTab[] {
+  return (mode ?? DEFAULT_AGENT_MODE) === 'openrouter' ? ['logs'] : ['terminal', 'logs']
+}
+
+/** Whether the chat panel exists at all in this mode; `chatVisible` only matters when it does. */
+export function chatPanelAvailable(mode: AgentMode | null): boolean {
+  return (mode ?? DEFAULT_AGENT_MODE) === 'openrouter'
+}
+
+/** The tab to land on when `tab` isn't visible in `mode`, most commonly right after a mode switch. */
+export function coerceDockTab(tab: DockTab, mode: AgentMode | null): DockTab {
+  const visible = visibleDockTabs(mode)
+  return visible.includes(tab) ? tab : visible[0] ?? 'logs'
 }
 
 /**
@@ -113,7 +161,11 @@ export function parseWorkspaceLayout(raw: unknown): WorkspaceLayout {
     dockVisible: parseDockVisible(value.dockVisible),
     sidebarWidth: size('sidebarWidth', DEFAULT_WORKSPACE_LAYOUT.sidebarWidth, clampSidebarWidth),
     dockHeight: size('dockHeight', DEFAULT_WORKSPACE_LAYOUT.dockHeight, clampDockHeight),
-    dockTab: isDockTab(value.dockTab) ? value.dockTab : DEFAULT_WORKSPACE_LAYOUT.dockTab
+    // A stored 'chat' from before the chat moved out of the dock is simply
+    // not a dock tab any more and falls back like any other bad value.
+    dockTab: isDockTab(value.dockTab) ? value.dockTab : DEFAULT_WORKSPACE_LAYOUT.dockTab,
+    chatVisible: bool('chatVisible', DEFAULT_WORKSPACE_LAYOUT.chatVisible),
+    chatWidth: size('chatWidth', DEFAULT_WORKSPACE_LAYOUT.chatWidth, clampChatWidth)
   }
 }
 

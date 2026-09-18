@@ -67,6 +67,11 @@ export const COMMANDS = {
     category: 'View',
     defaultCombo: 'mod+2'
   },
+  'view.toggleChat': {
+    id: 'view.toggleChat',
+    category: 'View',
+    defaultCombo: 'mod+j'
+  },
   'app.toggleSettings': {
     id: 'app.toggleSettings',
     category: 'Navigation',

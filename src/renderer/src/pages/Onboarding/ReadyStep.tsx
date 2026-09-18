@@ -7,12 +7,17 @@ import OnboardingShell from '../../components/onboarding/OnboardingShell'
 import { CLI_LABELS } from '../../components/settings/mcpCliLabels'
 import { useProfileStore } from '../../state/profileStore'
 import { useToast } from '../../components/ui/useToast'
-import { chooseFirstPrompt } from './firstPrompt'
+import { chooseFirstPrompt, firstPromptDestination } from './firstPrompt'
 import type { StorageMode } from '@shared/types/profile'
+import { DEFAULT_AGENT_MODE, isAgentMode, type AgentMode } from '@shared/types/agentMode'
 
 interface Setup {
   storageMode: StorageMode | null
+  agentMode: AgentMode
   connectedClis: string[]
+  /** Only meaningful when `agentMode` is `'openrouter'`. */
+  openRouterModelId: string | null
+  openRouterConnected: boolean
 }
 
 /** The first name alone, for the greeting. Long enough to be a name, short enough to be a heading. */
@@ -42,13 +47,15 @@ export default function ReadyStep({ onFinish, onBack }: { onFinish: () => void; 
   useEffect(() => {
     let cancelled = false
 
-    // Both reads are decoration on a screen whose only job is to finish:
-    // either failing costs a summary line, never the Finish button, so they
-    // settle independently rather than sharing one rejection.
+    // Every read here is decoration on a screen whose only job is to
+    // finish: any of them failing costs a summary line, never the Finish
+    // button, so they settle independently rather than sharing one
+    // rejection.
     void Promise.allSettled([
       window.api.onboarding.getStatus(),
-      window.api.onboarding.detectMcpConfigs()
-    ]).then(([status, detections]) => {
+      window.api.onboarding.detectMcpConfigs(),
+      window.api.settings.getAgentMode()
+    ]).then(async ([status, detections, agentModeResult]) => {
       if (cancelled) return
       if (status.status === 'rejected') {
         console.error(`Could not read the onboarding status: ${String(status.reason)}`)
@@ -56,12 +63,44 @@ export default function ReadyStep({ onFinish, onBack }: { onFinish: () => void; 
       if (detections.status === 'rejected') {
         console.error(`Could not detect installed agent CLIs: ${String(detections.reason)}`)
       }
+      if (agentModeResult.status === 'rejected') {
+        console.error(`Could not read the agent mode: ${String(agentModeResult.reason)}`)
+      }
+
       const list = detections.status === 'fulfilled' && Array.isArray(detections.value) ? detections.value : []
+      const agentMode =
+        agentModeResult.status === 'fulfilled' && isAgentMode(agentModeResult.value)
+          ? agentModeResult.value
+          : DEFAULT_AGENT_MODE
+
+      let openRouterModelId: string | null = null
+      let openRouterConnected = false
+      if (agentMode === 'openrouter') {
+        const [settingsResult, connectionResult] = await Promise.allSettled([
+          window.api.openrouter.getSettings(),
+          window.api.openrouter.getConnection()
+        ])
+        if (settingsResult.status === 'fulfilled' && typeof settingsResult.value?.modelId === 'string') {
+          openRouterModelId = settingsResult.value.modelId
+        } else if (settingsResult.status === 'rejected') {
+          console.error(`Could not read the OpenRouter settings: ${String(settingsResult.reason)}`)
+        }
+        if (connectionResult.status === 'fulfilled') {
+          openRouterConnected = connectionResult.value?.connected === true
+        } else {
+          console.error(`Could not read the OpenRouter connection: ${String(connectionResult.reason)}`)
+        }
+      }
+
+      if (cancelled) return
       setSetup({
         storageMode: status.status === 'fulfilled' ? status.value.storageMode : null,
+        agentMode,
         connectedClis: list
           .filter((d) => d.configuredScopes.length > 0)
-          .map((d) => CLI_LABELS[d.cli] ?? d.cli)
+          .map((d) => CLI_LABELS[d.cli] ?? d.cli),
+        openRouterModelId,
+        openRouterConnected
       })
       setLoading(false)
     })
@@ -88,6 +127,8 @@ export default function ReadyStep({ onFinish, onBack }: { onFinish: () => void; 
         ? t('ready.prompts.fromResume')
         : t('ready.prompts.genericSearch')
 
+  const destination = firstPromptDestination(setup?.agentMode ?? DEFAULT_AGENT_MODE)
+
   const handleFinish = async (): Promise<void> => {
     setFinishing(true)
     try {
@@ -112,7 +153,7 @@ export default function ReadyStep({ onFinish, onBack }: { onFinish: () => void; 
     <OnboardingShell
       step="ready"
       title={name ? t('ready.titleNamed', { name }) : t('ready.title')}
-      subtitle={t('ready.intro')}
+      subtitle={destination === 'chat' ? t('ready.introChat') : t('ready.intro')}
       back={
         <Button variant="ghost" onClick={onBack} disabled={finishing}>
           {t('nav.back')}
@@ -153,12 +194,24 @@ export default function ReadyStep({ onFinish, onBack }: { onFinish: () => void; 
               }
             />
             <SummaryRow
-              done={loading ? null : (setup?.connectedClis.length ?? 0) > 0}
+              done={
+                loading
+                  ? null
+                  : setup?.agentMode === 'openrouter'
+                    ? setup.openRouterConnected
+                    : (setup?.connectedClis.length ?? 0) > 0
+              }
               label={t('ready.summary.agent')}
               detail={
-                loading ? null : setup && setup.connectedClis.length > 0
-                  ? setup.connectedClis.join(', ')
-                  : t('ready.summary.agentPending')
+                loading
+                  ? null
+                  : setup?.agentMode === 'openrouter'
+                    ? setup.openRouterConnected && setup.openRouterModelId
+                      ? setup.openRouterModelId
+                      : t('ready.summary.openrouterPending')
+                    : setup && setup.connectedClis.length > 0
+                      ? setup.connectedClis.join(', ')
+                      : t('ready.summary.agentPending')
               }
             />
           </ul>
@@ -166,7 +219,11 @@ export default function ReadyStep({ onFinish, onBack }: { onFinish: () => void; 
 
         <section className="flex flex-col gap-2">
           <SectionLabel>{t('ready.firstPromptLabel')}</SectionLabel>
-          <CopyBlock text={suggestedPrompt} variant="wrap" caption={t('ready.firstPromptCaption')} />
+          <CopyBlock
+            text={suggestedPrompt}
+            variant="wrap"
+            caption={destination === 'chat' ? t('ready.firstPromptCaptionChat') : t('ready.firstPromptCaption')}
+          />
         </section>
       </div>
     </OnboardingShell>

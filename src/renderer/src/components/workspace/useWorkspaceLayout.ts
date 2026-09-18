@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { AgentMode } from '@shared/types/agentMode'
 import {
   DEFAULT_WORKSPACE_LAYOUT,
+  clampChatWidth,
   clampDockHeight,
   clampSidebarWidth,
+  coerceDockTab,
   readStoredWorkspaceLayout,
   writeStoredWorkspaceLayout,
   type DockScreen,
@@ -10,7 +13,8 @@ import {
   type WorkspaceLayout
 } from './workspaceLayout'
 
-// Panel visibility + sidebar width + dock height + active dock tab, persisted
+// Panel visibility + sidebar width + dock height + chat panel width + active
+// dock tab, persisted
 // to localStorage with debounced writes (flushed on `beforeunload`).
 // Clamping/parsing rules live in the plain `workspaceLayout.ts` module (no
 // React) so they're independently testable; this hook only wraps that with
@@ -32,14 +36,30 @@ export interface WorkspaceLayoutController {
   setSidebarWidth: (width: number, available?: number) => void
   /** @param available Height of the region the board shares with the dock. */
   setDockHeight: (height: number, available?: number) => void
+  setChatVisible: (visible: boolean) => void
+  /** @param available Width of the region the rail screens share with the chat panel. */
+  setChatWidth: (width: number, available?: number) => void
   reset: () => void
 }
 
-export function useWorkspaceLayout(): WorkspaceLayoutController {
+export function useWorkspaceLayout(mode: AgentMode | null): WorkspaceLayoutController {
   // Electron's renderer has no SSR pass, so reading storage in the
   // initializer carries none of the hydration-mismatch risk a server-rendered
   // app would have — the first paint can already reflect the saved layout.
   const [layout, setLayout] = useState<WorkspaceLayout>(() => readStoredWorkspaceLayout())
+
+  // A stored `dockTab` of 'terminal' from a previous cli-mode session has
+  // to yield the moment the mode turns out to be openrouter, otherwise the
+  // dock would open on a tab `visibleDockTabs` no longer lists for this mode. Adjusted
+  // during render (React's pattern for reacting to a prop change, tracked
+  // via `renderedMode`) rather than in an effect, so the very first commit
+  // where `mode` differs already has the coerced tab.
+  const [renderedMode, setRenderedMode] = useState(mode)
+  if (mode !== renderedMode) {
+    setRenderedMode(mode)
+    const coerced = coerceDockTab(layout.dockTab, mode)
+    if (coerced !== layout.dockTab) setLayout((current) => ({ ...current, dockTab: coerced }))
+  }
 
   // Mirrors `layout` outside of render so the mount-once effect below can
   // flush whatever's current without re-subscribing its listener on every
@@ -86,7 +106,23 @@ export function useWorkspaceLayout(): WorkspaceLayoutController {
     [update]
   )
 
+  const setChatVisible = useCallback((visible: boolean) => update({ chatVisible: visible }), [update])
+  const setChatWidth = useCallback(
+    (width: number, available?: number) => update({ chatWidth: clampChatWidth(width, available) }),
+    [update]
+  )
+
   const reset = useCallback(() => setLayout(DEFAULT_WORKSPACE_LAYOUT), [])
 
-  return { layout, setSidebarVisible, setDockVisible, setDockTab, setSidebarWidth, setDockHeight, reset }
+  return {
+    layout,
+    setSidebarVisible,
+    setDockVisible,
+    setDockTab,
+    setSidebarWidth,
+    setDockHeight,
+    setChatVisible,
+    setChatWidth,
+    reset
+  }
 }

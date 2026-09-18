@@ -136,7 +136,36 @@ export const IPC = {
     getSearchCountry: 'settings:getSearchCountry',
     setSearchCountry: 'settings:setSearchCountry',
     getSearchChallengeFallback: 'settings:getSearchChallengeFallback',
-    setSearchChallengeFallback: 'settings:setSearchChallengeFallback'
+    setSearchChallengeFallback: 'settings:setSearchChallengeFallback',
+    // Which agent (cli terminal vs in-app OpenRouter chat) drives the dock.
+    getAgentMode: 'settings:getAgentMode',
+    setAgentMode: 'settings:setAgentMode',
+    onAgentModeChanged: 'settings:agentModeChanged'
+  },
+  openrouter: {
+    getConnection: 'openrouter:getConnection',
+    startAuth: 'openrouter:startAuth',
+    cancelAuth: 'openrouter:cancelAuth',
+    submitAuthCode: 'openrouter:submitAuthCode',
+    disconnect: 'openrouter:disconnect',
+    refreshConnection: 'openrouter:refreshConnection',
+    listModels: 'openrouter:listModels',
+    getSettings: 'openrouter:getSettings',
+    setSettings: 'openrouter:setSettings',
+    onAuthStatus: 'openrouter:authStatus'
+  },
+  chat: {
+    listSessions: 'chat:listSessions',
+    createSession: 'chat:createSession',
+    renameSession: 'chat:renameSession',
+    deleteSession: 'chat:deleteSession',
+    setSessionModel: 'chat:setSessionModel',
+    listMessages: 'chat:listMessages',
+    send: 'chat:send',
+    stop: 'chat:stop',
+    respondToolApproval: 'chat:respondToolApproval',
+    listPendingApprovals: 'chat:listPendingApprovals',
+    onEvent: 'chat:event'
   },
   storageLocation: {
     getStatus: 'storageLocation:getStatus',

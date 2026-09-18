@@ -12,6 +12,8 @@
  * them fill it in later.
  */
 
+import type { AgentMode } from '@shared/types/agentMode'
+
 export type FirstPromptKind = 'fromResume' | 'roleSearch' | 'genericSearch'
 
 export interface FirstPromptChoice {
@@ -54,4 +56,16 @@ export function chooseFirstPrompt(input: FirstPromptInput): FirstPromptChoice {
 
   const role = usableRole(input.desiredRoles)
   return role ? { kind: 'roleSearch', role } : { kind: 'genericSearch' }
+}
+
+/**
+ * Where the payoff screen tells the user to paste the suggested sentence.
+ * The sentence itself never changes with agent mode, only where it gets
+ * typed does: a CLI agent lives in the embedded terminal, an OpenRouter
+ * agent in the chat panel on the right of the workspace.
+ */
+export type FirstPromptDestination = 'terminal' | 'chat'
+
+export function firstPromptDestination(agentMode: AgentMode): FirstPromptDestination {
+  return agentMode === 'openrouter' ? 'chat' : 'terminal'
 }

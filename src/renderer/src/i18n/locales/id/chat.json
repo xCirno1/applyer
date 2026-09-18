@@ -1,0 +1,138 @@
+{
+  "panel": {
+    "title": "Obrolan",
+    "newChat": "Obrolan baru",
+    "showSessions": "Sesi",
+    "backToChat": "Kembali ke obrolan",
+    "settings": "Pengaturan agen",
+    "hide": "Sembunyikan panel obrolan"
+  },
+  "sessions": {
+    "heading": "Sesi",
+    "listLabel": "Sesi obrolan",
+    "search": "Cari sesi",
+    "searchPlaceholder": "Cari berdasarkan judul…",
+    "empty": "Belum ada obrolan.",
+    "noMatches": "Tidak ada sesi yang cocok dengan pencarian Anda.",
+    "messageCount_other": "{{count}} pesan",
+    "working": "Sedang bekerja…",
+    "rename": "Ubah nama",
+    "renameLabel": "Ubah nama \"{{title}}\"",
+    "delete": "Hapus",
+    "deleteLabel": "Hapus \"{{title}}\"",
+    "atMax": "{{count}} obrolan terbuka (batas tercapai)",
+    "deleteConfirmTitle": "Hapus obrolan ini?",
+    "deleteConfirmMessage": "\"{{title}}\" memiliki pesan. Menghapusnya akan membuang sesi beserta riwayatnya.",
+    "deleteConfirmAction": "Hapus obrolan"
+  },
+  "welcome": {
+    "title": "Agen Applyer",
+    "subtitle": "Cari lowongan, sesuaikan resume, dan isi lamaran dari sini. Agen memakai alat yang sama dengan agen CLI, dan bertanya dulu sebelum mengubah apa pun yang Anda minta untuk dikonfirmasi.",
+    "startersHeading": "Coba tanyakan",
+    "starterFindJobs": "Cari lowongan baru yang cocok dengan profil saya",
+    "starterFillProfile": "Baca resume yang saya unggah dan isi profil saya",
+    "starterTailor": "Sesuaikan resume saya untuk lowongan di antrean"
+  },
+  "message": {
+    "you": "Anda",
+    "assistant": "Asisten",
+    "thinking": "Berpikir…",
+    "tokens": "{{prompt}} masuk / {{completion}} keluar"
+  },
+  "reasoning": {
+    "label": "Penalaran",
+    "thinking": "Berpikir…"
+  },
+  "toolCall": {
+    "arguments": "Argumen",
+    "result": "Hasil",
+    "error": "Gagal",
+    "denied": "Ditolak",
+    "cancelled": "Dibatalkan",
+    "showAll": "Tampilkan semua",
+    "showLess": "Tampilkan lebih sedikit",
+    "expand": "Tampilkan detail {{tool}}",
+    "collapse": "Sembunyikan detail {{tool}}",
+    "viewLabel": "Cara menampilkan {{section}}",
+    "viewReadable": "Terbaca",
+    "viewJson": "JSON"
+  },
+  "payload": {
+    "yes": "Ya",
+    "no": "Tidak",
+    "none": "Kosong",
+    "nothing": "Tidak ada yang ditampilkan.",
+    "more_other": "{{count}} lagi",
+    "noRows": "Tidak ada entri.",
+    "jobGone": "Lowongan itu sudah tidak ada di papan.",
+    "openJob": "Buka lowongan",
+    "openPosting": "Buka iklan lowongan",
+    "column": {
+      "title": "Judul",
+      "company": "Perusahaan",
+      "location": "Lokasi",
+      "source": "Sumber",
+      "status": "Status",
+      "matchScore": "Kecocokan",
+      "failure": "Kegagalan",
+      "field": "Kolom",
+      "kind": "Jenis",
+      "required": "Wajib",
+      "value": "Nilai",
+      "salary": "Gaji"
+    }
+  },
+  "approval": {
+    "title": "Izinkan \"{{tool}}\"?",
+    "allowOnce": "Izinkan sekali",
+    "allowAlways": "Selalu izinkan",
+    "allowAlwaysHint": "Menghapus alat ini dari daftar konfirmasi di Pengaturan > Agen, sehingga tidak akan bertanya lagi.",
+    "deny": "Tolak"
+  },
+  "thread": {
+    "loadEarlier": "Muat pesan sebelumnya",
+    "jumpToLatest": "Lompat ke terbaru"
+  },
+  "composer": {
+    "label": "Pesan",
+    "placeholder": "Tanyakan ke agen…",
+    "hint": "Enter untuk mengirim, Shift+Enter untuk baris baru",
+    "charCount": "{{count}} / {{max}}",
+    "send": "Kirim",
+    "sendHint": "Kirim (Enter)",
+    "stop": "Hentikan",
+    "stopHint": "Hentikan (Esc)"
+  },
+  "model": {
+    "label": "Model",
+    "change": "Ganti model untuk obrolan ini",
+    "searchLabel": "Cari model",
+    "searchPlaceholder": "Cari berdasarkan nama atau id…",
+    "loadFailed": "Tidak dapat memuat daftar model.",
+    "noMatches": "Tidak ada model yang cocok dengan pencarian Anda.",
+    "moreMatches_other": "{{count}} hasil lagi. Ketik lebih lanjut untuk mempersempit.",
+    "free": "Gratis",
+    "effort": "Tingkat penalaran",
+    "effortUnsupported": "Model ini tidak melaporkan tingkat penalaran.",
+    "changed": "Obrolan ini sekarang memakai {{model}}.",
+    "changeFailed": "Tidak dapat mengganti model.",
+    "effortSaved": "Tingkat penalaran diatur ke {{effort}}.",
+    "effortFailed": "Tidak dapat menyimpan tingkat penalaran."
+  },
+  "status": {
+    "connected": "Terhubung",
+    "connectedAs": "Terhubung sebagai {{label}}",
+    "notConnected": "Tidak terhubung",
+    "cost": "{{cost}} obrolan ini",
+    "approvals_other": "{{count}} alat bertanya dulu",
+    "approvalsNone": "Tidak ada alat yang bertanya dulu",
+    "approvalsHint": "Alat pengubah data yang meminta persetujuan Anda sebelum berjalan. Ubah daftarnya di Pengaturan > Agen.",
+    "keyRejected": "Kunci ditolak"
+  },
+  "emptyState": {
+    "notConnected": "Hubungkan akun OpenRouter untuk mulai mengobrol dengan agen.",
+    "noModel": "Pilih model di Pengaturan > Agen untuk mulai mengobrol.",
+    "openSettings": "Buka Pengaturan > Agen",
+    "keyRejected": "OpenRouter menolak kunci yang tersimpan. Sambungkan ulang di Pengaturan > Agen untuk melanjutkan."
+  }
+}

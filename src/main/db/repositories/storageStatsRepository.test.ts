@@ -10,7 +10,7 @@ beforeEach(() => {
   testDb = createTestDb().db
 })
 
-import { jobs, indexedJobs, jobExclusions, companyBoards, activityLog } from '../schema'
+import { jobs, indexedJobs, jobExclusions, companyBoards, activityLog, chatSessions, chatMessages } from '../schema'
 import { getStorageRowCounts } from './storageStatsRepository'
 
 describe('getStorageRowCounts', () => {
@@ -22,7 +22,9 @@ describe('getStorageRowCounts', () => {
       companyBoards: 0,
       documents: 0,
       resumeVariants: 0,
-      activityLogEntries: 0
+      activityLogEntries: 0,
+      chatSessions: 0,
+      chatMessages: 0
     })
   })
 
@@ -46,6 +48,11 @@ describe('getStorageRowCounts', () => {
       })
       .run()
     testDb.insert(activityLog).values({ message: 'started' }).run()
+    testDb.insert(chatSessions).values({ id: 's1', title: 'Chat', modelId: 'openai/gpt-5', updatedAt: '2026-01-01T00:00:00.000Z' }).run()
+    testDb
+      .insert(chatMessages)
+      .values({ id: 'm1', sessionId: 's1', seq: 1, role: 'user', content: 'hi' })
+      .run()
 
     expect(getStorageRowCounts()).toEqual({
       jobs: 2,
@@ -54,7 +61,9 @@ describe('getStorageRowCounts', () => {
       companyBoards: 1,
       documents: 0,
       resumeVariants: 0,
-      activityLogEntries: 1
+      activityLogEntries: 1,
+      chatSessions: 1,
+      chatMessages: 1
     })
   })
 })

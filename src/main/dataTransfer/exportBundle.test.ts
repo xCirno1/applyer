@@ -15,8 +15,18 @@ import { upsertIndexedJobs, listAllIndexedJobs } from '../db/repositories/indexe
 import { excludeUrl } from '../db/repositories/jobExclusionsRepository'
 import { addCompanyBoard, recordCompanyBoardFetch } from '../db/repositories/companyBoardsRepository'
 import { saveProfile } from '../db/repositories/profileRepository'
-import { setAutoStartCommand, setNotificationPreferences, setResumeSettings, setSearchCountry, setStorageMode } from '../db/repositories/settingsRepository'
+import {
+  setAgentMode,
+  setAutoStartCommand,
+  setNotificationPreferences,
+  setOpenRouterSettings,
+  setResumeSettings,
+  setSearchCountry,
+  setStorageMode
+} from '../db/repositories/settingsRepository'
+import { DEFAULT_OPENROUTER_SETTINGS } from '@shared/types/openrouter'
 import { assignVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
+import { createChatSession, insertChatMessage } from '../db/repositories/chatRepository'
 import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
 import { jobsToCsv, companyBoardsToCsv, indexedJobsToCsv } from './csv'
 import { buildExportBundle, bundleJsonBytes, computeExportSizes, exportableJobs, filenameTimestamp } from './exportBundle'
@@ -192,14 +202,57 @@ describe('buildExportBundle', () => {
         jobFilled: true,
         jobFailed: false
       },
-      searchCountry: 'au'
+      searchCountry: 'au',
+      agentMode: 'openrouter',
+      openrouter: DEFAULT_OPENROUTER_SETTINGS
     })
+  })
+
+  it('includes the chosen agent mode and OpenRouter settings, but never the API key', () => {
+    setAgentMode('openrouter')
+    setOpenRouterSettings({
+      modelId: 'openai/gpt-5',
+      reasoningEffort: 'high',
+      toolApproval: { askFor: ['queue_job'] }
+    })
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), settings: true }, testTheme)
+    expect(bundle.data.settings?.agentMode).toBe('openrouter')
+    expect(bundle.data.settings?.openrouter).toEqual({
+      modelId: 'openai/gpt-5',
+      reasoningEffort: 'high',
+      toolApproval: { askFor: ['queue_job'] }
+    })
+    expect(JSON.stringify(bundle)).not.toContain('apiKey')
   })
 
   it('includes the given theme state verbatim when selected, unlike every other domain never reading it from the DB', () => {
     const theme: ThemeState = { ...DEFAULT_THEME_STATE, mode: 'dark', accent: '#3c83f6', canvasTint: 40 }
     const bundle = buildExportBundle({ ...allDomainsSelected(false), theme: true }, theme)
     expect(bundle.data.theme).toEqual(theme)
+  })
+
+  it('includes chat sessions with their messages when selected', () => {
+    setStorageMode('plaintext')
+    const session = createChatSession({ title: 'Job hunt help', modelId: 'openai/gpt-5' })
+    insertChatMessage({
+      sessionId: session.id,
+      role: 'user',
+      content: 'Find me backend roles',
+      reasoning: null,
+      reasoningDetails: null,
+      toolCalls: null,
+      toolCallId: null,
+      modelId: null,
+      usage: null,
+      error: null
+    })
+
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), chats: true }, testTheme)
+    expect(bundle.data.chats).toHaveLength(1)
+    expect(bundle.data.chats?.[0]?.title).toBe('Job hunt help')
+    expect(bundle.data.chats?.[0]?.messages).toEqual([
+      expect.objectContaining({ role: 'user', content: 'Find me backend roles' })
+    ])
   })
 })
 
@@ -317,6 +370,14 @@ describe('computeExportSizes', () => {
     const empty = computeExportSizes(testTheme).theme.json
     const withCss = computeExportSizes({ ...testTheme, customCss: 'body { color: red; }' }).theme.json
     expect(withCss).toBeGreaterThan(empty)
+  })
+
+  it('grows as chat sessions are added', () => {
+    setStorageMode('plaintext')
+    const before = computeExportSizes(testTheme).chats.json
+    createChatSession({ title: 'A', modelId: 'm' })
+    const after = computeExportSizes(testTheme).chats.json
+    expect(after).toBeGreaterThan(before)
   })
 })
 

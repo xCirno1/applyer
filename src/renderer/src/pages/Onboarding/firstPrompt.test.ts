@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { chooseFirstPrompt, usableRole } from './firstPrompt'
+import { chooseFirstPrompt, usableRole, firstPromptDestination } from './firstPrompt'
 
 describe('usableRole', () => {
   it('picks the first role that can be dropped into a sentence', () => {
@@ -63,5 +63,15 @@ describe('chooseFirstPrompt', () => {
     expect(chooseFirstPrompt({ profileComplete: false, hasResume: false, desiredRoles: [] })).toEqual({
       kind: 'genericSearch'
     })
+  })
+})
+
+describe('firstPromptDestination', () => {
+  it('points a CLI agent at the terminal', () => {
+    expect(firstPromptDestination('cli')).toBe('terminal')
+  })
+
+  it('points an OpenRouter agent at the chat tab', () => {
+    expect(firstPromptDestination('openrouter')).toBe('chat')
   })
 })

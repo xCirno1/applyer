@@ -47,7 +47,7 @@ export default function Welcome({ onNext }: { onNext: () => void }): ReactElemen
               {t('welcome.mcpTerm')}
             </span>
           </Tooltip>
-          {t('welcome.agentNoteAfter')}
+          {t('welcome.agentNoteAfter')} {t('welcome.agentNoteOpenRouter')}
         </Callout>
 
         {/* Offered on the very first screen, not only in Settings: if the

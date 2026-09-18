@@ -36,6 +36,7 @@
     "mcpTerm": "MCP",
     "mcpTooltip": "Model Context Protocol, the standard way a coding agent calls into another app.",
     "agentNoteAfter": ". Claude Code, Codex and anything else that speaks it will do.",
+    "agentNoteOpenRouter": "Prefer not to run a CLI? Connect an OpenRouter account instead and chat with the agent right here in the app.",
     "languagePrompt": "Please select your language",
     "getStarted": "Get started"
   },
@@ -99,12 +100,15 @@
     "explainerAfter": ", so your agent can call into the app the same way it calls any other tool.",
     "noneDetected": "No supported agent CLI was found on this computer. Install Claude Code or Codex, then connect it later from Settings > Agent.",
     "detectFailed": "Could not check which agent CLIs are installed. You can connect one later from Settings > Agent.",
-    "optionalNote": "You can skip this and do it later in Settings > Agent. The rest of the app works either way."
+    "optionalNote": "You can skip this and do it later in Settings > Agent. The rest of the app works either way.",
+    "modeChangeFailed": "Could not change the agent mode.",
+    "openrouterNotConnectedYet": "Chat won't work until you connect an OpenRouter account. You can do that now above, or later from Settings > Agent."
   },
   "ready": {
     "title": "You're all set.",
     "titleNamed": "You're all set, {{name}}.",
     "intro": "Applyer is ready. Open the Terminal panel, start your agent, and give it the line below.",
+    "introChat": "Applyer is ready. The chat panel sits on the right of the workspace; give the agent the line below.",
     "summaryLabel": "What's set up",
     "summary": {
       "profile": "Profile",
@@ -116,10 +120,12 @@
       "storage": "Storage",
       "agent": "Agent",
       "agentPending": "Connect later in Settings",
+      "openrouterPending": "Connect later in Settings",
       "unknown": "Unknown"
     },
     "firstPromptLabel": "Try this first",
     "firstPromptCaption": "Paste this to your agent in the Terminal panel.",
+    "firstPromptCaptionChat": "Paste this to your agent in the chat panel.",
     "prompts": {
       "fromResume": "Read the resume I uploaded to Applyer, fill in my profile from it, then find matching jobs and queue the good ones.",
       "roleSearch": "Find me {{role}} roles that fit my profile and queue the ones worth applying to.",

@@ -1,6 +1,6 @@
 {
   "name": "applyer",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Local-first desktop workspace for agent-assisted job search and application drafting",
   "main": "./out/main/index.js",
   "desktopName": "com.applyer.app.desktop",
@@ -120,8 +120,7 @@
       "out/**/*",
       "package.json",
       "!**/*.map",
-      "!**/node_modules/playwright-core/.local-browsers/**",
-      "!**/node_modules/@napi-rs/canvas*/**"
+      "!**/node_modules/playwright-core/.local-browsers/**"
     ],
     "electronLanguages": [
       "en-US",

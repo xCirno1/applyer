@@ -11,7 +11,7 @@ describe('isAgentMode', () => {
     expect(isAgentMode(value)).toBe(false)
   })
 
-  it('defaults to cli', () => {
-    expect(DEFAULT_AGENT_MODE).toBe('cli')
+  it('defaults to openrouter', () => {
+    expect(DEFAULT_AGENT_MODE).toBe('openrouter')
   })
 })

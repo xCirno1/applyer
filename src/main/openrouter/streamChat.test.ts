@@ -253,7 +253,7 @@ describe('streamChatCompletion: failures', () => {
     const fetchImpl = vi.fn().mockResolvedValue(sseResponse(chunks))
     const result = await streamChatCompletion(baseRequest(), noopHandlers(), { signal: new AbortController().signal, fetch: fetchImpl })
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.error.code).toBe('openrouterStreamError')
+    if (!result.ok) expect(result.error.code).toBe('openrouterProviderStreamError')
   })
 
   it('fails a 200 stream that produces no content, no tool calls and no explicit error', async () => {

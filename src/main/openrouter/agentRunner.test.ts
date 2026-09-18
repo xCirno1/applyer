@@ -158,6 +158,7 @@ describe('sendChatMessage: validation', () => {
   it('rejects when agent mode is not openrouter', async () => {
     setStorageMode('plaintext')
     storeOpenRouterKey('test-key')
+    setAgentMode('cli')
     const session = createChatSession({ title: 'New chat', modelId: 'test/model' })
     const result = await sendChatMessage(session.id, 'hello')
     expect(result).toMatchObject({ ok: false, error: { code: 'openrouterNotConnected' } })

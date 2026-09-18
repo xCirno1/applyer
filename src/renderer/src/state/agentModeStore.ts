@@ -8,8 +8,8 @@ import { isAgentMode, type AgentMode } from '@shared/types/agentMode'
  * OpenRouter's chat panel on the right), mirrored from the one main-process
  * setting both modes share. `mode` is `null` until the first read comes
  * back, which `workspaceLayout.ts`'s `visibleDockTabs` and
- * `chatPanelAvailable` treat the same as `'cli'` (Terminal, no chat panel)
- * so nothing flickers while this loads.
+ * `chatPanelAvailable` treat the same as `DEFAULT_AGENT_MODE` so nothing
+ * flickers while this loads.
  *
  * `setMode` is optimistic - the shell switches the instant the user picks a
  * mode rather than waiting on a round trip - and reverts on a rejected

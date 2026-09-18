@@ -203,7 +203,7 @@ describe('buildExportBundle', () => {
         jobFailed: false
       },
       searchCountry: 'au',
-      agentMode: 'cli',
+      agentMode: 'openrouter',
       openrouter: DEFAULT_OPENROUTER_SETTINGS
     })
   })

@@ -10,7 +10,7 @@
 // Deliberately no React here: the clamping/parsing rules are what's worth
 // getting right, and they don't need a DOM to exercise.
 
-import type { AgentMode } from '@shared/types/agentMode'
+import { DEFAULT_AGENT_MODE, type AgentMode } from '@shared/types/agentMode'
 
 export type DockTab = 'terminal' | 'logs'
 
@@ -102,17 +102,17 @@ function isDockTab(value: unknown): value is DockTab {
  * agent's, so it follows `AgentMode` (see `shared/types/agentMode.ts`); in
  * `openrouter` mode the agent lives in the chat panel on the right instead,
  * and the dock is left with Logs alone. `null` (the mode hasn't loaded from
- * main yet) behaves like `'cli'`: Terminal first, so a dock that mounts
- * before the mode read resolves never flashes a tab strip that's about to
- * change a moment later.
+ * main yet) behaves like `DEFAULT_AGENT_MODE`, so a dock that mounts before
+ * the mode read resolves never flashes a tab strip that's about to change a
+ * moment later.
  */
 export function visibleDockTabs(mode: AgentMode | null): DockTab[] {
-  return mode === 'openrouter' ? ['logs'] : ['terminal', 'logs']
+  return (mode ?? DEFAULT_AGENT_MODE) === 'openrouter' ? ['logs'] : ['terminal', 'logs']
 }
 
 /** Whether the chat panel exists at all in this mode; `chatVisible` only matters when it does. */
 export function chatPanelAvailable(mode: AgentMode | null): boolean {
-  return mode === 'openrouter'
+  return (mode ?? DEFAULT_AGENT_MODE) === 'openrouter'
 }
 
 /** The tab to land on when `tab` isn't visible in `mode`, most commonly right after a mode switch. */

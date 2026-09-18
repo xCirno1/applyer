@@ -82,6 +82,7 @@
   "openrouterInsufficientCredits": "This OpenRouter account is out of credits.",
   "openrouterModelUnavailable": "The model \"{{modelId}}\" is not available.",
   "openrouterStreamError": "The chat stream was interrupted: {{message}}",
+  "openrouterProviderStreamError": "This is a provider issue, not Applyer. Try a different model.",
   "chatSessionNotFound": "Chat session not found.",
   "chatSessionBusy": "This chat session is already generating a reply.",
   "chatSessionNotBusy": "This chat session is not generating a reply.",

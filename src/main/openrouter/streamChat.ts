@@ -309,7 +309,7 @@ export async function streamChatCompletion(
       if (typeof choice.finish_reason === 'string' && isFinishReason(choice.finish_reason)) {
         finishReason = choice.finish_reason
         if (finishReason === 'error' && !streamError) {
-          streamError = appError('openrouterStreamError', { message: 'The model stream ended with an error.' })
+          streamError = appError('openrouterProviderStreamError')
         }
       }
     }

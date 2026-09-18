@@ -66,6 +66,8 @@ export type ErrorCode =
   | 'openrouterInsufficientCredits'
   | 'openrouterModelUnavailable'
   | 'openrouterStreamError'
+  // The stream ended with `finish_reason: "error"` and no error payload of its own, i.e. an upstream provider failure rather than anything Applyer sent wrong.
+  | 'openrouterProviderStreamError'
   // In-app chat sessions (OpenRouter mode's dock tab).
   | 'chatSessionNotFound'
   | 'chatSessionBusy'

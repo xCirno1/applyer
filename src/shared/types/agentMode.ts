@@ -10,7 +10,7 @@
  */
 export type AgentMode = 'cli' | 'openrouter'
 
-export const DEFAULT_AGENT_MODE: AgentMode = 'cli'
+export const DEFAULT_AGENT_MODE: AgentMode = 'openrouter'
 
 /** Runtime guard for a persisted setting or an IPC-supplied value. */
 export function isAgentMode(value: unknown): value is AgentMode {

@@ -164,7 +164,10 @@ describe('chatPanelAvailable', () => {
   it('only exists in openrouter mode', () => {
     expect(chatPanelAvailable('openrouter')).toBe(true)
     expect(chatPanelAvailable('cli')).toBe(false)
-    expect(chatPanelAvailable(null)).toBe(false)
+  })
+
+  it('behaves like the default mode (openrouter) while the mode has not loaded yet', () => {
+    expect(chatPanelAvailable(null)).toBe(true)
   })
 })
 
@@ -177,8 +180,8 @@ describe('visibleDockTabs', () => {
     expect(visibleDockTabs('cli')).toEqual(['terminal', 'logs'])
   })
 
-  it('behaves like cli mode while the mode has not loaded yet, so nothing flickers', () => {
-    expect(visibleDockTabs(null)).toEqual(['terminal', 'logs'])
+  it('behaves like the default mode (openrouter) while the mode has not loaded yet, so nothing flickers', () => {
+    expect(visibleDockTabs(null)).toEqual(['logs'])
   })
 })
 

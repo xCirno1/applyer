@@ -319,9 +319,9 @@ describe('openrouter API key row', () => {
 })
 
 describe('agent mode', () => {
-  it('defaults to the CLI mode', () => {
+  it('defaults to the OpenRouter mode', () => {
     expect(getAgentMode()).toBe(DEFAULT_AGENT_MODE)
-    expect(getAgentMode()).toBe('cli')
+    expect(getAgentMode()).toBe('openrouter')
   })
 
   it('round-trips a chosen mode', () => {

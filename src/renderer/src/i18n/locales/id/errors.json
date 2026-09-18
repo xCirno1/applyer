@@ -82,6 +82,7 @@
   "openrouterInsufficientCredits": "Akun OpenRouter ini kehabisan kredit.",
   "openrouterModelUnavailable": "Model \"{{modelId}}\" tidak tersedia.",
   "openrouterStreamError": "Streaming chat terputus: {{message}}",
+  "openrouterProviderStreamError": "Ini masalah dari provider, bukan Applyer. Coba model lain.",
   "chatSessionNotFound": "Sesi chat tidak ditemukan.",
   "chatSessionBusy": "Sesi chat ini sedang menghasilkan jawaban.",
   "chatSessionNotBusy": "Sesi chat ini sedang tidak menghasilkan jawaban.",

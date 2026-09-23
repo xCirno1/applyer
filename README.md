@@ -1,3 +1,5 @@
+
+
 <div align="center">
   <img src="src/renderer/src/assets/logo.png" width="76" height="76" alt="Applyer logo" />
 
@@ -109,7 +111,7 @@ npm install
 npm run dev
 ```
 
-`npm install` rebuilds the native Electron modules and installs Chromium for browser
+`npm install` applies the repository's patches, rebuilds the native Electron modules, and installs Chromium for browser
 automation. Development builds use a separate `applyer-dev` data directory, so they do
 not touch an installed copy's data.
 

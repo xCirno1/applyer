@@ -91,6 +91,9 @@
   "chatTitleTooLong": "Title is too long (max {{max}} characters).",
   "invalidAgentMode": "Invalid agent mode.",
   "invalidOpenRouterSettings": "Invalid OpenRouter settings.",
+  "invalidCustomSystemPrompt": "Invalid custom instructions.",
+  "customSystemPromptTooLong": "Custom instructions are too long (max {{max}} characters).",
+  "customSystemPromptUnreadable": "Your custom instructions are encrypted and cannot be read right now (is the OS keychain unlocked?).",
   "unexpected": "Something went wrong: {{message}}",
   "unexpectedNoDetail": "Something went wrong."
 }

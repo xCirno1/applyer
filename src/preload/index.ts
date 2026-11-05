@@ -118,6 +118,7 @@ import type {
 } from '@shared/types/agentPermissions'
 import type { RemoteBrowserProbe, RemoteBrowserSettings } from '@shared/types/remoteBrowser'
 import type { AgentMode } from '@shared/types/agentMode'
+import type { CustomSystemPromptResult } from '@shared/types/customSystemPrompt'
 import type {
   OpenRouterAuthStatus,
   OpenRouterConnection,
@@ -478,7 +479,10 @@ const settingsApi = {
     const listener = (_event: Electron.IpcRendererEvent, mode: AgentMode): void => callback(mode)
     ipcRenderer.on(IPC.settings.onAgentModeChanged, listener)
     return () => ipcRenderer.removeListener(IPC.settings.onAgentModeChanged, listener)
-  }
+  },
+  getCustomSystemPrompt: (): Promise<CustomSystemPromptResult> => ipcRenderer.invoke(IPC.settings.getCustomSystemPrompt),
+  setCustomSystemPrompt: (prompt: string): Promise<CustomSystemPromptResult> =>
+    ipcRenderer.invoke(IPC.settings.setCustomSystemPrompt, { prompt })
 }
 
 const openrouterApi = {

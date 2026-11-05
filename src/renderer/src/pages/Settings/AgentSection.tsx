@@ -12,6 +12,7 @@ import McpCliCard from '../../components/settings/McpCliCard'
 import AgentModeChoice from '../../components/settings/AgentModeChoice'
 import OpenRouterConnectCard from '../../components/settings/OpenRouterConnectCard'
 import OpenRouterModelSettings from '../../components/settings/OpenRouterModelSettings'
+import CustomSystemPromptEditor from '../../components/settings/CustomSystemPromptEditor'
 import type { AutoStartCommand, McpConfigDetection } from '@shared/types/ipcEvents'
 import { DEFAULT_AGENT_MODE, type AgentMode } from '@shared/types/agentMode'
 import { appError, type AppError } from '@shared/types/errorCodes'
@@ -31,7 +32,7 @@ function presetForCommand(command: string): Preset {
 /**
  * Settings > Agent: the CLI-vs-OpenRouter choice up top (shared with
  * onboarding via `AgentModeChoice`), then only the active mode's own setup
- * block below it. Switching modes here is the same `setAgentMode` call the
+ * block below it, then the custom instructions both modes share. Switching modes here is the same `setAgentMode` call the
  * onboarding step makes, so a user who set this up during onboarding and
  * changes their mind later isn't using a second, different code path.
  */
@@ -90,6 +91,11 @@ export default function AgentSection(): ReactElement {
         ) : (
           <CliAgentBlock />
         )}
+      </div>
+
+      {/* Below the mode-specific block, not inside it: the instructions apply to both modes. */}
+      <div className="border-t border-border-soft pt-5">
+        <CustomSystemPromptEditor />
       </div>
     </div>
   )

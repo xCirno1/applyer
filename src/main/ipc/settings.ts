@@ -42,6 +42,14 @@ import { setLogStorageMode } from '../logger'
 import { rewriteScreenshotStorageMode } from '../secureFiles'
 import { isAgentPermissions, type AgentPermissions } from '@shared/types/agentPermissions'
 import { broadcastAgentPermissionsChanged } from './jobsBroadcast'
+import {
+  CustomSystemPromptError,
+  getCustomSystemPrompt,
+  rewriteCustomSystemPromptStorageMode,
+  saveCustomSystemPrompt
+} from '../config/customSystemPrompt'
+import { writeAgentInstructions } from '../config/agentInstructions'
+import { CUSTOM_SYSTEM_PROMPT_MAX_LENGTH, type CustomSystemPromptResult } from '@shared/types/customSystemPrompt'
 
 const AUTO_START_COMMAND_MAX_LENGTH = getSettings().dangerousAutoStartCommandMaxLength
 
@@ -72,12 +80,16 @@ export function registerSettingsIpc(): void {
       }
       rewriteResumeStorageMode(mode)
       rewriteChatStorageMode(mode)
+      rewriteCustomSystemPromptStorageMode(mode)
       rewriteScreenshotStorageMode(mode)
       setLogStorageMode(mode)
 
       // Whole-database encryption covers jobs, search history, exclusions,
       // boards, settings, caches and activity logs without weakening queries.
       setDatabaseEncryptionMode(mode)
+      // The instruction file embeds the custom instructions only in
+      // plaintext mode, so it has to follow the new mode right away.
+      writeAgentInstructions()
 
       logActivity('info', `Storage mode changed to ${mode}`)
       return { ok: true }
@@ -231,6 +243,42 @@ export function registerSettingsIpc(): void {
       setNotificationLocale(locale)
       return { ok: true }
     } catch (err) {
+      return { ok: false, error: unexpectedError(err) }
+    }
+  })
+
+  ipcMain.handle(IPC.settings.getCustomSystemPrompt, (): CustomSystemPromptResult => {
+    try {
+      return { ok: true, prompt: getCustomSystemPrompt() }
+    } catch (err) {
+      logActivity('error', 'Custom system prompt could not be read', { error: String(err) })
+      return { ok: false, error: appError('customSystemPromptUnreadable') }
+    }
+  })
+
+  ipcMain.handle(IPC.settings.setCustomSystemPrompt, (_event, payload: unknown): CustomSystemPromptResult => {
+    const prompt = typeof payload === 'object' && payload !== null ? (payload as { prompt?: unknown }).prompt : undefined
+    try {
+      const saved = saveCustomSystemPrompt(prompt)
+      // CLI agents read the instruction file at session start; chat mode and
+      // new MCP connections read the stored row, so only the file needs this.
+      writeAgentInstructions()
+      // Length only: the text itself is user data and stays out of the log.
+      logActivity('info', saved ? 'Custom system prompt updated' : 'Custom system prompt cleared', {
+        length: saved.length
+      })
+      return { ok: true, prompt: saved }
+    } catch (err) {
+      if (err instanceof CustomSystemPromptError) {
+        return {
+          ok: false,
+          error:
+            err.reason === 'tooLong'
+              ? appError('customSystemPromptTooLong', { max: CUSTOM_SYSTEM_PROMPT_MAX_LENGTH })
+              : appError('invalidCustomSystemPrompt')
+        }
+      }
+      logActivity('error', 'Custom system prompt could not be saved', { error: String(err) })
       return { ok: false, error: unexpectedError(err) }
     }
   })

@@ -77,6 +77,12 @@ export interface ExportSettingsData {
    * for inline approval.
    */
   openrouter?: Pick<OpenRouterSettings, 'modelId' | 'reasoningEffort' | 'toolApproval'>
+  /**
+   * The user's custom agent instructions (Settings > Agent). Omitted when
+   * there are none, so importing a bundle without them leaves this
+   * machine's own instructions in place rather than clearing them.
+   */
+  customSystemPrompt?: string
 }
 
 /** The single JSON round-trip format — the only format `data:import` accepts. */

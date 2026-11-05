@@ -78,6 +78,10 @@ export type ErrorCode =
   // Agent mode (cli vs openrouter) and its settings.
   | 'invalidAgentMode'
   | 'invalidOpenRouterSettings'
+  // The user's custom agent instructions (Settings > Agent).
+  | 'invalidCustomSystemPrompt'
+  | 'customSystemPromptTooLong'
+  | 'customSystemPromptUnreadable'
   // Company ATS boards (adding, resolving and tracking a company's own board).
   | 'boardInputRequired'
   | 'boardNotFound'

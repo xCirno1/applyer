@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { buildChatSystemPrompt } from './systemPrompt'
 import { buildAgentToolGuide } from '../config/agentInstructions'
+import { buildCustomInstructionsSection } from '@shared/types/customSystemPrompt'
 
 describe('buildChatSystemPrompt', () => {
   it('names the model, states today\'s date, and never mentions the terminal', () => {
@@ -49,5 +50,14 @@ describe('buildChatSystemPrompt', () => {
     const prompt = buildChatSystemPrompt({ autoTailor: false, modelId: 'x/model' })
     const todayIso = new Date().toISOString().slice(0, 10)
     expect(prompt).toContain(`Today's date is ${todayIso}.`)
+  })
+
+  it('appends the user\'s custom instructions after the tool guide, delimited, and nothing when empty', () => {
+    const guide = buildAgentToolGuide({ autoTailor: false })
+    const prompt = buildChatSystemPrompt({ autoTailor: false, modelId: 'x/model', customPrompt: 'Only remote roles.' })
+    expect(prompt).toContain(guide + buildCustomInstructionsSection('Only remote roles.'))
+    expect(prompt.endsWith('<user_instructions>\nOnly remote roles.\n</user_instructions>\n')).toBe(true)
+    expect(prompt.indexOf('Only remote roles.')).toBeGreaterThan(prompt.indexOf('Never claim'))
+    expect(buildChatSystemPrompt({ autoTailor: false, modelId: 'x/model', customPrompt: '' }).endsWith(guide)).toBe(true)
   })
 })

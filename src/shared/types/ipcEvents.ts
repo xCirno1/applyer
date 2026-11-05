@@ -140,7 +140,10 @@ export const IPC = {
     // Which agent (cli terminal vs in-app OpenRouter chat) drives the dock.
     getAgentMode: 'settings:getAgentMode',
     setAgentMode: 'settings:setAgentMode',
-    onAgentModeChanged: 'settings:agentModeChanged'
+    onAgentModeChanged: 'settings:agentModeChanged',
+    // The user's custom instructions appended to the agent's built-in prompt.
+    getCustomSystemPrompt: 'settings:getCustomSystemPrompt',
+    setCustomSystemPrompt: 'settings:setCustomSystemPrompt'
   },
   openrouter: {
     getConnection: 'openrouter:getConnection',

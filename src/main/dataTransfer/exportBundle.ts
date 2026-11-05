@@ -18,6 +18,8 @@ import {
   getResumeSettings,
   getSearchCountry
 } from '../db/repositories/settingsRepository'
+import { getCustomSystemPrompt } from '../config/customSystemPrompt'
+import { appLogger } from '../logger'
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from './csv'
 import type { ExportCompanyBoard, ExportJobRecord, ExportResumesData, ExportSettingsData } from '@shared/types/dataTransfer'
 import type { CompanyBoardRecord } from '@shared/types/companyBoard'
@@ -47,20 +49,38 @@ function exportableCompanyBoards(): ExportCompanyBoard[] {
 /**
  * Shared by `buildExportBundle` and `computeExportSizes` so the settings
  * domain's shape can't drift between what actually gets exported and what
- * the Export modal's size preview measures. `agentMode` and `openrouter`
+ * the Export modal's size preview measures. `agentMode`, `openrouter` and
+ * `customSystemPrompt`
  * ride in the same domain as the rest of settings rather than their own:
  * they are exactly that, a settings choice, and the API key itself is
  * never part of `getOpenRouterSettings()` in the first place (see
  * `keyStore.ts`), so there is nothing secret here to leave out.
  */
 function exportableSettings(): ExportSettingsData {
-  return {
+  const settings: ExportSettingsData = {
     autoStartCommand: getAutoStartCommand(),
     indexedJobsRetentionDays: getIndexedJobsRetentionDays(),
     notificationPreferences: getNotificationPreferences(),
     searchCountry: getSearchCountry(),
     agentMode: getAgentMode(),
     openrouter: getOpenRouterSettings()
+  }
+  const customSystemPrompt = exportableCustomSystemPrompt()
+  if (customSystemPrompt) settings.customSystemPrompt = customSystemPrompt
+  return settings
+}
+
+/**
+ * The custom instructions, or null when there are none or they cannot be
+ * decrypted right now. An unreadable row is left out of the bundle (and
+ * logged) rather than failing the whole export over one settings field.
+ */
+function exportableCustomSystemPrompt(): string | null {
+  try {
+    return getCustomSystemPrompt() || null
+  } catch (err) {
+    appLogger.warn(`Export left out the custom system prompt: it could not be read (${String(err)})`)
+    return null
   }
 }
 

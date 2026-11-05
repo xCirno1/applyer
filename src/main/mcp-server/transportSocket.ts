@@ -3,6 +3,8 @@ import type { JSONRPCMessage } from '@modelcontextprotocol/sdk/types.js'
 import { createServer, type Server, type Socket } from 'net'
 import { chmodSync, existsSync, unlinkSync } from 'fs'
 import { createApplyerMcpServer } from './server'
+import { buildMcpServerInstructions } from '../config/agentInstructions'
+import { readCustomSystemPromptForAgent } from '../config/customSystemPrompt'
 import { LineFramer } from './lineFraming'
 import { mcpLogger } from '../logger'
 
@@ -117,7 +119,10 @@ export function startMcpSocketServer(socketPath: string): Server {
       openConnections -= 1
     })
 
-    const mcpServer = createApplyerMcpServer()
+    // Read per connection, so a CLI session started after a save sees it.
+    const mcpServer = createApplyerMcpServer({
+      instructions: buildMcpServerInstructions(readCustomSystemPromptForAgent())
+    })
     const transport = new SocketServerTransport(socket)
 
     mcpServer.connect(transport).catch((err) => {

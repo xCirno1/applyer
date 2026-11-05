@@ -205,7 +205,9 @@ export function registerDataTransferIpc(): void {
         // which the settings IPC rewrites on every change; an import that
         // changes it has to do the same or terminals opened before the
         // next launch keep the old preference.
-        if (summary.resumeSettings) writeAgentInstructions()
+        // Custom instructions ride with the settings domain and are baked
+        // into the same file.
+        if (summary.resumeSettings || summary.settings) writeAgentInstructions()
         return { ok: true, summary }
       } catch (err) {
         return { ok: false, error: unexpectedError(err) }

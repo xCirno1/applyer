@@ -9,6 +9,7 @@ import { importResumes, linkVariantsByName } from '../db/repositories/resumeRepo
 import { importChatSessions } from '../db/repositories/chatRepository'
 import { broadcastChatEvent } from '../ipc/chatBroadcast'
 import { broadcastAgentModeChanged } from '../openrouter/broadcast'
+import { saveCustomSystemPrompt } from '../config/customSystemPrompt'
 import type { ExportJobRecord, ExportResumesData } from '@shared/types/dataTransfer'
 import {
   setAgentMode,
@@ -96,6 +97,11 @@ export function applyImport(bundle: ExportBundle, selection: ExportSelection): I
       broadcastAgentModeChanged(bundle.data.settings.agentMode)
     }
     if (bundle.data.settings.openrouter) setOpenRouterSettings(bundle.data.settings.openrouter)
+    // Stored for this machine's storage mode, like every other user-data
+    // write; the caller rewrites the agent instruction file afterwards.
+    if (bundle.data.settings.customSystemPrompt !== undefined) {
+      saveCustomSystemPrompt(bundle.data.settings.customSystemPrompt)
+    }
     summary.settings = true
   }
   // Append-only: chats are never merged against or replace existing

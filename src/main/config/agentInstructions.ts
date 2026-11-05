@@ -1,8 +1,10 @@
 import { join } from 'path'
 import { writeFileSync } from 'fs'
 import { agentWorkspaceDir } from './paths'
-import { getResumeSettings } from '../db/repositories/settingsRepository'
+import { getResumeSettings, getStorageMode } from '../db/repositories/settingsRepository'
 import { appLogger } from '../logger'
+import { buildCustomInstructionsSection } from '@shared/types/customSystemPrompt'
+import { readCustomSystemPromptForAgent } from './customSystemPrompt'
 
 // Claude Code reads project-scoped CLAUDE.md by walking up from its cwd;
 // Codex CLI does the same for AGENTS.md. Both land in the shared agent
@@ -117,6 +119,27 @@ export interface AgentInstructionOptions {
   autoTailor: boolean
 }
 
+export interface AgentInstructionFileOptions extends AgentInstructionOptions {
+  /** The user's custom instructions (already normalized); absent or `''` for none. */
+  customPrompt?: string
+  /**
+   * Whether the custom instructions may be written into the file itself.
+   * False in encrypted storage mode: the file is plaintext on disk, so the
+   * text goes only through the MCP server's `instructions` (sent over the
+   * socket at connect time, never written anywhere) and the file says so.
+   * Defaults to false, failing closed.
+   */
+  embedCustomPrompt?: boolean
+}
+
+const CUSTOM_PROMPT_VIA_MCP_NOTE = `
+## The user's custom instructions
+
+The user has written custom instructions for you in Applyer's Settings >
+Agent. Applyer's storage is encrypted, so they are not written to this file:
+they arrive with the \`applyer\` MCP server's instructions. Follow them.
+`
+
 /**
  * The tool-by-tool guide shared by the CLI terminal instructions and the
  * OpenRouter chat system prompt (`openrouter/systemPrompt.ts`'s
@@ -133,14 +156,40 @@ export function buildAgentToolGuide(options: AgentInstructionOptions): string {
   )
 }
 
-export function buildAgentInstructions(options: AgentInstructionOptions): string {
-  return APP_HEAD + buildAgentToolGuide(options) + APP_TAIL
+export function buildAgentInstructions(options: AgentInstructionFileOptions): string {
+  const hasCustom = !!options.customPrompt && buildCustomInstructionsSection(options.customPrompt) !== ''
+  const custom = hasCustom && options.customPrompt
+    ? options.embedCustomPrompt
+      ? buildCustomInstructionsSection(options.customPrompt)
+      : CUSTOM_PROMPT_VIA_MCP_NOTE
+    : ''
+  // The guide already ends on a blank line, so the section drops its own
+  // leading one and adds one after itself to keep the tail separated.
+  return APP_HEAD + buildAgentToolGuide(options) + (custom ? custom.replace(/^\n/, '') + '\n' : '') + APP_TAIL
 }
 
 /**
- * The auto-tailor flag is the one piece of user state in the file, so it is
- * read here rather than passed in: every caller (launch, the settings
- * toggle) wants the current value. A database that is not open yet (tests,
+ * The MCP server's \`instructions\` (sent to every CLI client in the
+ * initialize handshake), or \`undefined\` when the user has written none,
+ * so a server with nothing to add advertises nothing. This is the channel
+ * that reaches a CLI agent started outside the agent workspace (where the
+ * instruction file is not read) and, in encrypted storage mode, the only
+ * channel the custom text takes at all. Read fresh per connection, so a
+ * newly started CLI session always sees the latest saved text.
+ */
+export function buildMcpServerInstructions(customPrompt: string): string | undefined {
+  const section = buildCustomInstructionsSection(customPrompt)
+  if (!section) return undefined
+  return `Applyer's MCP server: tools for finding jobs, tracking them on the user's board, filling applications in a real browser, and writing resume variants. Nothing here submits an application; the user reviews and submits every one.
+${section}`
+}
+
+/**
+ * The auto-tailor flag and the custom instructions are the user state in
+ * the file, so they are read here rather than passed in: every caller
+ * (launch, the settings toggles, an import, a storage-mode change) wants
+ * the current values. The storage mode decides whether the custom text is
+ * embedded; an unknown mode counts as encrypted, failing closed. A database that is not open yet (tests,
  * or a launch that failed before this point) falls back to the default
  * rather than failing the write, since instructions with no tailoring step
  * are still correct instructions.
@@ -155,7 +204,14 @@ export function writeAgentInstructions(options?: Partial<AgentInstructionOptions
       autoTailor = false
     }
   }
-  const content = buildAgentInstructions({ autoTailor })
+  const customPrompt = readCustomSystemPromptForAgent()
+  let embedCustomPrompt = false
+  try {
+    embedCustomPrompt = getStorageMode() === 'plaintext'
+  } catch (err) {
+    appLogger.warn(`Agent instructions written without the storage mode: ${String(err)}`)
+  }
+  const content = buildAgentInstructions({ autoTailor, customPrompt, embedCustomPrompt })
   const dir = agentWorkspaceDir()
   writeFileSync(join(dir, 'CLAUDE.md'), content)
   writeFileSync(join(dir, 'AGENTS.md'), content)

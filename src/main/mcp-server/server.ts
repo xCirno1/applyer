@@ -67,8 +67,21 @@ function observed<Args>(
   }
 }
 
-export function createApplyerMcpServer(): McpServer {
-  const server = new McpServer({ name: 'applyer', version: APP_VERSION })
+export interface ApplyerMcpServerOptions {
+  /**
+   * Sent to the client in the initialize handshake. The CLI socket passes
+   * the user's custom instructions here (`buildMcpServerInstructions`); the
+   * in-process OpenRouter bridge passes nothing, since chat mode carries
+   * them in its own system prompt instead.
+   */
+  instructions?: string
+}
+
+export function createApplyerMcpServer(options: ApplyerMcpServerOptions = {}): McpServer {
+  const server = new McpServer(
+    { name: 'applyer', version: APP_VERSION },
+    options.instructions ? { instructions: options.instructions } : undefined
+  )
 
   server.registerTool(
     'get_profile',

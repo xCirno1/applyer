@@ -13,6 +13,7 @@ import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
 import { SEARCH_COUNTRIES } from '@shared/types/jobSource'
 import { isAgentMode, type AgentMode } from '@shared/types/agentMode'
 import { isReasoningEffort, type ReasoningEffort } from '@shared/types/openrouter'
+import { parseCustomSystemPrompt } from '@shared/types/customSystemPrompt'
 import { isChatRole, isChatToolCallStatus, type ChatRole, type ChatToolCallStatus } from '@shared/types/chat'
 import { isValidBoardDescriptor } from '../browser/ats/providers'
 import { sanitizeDescriptionHtml } from '../browser/htmlContent'
@@ -201,6 +202,12 @@ const settingsDataSchema = z.object({
       reasoningEffort: z.custom<ReasoningEffort>(isReasoningEffort),
       toolApproval: z.object({ askFor: z.array(z.string()) })
     })
+    .optional(),
+  // Optional: bundles written before custom instructions existed, or from an
+  // install with none. Checked with the same rule the Settings editor uses.
+  customSystemPrompt: z
+    .string()
+    .refine((value) => parseCustomSystemPrompt(value).ok, { message: 'Custom system prompt is too long' })
     .optional()
 })
 

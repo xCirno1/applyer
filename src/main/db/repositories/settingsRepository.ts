@@ -45,6 +45,7 @@ const SEARCH_CHALLENGE_FALLBACK_KEY = 'search_challenge_fallback'
 const OPENROUTER_API_KEY_KEY = 'openrouter_api_key'
 const AGENT_MODE_KEY = 'agent_mode'
 const OPENROUTER_SETTINGS_KEY = 'openrouter_settings'
+const CUSTOM_SYSTEM_PROMPT_KEY = 'custom_system_prompt'
 
 function getSetting(key: string): string | null {
   const row = getDb().select().from(appSettings).where(eq(appSettings.key, key)).get()
@@ -330,4 +331,24 @@ export function getOpenRouterSettings(): OpenRouterSettings {
 
 export function setOpenRouterSettings(settings: OpenRouterSettings): void {
   setSetting(OPENROUTER_SETTINGS_KEY, JSON.stringify(settings))
+}
+
+/**
+ * The user's custom agent instructions, stored exactly as
+ * `config/customSystemPrompt.ts` hands them over (already run through
+ * `writeSecureField` for the active storage mode), same arrangement as the
+ * OpenRouter key above: this repository never decides how the text is
+ * protected. An empty prompt is a deleted row rather than an empty string,
+ * so "never set" and "cleared" read back the same way.
+ */
+export function getCustomSystemPromptRaw(): string | null {
+  return getSetting(CUSTOM_SYSTEM_PROMPT_KEY)
+}
+
+export function setCustomSystemPromptRaw(value: string): void {
+  setSetting(CUSTOM_SYSTEM_PROMPT_KEY, value)
+}
+
+export function clearCustomSystemPrompt(): void {
+  getDb().delete(appSettings).where(eq(appSettings.key, CUSTOM_SYSTEM_PROMPT_KEY)).run()
 }

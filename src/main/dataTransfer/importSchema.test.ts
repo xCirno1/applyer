@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { validateExportBundle } from './importSchema'
 import { EXPORT_SCHEMA_VERSION } from '@shared/types/dataTransfer'
 import type { ExportBundle } from '@shared/types/dataTransfer'
+import { CUSTOM_SYSTEM_PROMPT_MAX_LENGTH } from '@shared/types/customSystemPrompt'
 import { DEFAULT_THEME_STATE, MAX_CSS_PRESETS, MAX_CUSTOM_CSS_LENGTH, MAX_PRESET_NAME_LENGTH } from '@shared/types/theme'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
@@ -552,5 +553,24 @@ describe('validateExportBundle: chats', () => {
     if (!result.ok) return
     expect(result.bundle.data.chats?.[0]?.messages[0]).not.toHaveProperty('id')
     expect(result.bundle.data.chats?.[0]?.messages[0]).not.toHaveProperty('sessionId')
+  })
+})
+
+describe('validateExportBundle: custom system prompt', () => {
+  const baseSettings = { autoStartCommand: '', indexedJobsRetentionDays: 30 }
+  const withPrompt = (customSystemPrompt: unknown): unknown => ({
+    ...validBundle(),
+    data: { settings: { ...baseSettings, customSystemPrompt } }
+  })
+
+  it('accepts a bundle with or without custom instructions', () => {
+    expect(validateExportBundle({ ...validBundle(), data: { settings: baseSettings } }).ok).toBe(true)
+    expect(validateExportBundle(withPrompt('Only remote roles.')).ok).toBe(true)
+    expect(validateExportBundle(withPrompt('a'.repeat(CUSTOM_SYSTEM_PROMPT_MAX_LENGTH))).ok).toBe(true)
+  })
+
+  it('rejects instructions over the limit or of the wrong type', () => {
+    expect(validateExportBundle(withPrompt('a'.repeat(CUSTOM_SYSTEM_PROMPT_MAX_LENGTH + 1))).ok).toBe(false)
+    expect(validateExportBundle(withPrompt(42)).ok).toBe(false)
   })
 })

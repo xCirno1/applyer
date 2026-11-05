@@ -29,6 +29,7 @@ import {
 } from './toolApprovalGate'
 import { isSessionBusy, markSessionBusy, markSessionIdle } from './sessionActivity'
 import { buildChatSystemPrompt } from './systemPrompt'
+import { readCustomSystemPromptForAgent } from '../config/customSystemPrompt'
 import { buildModelMessages } from './contextWindow'
 import { broadcastChatEvent } from '../ipc/chatBroadcast'
 import { invalidateOpenRouterConnectionCache } from '../ipc/openrouter'
@@ -183,7 +184,11 @@ async function runTurn(sessionId: string): Promise<void> {
       let settings = getOpenRouterSettings()
       const resumeSettings = getResumeSettings()
       const contextLength = await resolveContextLength(session.modelId)
-      const systemPrompt = buildChatSystemPrompt({ autoTailor: resumeSettings.autoTailor, modelId: session.modelId })
+      const systemPrompt = buildChatSystemPrompt({
+        autoTailor: resumeSettings.autoTailor,
+        modelId: session.modelId,
+        customPrompt: readCustomSystemPromptForAgent()
+      })
       const history = listAllChatMessages(sessionId)
       const messages = buildModelMessages(history, { systemPrompt, contextLength, reserveTokens: CONTEXT_RESERVE_TOKENS })
       const tools = await deps.listToolDefinitions()

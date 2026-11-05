@@ -1,4 +1,5 @@
 import { buildAgentToolGuide } from '../config/agentInstructions'
+import { buildCustomInstructionsSection } from '@shared/types/customSystemPrompt'
 
 /**
  * The system prompt for OpenRouter chat mode's in-app agent, built fresh for
@@ -27,6 +28,14 @@ export interface BuildChatSystemPromptOptions {
   autoTailor: boolean
   /** The OpenRouter model id driving this turn, so the model knows what it is running as. */
   modelId: string
+  /**
+   * The user's custom instructions from Settings > Agent, appended after the
+   * tool guide in their own delimited section (see
+   * `@shared/types/customSystemPrompt`). Absent or `''` adds nothing. Not
+   * subject to the storage mode the way the CLI file is: this prompt only
+   * ever lives in memory and in the request to OpenRouter.
+   */
+  customPrompt?: string
   /** Defaults to the real current time; overridable so tests get a fixed date. */
   now?: Date
 }
@@ -46,5 +55,5 @@ Never claim or imply you submitted, applied to, or finished an application: noth
 Today's date is ${today}.
 
 `
-  return head + buildAgentToolGuide({ autoTailor: options.autoTailor })
+  return head + buildAgentToolGuide({ autoTailor: options.autoTailor }) + buildCustomInstructionsSection(options.customPrompt ?? '')
 }

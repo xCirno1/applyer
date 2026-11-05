@@ -91,6 +91,9 @@
   "chatTitleTooLong": "Judul terlalu panjang (maksimal {{max}} karakter).",
   "invalidAgentMode": "Mode agen tidak valid.",
   "invalidOpenRouterSettings": "Pengaturan OpenRouter tidak valid.",
+  "invalidCustomSystemPrompt": "Instruksi kustom tidak valid.",
+  "customSystemPromptTooLong": "Instruksi kustomnya kepanjangan (maksimal {{max}} karakter).",
+  "customSystemPromptUnreadable": "Instruksi kustommu terenkripsi dan tidak bisa dibaca sekarang (apakah keychain OS sudah terbuka?).",
   "unexpected": "Ada yang salah: {{message}}",
   "unexpectedNoDetail": "Ada yang salah."
 }

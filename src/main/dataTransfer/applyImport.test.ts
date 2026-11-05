@@ -38,6 +38,8 @@ import {
   setStorageMode
 } from '../db/repositories/settingsRepository'
 import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
+import { getCustomSystemPrompt, saveCustomSystemPrompt } from '../config/customSystemPrompt'
+import { getCustomSystemPromptRaw } from '../db/repositories/settingsRepository'
 import { EXPORT_SCHEMA_VERSION, allDomainsSelected } from '@shared/types/dataTransfer'
 import type { ExportBundle, ExportSelection } from '@shared/types/dataTransfer'
 import type { JobRecord } from '@shared/types/job'
@@ -325,6 +327,26 @@ describe('applyImport', () => {
       reasoningEffort: 'high',
       toolApproval: { askFor: ['queue_job'] }
     })
+  })
+
+  it('imports custom instructions, stored for this machine\'s storage mode', () => {
+    setStorageMode('encrypted')
+    applyImport(
+      bundle({ settings: { autoStartCommand: '', indexedJobsRetentionDays: 30, customSystemPrompt: 'Only remote roles.' } }),
+      { ...NO_SELECTION, settings: true }
+    )
+    expect(getCustomSystemPrompt()).toBe('Only remote roles.')
+    expect(getCustomSystemPromptRaw()?.startsWith('enc:v1:')).toBe(true)
+  })
+
+  it('keeps this machine\'s custom instructions when the bundle has none', () => {
+    setStorageMode('plaintext')
+    saveCustomSystemPrompt('Keep me.')
+    applyImport(bundle({ settings: { autoStartCommand: '', indexedJobsRetentionDays: 30 } }), {
+      ...NO_SELECTION,
+      settings: true
+    })
+    expect(getCustomSystemPrompt()).toBe('Keep me.')
   })
 
   it('keeps the current agent mode and OpenRouter settings when importing a bundle written before they existed', () => {

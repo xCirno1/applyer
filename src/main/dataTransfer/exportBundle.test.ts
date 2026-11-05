@@ -28,6 +28,8 @@ import { DEFAULT_OPENROUTER_SETTINGS } from '@shared/types/openrouter'
 import { assignVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
 import { createChatSession, insertChatMessage } from '../db/repositories/chatRepository'
 import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
+import { saveCustomSystemPrompt } from '../config/customSystemPrompt'
+import { __setEncryptionAvailable } from '../../../test/mocks/electron'
 import { jobsToCsv, companyBoardsToCsv, indexedJobsToCsv } from './csv'
 import { buildExportBundle, bundleJsonBytes, computeExportSizes, exportableJobs, filenameTimestamp } from './exportBundle'
 import { allDomainsSelected, totalJsonBytes } from '@shared/types/dataTransfer'
@@ -223,6 +225,28 @@ describe('buildExportBundle', () => {
       toolApproval: { askFor: ['queue_job'] }
     })
     expect(JSON.stringify(bundle)).not.toContain('apiKey')
+  })
+
+  it('includes the custom instructions decrypted, and leaves them out when there are none', () => {
+    const empty = buildExportBundle({ ...allDomainsSelected(false), settings: true }, testTheme)
+    expect(empty.data.settings).not.toHaveProperty('customSystemPrompt')
+    setStorageMode('encrypted')
+    saveCustomSystemPrompt('Only remote roles.')
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), settings: true }, testTheme)
+    expect(bundle.data.settings?.customSystemPrompt).toBe('Only remote roles.')
+  })
+
+  it('still exports the other settings when the custom instructions cannot be decrypted', () => {
+    setStorageMode('encrypted')
+    saveCustomSystemPrompt('Only remote roles.')
+    __setEncryptionAvailable(false)
+    try {
+      const bundle = buildExportBundle({ ...allDomainsSelected(false), settings: true }, testTheme)
+      expect(bundle.data.settings).toBeDefined()
+      expect(bundle.data.settings).not.toHaveProperty('customSystemPrompt')
+    } finally {
+      __setEncryptionAvailable(true)
+    }
   })
 
   it('includes the given theme state verbatim when selected, unlike every other domain never reading it from the DB', () => {

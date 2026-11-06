@@ -1,3 +1,5 @@
+import type { JobAttachedResume } from '../resume/attachedResume'
+
 export type JobStatus = 'queued' | 'filled' | 'submitted' | 'failed'
 
 export type ApplyMethod = 'external_form' | 'easy_apply' | 'email' | 'unknown'
@@ -29,6 +31,8 @@ export interface JobRecord {
   submittedAt: string | null
   /** The named resume variant this job attaches (see `shared/types/resume.ts`); null means the fallback (master or original upload). */
   resumeVariantId: string | null
+  /** Which resume the application actually got, recorded when the form accepted the file; null until one was attached (and again after a retry starts a fresh application). */
+  attachedResume: JobAttachedResume | null
   createdAt: string
   updatedAt: string
 }

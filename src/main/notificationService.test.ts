@@ -51,6 +51,7 @@ function job(status: JobRecord['status']): JobRecord {
     filledAt: status === 'filled' ? '2020-01-01T01:00:00.000Z' : null,
     submittedAt: null,
     resumeVariantId: null,
+    attachedResume: null,
     createdAt: '2020-01-01T00:00:00.000Z',
     updatedAt: '2020-01-01T01:00:00.000Z'
   }

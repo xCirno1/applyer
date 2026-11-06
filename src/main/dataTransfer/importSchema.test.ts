@@ -39,6 +39,7 @@ function validBundle(): ExportBundle {
           filledAt: null,
           submittedAt: null,
           resumeVariantId: null,
+          attachedResume: null,
           createdAt: '2020-01-01T00:00:00.000Z',
           updatedAt: '2020-01-01T00:00:00.000Z'
         }
@@ -152,6 +153,30 @@ describe('validateExportBundle: resumes and variant names', () => {
     if (!result.ok) return
     expect(result.bundle.data.jobs?.[0]?.resumeVariantId).toBeNull()
     expect(result.bundle.data.jobs?.[1]?.resumeVariantId).toBeNull()
+  })
+
+  it('keeps a valid attached-resume record, and reads a missing or malformed one as nothing recorded', () => {
+    const bundle = validBundle()
+    const job = bundle.data.jobs![0]!
+    const { attachedResume: _dropped, ...legacy } = job
+    void _dropped
+    const attachedResume = {
+      source: 'master',
+      variantId: null,
+      variantName: null,
+      templateId: 'classic',
+      stale: false,
+      attachedAt: '2020-01-02T00:00:00.000Z'
+    }
+    const result = validateExportBundle({
+      ...bundle,
+      data: { jobs: [{ ...job, attachedResume }, legacy, { ...job, attachedResume: { source: 'master' } }] }
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.bundle.data.jobs?.[0]?.attachedResume).toEqual(attachedResume)
+    expect(result.bundle.data.jobs?.[1]?.attachedResume).toBeNull()
+    expect(result.bundle.data.jobs?.[2]?.attachedResume).toBeNull()
   })
 
   it('rejects an empty or over-long variant name, and the old per-job variant shape', () => {

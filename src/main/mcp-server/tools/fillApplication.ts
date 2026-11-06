@@ -11,11 +11,12 @@ type Args = {
   jobId: z.infer<typeof fillApplicationShape.jobId>
   answers: z.infer<typeof fillApplicationShape.answers>
   finalStep?: z.infer<typeof fillApplicationShape.finalStep>
+  resume?: z.infer<typeof fillApplicationShape.resume>
 }
 
 export async function fillApplicationTool(args: Args): Promise<CallToolResult> {
   try {
-    const result = await runFillTask(args.jobId, args.answers, args.finalStep ?? false)
+    const result = await runFillTask(args.jobId, args.answers, args.finalStep ?? false, { resume: args.resume ?? 'assigned' })
     logActivity('info', `fill_application -> ${result.status}`, { jobId: args.jobId })
     recordRunEvent('form_filled', {
       source: getJob(args.jobId)?.source ?? null,
@@ -24,6 +25,8 @@ export async function fillApplicationTool(args: Args): Promise<CallToolResult> {
         status: result.status,
         mode: 'fill',
         finalStep: args.finalStep ?? false,
+        ...(args.resume && args.resume !== 'assigned' ? { resume: args.resume } : {}),
+        ...('attachedResume' in result && result.attachedResume ? { attachedResume: result.attachedResume.source } : {}),
         ...('filledFields' in result ? { filledFields: result.filledFields.length, skippedFields: result.skippedFields.length } : {}),
         ...('reasonTag' in result ? { reasonTag: result.reasonTag } : {})
       }

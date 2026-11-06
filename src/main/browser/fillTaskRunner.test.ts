@@ -33,9 +33,10 @@ beforeEach(() => {
 })
 
 import { runClickButtonTask, runEditTask, runFillTask, runInspectTask } from './fillTaskRunner'
-import { getJob, queueJob, setFilled, setSubmitted } from '../db/repositories/jobsRepository'
+import { getJob, queueJob, retry, setFailed, setFilled, setSubmitted } from '../db/repositories/jobsRepository'
 import { setAgentPermissions, setResumeSettings, setStorageMode } from '../db/repositories/settingsRepository'
-import { assignVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
+import { assignVariant, deleteVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
+import { addDocument } from '../db/repositories/documentsRepository'
 import { listActivity } from '../db/repositories/activityLogRepository'
 import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
 import { existsSync } from 'fs'
@@ -363,6 +364,111 @@ describe('resume attachment', () => {
     expect(listActivity({ jobId: job.id }).entries.some((entry) => entry.message === 'Attached the tailored resume')).toBe(true)
   })
 
+  it('records the attached variant on the job and returns it, and keeps the record after the variant is deleted', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT, templateId: 'compact' })
+    const variant = saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT, templateId: 'modern' })
+    assignVariant(job.id, variant.id)
+    renderMocks.renderResumePdf.mockResolvedValue(Buffer.from('%PDF-1.4 tailored'))
+    resumeFormPage()
+
+    await expect(runInspectTask(job.id)).resolves.toMatchObject({
+      storedDocuments: [{ kind: 'resume', source: 'variant', variantName: 'Backend', stale: false }]
+    })
+    const result = await runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])
+
+    const expected = { source: 'variant', variantId: variant.id, variantName: 'Backend', templateId: 'modern', stale: false }
+    expect(result).toMatchObject({ status: 'partially_filled', attachedResume: expected })
+    expect(getJob(job.id)?.attachedResume).toMatchObject(expected)
+
+    deleteVariant(variant.id)
+    expect(getJob(job.id)?.resumeVariantId).toBeNull()
+    expect(getJob(job.id)?.attachedResume).toMatchObject({ source: 'variant', variantName: 'Backend' })
+  })
+
+  it('marks a stale variant in the inspection and in the record', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    await new Promise((resolve) => setTimeout(resolve, 5))
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    renderMocks.renderResumePdf.mockResolvedValue(Buffer.from('%PDF-1.4 tailored'))
+    resumeFormPage()
+
+    await expect(runInspectTask(job.id)).resolves.toMatchObject({
+      storedDocuments: [{ source: 'variant', variantName: 'Backend', stale: true }]
+    })
+    await expect(runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])).resolves.toMatchObject({
+      attachedResume: { source: 'variant', stale: true }
+    })
+  })
+
+  it('attaches the master when asked to, even with a variant assigned', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT, templateId: 'classic' })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT, templateId: 'modern' }).id)
+    renderMocks.renderResumePdf.mockResolvedValue(Buffer.from('%PDF-1.4 master'))
+    resumeFormPage()
+
+    await runInspectTask(job.id)
+    const result = await runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }], false, { resume: 'master' })
+
+    expect(renderMocks.renderResumePdf).toHaveBeenCalledWith(SAMPLE_RESUME_CONTENT, 'classic', 'letter', {})
+    expect(result).toMatchObject({ attachedResume: { source: 'master', variantName: null, templateId: 'classic' } })
+    expect(listActivity({ jobId: job.id }).entries.some((entry) => entry.message === 'Attached the master resume')).toBe(true)
+  })
+
+  it('reports a requested master that does not exist instead of attaching something else', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    const { setInputFiles } = resumeFormPage()
+
+    await runInspectTask(job.id)
+    await expect(
+      runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }], false, { resume: 'master' })
+    ).resolves.toMatchObject({ status: 'failed', message: expect.stringContaining('Skipped: Resume (no master resume exists to render)') })
+    expect(setInputFiles).not.toHaveBeenCalled()
+    expect(renderMocks.renderResumePdf).not.toHaveBeenCalled()
+  })
+
+  it('attaches and records the original upload, also when asked for it over an assigned variant', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    await addDocument({ kind: 'resume', originalFilename: 'cv.txt', mimeType: 'text/plain', data: Buffer.from('Alex Morgan') })
+    const { setInputFiles } = resumeFormPage()
+
+    await expect(runInspectTask(job.id)).resolves.toMatchObject({
+      storedDocuments: [{ kind: 'resume', filename: 'cv.txt', source: 'original' }]
+    })
+    await expect(runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])).resolves.toMatchObject({
+      attachedResume: { source: 'original', variantName: null, templateId: null }
+    })
+    expect(listActivity({ jobId: job.id }).entries.some((entry) => entry.message === 'Attached the uploaded resume')).toBe(true)
+
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    await runInspectTask(job.id)
+    await expect(
+      runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }], false, { resume: 'original' })
+    ).resolves.toMatchObject({ attachedResume: { source: 'original' } })
+    expect(renderMocks.renderResumePdf).not.toHaveBeenCalled()
+    expect(setInputFiles).toHaveBeenCalledTimes(2)
+    expect(String(setInputFiles.mock.calls[1]![0])).toMatch(/\.txt$/)
+  })
+
+  it('clears the record when a failed job is retried for a fresh application', async () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    renderMocks.renderResumePdf.mockResolvedValue(Buffer.from('%PDF-1.4 tailored'))
+    resumeFormPage()
+
+    await runInspectTask(job.id)
+    await runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])
+    expect(getJob(job.id)?.attachedResume).not.toBeNull()
+    setFailed(job.id, 'other')
+    expect(getJob(job.id)?.attachedResume).not.toBeNull()
+    expect(retry(job.id).attachedResume).toBeNull()
+  })
+
   it('falls back to the master only when that is the chosen fallback', async () => {
     const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
     saveMasterResume({ content: SAMPLE_RESUME_CONTENT, templateId: 'classic', pageSize: 'a4' })
@@ -373,8 +479,9 @@ describe('resume attachment', () => {
     // Default fallback is the original upload, and nothing was uploaded.
     await expect(runFillTask(job.id, [{ fieldId: 'field-resume', value: 'resume' }])).resolves.toMatchObject({
       status: 'failed',
-      message: expect.stringContaining('Skipped: Resume (value must name an available stored document')
+      message: expect.stringContaining('Skipped: Resume (no resume has been uploaded)')
     })
+    expect(getJob(job.id)?.attachedResume).toBeNull()
     expect(renderMocks.renderResumePdf).not.toHaveBeenCalled()
 
     setResumeSettings({ fallbackAttachment: 'master', autoTailor: false })
@@ -400,9 +507,10 @@ describe('resume attachment', () => {
 
     expect(result).toMatchObject({
       status: 'failed',
-      message: expect.stringContaining('Skipped: Resume (tailored resume could not be rendered: Error: browser download was declined)')
+      message: expect.stringContaining('Skipped: Resume (tailored resume "Backend" could not be rendered: Error: browser download was declined; retry this field with fill_application resume "original"')
     })
     expect(setInputFiles).not.toHaveBeenCalled()
+    expect(getJob(job.id)?.attachedResume).toBeNull()
     expect(listActivity({ jobId: job.id, level: 'warn' }).entries.some((entry) => entry.message.includes('could not be rendered'))).toBe(true)
   })
 

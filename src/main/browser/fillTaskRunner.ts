@@ -2,10 +2,10 @@ import { randomUUID } from 'crypto'
 import { writeFileSync, mkdirSync } from 'fs'
 import { join, extname } from 'path'
 import type { Page } from 'playwright'
-import { clearBlocking, getJob, refreshFilled, setBlocking, setFilled } from '../db/repositories/jobsRepository'
+import { clearBlocking, getJob, refreshFilled, setAttachedResume, setBlocking, setFilled } from '../db/repositories/jobsRepository'
 import { listDocuments, readDocumentBytes } from '../db/repositories/documentsRepository'
 import { openHeadedBrowser, type HeadedBrowser } from './browserController'
-import { renderResumePdf, resolveResumeAttachment, resumeFileName } from './resumeRenderer'
+import { attachedResumeFor, renderResumePdf, resolveResumeAttachment, resumeFileName } from './resumeRenderer'
 import { removeFile, removeMaterializedDocument } from './attachmentCleanup'
 import { logActivity } from '../db/repositories/activityLogRepository'
 import { detectCaptcha } from './captchaDetector'
@@ -28,12 +28,22 @@ import { withStorageWriteLock } from '../storageWriteLock'
 import { mcpLogger } from '../logger'
 import { isNavigableUrl } from '@shared/url'
 import type { AgentPermission, AgentPermissions } from '@shared/types/agentPermissions'
+import type { JobAttachedResume, ResumeAttachmentPreference, ResumeAttachmentSource } from '@shared/resume/attachedResume'
 import { getAgentPermissions, getStorageMode } from '../db/repositories/settingsRepository'
 import { writeSecureFileBuffer } from '../db/encryption'
 import { allowRequestedPermissions, requestAgentPermissions } from './agentPermissionGate'
 
 export type FillTaskResult =
-  | { status: 'filled'; jobId: string; screenshotPath: string; screenshotPaths: string[]; filledFields: string[]; skippedFields: string[] }
+  | {
+      status: 'filled'
+      jobId: string
+      screenshotPath: string
+      screenshotPaths: string[]
+      filledFields: string[]
+      skippedFields: string[]
+      /** Present when this call attached a resume: which one the form now holds. */
+      attachedResume?: JobAttachedResume
+    }
   | {
       status: 'partially_filled'
       jobId: string
@@ -41,6 +51,7 @@ export type FillTaskResult =
       screenshotPaths: string[]
       filledFields: string[]
       skippedFields: string[]
+      attachedResume?: JobAttachedResume
       message: string
     }
   | { status: 'no_active_session'; jobId: string; message: string }
@@ -60,13 +71,31 @@ export type InspectTaskResult =
       mode: 'fill' | 'edit'
       fields: ApplicationField[]
       buttons: ApplicationButton[]
-      /** `source` says which resume the `resume` file value attaches: the job's assigned variant, the master, or (absent) the upload. */
-      storedDocuments: Array<{ kind: 'resume' | 'cover_letter'; filename: string; source?: 'variant' | 'master' }>
+      /**
+       * `source` says which resume the `resume` file value attaches: the
+       * job's assigned variant (named by `variantName`, `stale` when written
+       * against an older master), the master, or the original upload.
+       * Absent on a cover letter.
+       */
+      storedDocuments: StoredDocumentEntry[]
       message: string
     }
   | { status: 'paused_captcha'; jobId: string; taskId: string; message: string }
   | { status: 'no_active_session'; jobId: string; message: string }
   | { status: 'failed'; jobId: string; reasonTag: string; message: string }
+
+export interface StoredDocumentEntry {
+  kind: 'resume' | 'cover_letter'
+  filename: string
+  source?: ResumeAttachmentSource
+  variantName?: string
+  stale?: boolean
+}
+
+export interface FillTaskOptions {
+  /** Which resume a `resume` file value attaches; `assigned` (the default) follows the job's variant and the fallback setting. */
+  resume?: ResumeAttachmentPreference
+}
 
 export type ClickButtonTaskResult =
   | { status: 'clicked'; jobId: string; button: ApplicationButton; message: string }
@@ -152,45 +181,92 @@ function materializeDocument(kind: 'resume' | 'cover_letter'): string | undefine
 interface MaterializedResume {
   path?: string
   failure?: string
-  /** What the rendered file is, for the activity entry written once it is attached. */
-  rendered?: { kind: 'variant' | 'master'; templateId: string; stale: boolean }
+  /** What the file is, for the activity entry and the job's record written once it is attached. */
+  attached?: Omit<JobAttachedResume, 'attachedAt'>
 }
 
-async function materializeResume(jobId: string): Promise<MaterializedResume> {
+/** The clause a skipped resume field ends with, pointing at the retry that does not need the failed render. */
+function retryHint(preference: ResumeAttachmentPreference): string {
+  return preference === 'original'
+    ? ''
+    : '; retry this field with fill_application resume "original" (or "master") only if attaching a different resume is acceptable'
+}
+
+async function materializeResume(jobId: string, preference: ResumeAttachmentPreference): Promise<MaterializedResume> {
   let plan
   try {
-    plan = resolveResumeAttachment(jobId)
+    plan = resolveResumeAttachment(jobId, preference)
   } catch (error) {
-    logActivity('warn', 'Stored resume could not be read for attachment', { jobId, error: String(error) })
-    return { failure: `stored resume could not be read: ${String(error)}` }
+    logActivity('warn', 'Stored resume could not be read for attachment', { jobId, preference, error: String(error) })
+    return { failure: `stored resume could not be read: ${String(error)}${retryHint(preference)}` }
   }
-  if (plan.kind === 'original') return { path: materializeDocument('resume') }
+  if (plan.kind === 'unavailable') {
+    logActivity('warn', 'The requested resume is not available to attach', { jobId, preference, reason: plan.reason })
+    return { failure: plan.reason }
+  }
+  const attached = attachedResumeFor(plan) ?? undefined
+  if (plan.kind === 'original') {
+    let path: string | undefined
+    try {
+      path = materializeDocument('resume')
+    } catch (error) {
+      logActivity('warn', 'Uploaded resume could not be read for attachment', { jobId, error: String(error) })
+      return { failure: `the uploaded resume could not be read: ${String(error)}` }
+    }
+    return path ? { path, attached } : { failure: 'no resume has been uploaded' }
+  }
   try {
     const bytes = await renderResumePdf(plan.content, plan.templateId, plan.pageSize, plan.style)
     const dir = join(tempDir(), randomUUID())
     mkdirSync(dir, { recursive: true, mode: 0o700 })
     const path = join(dir, resumeFileName(plan.content))
     writeFileSync(path, bytes, { mode: 0o600 })
-    return {
-      path,
-      rendered: { kind: plan.kind, templateId: plan.templateId, stale: plan.kind === 'variant' && plan.stale }
-    }
+    return { path, attached }
   } catch (error) {
     logActivity('warn', `${plan.kind === 'variant' ? 'Tailored' : 'Master'} resume could not be rendered`, {
       jobId,
+      ...(plan.kind === 'variant' ? { variantName: plan.name } : {}),
       error: String(error)
     })
-    return { failure: `${plan.kind === 'variant' ? 'tailored' : 'master'} resume could not be rendered: ${String(error)}` }
+    return {
+      failure: `${plan.kind === 'variant' ? `tailored resume "${plan.name}"` : 'master resume'} could not be rendered: ${String(error)}${retryHint(preference)}`
+    }
   }
 }
 
-function logResumeAttached(jobId: string, rendered: NonNullable<MaterializedResume['rendered']>): void {
-  logActivity('info', rendered.kind === 'variant' ? 'Attached the tailored resume' : 'Attached the master resume', {
+const ATTACHED_MESSAGES: Record<ResumeAttachmentSource, string> = {
+  variant: 'Attached the tailored resume',
+  master: 'Attached the master resume',
+  original: 'Attached the uploaded resume'
+}
+
+/**
+ * Logs the attachment and records it on the job. The record failing to
+ * save must not fail a fill whose form already holds the file: it is logged
+ * and the fill goes on, the board just has no "attached" line for it.
+ */
+function recordResumeAttached(jobId: string, attached: Omit<JobAttachedResume, 'attachedAt'>): JobAttachedResume {
+  const record: JobAttachedResume = { ...attached, attachedAt: new Date().toISOString() }
+  logActivity('info', ATTACHED_MESSAGES[record.source], {
     jobId,
-    templateId: rendered.templateId,
-    ...(rendered.stale ? { stale: true } : {})
+    ...(record.variantName ? { variantName: record.variantName } : {}),
+    ...(record.templateId ? { templateId: record.templateId } : {}),
+    ...(record.stale ? { stale: true } : {})
   })
-  recordRunEvent('resume_attached', { jobId, meta: { kind: rendered.kind, templateId: rendered.templateId, stale: rendered.stale } })
+  // Run statistics count rendered resumes (tailored vs master); the upload
+  // was never rendered, so it is not one of those figures.
+  if (record.source !== 'original') {
+    recordRunEvent('resume_attached', {
+      jobId,
+      meta: { kind: record.source, templateId: record.templateId, stale: record.stale }
+    })
+  }
+  try {
+    broadcastJobUpdate(setAttachedResume(jobId, record))
+  } catch (error) {
+    logActivity('error', 'Could not record which resume was attached', { jobId, error: String(error) })
+  }
+  return record
 }
 
 function screenshotPathFor(jobId: string, stepIndex: number): string {
@@ -306,20 +382,26 @@ async function inspectSession(jobId: string, page: Page): Promise<InspectTaskRes
     ])
     const session = activeApplicationSessions.get(jobId)
     if (session?.page === page) recordInspectedStep(session, stepFingerprint(fields, buttons))
-    const storedDocuments = listDocuments().filter(
+    const storedDocuments: StoredDocumentEntry[] = listDocuments().filter(
       (document): document is typeof document & { kind: 'resume' | 'cover_letter' } =>
         document.kind === 'resume' || document.kind === 'cover_letter'
-    ).map((document) => ({
+    ).map((document): StoredDocumentEntry => ({
       kind: document.kind,
-      filename: document.originalFilename
+      filename: document.originalFilename,
+      ...(document.kind === 'resume' ? { source: 'original' as const } : {})
     }))
     // A tailored or master resume is attached in place of the upload, and it
     // exists even when nothing was ever uploaded, so list it as the resume
     // the agent may name. A corrupt stored resume is reported at fill time.
     try {
       const plan = resolveResumeAttachment(jobId)
-      if (plan.kind !== 'original') {
-        const rendered = { kind: 'resume' as const, filename: resumeFileName(plan.content), source: plan.kind }
+      if (plan.kind === 'variant' || plan.kind === 'master') {
+        const rendered: StoredDocumentEntry = {
+          kind: 'resume',
+          filename: resumeFileName(plan.content),
+          source: plan.kind,
+          ...(plan.kind === 'variant' ? { variantName: plan.name, stale: plan.stale } : {})
+        }
         const uploadIndex = storedDocuments.findIndex((document) => document.kind === 'resume')
         if (uploadIndex >= 0) storedDocuments.splice(uploadIndex, 1, rendered)
         else storedDocuments.unshift(rendered)
@@ -337,7 +419,7 @@ async function inspectSession(jobId: string, page: Page): Promise<InspectTaskRes
       message:
         mode === 'edit'
           ? 'Use edit_application with fieldId/value pairs from this visible step. If the field to edit is on an earlier step, click a listed Back or Previous button with click_application_button, then inspect again; repeat until the field is visible. Submit controls are never listed. Labels are context only. Attachments cannot be changed while editing.'
-          : 'Use fill_application with fieldId/value pairs from this visible step. Leave finalStep false while more application pages remain; set it true only when every page is complete and the form is ready for user review. To correct an answer already on this step, edit_application changes it without touching attachments or the final step. Use click_application_button with a buttonId to navigate, then inspect again. Submit controls are never listed. Labels are context only. For a file field, use resume or cover_letter only when that stored document is listed.'
+          : 'Use fill_application with fieldId/value pairs from this visible step. Leave finalStep false while more application pages remain; set it true only when every page is complete and the form is ready for user review. To correct an answer already on this step, edit_application changes it without touching attachments or the final step. Use click_application_button with a buttonId to navigate, then inspect again. Submit controls are never listed. Labels are context only. For a file field, use resume or cover_letter only when that stored document is listed. The resume entry\'s source says which resume it is; pass fill_application\'s resume option to attach the master or the original upload instead only when the user asked for that or the listed resume could not be rendered.'
     }
   } catch (error) {
     return { status: 'failed', jobId, reasonTag: 'other', message: `Could not inspect the open application form: ${String(error)}` }
@@ -521,15 +603,17 @@ async function applyAnswers(
   answers: ApplicationFieldAnswer[],
   permissions: AgentPermissions,
   edit: boolean,
-  finalStep: boolean
+  finalStep: boolean,
+  resumePreference: ResumeAttachmentPreference
 ): Promise<FillTaskResult | EditTaskResult> {
   let resume: MaterializedResume | undefined
+  let attachedResume: JobAttachedResume | undefined
   let coverLetterPath: string | undefined
   // Rendered only if `fillForm` reaches a file control whose answer names the
   // resume: rendering spins up the headless browser, which a text answer
   // that happens to say "resume" must never trigger.
   const resumeFile = async (): Promise<{ path?: string; unavailableReason?: string }> => {
-    resume = await materializeResume(jobId)
+    resume = await materializeResume(jobId, resumePreference)
     return { path: resume.path, unavailableReason: resume.failure }
   }
   try {
@@ -543,7 +627,7 @@ async function applyAnswers(
           coverLetterFilePath: coverLetterPath
         })
       : { filledFields: [], skippedFields: [], requiredPermissions: [], attachedDocuments: [] }
-    if (resume?.rendered && result.attachedDocuments.includes('resume')) logResumeAttached(jobId, resume.rendered)
+    if (resume?.attached && result.attachedDocuments.includes('resume')) attachedResume = recordResumeAttached(jobId, resume.attached)
     if (result.requiredPermissions.length > 0) {
       return {
         status: 'permission_denied',
@@ -603,6 +687,7 @@ async function applyAnswers(
         screenshotPaths,
         filledFields: result.filledFields,
         skippedFields: result.skippedFields,
+        ...(attachedResume ? { attachedResume } : {}),
         message: finalStep
           ? 'The job remains Queued because at least one requested final answer was skipped. Inspect the form again and retry every skipped answer before setting finalStep to true.'
           : 'This page was filled and the job remains Queued. Navigate and inspect again, or set finalStep to true only when every application page is complete and the form is ready for user review.'
@@ -614,7 +699,8 @@ async function applyAnswers(
       screenshotPath,
       screenshotPaths,
       filledFields: result.filledFields,
-      skippedFields: result.skippedFields
+      skippedFields: result.skippedFields,
+      ...(attachedResume ? { attachedResume } : {})
     }
   } catch (error) {
     return {
@@ -633,7 +719,8 @@ async function runAnswerTask(
   jobId: string,
   answers: ApplicationFieldAnswer[],
   edit: boolean,
-  finalStep = false
+  finalStep = false,
+  resumePreference: ResumeAttachmentPreference = 'assigned'
 ): Promise<FillTaskResult | EditTaskResult> {
   const job = getJob(jobId)
   if (!job) return { status: 'failed', jobId, reasonTag: 'other', message: 'Job not found.' }
@@ -687,7 +774,7 @@ async function runAnswerTask(
         message: `The user denied this permission request or it timed out. The open form was not changed and the job remains ${job.status === 'filled' ? 'Filled' : 'Queued'}.`
       }
     }
-    return applyAnswers(jobId, session.page, answers, authorization.permissions, edit, finalStep)
+    return applyAnswers(jobId, session.page, answers, authorization.permissions, edit, finalStep, resumePreference)
   } catch (error) {
     return { status: 'failed', jobId, reasonTag: 'other', message: `Could not access the open application form: ${String(error)}` }
   }
@@ -696,9 +783,10 @@ async function runAnswerTask(
 export async function runFillTask(
   jobId: string,
   answers: ApplicationFieldAnswer[],
-  finalStep = false
+  finalStep = false,
+  options: FillTaskOptions = {}
 ): Promise<FillTaskResult> {
-  return runAnswerTask(jobId, answers, false, finalStep) as Promise<FillTaskResult>
+  return runAnswerTask(jobId, answers, false, finalStep, options.resume ?? 'assigned') as Promise<FillTaskResult>
 }
 
 /** Updates only supplied field IDs in the original visible form and never uploads documents. */

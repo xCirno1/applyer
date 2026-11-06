@@ -17,6 +17,7 @@ import { isChatRole, isChatToolCallStatus, type ChatRole, type ChatToolCallStatu
 import { isValidBoardDescriptor } from '../browser/ats/providers'
 import { sanitizeDescriptionHtml } from '../browser/htmlContent'
 import { appError, type AppError } from '@shared/types/errorCodes'
+import { normalizeAttachedResume } from '@shared/resume/attachedResume'
 import {
   isValidCanvasTint,
   isValidHexColor,
@@ -67,6 +68,10 @@ const jobRecordSchema = z.object({
   resumeVariantId: z.null().catch(null),
   // Optional so bundles written before named variants existed still import.
   resumeVariantName: resumeVariantNameSchema.nullable().optional(),
+  // History of what the application sent. Optional for bundles written
+  // before it was recorded; a malformed one is dropped to "nothing
+  // recorded" rather than failing the whole import over a display line.
+  attachedResume: z.unknown().optional().transform((value) => normalizeAttachedResume(value)),
   createdAt: z.string(),
   updatedAt: z.string()
 })

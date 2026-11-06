@@ -92,6 +92,13 @@
       "when": 1789542679756,
       "tag": "0012_chat_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1794150440991,
+      "tag": "0013_job_attached_resume",
+      "breakpoints": true
     }
   ]
 }

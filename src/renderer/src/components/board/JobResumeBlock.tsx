@@ -5,10 +5,12 @@ import { diffResumeContent } from '@shared/resume/resumeDiff'
 import { useResumesStore } from '../../state/resumesStore'
 import { useToast } from '../ui/useToast'
 import { useErrorMessage } from '../../i18n/formatError'
+import { useFormatters } from '../../i18n/format'
 import Button from '../ui/Button'
 import Select from '../ui/Select'
 import ResumeStatusTag from '../resume/ResumeStatusTag'
 import TailorPromptBlock from '../resume/TailorPromptBlock'
+import { attachedNote, attachmentDiffersFromPlan, plannedResume, showsPlannedSentence } from './jobResumeLogic'
 
 /*
  * The "Resume" block inside `JobDetailModal`: a picker for which resume
@@ -23,6 +25,15 @@ import TailorPromptBlock from '../resume/TailorPromptBlock'
  * the sentence under the picker spells out which. Only jobs that can still
  * be filled get the prompt to tailor: a submitted application has already
  * sent whatever it sent.
+ *
+ * Once a fill has attached a resume, the job carries a record of which one
+ * (`JobRecord.attachedResume`), and the block says so with the time. That
+ * record is a snapshot, so it still names a variant that has since been
+ * renamed or deleted; when it no longer matches the selection, a note says
+ * whether the next fill will fix that (a Queued job) or the application
+ * already holds the old file (Filled or Submitted, where edits never touch
+ * attachments). For a settled application the record replaces the "will be
+ * attached" sentence, which no longer describes anything that will happen.
  */
 
 const DEFAULT_OPTION = ''
@@ -38,6 +49,7 @@ export default function JobResumeBlock({ job, onOpenResume, onPromptSent }: JobR
   const { t } = useTranslation(['board', 'resumes'])
   const toast = useToast()
   const errorMessage = useErrorMessage()
+  const format = useFormatters()
   const master = useResumesStore((s) => s.master)
   const settings = useResumesStore((s) => s.settings)
   const loadedOnce = useResumesStore((s) => s.loadedOnce)
@@ -66,6 +78,25 @@ export default function JobResumeBlock({ job, onOpenResume, onPromptSent }: JobR
   }, [master, variant, t])
 
   const canTailor = job.status === 'queued' || job.status === 'failed'
+  const attached = job.attachedResume
+
+  let attachedSentence: string | null = null
+  let note: ReturnType<typeof attachedNote> = null
+  if (attached) {
+    const date = format.dateTime(attached.attachedAt)
+    attachedSentence =
+      attached.source === 'variant'
+        ? t('board:detail.resumeAttachedVariant', { name: attached.variantName ?? '', date })
+        : attached.source === 'master'
+          ? t('board:detail.resumeAttachedMaster', { date })
+          : t('board:detail.resumeAttachedOriginal', { date })
+    // The comparison needs the variant list and settings; before the first
+    // fetch lands it would compare against an empty store and cry wolf.
+    if (loadedOnce) {
+      const plan = plannedResume(summary?.id ?? null, master !== null, settings.fallbackAttachment)
+      note = attachedNote(job.status, attachmentDiffersFromPlan(attached, plan))
+    }
+  }
 
   let sentence: string
   if (summary) {
@@ -123,8 +154,19 @@ export default function JobResumeBlock({ job, onOpenResume, onPromptSent }: JobR
           disabled={assigning || !loadedOnce}
         />
       )}
-      <p className="text-[12px] text-text-muted">{sentence}</p>
+      {showsPlannedSentence(job.status, attached) && <p className="text-[12px] text-text-muted">{sentence}</p>}
       {summary?.stale && <p className="text-[12px] text-warning">{t('board:detail.resumeStale')}</p>}
+      {attachedSentence && (
+        <p className="text-[12px] text-text">
+          {attachedSentence}
+          {attached?.stale && <span className="text-warning"> {t('board:detail.resumeAttachedStale')}</span>}
+        </p>
+      )}
+      {note && (
+        <p className="text-[12px] text-warning">
+          {note === 'pendingChange' ? t('board:detail.resumeAttachedPendingChange') : t('board:detail.resumeAttachedAlreadySent')}
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         <Button size="sm" onClick={() => onOpenResume(job.id)}>
           {t('board:detail.openResume')}

@@ -28,9 +28,13 @@ import {
   listBlockedJobs,
   listAllJobs,
   importJobs,
-  IllegalTransitionError
+  IllegalTransitionError,
+  setAttachedResume
 } from './jobsRepository'
 import type { JobRecord } from '@shared/types/job'
+import type { JobAttachedResume } from '@shared/resume/attachedResume'
+import { sql } from 'drizzle-orm'
+import { listActivity } from './activityLogRepository'
 
 function baseInput(overrides: Partial<Parameters<typeof queueJob>[0]> = {}): Parameters<typeof queueJob>[0] {
   return { title: 'Backend Engineer', company: 'Acme', url: 'https://example.com/1', ...overrides }
@@ -323,6 +327,7 @@ describe('importJobs', () => {
       filledAt: '2020-01-02T00:00:00.000Z',
       submittedAt: '2020-01-03T00:00:00.000Z',
       resumeVariantId: null,
+      attachedResume: null,
       createdAt: '2020-01-01T00:00:00.000Z',
       updatedAt: '2020-01-03T00:00:00.000Z',
       ...overrides
@@ -349,5 +354,63 @@ describe('importJobs', () => {
     const result = importJobs([fixture()])
     expect(result).toEqual({ imported: 0, skipped: 1 })
     expect(listAllJobs()).toHaveLength(1)
+  })
+
+  it('keeps the attached-resume history but drops its variant id, which is minted afresh on import', () => {
+    const attachedResume: JobAttachedResume = {
+      source: 'variant',
+      variantId: 'variant-on-another-machine',
+      variantName: 'Backend',
+      templateId: 'modern',
+      stale: false,
+      attachedAt: '2020-01-02T00:00:00.000Z'
+    }
+    importJobs([fixture({ attachedResume })])
+    expect(getJobByUrl('https://example.com/imported')?.attachedResume).toEqual({ ...attachedResume, variantId: null })
+  })
+})
+
+describe('setAttachedResume', () => {
+  const record: JobAttachedResume = {
+    source: 'variant',
+    variantId: 'variant-1',
+    variantName: 'Backend',
+    templateId: 'modern',
+    stale: false,
+    attachedAt: '2026-02-01T00:00:00.000Z'
+  }
+
+  it('stores the record and reads it back on the job', () => {
+    const { job } = queueJob(baseInput())
+    expect(job.attachedResume).toBeNull()
+    expect(setAttachedResume(job.id, record).attachedResume).toEqual(record)
+    expect(getJob(job.id)?.attachedResume).toEqual(record)
+  })
+
+  it('refuses an invalid record and an unknown job', () => {
+    const { job } = queueJob(baseInput())
+    expect(() => setAttachedResume(job.id, { ...record, variantName: '' })).toThrow('invalid attached resume')
+    expect(() => setAttachedResume('missing', record)).toThrow('Job not found')
+  })
+
+  it('reads an unreadable stored record as nothing recorded and logs it once', () => {
+    const { job } = queueJob(baseInput())
+    testDb.run(sql`UPDATE jobs SET attached_resume = '{"source":"nonsense"}'`)
+    expect(getJob(job.id)?.attachedResume).toBeNull()
+    expect(listJobs({}).jobs[0]?.attachedResume).toBeNull()
+    const warnings = listActivity({ jobId: job.id, level: 'warn' }).entries
+    expect(warnings.filter((entry) => entry.message.includes('unreadable record of the resume attached'))).toHaveLength(1)
+  })
+
+  it('is cleared by every retry path', () => {
+    const ids = ['https://x.com/a', 'https://x.com/b', 'https://x.com/c'].map((url) => {
+      const { job } = queueJob(baseInput({ url }))
+      setAttachedResume(job.id, record)
+      setFailed(job.id, 'other')
+      return job.id
+    })
+    expect(retry(ids[0]!).attachedResume).toBeNull()
+    expect(retryManyFailed([ids[1]!])[0]?.attachedResume).toBeNull()
+    expect(retryAllFailed()[0]?.attachedResume).toBeNull()
   })
 })

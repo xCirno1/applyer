@@ -126,7 +126,13 @@
     "resumeStale": "Varian ini berdasarkan resume utama yang lebih lama.",
     "resumeMaster": "Tidak ada varian yang ditetapkan; resume utama akan dilampirkan.",
     "resumeOriginal": "Tidak ada varian yang ditetapkan; file asli yang diunggah akan dilampirkan.",
-    "resumeNoMaster": "Resume utama belum disiapkan; file asli yang diunggah akan dilampirkan."
+    "resumeNoMaster": "Resume utama belum disiapkan; file asli yang diunggah akan dilampirkan.",
+    "resumeAttachedVariant": "\"{{name}}\" dilampirkan pada {{date}}.",
+    "resumeAttachedMaster": "Resume utama dilampirkan pada {{date}}.",
+    "resumeAttachedOriginal": "File asli yang diunggah dilampirkan pada {{date}}.",
+    "resumeAttachedStale": "Varian itu berdasarkan resume utama yang lebih lama.",
+    "resumeAttachedPendingChange": "Formulir yang terbuka berisi resume yang berbeda dari yang dipilih; pengisian berikutnya pada kolom resume akan melampirkan yang dipilih.",
+    "resumeAttachedAlreadySent": "Lamaran ini berisi resume yang berbeda dari yang dipilih; mengubah pilihan tidak mengubahnya."
   },
   "overview": {
     "title": "Ringkasan",

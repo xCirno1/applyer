@@ -81,7 +81,7 @@ The *why* for each component — behavioral quirks, the bugs a given approach wa
 | `AdvancedSettingsEditor` / `SettingsDisclosure` | `settings/AdvancedSettingsEditor.tsx`, `settings/SettingsDisclosure.tsx` (hierarchy/search in `settings/advancedSettingsSections.ts`) |
 | `RemoteBrowserCard` | `settings/RemoteBrowserCard.tsx` |
 | `TextArea` | `ui/TextArea.tsx` |
-| `JobResumeBlock` | `board/JobResumeBlock.tsx` |
+| `JobResumeBlock` / `jobResumeLogic.ts` | `board/JobResumeBlock.tsx`, `board/jobResumeLogic.ts` |
 | `ResumePreview` / `previewPagination.ts` | `resume/ResumePreview.tsx`, `resume/previewPagination.ts` |
 | `ResumeEditor` / `resumeEditorLogic.ts` | `resume/ResumeEditor.tsx`, `resume/resumeEditorLogic.ts` |
 | `ResumeWorkArea` | `resume/ResumeWorkArea.tsx` |

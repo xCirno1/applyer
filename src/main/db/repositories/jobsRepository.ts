@@ -4,6 +4,8 @@ import { getDb } from '../index'
 import { likeContains } from './likeSearch'
 import { jobs } from '../schema'
 import type { JobRecord, JobStatus, ListJobsQuery, ListJobsResult, ApplyMethod } from '@shared/types/job'
+import { logActivity } from './activityLogRepository'
+import { normalizeAttachedResume, type JobAttachedResume } from '@shared/resume/attachedResume'
 import { LIST_JOBS_DEFAULT_LIMIT, LIST_JOBS_MAX_LIMIT } from '@shared/constants'
 
 type JobRow = typeof jobs.$inferSelect
@@ -38,9 +40,28 @@ function toJobRecord(row: JobRow): JobRecord {
     filledAt: row.filledAt,
     submittedAt: row.submittedAt,
     resumeVariantId: row.resumeVariantId,
+    attachedResume: attachedResumeOf(row),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }
+}
+
+/** Jobs whose unreadable record was already logged this session; every list page maps every row, so logging per read would flood the log. */
+const reportedUnreadableAttachments = new Set<string>()
+
+/**
+ * A malformed stored record (a hand-edited database, a future shape) reads
+ * as "nothing recorded" so the board still renders, and is logged once per
+ * job per session so it does not vanish silently either.
+ */
+function attachedResumeOf(row: JobRow): JobAttachedResume | null {
+  if (row.attachedResume === null || row.attachedResume === undefined) return null
+  const record = normalizeAttachedResume(row.attachedResume)
+  if (!record && !reportedUnreadableAttachments.has(row.id)) {
+    reportedUnreadableAttachments.add(row.id)
+    logActivity('warn', 'Ignoring an unreadable record of the resume attached to this job', { jobId: row.id })
+  }
+  return record
 }
 
 const nowIso = (): string => new Date().toISOString()
@@ -265,6 +286,7 @@ export function retry(id: string): JobRecord {
       status: 'queued',
       failureTag: null,
       failureMessage: null,
+      attachedResume: null,
       updatedAt: now
     })
     .where(eq(jobs.id, id))
@@ -285,7 +307,7 @@ export function retryAllFailed(): JobRecord[] {
   if (failedIds.length === 0) return []
 
   db.update(jobs)
-    .set({ status: 'queued', failureTag: null, failureMessage: null, updatedAt: nowIso() })
+    .set({ status: 'queued', failureTag: null, failureMessage: null, attachedResume: null, updatedAt: nowIso() })
     .where(eq(jobs.status, 'failed'))
     .run()
 
@@ -307,12 +329,31 @@ export function retryManyFailed(ids: string[]): JobRecord[] {
     const current = getJob(id)
     if (!current || current.status !== 'failed') continue
     db.update(jobs)
-      .set({ status: 'queued', failureTag: null, failureMessage: null, updatedAt: now })
+      .set({ status: 'queued', failureTag: null, failureMessage: null, attachedResume: null, updatedAt: now })
       .where(eq(jobs.id, id))
       .run()
     updated.push(getJob(id) as JobRecord)
   }
   return updated
+}
+
+/**
+ * Records which resume the application got. Called once the form reported
+ * the file accepted, not when it was rendered: a rendered file the form
+ * refused was never attached. Returns the job as the board will now see it.
+ */
+export function setAttachedResume(id: string, record: JobAttachedResume): JobRecord {
+  const normalized = normalizeAttachedResume(record)
+  if (!normalized) throw new Error(`Refusing to record an invalid attached resume on job ${id}`)
+  const db = getDb()
+  const result = db.update(jobs).set({ attachedResume: normalized, updatedAt: nowIso() }).where(eq(jobs.id, id)).run()
+  if (result.changes === 0) throw new Error(`Job not found: ${id}`)
+  return getJob(id) as JobRecord
+}
+
+function importedAttachedResume(value: unknown): JobAttachedResume | null {
+  const record = normalizeAttachedResume(value)
+  return record ? { ...record, variantId: null } : null
 }
 
 export function setBlocking(id: string, blockingReason: string, blockingTaskId: string): void {
@@ -387,6 +428,9 @@ export function importJobs(records: JobRecord[]): { imported: number; skipped: n
         filledAt: r.filledAt,
         submittedAt: r.submittedAt,
         resumeVariantId: null,
+        // History, not a pointer, so it travels; the variant id does not
+        // (ids are minted on import), the name it was attached under does.
+        attachedResume: importedAttachedResume(r.attachedResume),
         createdAt: r.createdAt,
         updatedAt: r.updatedAt
       })

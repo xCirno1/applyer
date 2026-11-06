@@ -27,7 +27,7 @@ describe('fillApplicationTool', () => {
     const answers = [{ fieldId: 'field-email', value: 'jane@example.com' }]
     const result = await fillApplicationTool({ jobId: 'job-1', answers })
     expect(parse(result)).toMatchObject({ status: 'filled', jobId: 'job-1' })
-    expect(runFillTask).toHaveBeenCalledWith('job-1', answers, false)
+    expect(runFillTask).toHaveBeenCalledWith('job-1', answers, false, { resume: 'assigned' })
   })
 
   it('passes through the explicit final-step signal', async () => {
@@ -35,7 +35,32 @@ describe('fillApplicationTool', () => {
 
     await fillApplicationTool({ jobId: 'job-1', answers: [], finalStep: true })
 
-    expect(runFillTask).toHaveBeenCalledWith('job-1', [], true)
+    expect(runFillTask).toHaveBeenCalledWith('job-1', [], true, { resume: 'assigned' })
+  })
+
+  it('passes the requested resume through and returns which one was attached', async () => {
+    const attachedResume = {
+      source: 'original',
+      variantId: null,
+      variantName: null,
+      templateId: null,
+      stale: false,
+      attachedAt: '2026-01-01T00:00:00.000Z'
+    }
+    runFillTask.mockResolvedValue({
+      status: 'filled',
+      jobId: 'job-1',
+      screenshotPath: '/tmp/x.png',
+      screenshotPaths: ['/tmp/x.png'],
+      filledFields: ['Resume'],
+      skippedFields: [],
+      attachedResume
+    })
+
+    const result = await fillApplicationTool({ jobId: 'job-1', answers: [{ fieldId: 'field-resume', value: 'resume' }], resume: 'original' })
+
+    expect(runFillTask).toHaveBeenCalledWith('job-1', [{ fieldId: 'field-resume', value: 'resume' }], false, { resume: 'original' })
+    expect(parse(result)).toMatchObject({ attachedResume })
   })
 
   it('logs an activity entry summarizing the outcome', async () => {

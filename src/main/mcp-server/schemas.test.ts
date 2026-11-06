@@ -193,6 +193,14 @@ describe('fillApplicationShape', () => {
     expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [], finalStep: 'yes' }).success).toBe(false)
     expect(fillApplicationSchema.safeParse({ jobId: '' }).success).toBe(false)
   })
+
+  it('accepts only the known resume choices', () => {
+    for (const resume of ['assigned', 'master', 'original']) {
+      expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [], finalStep: true, resume }).success).toBe(true)
+    }
+    expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [], finalStep: true, resume: 'variant' }).success).toBe(false)
+    expect(fillApplicationSchema.safeParse({ jobId: 'job-1', answers: [], finalStep: true, resume: 1 }).success).toBe(false)
+  })
 })
 
 describe('inspectApplicationShape', () => {

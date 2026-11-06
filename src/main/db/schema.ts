@@ -87,6 +87,16 @@ export const jobs = sqliteTable('jobs', {
    * declared further down is fine.
    */
   resumeVariantId: text('resume_variant_id').references(() => resumeVariants.id, { onDelete: 'set null' }),
+  /**
+   * JSON snapshot of which resume the application actually got (see
+   * `shared/resume/attachedResume.ts`), written when the form accepted the
+   * file. A snapshot, not a reference: the variant may be renamed or deleted
+   * afterwards and the application already went out with it. No resume
+   * content and no file name, so the row's whole-database encryption is the
+   * same protection every other job column gets. Read through
+   * `normalizeAttachedResume`, never trusted as stored.
+   */
+  attachedResume: text('attached_resume', { mode: 'json' }).$type<unknown>(),
   createdAt: text('created_at').notNull().default(nowIso),
   updatedAt: text('updated_at').notNull().default(nowIso)
 })

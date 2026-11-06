@@ -1,6 +1,7 @@
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { z } from 'zod'
 import { getJob } from '../../db/repositories/jobsRepository'
+import type { JobRecord } from '@shared/types/job'
 import {
   getMasterResume,
   getVariantByJob,
@@ -38,11 +39,26 @@ export async function getResumeTool(args?: Args): Promise<CallToolResult> {
   const settings = getResumeSettings()
 
   if (!master) {
+    let job: JobRecord | null = null
+    if (args?.jobId) {
+      job = getJob(args.jobId)
+      if (!job) return textError(`No tracked job with id ${args.jobId}.`)
+    }
     const uploadedResume = listDocuments().find((document) => document.kind === 'resume')
     return jsonResult({
       master: null,
       variants: [],
       settings,
+      // Without a master nothing can be rendered, so a fill attaches the
+      // upload whatever the fallback setting says, or nothing at all.
+      ...(job
+        ? {
+            job: { id: job.id, title: job.title, company: job.company, status: job.status },
+            variant: null,
+            willAttach: uploadedResume ? 'original' : 'none',
+            lastAttached: job.attachedResume
+          }
+        : {}),
       message: uploadedResume
         ? `No master resume exists yet. Build one from the uploaded resume "${uploadedResume.originalFilename}": call get_profile with includeDocumentText true, convert the text into structured content without changing any wording, and send it to set_master_resume with sourceDocumentId "${uploadedResume.id}".`
         : 'No master resume exists yet and no resume has been uploaded. Ask the user for their resume, or build the master from what they tell you, then call set_master_resume.'
@@ -89,6 +105,9 @@ export async function getResumeTool(args?: Args): Promise<CallToolResult> {
         }
       : null
     result.willAttach = variant ? 'variant' : settings.fallbackAttachment
+    // What the application actually got, which can differ from willAttach:
+    // the assignment may have changed since, or the agent asked for another.
+    result.lastAttached = job.attachedResume
   }
 
   return jsonResult(result)

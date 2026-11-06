@@ -165,7 +165,7 @@ export function createApplyerMcpServer(options: ApplyerMcpServerOptions = {}): M
     {
       title: 'Inspect a job application form',
       description:
-        'Opens and retains a visible application form for a Queued job, or re-reads the retained form of a Queued or Filled job, and returns the current step\'s fields and recognised navigation buttons with opaque ids: label, name/placeholder/autocomplete hints, control type, current value, required, options. Ids are the identifiers; labels are context only. storedDocuments lists what a file field may name (`resume`, `cover_letter`); a resume with source variant or master is rendered from the structured resume. Password, hidden-step and final-action controls are omitted. Never changes the page.',
+        'Opens and retains a visible application form for a Queued job, or re-reads the retained form of a Queued or Filled job, and returns the current step\'s fields and recognised navigation buttons with opaque ids: label, name/placeholder/autocomplete hints, control type, current value, required, options. Ids are the identifiers; labels are context only. storedDocuments lists what a file field may name (`resume`, `cover_letter`); the resume entry\'s source says which one it is (variant, with its variantName and stale flag, or master: rendered from the structured resume; original: the uploaded file). Password, hidden-step and final-action controls are omitted. Never changes the page.',
       inputSchema: inspectApplicationShape
     },
     observed('inspect_application', inspectApplicationTool)
@@ -187,7 +187,7 @@ export function createApplyerMcpServer(options: ApplyerMcpServerOptions = {}): M
     {
       title: 'Fill out a job application',
       description:
-        'Fills the given fieldId/value pairs from the latest inspection. File value `resume` attaches the job\'s assigned variant, else the master or original upload per the user\'s setting (storedDocuments says which); `cover_letter` attaches that upload. Returns partially_filled and keeps the job Queued unless finalStep is true, which marks it Filled once every page is done; nothing submits. An empty answers list only with finalStep true on a fieldless review page. Use option values exactly as inspected. Asks the user for permission when it is not granted.',
+        'Fills the given fieldId/value pairs from the latest inspection. File value `resume` attaches the job\'s assigned variant, else the master or original upload per the user\'s setting (storedDocuments says which; `resume` overrides it, see its description), and the result\'s attachedResume says which one the form got; `cover_letter` attaches that upload. Returns partially_filled and keeps the job Queued unless finalStep is true, which marks it Filled once every page is done; nothing submits. An empty answers list only with finalStep true on a fieldless review page. Use option values exactly as inspected. Asks the user for permission when it is not granted.',
       inputSchema: fillApplicationShape
     },
     observed('fill_application', fillApplicationTool)
@@ -242,7 +242,7 @@ export function createApplyerMcpServer(options: ApplyerMcpServerOptions = {}): M
     {
       title: 'Get the structured resume',
       description:
-        'The master resume as structured content (header, then sections with free-text titles and a layout: text, entries, groups or list), the saved variants (name, template, stale flag, jobs using each) and resume settings. With `jobId`: that job\'s assigned variant, a diff summary against the master, and what fill_application will attach. If no master exists, says how to build one. Call before save_resume_variant (variants reuse master ids) and assign_resume.',
+        'The master resume as structured content (header, then sections with free-text titles and a layout: text, entries, groups or list), the saved variants (name, template, stale flag, jobs using each) and resume settings. With `jobId`: that job\'s assigned variant, a diff summary against the master, what fill_application will attach (willAttach) and what its application last got (lastAttached). If no master exists, says how to build one. Call before save_resume_variant (variants reuse master ids) and assign_resume.',
       inputSchema: getResumeShape
     },
     observed('get_resume', getResumeTool)

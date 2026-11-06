@@ -14,7 +14,8 @@ beforeEach(() => {
   browserMocks.newHeadlessContext.mockReset()
 })
 
-import { renderResumePdf, resolveResumeAttachment, resumeFileName } from './resumeRenderer'
+import { sql } from 'drizzle-orm'
+import { attachedResumeFor, renderResumePdf, resolveResumeAttachment, resumeFileName } from './resumeRenderer'
 import { assignVariant, deleteVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
 import { setResumeSettings, setStorageMode } from '../db/repositories/settingsRepository'
 import { queueJob } from '../db/repositories/jobsRepository'
@@ -102,6 +103,58 @@ describe('resolveResumeAttachment', () => {
     await new Promise((resolve) => setTimeout(resolve, 2))
     saveMasterResume({ content: SAMPLE_RESUME_CONTENT, templateId: 'modern' })
     expect(resolveResumeAttachment(job.id)).toMatchObject({ kind: 'variant', stale: true })
+  })
+
+  it('honours an explicit preference over the assignment and the fallback setting', () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    // No master yet: asking for it is reported, never swapped for the upload.
+    expect(resolveResumeAttachment(job.id, 'master')).toEqual({ kind: 'unavailable', reason: 'no master resume exists to render' })
+    expect(resolveResumeAttachment(job.id, 'original')).toEqual({ kind: 'original' })
+
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT, templateId: 'compact' })
+    const variant = saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT, templateId: 'modern' })
+    assignVariant(job.id, variant.id)
+    expect(resolveResumeAttachment(job.id, 'assigned')).toMatchObject({ kind: 'variant', variantId: variant.id })
+    expect(resolveResumeAttachment(job.id, 'master')).toMatchObject({ kind: 'master', templateId: 'compact' })
+    expect(resolveResumeAttachment(job.id, 'original')).toEqual({ kind: 'original' })
+  })
+
+  it('throws on a corrupt variant payload rather than attaching something else', () => {
+    const { job } = queueJob({ title: 'Engineer', company: 'Acme', url: 'https://example.com/job' })
+    saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
+    assignVariant(job.id, saveVariant({ name: 'Backend', content: SAMPLE_RESUME_CONTENT }).id)
+    testDb.run(sql`UPDATE resume_variants SET secure_payload = '{not json'`)
+    expect(() => resolveResumeAttachment(job.id)).toThrow('invalid or corrupted')
+    // An explicit choice that does not need the variant still works.
+    expect(resolveResumeAttachment(job.id, 'master')).toMatchObject({ kind: 'master' })
+  })
+})
+
+describe('attachedResumeFor', () => {
+  it('describes each plan as the record the job keeps, and nothing for an unavailable one', () => {
+    expect(
+      attachedResumeFor({
+        kind: 'variant',
+        variantId: 'v1',
+        name: 'Backend',
+        content: SAMPLE_RESUME_CONTENT,
+        templateId: 'modern',
+        pageSize: 'letter',
+        style: {},
+        stale: true
+      })
+    ).toEqual({ source: 'variant', variantId: 'v1', variantName: 'Backend', templateId: 'modern', stale: true })
+    expect(
+      attachedResumeFor({ kind: 'master', content: SAMPLE_RESUME_CONTENT, templateId: 'classic', pageSize: 'a4', style: {} })
+    ).toEqual({ source: 'master', variantId: null, variantName: null, templateId: 'classic', stale: false })
+    expect(attachedResumeFor({ kind: 'original' })).toEqual({
+      source: 'original',
+      variantId: null,
+      variantName: null,
+      templateId: null,
+      stale: false
+    })
+    expect(attachedResumeFor({ kind: 'unavailable', reason: 'x' })).toBeNull()
   })
 })
 

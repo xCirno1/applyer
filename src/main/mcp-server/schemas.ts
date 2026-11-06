@@ -12,6 +12,7 @@ import {
   resumeTemplateIdSchema,
   resumeVariantNameSchema
 } from '@shared/resume/resumeContentSchema'
+import { RESUME_ATTACHMENT_PREFERENCES, type ResumeAttachmentPreference } from '@shared/resume/attachedResume'
 
 const settings = getSettings()
 
@@ -130,7 +131,13 @@ export const fillApplicationShape = {
   answers: applicationAnswers,
   finalStep: z.boolean().optional().describe(
     'Set true only when every application page has been filled and the retained form is ready for user review. This changes only the Applyer board state and never submits the form.'
-  )
+  ),
+  resume: z
+    .enum(RESUME_ATTACHMENT_PREFERENCES as [ResumeAttachmentPreference, ...ResumeAttachmentPreference[]])
+    .optional()
+    .describe(
+      'Which resume a `resume` file value attaches. Default `assigned`: the job\'s variant, else the user\'s fallback. `master` or `original` (the uploaded file) only when the user asked for it or the assigned resume could not be rendered.'
+    )
 }
 
 export const inspectApplicationShape = {

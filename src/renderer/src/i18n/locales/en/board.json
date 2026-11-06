@@ -140,7 +140,13 @@
     "resumeStale": "This variant is based on an older master resume.",
     "resumeMaster": "No variant assigned; the master resume will be attached.",
     "resumeOriginal": "No variant assigned; the original uploaded file will be attached.",
-    "resumeNoMaster": "No master resume is set up; the original uploaded file will be attached."
+    "resumeNoMaster": "No master resume is set up; the original uploaded file will be attached.",
+    "resumeAttachedVariant": "Attached \"{{name}}\" on {{date}}.",
+    "resumeAttachedMaster": "Attached the master resume on {{date}}.",
+    "resumeAttachedOriginal": "Attached the original uploaded file on {{date}}.",
+    "resumeAttachedStale": "It was based on an older master resume.",
+    "resumeAttachedPendingChange": "The open form holds a different resume than the one selected; the next fill of its resume field attaches the selected one.",
+    "resumeAttachedAlreadySent": "This application holds a different resume than the one selected; changing the selection does not change it."
   },
   "overview": {
     "title": "Overview",

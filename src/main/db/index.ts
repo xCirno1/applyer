@@ -12,6 +12,7 @@ import { BUILTIN_FAILURE_TAGS } from '@shared/constants'
 import { decryptOpenDatabase, encryptOpenDatabase, openCipherDatabase } from './databaseEncryption'
 import { setLogStorageMode } from '../logger'
 import { rewriteScreenshotStorageMode } from '../secureFiles'
+import { repairDanglingStageRefs, seedBuiltinStages } from './applicationStageSeed'
 
 /**
  * Deliberately NOT __dirname-relative: this module can end up bundled into
@@ -135,7 +136,13 @@ export function initDatabase(): ReturnType<typeof drizzle<typeof schema>> {
   return database
 }
 
-/** Idempotent (onConflictDoNothing) — safe, and necessary, to re-run whenever a different database becomes active mid-session, in case it predates a newer app version's builtin tags. */
+/**
+ * Idempotent (onConflictDoNothing): safe, and necessary, to re-run whenever a different database becomes active mid-session, in case it predates a newer app version's builtin tags.
+ * Also re-seeds the built-in post-submission stages and clears any job stage
+ * pointing at a stage that is gone (see `applicationStageSeed.ts`), for the
+ * same reason: whatever database just became active is brought in line
+ * before anything reads it.
+ */
 export function seedFailureTags(database: ReturnType<typeof drizzle<typeof schema>>): void {
   for (const tag of BUILTIN_FAILURE_TAGS) {
     database
@@ -144,6 +151,8 @@ export function seedFailureTags(database: ReturnType<typeof drizzle<typeof schem
       .onConflictDoNothing({ target: failureTags.id })
       .run()
   }
+  seedBuiltinStages(database)
+  repairDanglingStageRefs(database)
 }
 
 export function closeDatabase(): void {

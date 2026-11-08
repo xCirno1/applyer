@@ -68,6 +68,15 @@ Applying
   to exclude, hide or stop seeing something; never as your own quality
   filter, for that simply do not queue.
 
+After submitting
+- \`list_application_stages\`: the stages a Submitted job can be in
+  (Awaiting response, Interviewing, Offer, Rejected, Withdrawn, plus the
+  user's own), with counts. The user manages that list in Applyer.
+- \`set_application_stage\`: record what happened to a Submitted
+  application, by stage name; no stage clears it. Only from what the user
+  told you (an interview invite, a rejection), never a guess.
+  \`list_jobs\` with \`stage\` lists the jobs in one.
+
 Resumes
 - \`get_resume\`: the master (header, then sections of layout text,
   entries, groups or list), the saved variants with their jobs, and with

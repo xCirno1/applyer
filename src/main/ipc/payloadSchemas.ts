@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { RUN_EVENT_KINDS, RUN_LABEL_MAX_LENGTH } from '@shared/types/run'
+import { STAGE_LABEL_MAX_LENGTH } from '@shared/types/applicationStage'
 import { ALL_EXPORT_DOMAINS } from '@shared/types/dataTransfer'
 import { checkRemoteBrowserEndpoint } from '@shared/types/remoteBrowser'
 import {
@@ -42,6 +43,19 @@ export const excludeJobPayload = z.object({ jobId: id, reason: z.string().option
 export const documentIdPayload = z.object({ documentId: id })
 export const exclusionIdPayload = z.object({ id })
 export const taskIdPayload = z.object({ taskId: id })
+
+/**
+ * Stage writes. The label is only bounded here (a megabyte of text is not a
+ * label anyone typed); the real rule, normalising and the length limit, is
+ * `checkStageLabel`, applied by the repository so the agent's tools and an
+ * import meet exactly the same one.
+ */
+const stageLabel = z.string().max(STAGE_LABEL_MAX_LENGTH * 4)
+export const createStagePayload = z.object({ label: stageLabel })
+export const renameStagePayload = z.object({ stageId: id, label: stageLabel })
+export const stageIdPayload = z.object({ stageId: id })
+export const reorderStagesPayload = z.object({ orderedIds: z.array(id).max(500) })
+export const setJobStagePayload = z.object({ jobIds: z.array(id).min(1).max(1000), stageId: id.nullable() })
 
 /**
  * Resume writes share `resumeContentSchema` with the MCP tools and the import
@@ -139,6 +153,8 @@ export const listJobsQuerySchema = z.object({
   status: z.enum(['queued', 'filled', 'submitted', 'failed']).optional().catch(undefined),
   source: z.string().optional().catch(undefined),
   sortBy: z.enum(['newest', 'matchScore']).optional().catch(undefined),
+  // `null` is a real filter ("no stage"), so only an unreadable value falls back to unfiltered.
+  stageId: z.string().min(1).nullable().optional().catch(undefined),
   search,
   limit,
   offset

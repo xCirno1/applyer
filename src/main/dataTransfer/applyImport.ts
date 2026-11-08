@@ -7,6 +7,7 @@ import { boardKeyOf, isValidBoardDescriptor } from '../browser/ats/providers'
 import { saveProfile } from '../db/repositories/profileRepository'
 import { importResumes, linkVariantsByName } from '../db/repositories/resumeRepository'
 import { importChatSessions } from '../db/repositories/chatRepository'
+import { importStages, linkJobStages } from '../db/repositories/applicationStagesRepository'
 import { broadcastChatEvent } from '../ipc/chatBroadcast'
 import { broadcastAgentModeChanged } from '../openrouter/broadcast'
 import { saveCustomSystemPrompt } from '../config/customSystemPrompt'
@@ -55,6 +56,15 @@ export function requiresAutoStartReview(
 export function applyImport(bundle: ExportBundle, selection: ExportSelection): ImportSummary {
   const summary: ImportSummary = {}
   if (selection.jobs && bundle.data.jobs) summary.jobs = importJobs(bundle.data.jobs)
+  // Stages ride with the jobs domain; created before the jobs are linked to
+  // them so a custom stage named by a job resolves in the same import.
+  if (selection.jobs && bundle.data.applicationStages) {
+    summary.stages = importStages(bundle.data.applicationStages)
+  }
+  if (selection.jobs && bundle.data.jobs) {
+    const stageLinks = bundle.data.jobs.flatMap((job) => (job.stage ? [{ jobUrl: job.url, stage: job.stage }] : []))
+    if (stageLinks.length > 0) summary.stageAssignments = linkJobStages(stageLinks)
+  }
   if (selection.indexedJobs && bundle.data.indexedJobs) {
     summary.indexedJobs = importIndexedJobs(bundle.data.indexedJobs)
   }

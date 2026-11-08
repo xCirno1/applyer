@@ -17,7 +17,7 @@ import { humanizeKey, MAX_LIST_ITEMS, parsePayload, readablePayload, toReadable,
 export type PayloadSection = 'arguments' | 'result'
 
 /** Column ids; `ToolPayloadView` maps them to translated headings. */
-export type HintColumn = 'title' | 'company' | 'location' | 'source' | 'status' | 'matchScore' | 'failure' | 'field' | 'kind' | 'required' | 'value' | 'salary'
+export type HintColumn = 'title' | 'company' | 'location' | 'source' | 'status' | 'stage' | 'matchScore' | 'failure' | 'field' | 'kind' | 'required' | 'value' | 'salary'
 
 export type HintCell =
   | { kind: 'text'; text: string; tone?: 'muted' | 'danger' }
@@ -97,13 +97,14 @@ function searchJobsResult(value: Record<string, unknown>): PayloadHint | null {
 /** `list_jobs` results: one row per tracked job, the title opening it on the board. */
 function listJobsResult(value: Record<string, unknown>): PayloadHint | null {
   if (!Array.isArray(value.jobs)) return null
-  const jobs = table(['title', 'company', 'status', 'matchScore', 'failure'], value.jobs, (job) => {
+  const jobs = table(['title', 'company', 'status', 'stage', 'matchScore', 'failure'], value.jobs, (job) => {
     const jobId = str(job.jobId)
     const title = str(job.title) ?? jobId ?? ''
     return [
       jobId ? { kind: 'job', text: title, jobId } : text(title),
       text(job.company),
       text(job.status),
+      text(job.stage, 'muted'),
       text(job.matchScore),
       text(job.failureTag, 'danger')
     ]

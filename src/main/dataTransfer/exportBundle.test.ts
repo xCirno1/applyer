@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { createTestDb } from '../db/testDb'
 import type * as schema from '../db/schema'
+import { jobs as jobsTable } from '../db/schema'
+import { eq } from 'drizzle-orm'
 
 let testDb: ReturnType<typeof drizzle<typeof schema>>
 vi.mock('../db/index', () => ({ getDb: () => testDb }))
@@ -27,6 +29,7 @@ import {
 import { DEFAULT_OPENROUTER_SETTINGS } from '@shared/types/openrouter'
 import { assignVariant, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
 import { createChatSession, insertChatMessage } from '../db/repositories/chatRepository'
+import { createStage, exportableStages, setJobsStage } from '../db/repositories/applicationStagesRepository'
 import { SAMPLE_RESUME_CONTENT } from '@shared/resume/sampleContent'
 import { saveCustomSystemPrompt } from '../config/customSystemPrompt'
 import { __setEncryptionAvailable } from '../../../test/mocks/electron'
@@ -76,6 +79,38 @@ describe('buildExportBundle', () => {
     expect(jobs.find((job) => job.id === plain.id)?.resumeVariantName).toBeNull()
   })
 
+  it('exports the stage list with the jobs and names each job\'s stage by built-in id or custom name', () => {
+    const builtin = queueJob({ title: 'A', company: 'X', url: 'https://x.com/a' }).job
+    const custom = queueJob({ title: 'B', company: 'X', url: 'https://x.com/b' }).job
+    queueJob({ title: 'C', company: 'X', url: 'https://x.com/c' })
+    for (const id of [builtin.id, custom.id]) {
+      testDb.update(jobsTable).set({ status: 'submitted' }).where(eq(jobsTable.id, id)).run()
+    }
+    const phone = createStage('Phone screen')
+    setJobsStage([builtin.id], 'interviewing')
+    setJobsStage([custom.id], phone.id)
+
+    const bundle = buildExportBundle({ ...allDomainsSelected(false), jobs: true }, testTheme)
+    expect(bundle.data.applicationStages).toEqual([
+      { kind: 'builtin', id: 'awaiting_response', position: 0 },
+      { kind: 'builtin', id: 'interviewing', position: 1 },
+      { kind: 'builtin', id: 'offer', position: 2 },
+      { kind: 'builtin', id: 'rejected', position: 3 },
+      { kind: 'builtin', id: 'withdrawn', position: 4 },
+      { kind: 'custom', name: 'Phone screen', position: 5 }
+    ])
+    const byUrl = new Map(bundle.data.jobs?.map((job) => [job.url, job]))
+    expect(byUrl.get('https://x.com/a')?.stage).toEqual({ kind: 'builtin', id: 'interviewing' })
+    expect(byUrl.get('https://x.com/b')?.stage).toEqual({ kind: 'custom', name: 'Phone screen' })
+    expect(byUrl.get('https://x.com/c')?.stage).toBeNull()
+    // The spreadsheet shows the label, English for a built-in.
+    const csv = jobsToCsv(exportableJobs())
+    expect(csv).toContain(',Interviewing')
+    expect(csv).toContain(',Phone screen')
+    // Not selected, not exported.
+    expect(buildExportBundle(allDomainsSelected(false), testTheme).data.applicationStages).toBeUndefined()
+  })
+
   it('gives the CSV export the same variant names as the bundle', () => {
     setStorageMode('plaintext')
     saveMasterResume({ content: SAMPLE_RESUME_CONTENT })
@@ -85,7 +120,7 @@ describe('buildExportBundle', () => {
 
     const csv = jobsToCsv(exportableJobs())
     expect(csv.split('\n')[0]).toContain('Resume Variant')
-    expect(csv.split('\n')[1]).toMatch(/,Backend$/)
+    expect(csv.split('\n')[1]).toMatch(/,Backend,$/)
     // The plain table dump the IPC handler used to export has no names at all.
     expect(jobsToCsv(listAllJobs())).not.toContain('Backend')
   })
@@ -341,10 +376,10 @@ describe('computeExportSizes', () => {
     expect(totalJsonBytes(sizes, twoDomains)).toBe(naiveSum + 1) // one comma between the two keys
   })
 
-  it('reports a small positive marginal size for an empty jobs list (just the "jobs":[] overhead)', () => {
+  it('sizes an empty jobs list as the "jobs":[] overhead plus the stage list that rides with it', () => {
     const sizes = computeExportSizes(testTheme)
-    expect(sizes.jobs.json).toBeGreaterThan(0)
-    expect(sizes.jobs.json).toBeLessThan(20)
+    const stagesOnly = Buffer.byteLength(JSON.stringify({ jobs: [], applicationStages: exportableStages() }), 'utf-8') - 2
+    expect(sizes.jobs.json).toBe(stagesOnly)
   })
 
   it('grows as jobs are added', () => {

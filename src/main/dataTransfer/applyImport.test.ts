@@ -24,6 +24,7 @@ import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository
 import { getProfile } from '../db/repositories/profileRepository'
 import { listAllVariants, saveMasterResume, saveVariant } from '../db/repositories/resumeRepository'
 import { listChatSessions } from '../db/repositories/chatRepository'
+import { createStage, listStages } from '../db/repositories/applicationStagesRepository'
 import {
   getAgentMode,
   getAutoStartCommand,
@@ -80,6 +81,8 @@ const jobFixture: JobRecord = {
   submittedAt: null,
   resumeVariantId: null,
   attachedResume: null,
+  stageId: null,
+  stageChangedAt: null,
   createdAt: '2020-01-01T00:00:00.000Z',
   updatedAt: '2020-01-01T00:00:00.000Z'
 }
@@ -262,6 +265,48 @@ describe('applyImport', () => {
 
     const plain = applyImport(bundle({ jobs: [{ ...jobFixture, id: 'x', url: 'https://example.com/plain' }] }), { ...NO_SELECTION, jobs: true })
     expect(plain.resumeAssignments).toBeUndefined()
+  })
+
+  it('imports custom stages with the jobs and re-links Submitted jobs to them by name', () => {
+    createStage('Onsite')
+    const submitted = { ...jobFixture, status: 'submitted' as const, filledAt: '2020-01-02T00:00:00.000Z', submittedAt: '2020-01-03T00:00:00.000Z' }
+    const result = applyImport(
+      bundle({
+        jobs: [
+          { ...submitted, stage: { kind: 'custom', name: 'Phone screen' } },
+          { ...submitted, id: 'e2', url: 'https://example.com/imported-2', stage: { kind: 'builtin', id: 'offer' } },
+          { ...submitted, id: 'e3', url: 'https://example.com/imported-3', stage: { kind: 'custom', name: 'Never exported' } },
+          { ...jobFixture, id: 'e4', url: 'https://example.com/imported-4', stage: { kind: 'builtin', id: 'offer' } },
+          { ...submitted, id: 'e5', url: 'https://example.com/imported-5', stage: null }
+        ],
+        applicationStages: [
+          { kind: 'builtin', id: 'offer', position: 0 },
+          { kind: 'custom', name: 'onsite', position: 5 },
+          { kind: 'custom', name: 'Phone screen', position: 6 }
+        ]
+      }),
+      { ...NO_SELECTION, jobs: true }
+    )
+    expect(result.jobs).toEqual({ imported: 5, skipped: 0 })
+    expect(result.stages).toEqual({ imported: 1, skipped: 0 })
+    // The queued job is not Submitted, so its reference does not resolve to anything it can carry.
+    expect(result.stageAssignments).toEqual({ linked: 2, unresolved: 2 })
+    const phone = listStages().find((stage) => stage.label === 'Phone screen')!
+    const jobs = listAllJobs()
+    expect(jobs.find((job) => job.url === 'https://example.com/imported')?.stageId).toBe(phone.id)
+    expect(jobs.find((job) => job.url === 'https://example.com/imported-2')?.stageId).toBe('offer')
+    expect(jobs.find((job) => job.url === 'https://example.com/imported-3')?.stageId).toBeNull()
+    expect(jobs.find((job) => job.url === 'https://example.com/imported-4')?.stageId).toBeNull()
+    expect(listStages().filter((stage) => stage.label.toLowerCase() === 'onsite')).toHaveLength(1)
+  })
+
+  it('leaves stages alone when the jobs domain is not selected, and reports nothing for a bundle without them', () => {
+    const skipped = applyImport(bundle({ applicationStages: [{ kind: 'custom', name: 'Onsite', position: 0 }] }), NO_SELECTION)
+    expect(skipped.stages).toBeUndefined()
+    expect(listStages().some((stage) => stage.label === 'Onsite')).toBe(false)
+    const plain = applyImport(bundle({ jobs: [jobFixture] }), { ...NO_SELECTION, jobs: true })
+    expect(plain.stages).toBeUndefined()
+    expect(plain.stageAssignments).toBeUndefined()
   })
 
   it('imports exclusions when selected and present', () => {

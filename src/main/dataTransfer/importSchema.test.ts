@@ -41,6 +41,8 @@ function validBundle(): ExportBundle {
           submittedAt: null,
           resumeVariantId: null,
           attachedResume: null,
+          stageId: null,
+          stageChangedAt: null,
           createdAt: '2020-01-01T00:00:00.000Z',
           updatedAt: '2020-01-01T00:00:00.000Z'
         }
@@ -204,6 +206,65 @@ describe('validateExportBundle: resumes and variant names', () => {
 
     const badVariant = { master: null, variants: [{ name: 'Backend', content: duplicated, templateId: 'classic' }] }
     expect(validateExportBundle({ ...bundle, data: { resumes: badVariant } }).ok).toBe(false)
+  })
+})
+
+describe('validateExportBundle: application stages', () => {
+  it('accepts stages and job stage references, normalising custom names', () => {
+    const bundle = validBundle()
+    const job = bundle.data.jobs![0]!
+    const result = validateExportBundle({
+      ...bundle,
+      data: {
+        jobs: [
+          { ...job, status: 'submitted', stage: { kind: 'custom', name: '  Phone   screen ' } },
+          { ...job, id: '2', url: 'https://example.com/2', stage: { kind: 'builtin', id: 'offer' } },
+          { ...job, id: '3', url: 'https://example.com/3', stage: null }
+        ],
+        applicationStages: [
+          { kind: 'builtin', id: 'offer', position: 0 },
+          { kind: 'custom', name: ' Phone  screen', position: 1 }
+        ]
+      }
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.bundle.data.jobs?.[0]?.stage).toEqual({ kind: 'custom', name: 'Phone screen' })
+    expect(result.bundle.data.jobs?.[1]?.stage).toEqual({ kind: 'builtin', id: 'offer' })
+    expect(result.bundle.data.jobs?.[2]?.stage).toBeNull()
+    expect(result.bundle.data.applicationStages?.[1]).toEqual({ kind: 'custom', name: 'Phone screen', position: 1 })
+  })
+
+  it('drops what it cannot read to no stage instead of failing the bundle', () => {
+    const bundle = validBundle()
+    const job = bundle.data.jobs![0]!
+    const result = validateExportBundle({
+      ...bundle,
+      data: {
+        jobs: [
+          { ...job, stage: { kind: 'builtin', id: 'hired' }, stageId: 'from-file', stageChangedAt: '2020-01-01' },
+          { ...job, id: '2', url: 'https://example.com/2', stage: { kind: 'custom', name: '   ' } }
+        ],
+        applicationStages: [
+          { kind: 'builtin', id: 'hired', position: 0 },
+          { kind: 'custom', name: '', position: 1 },
+          'junk',
+          { kind: 'custom', name: 'Onsite', position: 2 }
+        ]
+      }
+    })
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.bundle.data.jobs?.[0]).toMatchObject({ stage: null, stageId: null, stageChangedAt: null })
+    expect(result.bundle.data.jobs?.[1]?.stage).toBeNull()
+    expect(result.bundle.data.applicationStages).toEqual([{ kind: 'custom', name: 'Onsite', position: 2 }])
+  })
+
+  it('still accepts a bundle written before stages existed', () => {
+    const result = validateExportBundle(validBundle())
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.bundle.data.applicationStages).toBeUndefined()
   })
 })
 

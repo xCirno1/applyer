@@ -52,6 +52,8 @@ function job(status: JobRecord['status']): JobRecord {
     submittedAt: null,
     resumeVariantId: null,
     attachedResume: null,
+    stageId: null,
+    stageChangedAt: null,
     createdAt: '2020-01-01T00:00:00.000Z',
     updatedAt: '2020-01-01T01:00:00.000Z'
   }

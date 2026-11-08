@@ -55,7 +55,8 @@ export const DEFAULT_TOOL_APPROVAL_ASK_FOR: readonly string[] = [
   'delete_resume_variant',
   'assign_resume',
   'flag_failure',
-  'add_company_board'
+  'add_company_board',
+  'set_application_stage'
 ]
 
 export const DEFAULT_OPENROUTER_SETTINGS: OpenRouterSettings = {

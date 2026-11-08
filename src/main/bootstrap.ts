@@ -8,6 +8,7 @@ import { closeGuard } from './closeGuard'
 import { initDatabase, closeDatabase } from './db'
 import { registerTerminalIpc, setTerminalTarget } from './ipc/terminal'
 import { registerJobsIpc } from './ipc/jobs'
+import { registerStagesIpc } from './ipc/stages'
 import { registerIndexedJobsIpc } from './ipc/indexedJobs'
 import { registerExclusionsIpc } from './ipc/exclusions'
 import { registerCompanyBoardsIpc } from './ipc/companyBoards'
@@ -150,6 +151,7 @@ function initializeApp(): void {
   writeAgentInstructions()
 
   registerJobsIpc()
+  registerStagesIpc()
   registerRunsIpc()
   registerIndexedJobsIpc()
   registerExclusionsIpc()

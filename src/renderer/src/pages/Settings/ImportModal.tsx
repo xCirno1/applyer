@@ -146,6 +146,13 @@ export default function ImportModal({ open, onClose }: { open: boolean; onClose:
       if (linked > 0) parts.push(t('data.resumeAssignmentsLinked', { count: linked }))
       if (unresolved > 0) parts.push(t('data.resumeAssignmentsUnresolved', { count: unresolved }))
     }
+    if (result.summary.stages && result.summary.stages.imported > 0)
+      parts.push(t('data.stagesAdded', { count: result.summary.stages.imported }))
+    if (result.summary.stageAssignments) {
+      const { linked, unresolved } = result.summary.stageAssignments
+      if (linked > 0) parts.push(t('data.stageAssignmentsLinked', { count: linked }))
+      if (unresolved > 0) parts.push(t('data.stageAssignmentsUnresolved', { count: unresolved }))
+    }
     if (result.summary.settings) parts.push(t('data.settingsUpdated'))
     // Unlike every other domain, main never applies this one (it doesn't
     // have the renderer's localStorage) — it just carried `theme` through

@@ -29,6 +29,8 @@ const job = (overrides: Partial<JobRecord> = {}): JobRecord =>
     filledAt: null,
     submittedAt: null,
     resumeVariantId: null,
+    stageId: null,
+    stageChangedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides

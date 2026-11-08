@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { callIpc } from '../lib/ipcCall'
 import type { JobRecord, JobSortOrder, JobStatus } from '@shared/types/job'
+import { STAGE_FILTER_ALL, jobMatchesStageFilter, stageFilterToQuery, type StageFilter } from './stagesStoreLogic'
 
 const STATUSES: JobStatus[] = ['queued', 'filled', 'submitted', 'failed']
 const PAGE_SIZE = 20
@@ -16,6 +17,11 @@ export interface JobFilters {
   search: string
   source: string | null
   sortBy: JobSortOrder
+  /**
+   * Narrows the Submitted column only (no other status carries a stage):
+   * `STAGE_FILTER_ALL`, `STAGE_FILTER_NONE`, or a stage id.
+   */
+  stage: StageFilter
 }
 
 interface JobsState {
@@ -49,7 +55,17 @@ function emptyColumn(): ColumnState {
   return { jobs: [], total: 0, loading: false, loadedOnce: false }
 }
 
-const DEFAULT_FILTERS: JobFilters = { search: '', source: null, sortBy: 'newest' }
+const DEFAULT_FILTERS: JobFilters = { search: '', source: null, sortBy: 'newest', stage: STAGE_FILTER_ALL }
+
+/** Per-column request counter, so only the newest `fetchColumn` call writes its page. */
+const latestRequest: Record<JobStatus, number> = { queued: 0, filled: 0, submitted: 0, failed: 0 }
+
+/** The stage part of a column's query: only Submitted is filtered by stage. */
+function stageQuery(status: JobStatus, filters: JobFilters): { stageId?: string | null } {
+  if (status !== 'submitted') return {}
+  const stageId = stageFilterToQuery(filters.stage)
+  return stageId === undefined ? {} : { stageId }
+}
 
 export const useJobsStore = create<JobsState>((set, get) => ({
   columns: {
@@ -64,8 +80,14 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   selectedJobIds: new Set(),
 
   setFilters: (partial) => {
-    set((state) => ({ filters: { ...state.filters, ...partial } }))
-    get().fetchAllColumns()
+    const previous = get().filters
+    const next = { ...previous, ...partial }
+    set({ filters: next })
+    // The stage filter only changes what Submitted shows, so changing it
+    // alone refetches that one column rather than all four.
+    const onlyStage = (Object.keys(partial) as (keyof JobFilters)[]).every((key) => key === 'stage' || partial[key] === previous[key])
+    if (onlyStage && next.stage !== previous.stage) void get().fetchColumn('submitted')
+    else if (!onlyStage) get().fetchAllColumns()
   },
 
   fetchAllColumns: () => {
@@ -77,7 +99,9 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   },
 
   fetchColumn: async (status) => {
-    const { search, source, sortBy } = get().filters
+    const filters = get().filters
+    const { search, source, sortBy } = filters
+    const request = ++latestRequest[status]
     set((state) => ({ columns: { ...state.columns, [status]: { ...state.columns[status], loading: true } } }))
     // An empty page on failure, never a column stuck loading: `loading` is what
     // draws the skeleton, so a rejected call that skipped this `set` left one
@@ -89,10 +113,15 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         offset: 0,
         search: search || undefined,
         source: source || undefined,
-        sortBy
+        sortBy,
+        ...stageQuery(status, filters)
       }),
       { jobs: [], total: 0 }
     )
+    // A newer request for this column started while this one was in
+    // flight (a filter changed): it owns the column, so this stale page is
+    // dropped rather than shown over it.
+    if (latestRequest[status] !== request) return
     set((state) => ({
       columns: {
         ...state.columns,
@@ -104,7 +133,9 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   loadMore: async (status) => {
     const column = get().columns[status]
     if (column.loading || column.jobs.length >= column.total) return
-    const { search, source, sortBy } = get().filters
+    const filters = get().filters
+    const { search, source, sortBy } = filters
+    const request = latestRequest[status]
     set((state) => ({ columns: { ...state.columns, [status]: { ...state.columns[status], loading: true } } }))
     // Keeps the rows already loaded and reports the same total, so a failed
     // "load more" leaves the column exactly as it was, still able to retry.
@@ -115,10 +146,14 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         offset: column.jobs.length,
         search: search || undefined,
         source: source || undefined,
-        sortBy
+        sortBy,
+        ...stageQuery(status, filters)
       }),
       { jobs: [], total: column.total }
     )
+    // The column was refetched from the top meanwhile; this page belongs to
+    // the old list, and the refetch is what settles `loading`.
+    if (latestRequest[status] !== request) return
     set((state) => ({
       columns: {
         ...state.columns,
@@ -135,10 +170,13 @@ export const useJobsStore = create<JobsState>((set, get) => ({
   applyUpdate: (job) => {
     set((state) => {
       const columns = { ...state.columns }
+      // A Submitted job whose stage no longer matches the stage filter
+      // leaves the column, the way a status change moves it to another.
+      const belongs = jobMatchesStageFilter(job, state.filters.stage)
       for (const status of STATUSES) {
         const existingIndex = columns[status].jobs.findIndex((j) => j.id === job.id)
         if (existingIndex === -1) continue
-        if (status === job.status) {
+        if (status === job.status && belongs) {
           const jobs = [...columns[status].jobs]
           jobs[existingIndex] = job
           columns[status] = { ...columns[status], jobs }
@@ -151,7 +189,7 @@ export const useJobsStore = create<JobsState>((set, get) => ({
         }
       }
       const targetColumn = columns[job.status]
-      if (!targetColumn.jobs.some((j) => j.id === job.id)) {
+      if (belongs && !targetColumn.jobs.some((j) => j.id === job.id)) {
         columns[job.status] = {
           ...targetColumn,
           jobs: [job, ...targetColumn.jobs],

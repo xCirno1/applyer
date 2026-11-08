@@ -9,6 +9,7 @@ import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository
 import { getProfile } from '../db/repositories/profileRepository'
 import { getMasterResume, listAllVariants, listVariantSummaries } from '../db/repositories/resumeRepository'
 import { listAllChatSessionsForExport } from '../db/repositories/chatRepository'
+import { exportableStages, listStages, stageRefFor } from '../db/repositories/applicationStagesRepository'
 import {
   getAgentMode,
   getAutoStartCommand,
@@ -107,10 +108,21 @@ function exportableResumes(): ExportResumesData {
  */
 export function exportableJobs(): ExportJobRecord[] {
   const names = new Map(listVariantSummaries().map((variant) => [variant.id, variant.name]))
+  const stagesById = new Map(listStages().map((stage) => [stage.id, stage]))
   return listAllJobs().map((job) => ({
     ...job,
-    resumeVariantName: job.resumeVariantId ? (names.get(job.resumeVariantId) ?? null) : null
+    resumeVariantName: job.resumeVariantId ? (names.get(job.resumeVariantId) ?? null) : null,
+    stage: stageRefFor(job.stageId, stagesById)
   }))
+}
+
+/**
+ * The jobs domain's two keys, built together so the export and the size
+ * preview measure the same thing: the jobs themselves and the stage list
+ * their `stage` references resolve against.
+ */
+function exportableJobsDomain(): Pick<ExportBundle['data'], 'jobs' | 'applicationStages'> {
+  return { jobs: exportableJobs(), applicationStages: exportableStages() }
 }
 
 /**
@@ -122,7 +134,7 @@ export function exportableJobs(): ExportJobRecord[] {
  */
 export function buildExportBundle(selection: ExportSelection, theme: ThemeState): ExportBundle {
   const data: ExportBundle['data'] = {}
-  if (selection.jobs) data.jobs = exportableJobs()
+  if (selection.jobs) Object.assign(data, exportableJobsDomain())
   if (selection.indexedJobs) data.indexedJobs = listAllIndexedJobs()
   if (selection.exclusions) data.exclusions = listAllExclusions()
   if (selection.companyBoards) data.companyBoards = exportableCompanyBoards()
@@ -168,7 +180,8 @@ export function bundleJsonBytes(data: ExportBundle['data']): number {
  * function's doc comment for why this is the one domain not read from the DB.
  */
 export function computeExportSizes(theme: ThemeState): ExportSizes {
-  const jobs = exportableJobs()
+  const jobsDomain = exportableJobsDomain()
+  const jobs = jobsDomain.jobs ?? []
   const indexedJobs = listAllIndexedJobs()
   const exclusions = listAllExclusions()
   const companyBoards = exportableCompanyBoards()
@@ -179,7 +192,9 @@ export function computeExportSizes(theme: ThemeState): ExportSizes {
 
   const empty = bundleJsonBytes({})
   return {
-    jobs: { json: bundleJsonBytes({ jobs }) - empty, csv: Buffer.byteLength(jobsToCsv(jobs), 'utf-8') },
+    // Both keys in one measurement, so the separator between them is counted
+    // here and `totalJsonBytes` still adds exactly one per selected domain.
+    jobs: { json: bundleJsonBytes(jobsDomain) - empty, csv: Buffer.byteLength(jobsToCsv(jobs), 'utf-8') },
     indexedJobs: {
       json: bundleJsonBytes({ indexedJobs }) - empty,
       csv: Buffer.byteLength(indexedJobsToCsv(indexedJobs), 'utf-8')

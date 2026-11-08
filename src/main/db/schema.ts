@@ -97,6 +97,37 @@ export const jobs = sqliteTable('jobs', {
    * `normalizeAttachedResume`, never trusted as stored.
    */
   attachedResume: text('attached_resume', { mode: 'json' }).$type<unknown>(),
+  /**
+   * The post-submission stage (`applicationStages`); null means none yet.
+   * Cleared, not cascaded, when the stage is deleted, same as the variant
+   * above: the job is still a submitted application, it just has no stage.
+   * The repository clears it explicitly too rather than relying on the
+   * foreign key alone, since `PRAGMA foreign_keys` is per connection.
+   */
+  stageId: text('stage_id').references(() => applicationStages.id, { onDelete: 'set null' }),
+  stageChangedAt: text('stage_changed_at'),
+  createdAt: text('created_at').notNull().default(nowIso),
+  updatedAt: text('updated_at').notNull().default(nowIso)
+}, (table) => [index('jobs_stage_id_idx').on(table.stageId)])
+
+/**
+ * Post-submission stages (see `shared/types/applicationStage.ts`): one
+ * ordered list shared by every Submitted job. Built-in rows have fixed ids
+ * (`awaiting_response`, ...) seeded by the migration that created this table
+ * and re-seeded on open, and are never renamed or deleted; custom rows have
+ * UUIDs. Label uniqueness is case-insensitive and enforced in the
+ * repository, like resume variant names.
+ *
+ * No secure field here, matching the job columns it annotates: a stage label
+ * ("Interviewing", "Second round") is the same kind of data as a job's
+ * status, so the whole-database encryption mode is the envelope that covers
+ * it, exactly as it covers `jobs`.
+ */
+export const applicationStages = sqliteTable('application_stages', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  isBuiltin: integer('is_builtin', { mode: 'boolean' }).notNull().default(false),
+  position: integer('position').notNull(),
   createdAt: text('created_at').notNull().default(nowIso),
   updatedAt: text('updated_at').notNull().default(nowIso)
 })

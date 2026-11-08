@@ -92,6 +92,13 @@ export interface ExportBundle {
   appVersion: string
   data: {
     jobs?: ExportJobRecord[]
+    /**
+     * The post-submission stages, exported and imported with the jobs
+     * domain rather than as a domain of their own: they only mean something
+     * next to the jobs they annotate. Optional so bundles written before
+     * stages existed remain valid.
+     */
+    applicationStages?: ExportApplicationStage[]
     indexedJobs?: ExportIndexedJob[]
     exclusions?: ExclusionRecord[]
     companyBoards?: ExportCompanyBoard[]
@@ -120,7 +127,22 @@ export interface ExportBundle {
  */
 export interface ExportJobRecord extends JobRecord {
   resumeVariantName?: string | null
+  /**
+   * The job's post-submission stage by built-in id or custom name, for the
+   * same reason the variant travels by name: custom stage ids are minted per
+   * install. Re-linked after import (see `linkJobStages`). Optional so
+   * bundles written before stages existed remain valid.
+   */
+  stage?: ExportJobStageRef | null
 }
+
+/** How an exported job names its stage. */
+export type ExportJobStageRef = { kind: 'builtin'; id: string } | { kind: 'custom'; name: string }
+
+/** One stage of the exported order: built-ins by id (they exist everywhere), customs by name. */
+export type ExportApplicationStage =
+  | { kind: 'builtin'; id: string; position: number }
+  | { kind: 'custom'; name: string; position: number }
 
 /**
  * The structured master resume and its named variants. Timestamps are left
@@ -310,6 +332,14 @@ export interface ImportSummary {
    * selected, or the variant was deleted before the export).
    */
   resumeAssignments?: { linked: number; unresolved: number }
+  /** Custom stages added from the bundle (`skipped`: a name this install refused, e.g. past the custom-stage ceiling). Present whenever the jobs domain carried stages. */
+  stages?: { imported: number; skipped: number }
+  /**
+   * Job stages re-created from the jobs' `stage`, like `resumeAssignments`.
+   * `unresolved` is a stage that matched nothing here, or a job that is not
+   * Submitted on this install.
+   */
+  stageAssignments?: { linked: number; unresolved: number }
   settings?: boolean
   /** `skipped` is a session whose model or content failed validation. */
   chats?: { imported: number; skipped: number }

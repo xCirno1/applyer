@@ -47,6 +47,12 @@ export type ErrorCode =
   | 'variantNotFound'
   | 'variantNameTaken'
   | 'resumeRenderFailed'
+  // Post-submission stages (the Submitted column's sub-statuses).
+  | 'invalidStageName'
+  | 'stageNameTaken'
+  | 'stageLimitReached'
+  | 'stageNotFound'
+  | 'stageBuiltinLocked'
   // Attaching to a running browser over its remote-debugging port (Settings > Browser).
   | 'invalidRemoteBrowserEndpoint'
   | 'remoteBrowserUnreachable'

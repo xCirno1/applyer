@@ -40,6 +40,7 @@ import { useShortcutHandler } from './providers/ShortcutsContext'
 import { useJobsStore } from './state/jobsStore'
 import { useProfileStore } from './state/profileStore'
 import { useResumesStore } from './state/resumesStore'
+import { useStagesStore } from './state/stagesStore'
 import { useAgentModeStore } from './state/agentModeStore'
 import { useChatStore } from './state/chatStore'
 import { syncUnsavedChangesToMain } from './state/unsavedChangesStore'
@@ -104,6 +105,8 @@ function MainShell(): ReactElement {
   const subscribeToProfileUpdates = useProfileStore((s) => s.subscribeToUpdates)
   const subscribeToResumeUpdates = useResumesStore((s) => s.subscribeToUpdates)
   const selectResumeVariant = useResumesStore((s) => s.select)
+  const fetchStages = useStagesStore((s) => s.fetch)
+  const subscribeToStageUpdates = useStagesStore((s) => s.subscribeToUpdates)
   const [resumesTabRequest, setResumesTabRequest] = useState<{
     tab: ResumesTab
     nonce: number
@@ -117,6 +120,13 @@ function MainShell(): ReactElement {
   // board's "tailored" tags read the variant list, so the subscription lives
   // here and not on the page.
   useEffect(() => subscribeToResumeUpdates(), [subscribeToResumeUpdates])
+  // And for the Submitted stages: the cards' stage tags, the board's stage
+  // filter and the overview's counts all read them, and the agent and an
+  // import write them, so they load once here and follow every change.
+  useEffect(() => {
+    void fetchStages()
+    return subscribeToStageUpdates()
+  }, [fetchStages, subscribeToStageUpdates])
 
   // Which surface drives job automation (the dock's Terminal tab for a CLI
   // agent, the chat panel on the right for an in-app OpenRouter one)

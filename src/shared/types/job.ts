@@ -33,6 +33,14 @@ export interface JobRecord {
   resumeVariantId: string | null
   /** Which resume the application actually got, recorded when the form accepted the file; null until one was attached (and again after a retry starts a fresh application). */
   attachedResume: JobAttachedResume | null
+  /**
+   * The post-submission stage (see `shared/types/applicationStage.ts`); only
+   * ever set on a Submitted job. An id no stage has any more is read as "no
+   * stage" by every consumer, never as an error.
+   */
+  stageId: string | null
+  /** When `stageId` last changed; null until a stage is first set. */
+  stageChangedAt: string | null
   createdAt: string
   updatedAt: string
 }
@@ -53,6 +61,12 @@ export interface ListJobsQuery {
   search?: string
   source?: string
   sortBy?: JobSortOrder
+  /**
+   * Narrows to one post-submission stage: a stage id, or `null` for jobs with
+   * no stage. Left out, every stage is listed. Only meaningful alongside
+   * `status: 'submitted'`, since no other status carries a stage.
+   */
+  stageId?: string | null
 }
 
 export interface ListJobsResult {

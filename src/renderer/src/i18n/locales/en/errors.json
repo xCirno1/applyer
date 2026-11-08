@@ -94,6 +94,11 @@
   "invalidCustomSystemPrompt": "Invalid custom instructions.",
   "customSystemPromptTooLong": "Custom instructions are too long (max {{max}} characters).",
   "customSystemPromptUnreadable": "Your custom instructions are encrypted and cannot be read right now (is the OS keychain unlocked?).",
+  "invalidStageName": "A stage needs a name of at most 40 characters.",
+  "stageNameTaken": "A stage named \"{{name}}\" already exists.",
+  "stageLimitReached": "You can have at most {{max}} custom stages.",
+  "stageNotFound": "That stage no longer exists.",
+  "stageBuiltinLocked": "Built-in stages cannot be renamed or deleted.",
   "unexpected": "Something went wrong: {{message}}",
   "unexpectedNoDetail": "Something went wrong."
 }

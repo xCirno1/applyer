@@ -540,6 +540,9 @@
     "importComplete": "Impor selesai: {{parts}}.",
     "importCompleteEmpty": "Impor selesai. Tidak ada data baru yang perlu ditambahkan.",
     "resumeAssignmentsLinked_other": "{{count}} lowongan ditautkan ke varian resumenya",
-    "resumeAssignmentsUnresolved_other": "{{count}} lowongan menyebut varian resume yang tidak ada di sini"
+    "resumeAssignmentsUnresolved_other": "{{count}} lowongan menyebut varian resume yang tidak ada di sini",
+    "stagesAdded_other": "{{count}} tahap lamaran",
+    "stageAssignmentsLinked_other": "{{count}} lowongan mendapat tahapnya",
+    "stageAssignmentsUnresolved_other": "{{count}} lowongan tetap tanpa tahap karena tahapnya tidak dapat dicocokkan"
   }
 }

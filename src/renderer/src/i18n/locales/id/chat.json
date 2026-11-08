@@ -73,6 +73,7 @@
       "location": "Lokasi",
       "source": "Sumber",
       "status": "Status",
+      "stage": "Tahap",
       "matchScore": "Kecocokan",
       "failure": "Kegagalan",
       "field": "Kolom",

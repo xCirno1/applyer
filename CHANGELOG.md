@@ -3,6 +3,17 @@
 Notable changes to Applyer are documented here. This project follows
 [Semantic Versioning](https://semver.org/).
 
+## [1.1.1] - 2026-09-19
+
+### Fixed
+
+- Packaged builds excluded `@napi-rs/canvas` from the bundle to save space, not
+  realizing `pdf-parse` needs it at runtime to polyfill `DOMMatrix` for PDF text
+  extraction in Node. Every packaged release since it was added has silently failed
+  to extract text from uploaded PDF resumes (`ReferenceError: DOMMatrix is not
+  defined`, logged and swallowed as "no extractable text"). The dependency is now
+  included in the bundle.
+
 ## [1.1.0] - 2026-09-18
 
 ### Added

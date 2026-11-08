@@ -100,8 +100,12 @@ describe('packaging config', () => {
     expect(pkg.build.files).toContain('!**/node_modules/playwright-core/.local-browsers/**')
   })
 
-  it('excludes the unused @napi-rs/canvas PDF-rendering dependency', () => {
-    expect(pkg.build.files).toContain('!**/node_modules/@napi-rs/canvas*/**')
+  // pdf-parse requires @napi-rs/canvas at runtime to polyfill DOMMatrix/ImageData/
+  // Path2D for pdfjs-dist under Node; excluding it silently breaks PDF resume text
+  // extraction in every packaged build (the require() failure is only warned, not
+  // thrown, so it surfaces later as an unrelated "DOMMatrix is not defined").
+  it('ships @napi-rs/canvas, which pdf-parse needs at runtime to extract PDF text', () => {
+    expect(pkg.build.files.some((f) => f.includes('@napi-rs/canvas'))).toBe(false)
   })
 
   it('enables asar', () => {

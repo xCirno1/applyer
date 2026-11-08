@@ -83,6 +83,8 @@ function job(id: string, resumeVariantId: string | null): JobRecord {
     submittedAt: null,
     resumeVariantId,
     attachedResume: null,
+    stageId: null,
+    stageChangedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z'
   }

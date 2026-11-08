@@ -69,6 +69,8 @@ function job(overrides: Partial<JobRecord> = {}): JobRecord {
     submittedAt: null,
     resumeVariantId: null,
     attachedResume: null,
+    stageId: null,
+    stageChangedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...overrides
@@ -335,5 +337,69 @@ describe('jobsStore', () => {
       expect(useJobsStore.getState().activeJob?.id).toBe('job-1')
       expect(useJobsStore.getState().activeJob?.title).toBe('Open Job')
     })
+  })
+})
+
+describe('jobsStore: stage filter', () => {
+  it('passes the stage only to the Submitted column, and "no stage" as null', async () => {
+    const { useJobsStore } = await import('./jobsStore')
+    const { STAGE_FILTER_NONE } = await import('./stagesStoreLogic')
+    listMock.mockResolvedValue({ jobs: [], total: 0 })
+    useJobsStore.getState().setFilters({ stage: 'offer' })
+    await useJobsStore.getState().fetchColumn('submitted')
+    expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'submitted', stageId: 'offer' }))
+    await useJobsStore.getState().fetchColumn('queued')
+    expect(listMock.mock.lastCall?.[0]).not.toHaveProperty('stageId')
+
+    useJobsStore.getState().setFilters({ stage: STAGE_FILTER_NONE })
+    await useJobsStore.getState().fetchColumn('submitted')
+    expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ status: 'submitted', stageId: null }))
+  })
+
+  it('sends no stage at all when every stage is shown', async () => {
+    const { useJobsStore } = await import('./jobsStore')
+    listMock.mockResolvedValue({ jobs: [], total: 0 })
+    await useJobsStore.getState().fetchColumn('submitted')
+    expect(listMock.mock.lastCall?.[0]).not.toHaveProperty('stageId')
+  })
+
+  it('refetches only the Submitted column when only the stage changes', async () => {
+    const { useJobsStore } = await import('./jobsStore')
+    listMock.mockResolvedValue({ jobs: [], total: 0 })
+    listMock.mockClear()
+    useJobsStore.getState().setFilters({ stage: 'offer' })
+    await Promise.resolve()
+    expect(listMock).toHaveBeenCalledTimes(1)
+    expect(listMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'submitted' }))
+    listMock.mockClear()
+    useJobsStore.getState().setFilters({ stage: 'offer' })
+    expect(listMock).not.toHaveBeenCalled()
+  })
+
+  it('moves a Submitted job out of the column when its stage stops matching, and in when it starts', async () => {
+    const { useJobsStore } = await import('./jobsStore')
+    listMock.mockResolvedValue({ jobs: [job({ status: 'submitted', stageId: 'offer' })], total: 1 })
+    useJobsStore.getState().setFilters({ stage: 'offer' })
+    await useJobsStore.getState().fetchColumn('submitted')
+    expect(useJobsStore.getState().columns.submitted.jobs).toHaveLength(1)
+
+    useJobsStore.getState().applyUpdate(job({ status: 'submitted', stageId: 'rejected' }))
+    expect(useJobsStore.getState().columns.submitted).toMatchObject({ jobs: [], total: 0 })
+
+    useJobsStore.getState().applyUpdate(job({ status: 'submitted', stageId: 'offer' }))
+    expect(useJobsStore.getState().columns.submitted.jobs.map((j) => j.id)).toEqual(['job-1'])
+  })
+
+  it('drops a page that a newer request for the same column overtook', async () => {
+    const { useJobsStore } = await import('./jobsStore')
+    let resolveSlow: (value: ListJobsResult) => void = () => {}
+    listMock.mockImplementationOnce(() => new Promise((resolve) => (resolveSlow = resolve)))
+    listMock.mockResolvedValueOnce({ jobs: [job({ id: 'fresh', status: 'submitted' })], total: 1 })
+    const slow = useJobsStore.getState().fetchColumn('submitted')
+    await useJobsStore.getState().fetchColumn('submitted')
+    resolveSlow({ jobs: [job({ id: 'stale', status: 'submitted' })], total: 1 })
+    await slow
+    expect(useJobsStore.getState().columns.submitted.jobs.map((j) => j.id)).toEqual(['fresh'])
+    expect(useJobsStore.getState().columns.submitted.loading).toBe(false)
   })
 })

@@ -23,6 +23,7 @@ import {
   type DialogLabels
 } from '@shared/types/ipcEvents'
 import type { JobRecord, ListJobsQuery, ListJobsResult } from '@shared/types/job'
+import type { ApplicationStage, StageCount } from '@shared/types/applicationStage'
 import type { DocumentSummary, ProfileFields, ProfileWithDocuments, StorageMode } from '@shared/types/profile'
 import type {
   MasterResume,
@@ -210,6 +211,30 @@ const jobsApi = {
     const listener = (_event: Electron.IpcRendererEvent, payload: { jobId: string }): void => callback(payload)
     ipcRenderer.on(IPC.jobs.onRemoved, listener)
     return () => ipcRenderer.removeListener(IPC.jobs.onRemoved, listener)
+  }
+}
+
+type StageWriteResult<T> = { ok: true; value: T } | { ok: false; error: AppError }
+
+const stagesApi = {
+  list: (): Promise<{ stages: ApplicationStage[] }> => ipcRenderer.invoke(IPC.stages.list),
+  counts: (): Promise<{ counts: StageCount[] }> => ipcRenderer.invoke(IPC.stages.counts),
+  create: (label: string): Promise<StageWriteResult<ApplicationStage>> => ipcRenderer.invoke(IPC.stages.create, { label }),
+  rename: (stageId: string, label: string): Promise<StageWriteResult<ApplicationStage>> =>
+    ipcRenderer.invoke(IPC.stages.rename, { stageId, label }),
+  reorder: (orderedIds: string[]): Promise<StageWriteResult<ApplicationStage[]>> =>
+    ipcRenderer.invoke(IPC.stages.reorder, { orderedIds }),
+  remove: (stageId: string): Promise<StageWriteResult<{ clearedJobs: number }>> =>
+    ipcRenderer.invoke(IPC.stages.remove, { stageId }),
+  setJobStage: (
+    jobIds: string[],
+    stageId: string | null
+  ): Promise<StageWriteResult<{ jobs: JobRecord[]; skippedIds: string[] }>> =>
+    ipcRenderer.invoke(IPC.stages.setJobStage, { jobIds, stageId }),
+  onChanged: (callback: () => void): (() => void) => {
+    const listener = (): void => callback()
+    ipcRenderer.on(IPC.stages.onChanged, listener)
+    return () => ipcRenderer.removeListener(IPC.stages.onChanged, listener)
   }
 }
 
@@ -634,6 +659,7 @@ const api = {
   terminal: terminalApi,
   clipboard: clipboardApi,
   jobs: jobsApi,
+  stages: stagesApi,
   indexedJobs: indexedJobsApi,
   companyBoards: companyBoardsApi,
   exclusions: exclusionsApi,

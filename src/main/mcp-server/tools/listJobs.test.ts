@@ -20,7 +20,7 @@ function parse(result: Awaited<ReturnType<typeof listJobsTool>>): { jobs: unknow
 describe('listJobsTool', () => {
   it('returns a trimmed-down view of each job, not the full record', async () => {
     queueJob({ title: 'Engineer', company: 'Acme', url: 'https://x.com/1', matchScore: 80 })
-    const result = await listJobsTool({ status: undefined, limit: undefined, offset: undefined })
+    const result = await listJobsTool({ stage: undefined, status: undefined, limit: undefined, offset: undefined })
     const body = parse(result)
     expect(body.total).toBe(1)
     expect(body.jobs[0]).toEqual({
@@ -41,7 +41,7 @@ describe('listJobsTool', () => {
     queueJob({ title: 'B', company: 'X', url: 'https://x.com/b' })
     setFailed(a.id, 'other')
 
-    const result = await listJobsTool({ status: 'failed', limit: undefined, offset: undefined })
+    const result = await listJobsTool({ stage: undefined, status: 'failed', limit: undefined, offset: undefined })
     const body = parse(result)
     expect(body.jobs).toHaveLength(1)
     expect((body.jobs[0] as { title: string }).title).toBe('A')
@@ -49,7 +49,7 @@ describe('listJobsTool', () => {
 
   it('respects limit/offset', async () => {
     for (let i = 0; i < 3; i++) queueJob({ title: `Job ${i}`, company: 'X', url: `https://x.com/${i}` })
-    const result = await listJobsTool({ status: undefined, limit: 1, offset: 1 })
+    const result = await listJobsTool({ stage: undefined, status: undefined, limit: 1, offset: 1 })
     const body = parse(result)
     expect(body.jobs).toHaveLength(1)
     expect(body.total).toBe(3)

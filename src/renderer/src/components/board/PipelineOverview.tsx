@@ -6,6 +6,10 @@ import { usePendingCaptchaAlerts } from '../../providers/CaptchaAlertContext'
 import Tag from '../ui/Tag'
 import DonutChart from '../ui/DonutChart'
 import MetaList from '../ui/MetaList'
+import Skeleton from '../ui/Skeleton'
+import { useStagesStore } from '../../state/stagesStore'
+import { STAGE_FILTER_ALL, STAGE_FILTER_NONE, stageCountRows } from '../../state/stagesStoreLogic'
+import { useStageLabel } from './useStageLabel'
 
 // The workspace's left sidebar — a `DonutChart` + legend of per-status job
 // counts/share, and a "needs verification" list (from `CaptchaAlertContext`'s
@@ -37,12 +41,25 @@ const STATUS_SWATCH: Record<JobStatus, string> = {
  * blocked on a verification challenge. The analogue of the reference
  * design's bot-analysis sidebar — a persistent glance at the state of the
  * work, alongside the board rather than requiring a separate page.
+ *
+ * Between the two, the Submitted stages: how many submitted applications
+ * sit in each stage (and with none), counted across every Submitted job
+ * rather than the board's current page. Clicking a row filters the
+ * Submitted column to that stage, and clicking the active one again shows
+ * every stage.
  */
 export default function PipelineOverview({ onHide }: { onHide: () => void }): ReactElement {
   const { t } = useTranslation('board')
   const columns = useJobsStore((s) => s.columns)
   const openJob = useJobsStore((s) => s.openJob)
   const pendingAlerts = usePendingCaptchaAlerts()
+  const stages = useStagesStore((s) => s.stages)
+  const stageCounts = useStagesStore((s) => s.counts)
+  const stagesLoaded = useStagesStore((s) => s.loadedOnce)
+  const stageFilter = useJobsStore((s) => s.filters.stage)
+  const setFilters = useJobsStore((s) => s.setFilters)
+  const stageLabel = useStageLabel()
+  const { rows: stageRows, total: submittedTotal } = stageCountRows(stages, stageCounts)
 
   const totalTracked = STATUS_ORDER.reduce((sum, status) => sum + columns[status].total, 0)
 
@@ -97,6 +114,57 @@ export default function PipelineOverview({ onHide }: { onHide: () => void }): Re
               })}
             </div>
           </div>
+        </div>
+
+        <div className="border-b border-border-soft px-3 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <span className="text-2xs font-medium uppercase tracking-wide text-text-faint">{t('overview.stages')}</span>
+            {submittedTotal > 0 && <span className="text-2xs tabular-nums text-text-faint">{submittedTotal}</span>}
+          </div>
+          {!stagesLoaded ? (
+            <div className="mt-2 flex flex-col gap-1.5">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-2/3" />
+            </div>
+          ) : submittedTotal === 0 ? (
+            <p className="mt-2 text-[11px] leading-snug text-text-faint">{t('overview.noSubmitted')}</p>
+          ) : (
+            <div className="mt-1.5 flex flex-col">
+              {stageRows.map((row) => {
+                const filterValue = row.stage ? row.stage.id : STAGE_FILTER_NONE
+                const active = stageFilter === filterValue
+                const share = Math.round((row.count / submittedTotal) * 100)
+                return (
+                  <button
+                    key={filterValue}
+                    type="button"
+                    onClick={() => setFilters({ stage: active ? STAGE_FILTER_ALL : filterValue })}
+                    aria-pressed={active}
+                    title={t('overview.stageFilterHint')}
+                    className={`flex h-6 w-full cursor-pointer items-center gap-1.5 px-1 text-left hover:bg-canvas-soft ${
+                      active ? 'bg-canvas-soft' : ''
+                    }`}
+                  >
+                    <span
+                      className={`min-w-0 flex-1 truncate text-[11px] ${
+                        active ? 'font-medium text-text' : row.count > 0 ? 'text-text-muted' : 'text-text-faint'
+                      }`}
+                    >
+                      {stageLabel(row.stage)}
+                    </span>
+                    <MetaList
+                      className={`shrink-0 text-[11px] tabular-nums ${row.count > 0 ? 'text-text' : 'text-text-faint'}`}
+                      items={[
+                        { key: 'count', value: row.count },
+                        row.count > 0 && { key: 'share', value: `${share}%`, className: 'text-text-faint' }
+                      ]}
+                    />
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         <div className="px-3 py-2.5">

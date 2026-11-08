@@ -6,10 +6,14 @@ import ConfirmDialog from '../ui/ConfirmDialog'
 import type { MenuEntry } from '../ui/Menu'
 import { useJobsStore } from '../../state/jobsStore'
 import { useJobActions } from './useJobActions'
+import StagePickerModal from './StagePickerModal'
+import { stageTargets } from '../../state/stagesStoreLogic'
 
 interface BulkConfirmState {
   ids: string[]
 }
+
+type StagePickerState = ReturnType<typeof stageTargets>
 
 /**
  * Builds and renders the right-click menu for one `JobCard`. One hook
@@ -25,6 +29,9 @@ interface BulkConfirmState {
  * Mark Filled, Unqueue, Remove, and Exclude always confirm, matching their
  * single-job dialogs. Remove is available for Filled/Submitted jobs and
  * keeps their URLs discoverable; Exclude permanently blacklists a URL.
+ * "Set stage..." appears once any target is Submitted and opens
+ * `StagePickerModal` for just those jobs (the menu has no submenus, and a
+ * stage list is too long for one).
  */
 export function useJobContextMenu(): {
   openContextMenu: (e: MouseEvent, job: JobRecord, onOpen: () => void) => void
@@ -42,6 +49,7 @@ export function useJobContextMenu(): {
   const [excluding, setExcluding] = useState(false)
   const [unqueueing, setUnqueueing] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const [stagePicker, setStagePicker] = useState<StagePickerState | null>(null)
   const { markFilledMany, retryMany, excludeMany, unqueueMany, removeCompletedMany } = useJobActions()
 
   const openContextMenu = (e: MouseEvent, job: JobRecord, onOpen: () => void): void => {
@@ -66,10 +74,19 @@ export function useJobContextMenu(): {
     const removableIds = targetJobs
       .filter((j) => j.status === 'filled' || j.status === 'submitted')
       .map((j) => j.id)
+    const stageTarget = stageTargets(targetJobs)
 
     const items: MenuEntry[] = []
     if (!isBulk) {
       items.push({ type: 'action', key: 'open', label: t('actions.open'), onSelect: onOpen })
+    }
+    if (stageTarget.ids.length > 0) {
+      items.push({
+        type: 'action',
+        key: 'setStage',
+        label: isBulk ? t('actions.setStageCount', { count: stageTarget.ids.length }) : t('actions.setStageMenu'),
+        onSelect: () => setStagePicker(stageTarget)
+      })
     }
     if (retryableIds.length > 0) {
       items.push({
@@ -127,6 +144,14 @@ export function useJobContextMenu(): {
   const menuNode = (
     <>
       <ContextMenu state={menuState} onClose={() => setMenuState(null)} />
+
+      <StagePickerModal
+        open={stagePicker !== null}
+        jobIds={stagePicker?.ids ?? []}
+        skipped={stagePicker?.skipped ?? 0}
+        currentStageId={stagePicker?.current}
+        onClose={() => setStagePicker(null)}
+      />
 
       <ConfirmDialog
         open={confirmMarkFilled !== null}

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto'
-import { and, desc, eq, isNotNull, or, sql, type SQL } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm'
 import { getDb } from '../index'
 import { likeContains } from './likeSearch'
 import { jobs } from '../schema'
@@ -41,6 +41,10 @@ function toJobRecord(row: JobRow): JobRecord {
     submittedAt: row.submittedAt,
     resumeVariantId: row.resumeVariantId,
     attachedResume: attachedResumeOf(row),
+    // Only a Submitted job carries a stage; a stray one on any other status
+    // (a hand-edited row) reads as none rather than leaking onto the card.
+    stageId: row.status === 'submitted' ? row.stageId : null,
+    stageChangedAt: row.status === 'submitted' ? row.stageChangedAt : null,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt
   }
@@ -133,6 +137,9 @@ export function listJobs(query: ListJobsQuery): ListJobsResult {
   const conditions: SQL<unknown>[] = []
   if (query.status) conditions.push(eq(jobs.status, query.status))
   if (query.source) conditions.push(eq(jobs.source, query.source))
+  if (query.stageId !== undefined) {
+    conditions.push(query.stageId === null ? isNull(jobs.stageId) : eq(jobs.stageId, query.stageId))
+  }
   if (query.search?.trim()) {
     const term = query.search.trim()
     const searchCondition = or(likeContains(jobs.title, term), likeContains(jobs.company, term))
@@ -394,7 +401,8 @@ export function listAllJobs(): JobRecord[] {
  * colliding ids; screenshot paths and the in-memory-only blocking fields are
  * dropped since they'd point at another machine's filesystem/live task. The
  * resume variant is dropped for the same reason (its id is minted on import
- * too) and re-linked by name afterwards, see `linkVariantsByName`.
+ * too) and re-linked by name afterwards, see `linkVariantsByName`; the
+ * post-submission stage likewise, see `linkJobStages`.
  */
 export function importJobs(records: JobRecord[]): { imported: number; skipped: number } {
   const db = getDb()
@@ -431,6 +439,9 @@ export function importJobs(records: JobRecord[]): { imported: number; skipped: n
         // History, not a pointer, so it travels; the variant id does not
         // (ids are minted on import), the name it was attached under does.
         attachedResume: importedAttachedResume(r.attachedResume),
+        // Re-linked by built-in id or custom name afterwards, see `linkJobStages`.
+        stageId: null,
+        stageChangedAt: null,
         createdAt: r.createdAt,
         updatedAt: r.updatedAt
       })

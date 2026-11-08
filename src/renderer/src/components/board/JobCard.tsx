@@ -7,6 +7,9 @@ import { useJobsStore } from '../../state/jobsStore'
 import { useResumesStore } from '../../state/resumesStore'
 import { useJobContextMenu } from './useJobContextMenu'
 import { failureLabelKey, humanizeFailureTag } from './failureDisplay'
+import { useStagesStore } from '../../state/stagesStore'
+import { findJobStage } from '../../state/stagesStoreLogic'
+import { useStageLabel } from './useStageLabel'
 
 const STATUS_ACCENT: Record<JobStatus, string> = {
   queued: 'border-l-accent',
@@ -29,6 +32,13 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
   const toggleSelected = useJobsStore((s) => s.toggleSelected)
   const { openContextMenu, menuNode } = useJobContextMenu()
   const failureTagKey = job.failureTag ? failureLabelKey(job.failureTag) : null
+  // The stage object itself (a stable reference from the store's map), so
+  // the card re-renders when its own stage is renamed and not otherwise.
+  // An id the list does not know shows no tag rather than a raw id.
+  const stage = useStagesStore((s) =>
+    job.status === 'submitted' ? findJobStage(job.stageId, s.stagesById, s.loadedOnce) : null
+  )
+  const stageLabel = useStageLabel()
 
   // Select mode is simply "there's an active selection" — entered via
   // shift+click or right-click (see useJobContextMenu's selectOnly). While
@@ -83,6 +93,11 @@ export default function JobCard({ job, onOpen }: { job: JobRecord; onOpen: () =>
         </div>
         <span className="text-[11px] text-text-muted">{job.company}</span>
         {job.location && <span className="text-[11px] text-text-faint">{job.location}</span>}
+        {stage && (
+          <div className="mt-0.5">
+            <Tag label={stageLabel(stage)} />
+          </div>
+        )}
         {blocked && (
           <div className="mt-0.5">
             <Tag label={t('card.needsVerification')} tone="warning" />

@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next'
 import { useJobsStore } from '../../state/jobsStore'
 import { useToast } from '../ui/useToast'
 import { callIpc } from '../../lib/ipcCall'
+import { useStagesStore } from '../../state/stagesStore'
+import { useErrorMessage } from '../../i18n/formatError'
 
 /**
  * Bulk job mutations shared by the board's `BulkActionBar` and each
@@ -17,11 +19,19 @@ export function useJobActions(): {
   excludeMany: (ids: string[]) => Promise<void>
   unqueueMany: (ids: string[]) => Promise<void>
   removeCompletedMany: (ids: string[]) => Promise<void>
+  /**
+   * Sets (or with `null` clears) the stage of Submitted jobs. `stageName`
+   * is the on-screen name for the toast. Resolves `true` when the request
+   * went through, so a picker knows whether to close.
+   */
+  setStageMany: (ids: string[], stageId: string | null, stageName: string) => Promise<boolean>
 } {
   const { t } = useTranslation('board')
   const applyUpdate = useJobsStore((s) => s.applyUpdate)
   const removeJobLocal = useJobsStore((s) => s.removeJobLocal)
   const toast = useToast()
+  const errorMessage = useErrorMessage()
+  const setJobStage = useStagesStore((s) => s.setJobStage)
 
   const markFilledMany = async (ids: string[]): Promise<void> => {
     if (ids.length === 0) return
@@ -95,5 +105,29 @@ export function useJobActions(): {
     toast.success(t('toast.removed', { count: result.removedIds.length }))
   }
 
-  return { markFilledMany, retryMany, excludeMany, unqueueMany, removeCompletedMany }
+  const setStageMany = async (ids: string[], stageId: string | null, stageName: string): Promise<boolean> => {
+    if (ids.length === 0) return false
+    const result = await setJobStage(ids, stageId)
+    if (!result.ok) {
+      toast.error(errorMessage(result.error))
+      return false
+    }
+    // Applied here as well as by the `jobs:updated` broadcast, so the card
+    // and an open detail modal settle with the request.
+    const updated = Array.isArray(result.value?.jobs) ? result.value.jobs : []
+    const skipped = Array.isArray(result.value?.skippedIds) ? result.value.skippedIds.length : 0
+    for (const job of updated) applyUpdate(job)
+    if (updated.length === 0 && skipped === 0) toast.info(t('stages.toast.unchanged'))
+    else if (updated.length > 0) {
+      toast.success(
+        stageId
+          ? t('stages.toast.set', { count: updated.length, name: stageName })
+          : t('stages.toast.cleared', { count: updated.length })
+      )
+    }
+    if (skipped > 0) toast.info(t('stages.toast.skipped', { count: skipped }))
+    return true
+  }
+
+  return { markFilledMany, retryMany, excludeMany, unqueueMany, removeCompletedMany, setStageMany }
 }

@@ -338,7 +338,13 @@
     "resumeAssignmentsLinked_one": "{{count}} job linked to its resume variant",
     "resumeAssignmentsLinked_other": "{{count}} jobs linked to their resume variants",
     "resumeAssignmentsUnresolved_one": "{{count}} job named a resume variant that does not exist here",
-    "resumeAssignmentsUnresolved_other": "{{count}} jobs named resume variants that do not exist here"
+    "resumeAssignmentsUnresolved_other": "{{count}} jobs named resume variants that do not exist here",
+    "stagesAdded_one": "{{count}} application stage",
+    "stagesAdded_other": "{{count}} application stages",
+    "stageAssignmentsLinked_one": "{{count}} job given its stage",
+    "stageAssignmentsLinked_other": "{{count}} jobs given their stages",
+    "stageAssignmentsUnresolved_one": "{{count}} job kept no stage because its stage could not be matched",
+    "stageAssignmentsUnresolved_other": "{{count}} jobs kept no stage because their stages could not be matched"
   },
   "agent": {
     "autoStartTitle": "Auto-start command",

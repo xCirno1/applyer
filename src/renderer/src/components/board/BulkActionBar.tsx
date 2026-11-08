@@ -4,6 +4,8 @@ import Button from '../ui/Button'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import { useJobsStore } from '../../state/jobsStore'
 import { useJobActions } from './useJobActions'
+import StagePickerModal from './StagePickerModal'
+import { stageTargets } from '../../state/stagesStoreLogic'
 
 /**
  * Appears above the board whenever one or more job cards are checked
@@ -13,7 +15,12 @@ import { useJobActions } from './useJobActions'
  * would touch more than one job at once, matching that menu's rule and
  * `JobDetailModal`'s existing single-job behavior; destructive actions and
  * manual Filled overrides always confirm. Remove is limited to
- * Filled/Submitted jobs and does not blacklist their URLs.
+ * Filled/Submitted jobs and does not blacklist their URLs. Set stage
+ * applies to the Submitted part of the selection only, through
+ * `StagePickerModal`, which says how many others were left out.
+ *
+ * The button row scrolls sideways on a narrow window rather than pushing
+ * the bar taller, since it is one fixed-height band above the board.
  */
 export default function BulkActionBar(): ReactElement | null {
   const { t } = useTranslation('board')
@@ -41,6 +48,7 @@ export default function BulkActionBar(): ReactElement | null {
   const [excluding, setExcluding] = useState(false)
   const [unqueueing, setUnqueueing] = useState(false)
   const [removing, setRemoving] = useState(false)
+  const [stagePickerOpen, setStagePickerOpen] = useState(false)
 
   if (selectedJobIds.size === 0) return null
 
@@ -51,6 +59,7 @@ export default function BulkActionBar(): ReactElement | null {
   const removableIds = selectedJobs
     .filter((j) => j.status === 'filled' || j.status === 'submitted')
     .map((j) => j.id)
+  const stageTarget = stageTargets(selectedJobs)
 
   const handleRetry = async (): Promise<void> => {
     setConfirmRetryOpen(false)
@@ -93,12 +102,20 @@ export default function BulkActionBar(): ReactElement | null {
   }
 
   return (
-    <div className="flex h-7 shrink-0 items-center gap-2 border-b border-border-soft bg-canvas-soft px-2">
-      <span className="text-[12px] font-medium text-text">{t('selection.count', { count: selectedJobIds.size })}</span>
+    <div className="flex h-7 shrink-0 items-center gap-2 overflow-x-auto border-b border-border-soft bg-canvas-soft px-2">
+      <span className="shrink-0 text-[12px] font-medium text-text">{t('selection.count', { count: selectedJobIds.size })}</span>
       <Button size="sm" variant="ghost" onClick={clearSelection}>
         {t('selection.clear')}
       </Button>
-      <div className="ml-auto flex gap-2">
+      <div className="ml-auto flex shrink-0 gap-2">
+        <Button
+          size="sm"
+          variant="secondary"
+          disabled={stageTarget.ids.length === 0}
+          onClick={() => setStagePickerOpen(true)}
+        >
+          {stageTarget.ids.length > 0 ? t('actions.setStageCount', { count: stageTarget.ids.length }) : t('actions.setStage')}
+        </Button>
         <Button
           size="sm"
           variant="secondary"
@@ -145,6 +162,14 @@ export default function BulkActionBar(): ReactElement | null {
         </Button>
       </div>
 
+      <StagePickerModal
+        open={stagePickerOpen}
+        jobIds={stageTarget.ids}
+        skipped={stageTarget.skipped}
+        currentStageId={stageTarget.current}
+        onClose={() => setStagePickerOpen(false)}
+        onApplied={clearSelection}
+      />
       <ConfirmDialog
         open={confirmMarkFilledOpen}
         title={t('confirm.markFilledTitle', { count: fillableIds.length })}

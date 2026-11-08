@@ -1,6 +1,7 @@
 import type { JobRecord } from '@shared/types/job'
 import type { ExclusionRecord } from '@shared/types/exclusion'
-import type { ExportCompanyBoard, ExportIndexedJob } from '@shared/types/dataTransfer'
+import type { ExportCompanyBoard, ExportIndexedJob, ExportJobStageRef } from '@shared/types/dataTransfer'
+import { BUILTIN_STAGE_LABELS, isBuiltinStageId } from '@shared/types/applicationStage'
 
 type CsvValue = string | number | null | undefined
 
@@ -25,8 +26,17 @@ function rowToCsv(row: CsvValue[]): string {
   return row.map(escapeCsvField).join(',')
 }
 
-/** Accepts the export shape too, so the spreadsheet can name the resume variant a job uses. */
-export function jobsToCsv(records: Array<JobRecord & { resumeVariantName?: string | null }>): string {
+/** A job's stage as the spreadsheet shows it: the built-in's English label or the custom name. */
+function stageCell(stage: ExportJobStageRef | null | undefined): string | null {
+  if (!stage) return null
+  if (stage.kind === 'custom') return stage.name
+  return isBuiltinStageId(stage.id) ? BUILTIN_STAGE_LABELS[stage.id] : stage.id
+}
+
+/** Accepts the export shape too, so the spreadsheet can name the resume variant and stage a job has. */
+export function jobsToCsv(
+  records: Array<JobRecord & { resumeVariantName?: string | null; stage?: ExportJobStageRef | null }>
+): string {
   const header = [
     'Title',
     'Company',
@@ -43,7 +53,8 @@ export function jobsToCsv(records: Array<JobRecord & { resumeVariantName?: strin
     'Queued At',
     'Filled At',
     'Submitted At',
-    'Resume Variant'
+    'Resume Variant',
+    'Stage'
   ]
   const lines = [rowToCsv(header)]
   for (const r of records) {
@@ -64,7 +75,8 @@ export function jobsToCsv(records: Array<JobRecord & { resumeVariantName?: strin
         r.queuedAt,
         r.filledAt,
         r.submittedAt,
-        r.resumeVariantName ?? null
+        r.resumeVariantName ?? null,
+        stageCell(r.stage)
       ])
     )
   }

@@ -66,22 +66,25 @@ describe('describePayload: list_jobs results', () => {
     const raw = JSON.stringify({
       jobs: [
         { jobId: 'j1', title: 'Engineer', company: 'Acme', status: 'queued', matchScore: 88, failureTag: null },
-        { title: 'Untracked', company: 'Beta', status: 'failed', failureTag: 'captcha' }
+        { title: 'Untracked', company: 'Beta', status: 'failed', failureTag: 'captcha' },
+        { jobId: 'j3', title: 'Designer', company: 'Gamma', status: 'submitted', stage: 'Interviewing', failureTag: null }
       ],
-      total: 2
+      total: 3
     })
     const hint = describePayload('list_jobs', 'result', raw)
-    expect(hint.table?.columns).toEqual(['title', 'company', 'status', 'matchScore', 'failure'])
+    expect(hint.table?.columns).toEqual(['title', 'company', 'status', 'stage', 'matchScore', 'failure'])
     expect(hint.table?.rows[0]).toEqual([
       { kind: 'job', text: 'Engineer', jobId: 'j1' },
       { kind: 'text', text: 'Acme' },
       { kind: 'text', text: 'queued' },
+      { kind: 'text', text: '', tone: 'muted' },
       { kind: 'text', text: '88' },
       { kind: 'text', text: '', tone: 'danger' }
     ])
     expect(hint.table?.rows[1]?.[0]).toEqual({ kind: 'text', text: 'Untracked' })
-    expect(hint.table?.rows[1]?.[4]).toEqual({ kind: 'text', text: 'captcha', tone: 'danger' })
-    expect(hint.rows).toEqual([{ type: 'text', label: 'Total', text: '2', long: false }])
+    expect(hint.table?.rows[1]?.[5]).toEqual({ kind: 'text', text: 'captcha', tone: 'danger' })
+    expect(hint.table?.rows[2]?.[3]).toEqual({ kind: 'text', text: 'Interviewing', tone: 'muted' })
+    expect(hint.rows).toEqual([{ type: 'text', label: 'Total', text: '3', long: false }])
   })
 })
 

@@ -75,6 +75,7 @@
       "location": "Location",
       "source": "Source",
       "status": "Status",
+      "stage": "Stage",
       "matchScore": "Match",
       "failure": "Failure",
       "field": "Field",

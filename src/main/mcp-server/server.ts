@@ -21,7 +21,9 @@ import {
   setMasterResumeShape,
   saveResumeVariantShape,
   assignResumeShape,
-  deleteResumeVariantShape
+  deleteResumeVariantShape,
+  listApplicationStagesShape,
+  setApplicationStageShape
 } from './schemas'
 import { getProfileTool } from './tools/getProfile'
 import { updateProfileTool } from './tools/updateProfile'
@@ -42,6 +44,8 @@ import { setMasterResumeTool } from './tools/setMasterResume'
 import { saveResumeVariantTool } from './tools/saveResumeVariant'
 import { assignResumeTool } from './tools/assignResume'
 import { deleteResumeVariantTool } from './tools/deleteResumeVariant'
+import { listApplicationStagesTool } from './tools/listApplicationStages'
+import { setApplicationStageTool } from './tools/setApplicationStage'
 
 /**
  * Every tool call lands one `tool_call` event on the run in progress (see
@@ -143,7 +147,7 @@ export function createApplyerMcpServer(options: ApplyerMcpServerOptions = {}): M
     {
       title: 'List queued/tracked jobs',
       description:
-        'Jobs already on the board, optionally by status. Check before searching again.',
+        'Jobs already on the board, optionally by status. Submitted jobs carry their post-submission `stage`; `stage` (a name from list_application_stages, or `none`) narrows to Submitted jobs in that stage. Check before searching again.',
       inputSchema: listJobsShape
     },
     observed('list_jobs', listJobsTool)
@@ -290,6 +294,28 @@ export function createApplyerMcpServer(options: ApplyerMcpServerOptions = {}): M
       inputSchema: deleteResumeVariantShape
     },
     observed('delete_resume_variant', deleteResumeVariantTool)
+  )
+
+  server.registerTool(
+    'list_application_stages',
+    {
+      title: 'List post-submission stages',
+      description:
+        'The stages a Submitted application can be in (Awaiting response, Interviewing, Offer, Rejected, Withdrawn, plus any the user added), in the user\'s order, with how many Submitted jobs sit in each. The user manages the list in Applyer; you only assign stages.',
+      inputSchema: listApplicationStagesShape
+    },
+    observed('list_application_stages', listApplicationStagesTool)
+  )
+
+  server.registerTool(
+    'set_application_stage',
+    {
+      title: 'Set a submitted job\'s stage',
+      description:
+        'Records what happened after the user submitted an application: `stage` is a stage name from list_application_stages (case-insensitive); null or omitted clears it. Only Submitted jobs take a stage. Set one only from what the user told you (an interview invite, a rejection email), never by guessing.',
+      inputSchema: setApplicationStageShape
+    },
+    observed('set_application_stage', setApplicationStageTool)
   )
 
   return server

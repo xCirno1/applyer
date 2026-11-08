@@ -17,7 +17,12 @@ import { listAllExclusions } from '../db/repositories/jobExclusionsRepository'
 import { listAllIndexedJobs } from '../db/repositories/indexedJobsRepository'
 import { listAllCompanyBoards } from '../db/repositories/companyBoardsRepository'
 import { logActivity } from '../db/repositories/activityLogRepository'
-import { broadcastCompanyBoardsChanged, broadcastIndexedJobsChanged, broadcastResumesChanged } from './jobsBroadcast'
+import {
+  broadcastCompanyBoardsChanged,
+  broadcastIndexedJobsChanged,
+  broadcastResumesChanged,
+  broadcastStagesChanged
+} from './jobsBroadcast'
 import { jobsToCsv, indexedJobsToCsv, exclusionsToCsv, companyBoardsToCsv } from '../dataTransfer/csv'
 import { themeStateSchema, validateExportBundle } from '../dataTransfer/importSchema'
 import { buildExportBundle, computeExportSizes, exportableJobs, filenameTimestamp } from '../dataTransfer/exportBundle'
@@ -201,6 +206,10 @@ export function registerDataTransferIpc(): void {
         // the variant summaries, so those links need the same signal.
         const resumesChanged = (summary.resumes?.imported ?? 0) > 0 || (summary.resumeAssignments?.linked ?? 0) > 0
         if (resumesChanged) broadcastResumesChanged()
+        // The stage manager and the overview's per-stage counts read the
+        // stage list once and then listen; imported stages or re-linked
+        // jobs would otherwise not show until the next restart.
+        if ((summary.stages?.imported ?? 0) > 0 || (summary.stageAssignments?.linked ?? 0) > 0) broadcastStagesChanged()
         // The auto-tailor flag is baked into the agent's instruction file,
         // which the settings IPC rewrites on every change; an import that
         // changes it has to do the same or terminals opened before the

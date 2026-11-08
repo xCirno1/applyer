@@ -28,6 +28,18 @@ export const IPC = {
     onUpdated: 'jobs:updated',
     onRemoved: 'jobs:removed'
   },
+  /** Post-submission stages (see `shared/types/applicationStage.ts`). */
+  stages: {
+    list: 'stages:list',
+    counts: 'stages:counts',
+    create: 'stages:create',
+    rename: 'stages:rename',
+    reorder: 'stages:reorder',
+    remove: 'stages:remove',
+    setJobStage: 'stages:setJobStage',
+    /** Payload-less: the stage list, or which jobs sit in which stage, changed. */
+    onChanged: 'stages:changed'
+  },
   indexedJobs: {
     list: 'indexedJobs:list',
     listDates: 'indexedJobs:listDates',

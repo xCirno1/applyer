@@ -99,6 +99,13 @@
       "when": 1794150440991,
       "tag": "0013_job_attached_resume",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1794152118798,
+      "tag": "0014_application_stages",
+      "breakpoints": true
     }
   ]
 }

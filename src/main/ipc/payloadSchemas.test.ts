@@ -16,7 +16,12 @@ import {
   readListQuery,
   remoteBrowserEndpointPayload,
   remoteBrowserPayload,
+  createStagePayload,
+  renameStagePayload,
+  reorderStagesPayload,
   respondInstallPayload,
+  setJobStagePayload,
+  stageIdPayload,
   taskIdPayload
 } from './payloadSchemas'
 import { allDomainsSelected } from '@shared/types/dataTransfer'
@@ -137,6 +142,39 @@ describe('exportSelectionSchema', () => {
   })
 })
 
+describe('list queries: stage filter', () => {
+  it('keeps a stage id or null (no stage), and drops anything else', () => {
+    expect(listJobsQuerySchema.parse({ status: 'submitted', stageId: 'offer' }).stageId).toBe('offer')
+    expect(listJobsQuerySchema.parse({ status: 'submitted', stageId: null }).stageId).toBeNull()
+    expect(listJobsQuerySchema.parse({ stageId: 42 }).stageId).toBeUndefined()
+  })
+})
+
+describe('stage payloads', () => {
+  it('accepts well-formed writes', () => {
+    expect(createStagePayload.safeParse({ label: 'Phone screen' }).success).toBe(true)
+    expect(renameStagePayload.safeParse({ stageId: 's1', label: 'Onsite' }).success).toBe(true)
+    expect(stageIdPayload.safeParse({ stageId: 'offer' }).success).toBe(true)
+    expect(reorderStagesPayload.safeParse({ orderedIds: ['offer', 'rejected'] }).success).toBe(true)
+    expect(setJobStagePayload.safeParse({ jobIds: ['j1'], stageId: 'offer' }).success).toBe(true)
+    expect(setJobStagePayload.safeParse({ jobIds: ['j1'], stageId: null }).success).toBe(true)
+  })
+
+  it.each([
+    ['a non-string label', createStagePayload, { label: 3 }],
+    ['an absurdly long label', createStagePayload, { label: 'x'.repeat(10_000) }],
+    ['a rename with no id', renameStagePayload, { label: 'Onsite' }],
+    ['an empty stage id', stageIdPayload, { stageId: '' }],
+    ['an order that is not a list', reorderStagesPayload, { orderedIds: 'offer' }],
+    ['an order past the cap', reorderStagesPayload, { orderedIds: Array.from({ length: 501 }, (_, i) => `s${i}`) }],
+    ['no jobs', setJobStagePayload, { jobIds: [], stageId: 'offer' }],
+    ['a missing stage', setJobStagePayload, { jobIds: ['j1'] }],
+    ['too many jobs', setJobStagePayload, { jobIds: Array.from({ length: 1001 }, (_, i) => `j${i}`), stageId: null }]
+  ] as const)('rejects %s', (_label, schema, payload) => {
+    expect(schema.safeParse(payload).success).toBe(false)
+  })
+})
+
 describe('list queries', () => {
   it('accepts a well-formed query unchanged', () => {
     const query = { status: 'queued', limit: 20, offset: 40, search: 'react', sortBy: 'matchScore' }
@@ -156,7 +194,8 @@ describe('list queries', () => {
     ['a negative offset', { offset: -1 }],
     ['an unknown status', { status: 'archived' }],
     ['an unknown sort order', { sortBy: 'salary' }],
-    ['a non-string search', { search: { toString: () => 'x' } }]
+    ['a non-string search', { search: { toString: () => 'x' } }],
+    ['an empty stage id', { stageId: '' }]
   ])('drops %s', (_label, query) => {
     const parsed = listJobsQuerySchema.parse(query) as Record<string, unknown>
     for (const value of Object.values(parsed)) expect(value).toBeUndefined()

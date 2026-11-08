@@ -16,7 +16,11 @@
     "otherSource": "Other",
     "sortNewest": "Newest first",
     "sortMatch": "Best match first",
-    "searchSettings": "Job search settings: which country and sites a search reaches"
+    "searchSettings": "Job search settings: which country and sites a search reaches",
+    "stageLabel": "Filter Submitted by stage",
+    "stageAll": "All stages",
+    "stageNone": "No stage yet",
+    "manageStages": "Manage stages"
   },
   "card": {
     "select": "Select job",
@@ -68,7 +72,10 @@
     "open": "Open",
     "clearSelection": "Clear Selection",
     "deselect": "Deselect",
-    "markSubmitted": "Mark Submitted"
+    "markSubmitted": "Mark Submitted",
+    "setStage": "Set stage",
+    "setStageCount": "Set stage ({{count}})",
+    "setStageMenu": "Set stage..."
   },
   "confirm": {
     "markFilledTitle_one": "Mark this job as filled?",
@@ -146,7 +153,10 @@
     "resumeAttachedOriginal": "Attached the original uploaded file on {{date}}.",
     "resumeAttachedStale": "It was based on an older master resume.",
     "resumeAttachedPendingChange": "The open form holds a different resume than the one selected; the next fill of its resume field attaches the selected one.",
-    "resumeAttachedAlreadySent": "This application holds a different resume than the one selected; changing the selection does not change it."
+    "resumeAttachedAlreadySent": "This application holds a different resume than the one selected; changing the selection does not change it.",
+    "stage": "Stage",
+    "stageSelect": "Application stage",
+    "stageHint": "Where this application stands since you submitted it."
   },
   "overview": {
     "title": "Overview",
@@ -154,7 +164,10 @@
     "pipeline": "Pipeline",
     "jobs": "jobs",
     "needsVerification": "Needs verification",
-    "noneWaiting": "No jobs are waiting on a verification challenge right now."
+    "noneWaiting": "No jobs are waiting on a verification challenge right now.",
+    "stages": "Submitted stages",
+    "noSubmitted": "No submitted applications yet.",
+    "stageFilterHint": "Show only this stage in the Submitted column"
   },
   "captcha": {
     "message": "Verification challenge on <1>{{title}}</1> @ {{company}}. Resolve it in the browser window that opened.",
@@ -167,5 +180,72 @@
     "searchResuming": "Reading the {{site}} results…",
     "searchSkipped": "{{site}} skipped for this search.",
     "skipSource": "Skip this site"
+  },
+  "stages": {
+    "builtin": {
+      "awaiting_response": "Awaiting response",
+      "interviewing": "Interviewing",
+      "offer": "Offer",
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn"
+    },
+    "none": "No stage",
+    "tooltip": "A stage records what happened after you submitted an application, such as an interview or an offer.",
+    "picker": {
+      "title_one": "Set stage",
+      "title_other": "Set stage for {{count}} jobs",
+      "intro_one": "Pick where this application stands now.",
+      "intro_other": "Pick where these {{count}} applications stand now.",
+      "skipped_one": "{{count}} selected job is not Submitted and is left out.",
+      "skipped_other": "{{count}} selected jobs are not Submitted and are left out.",
+      "current": "Current",
+      "apply": "Set stage"
+    },
+    "manager": {
+      "title": "Application stages",
+      "intro": "Stages describe where a submitted application stands. Built-in stages can be reordered; your own stages can also be renamed and deleted.",
+      "builtin": "Built-in",
+      "builtinTooltip": "Built-in stages come with Applyer and cannot be renamed or deleted, only reordered.",
+      "jobs_one": "{{count}} job",
+      "jobs_other": "{{count}} jobs",
+      "moveUp": "Move {{name}} up",
+      "moveDown": "Move {{name}} down",
+      "rename": "Rename",
+      "renameLabel": "New name for {{name}}",
+      "save": "Save",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "addLabel": "New stage name",
+      "addPlaceholder": "For example: Phone screen",
+      "add": "Add stage",
+      "limit": "{{count}} of {{max}} custom stages",
+      "limitReached": "You have reached the limit of {{max}} custom stages. Delete one to add another.",
+      "nameEmpty": "Enter a name.",
+      "nameTooLong": "Keep the name to {{max}} characters or fewer.",
+      "nameTaken": "A stage with that name already exists.",
+      "loadFailed": "No stages to show. They could not be loaded."
+    },
+    "confirmDelete": {
+      "title": "Delete the \"{{name}}\" stage?",
+      "messageUnused": "No job is in this stage. Deleting it cannot be undone.",
+      "message_one": "{{count}} submitted job is in this stage. It will move back to having no stage. Deleting the stage cannot be undone.",
+      "message_other": "{{count}} submitted jobs are in this stage. They will move back to having no stage. Deleting the stage cannot be undone.",
+      "confirm": "Delete stage"
+    },
+    "toast": {
+      "set_one": "Moved to {{name}}.",
+      "set_other": "{{count}} jobs moved to {{name}}.",
+      "cleared_one": "Stage cleared.",
+      "cleared_other": "Stage cleared on {{count}} jobs.",
+      "unchanged": "Already in that stage.",
+      "skipped_one": "{{count}} job was skipped because it is not Submitted.",
+      "skipped_other": "{{count}} jobs were skipped because they are not Submitted.",
+      "created": "Added the \"{{name}}\" stage.",
+      "renamed": "Renamed to \"{{name}}\".",
+      "deleted": "Deleted the \"{{name}}\" stage.",
+      "deletedCleared_one": "Deleted the \"{{name}}\" stage; {{count}} job now has no stage.",
+      "deletedCleared_other": "Deleted the \"{{name}}\" stage; {{count}} jobs now have no stage.",
+      "reorderFailed": "The new order could not be saved."
+    }
   }
 }

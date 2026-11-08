@@ -14,11 +14,13 @@ import type { JobRecord } from '@shared/types/job'
 import type { ActivityLogEntry } from '@shared/types/activity'
 import { failureLabelKey, failureMessageDisplay, humanizeFailureTag } from './failureDisplay'
 import JobResumeBlock from './JobResumeBlock'
+import JobStageBlock from './JobStageBlock'
 
 // Full job detail: description rendered as sanitized HTML, match reasons, the
 // resume block (which resume the application gets, see `JobResumeBlock`), a
 // screenshot preview for Filled jobs served via the `applyer-file://`
-// protocol, and status-contextual actions — Unqueue or Mark Filled for
+// protocol, the stage block for Submitted jobs (see `JobStageBlock`), and
+// status-contextual actions: Unqueue or Mark Filled for
 // Queued, Retry for Failed, Mark Submitted for Filled, Exclude for anything
 // not yet Submitted, and Remove for Filled/Submitted — all behind spinner+disable /
 // `ConfirmDialog`, never a bare click. Excluding
@@ -217,6 +219,8 @@ export default function JobDetailModal({
             </ul>
           </div>
         )}
+
+        <JobStageBlock job={job} />
 
         <JobResumeBlock job={job} onOpenResume={(jobId) => { onClose(); onOpenResume(jobId) }} onPromptSent={onClose} />
 

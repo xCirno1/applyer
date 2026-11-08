@@ -11,6 +11,7 @@ import { DEFAULT_NOTIFICATION_PREFERENCES } from '@shared/types/notification'
 import { EXPORT_SCHEMA_VERSION, type ExportBundle } from '@shared/types/dataTransfer'
 import { isAtsProvider, type AtsProvider } from '@shared/types/companyBoard'
 import { SEARCH_COUNTRIES } from '@shared/types/jobSource'
+import { BUILTIN_STAGE_IDS, MAX_CUSTOM_STAGES, STAGE_LABEL_MAX_LENGTH, checkStageLabel } from '@shared/types/applicationStage'
 import { isAgentMode, type AgentMode } from '@shared/types/agentMode'
 import { isReasoningEffort, type ReasoningEffort } from '@shared/types/openrouter'
 import { parseCustomSystemPrompt } from '@shared/types/customSystemPrompt'
@@ -29,6 +30,39 @@ import {
 
 const jobStatusSchema = z.enum(['queued', 'filled', 'submitted', 'failed'])
 const applyMethodSchema = z.enum(['external_form', 'easy_apply', 'email', 'unknown'])
+
+const stageNameSchema = z
+  .string()
+  .max(STAGE_LABEL_MAX_LENGTH * 4)
+  .transform((value, ctx) => {
+    const check = checkStageLabel(value)
+    if (!check.ok) {
+      ctx.addIssue({ code: 'custom', message: `invalid stage name: ${check.problem}` })
+      return z.NEVER
+    }
+    return check.label
+  })
+
+const jobStageRefSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('builtin'), id: z.enum(BUILTIN_STAGE_IDS) }),
+  z.object({ kind: z.literal('custom'), name: stageNameSchema })
+])
+
+/**
+ * Bounded like everything else read from a file. An entry this build cannot
+ * read (an unknown built-in id from a newer build, an empty name) is dropped
+ * rather than failing the bundle: stages are an annotation on the jobs, and
+ * the jobs they annotate should still come in, simply with no stage.
+ */
+const applicationStageSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('builtin'), id: z.enum(BUILTIN_STAGE_IDS), position: z.number().int().nonnegative() }),
+  z.object({ kind: z.literal('custom'), name: stageNameSchema, position: z.number().int().nonnegative() })
+])
+
+const applicationStagesSchema = z
+  .array(applicationStageSchema.nullable().catch(null))
+  .max(BUILTIN_STAGE_IDS.length + MAX_CUSTOM_STAGES * 4)
+  .transform((entries) => entries.filter((entry) => entry !== null))
 
 const jobRecordSchema = z.object({
   id: z.string(),
@@ -73,6 +107,13 @@ const jobRecordSchema = z.object({
   // before it was recorded; a malformed one is dropped to "nothing
   // recorded" rather than failing the whole import over a display line.
   attachedResume: z.unknown().optional().transform((value) => normalizeAttachedResume(value)),
+  // Never trusted from a file, like the variant id: custom stage ids are
+  // minted per install, so the stage travels as `stage` and is re-linked.
+  stageId: z.null().catch(null),
+  stageChangedAt: z.null().catch(null),
+  // A reference that cannot be read is dropped to "no stage" rather than
+  // rejecting the whole bundle over one annotation.
+  stage: jobStageRefSchema.nullable().optional().catch(null),
   createdAt: z.string(),
   updatedAt: z.string()
 })
@@ -289,6 +330,7 @@ const exportBundleSchema = z.object({
   appVersion: z.string(),
   data: z.object({
     jobs: z.array(jobRecordSchema).optional(),
+    applicationStages: applicationStagesSchema.optional(),
     indexedJobs: z.array(indexedJobSchema).optional(),
     exclusions: z.array(exclusionRecordSchema).optional(),
     companyBoards: z.array(companyBoardSchema).optional(),

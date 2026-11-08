@@ -43,6 +43,20 @@ export function broadcastJobRemoved(jobId: string): void {
   broadcastResumesChanged()
 }
 
+/**
+ * Payload-less. Fired by every stage write (the manager modal, the agent's
+ * `set_application_stage`, an import), so the stage list and the overview's
+ * per-stage counts stay live while the board sits mounted-but-hidden. A job
+ * changing status or being removed also moves those counts; the renderer's
+ * stage store refetches them on the job signals it already hears rather
+ * than every job write here firing this one too.
+ */
+export function broadcastStagesChanged(): void {
+  if (webContentsRef && !webContentsRef.isDestroyed()) {
+    webContentsRef.send(IPC.stages.onChanged)
+  }
+}
+
 /** Payload-less — the renderer just refetches its currently-loaded page on signal. */
 export function broadcastIndexedJobsChanged(): void {
   if (webContentsRef && !webContentsRef.isDestroyed()) {

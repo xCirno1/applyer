@@ -94,6 +94,11 @@
   "invalidCustomSystemPrompt": "Instruksi kustom tidak valid.",
   "customSystemPromptTooLong": "Instruksi kustomnya kepanjangan (maksimal {{max}} karakter).",
   "customSystemPromptUnreadable": "Instruksi kustommu terenkripsi dan tidak bisa dibaca sekarang (apakah keychain OS sudah terbuka?).",
+  "invalidStageName": "Tahap memerlukan nama dengan paling banyak 40 karakter.",
+  "stageNameTaken": "Tahap bernama \"{{name}}\" sudah ada.",
+  "stageLimitReached": "Anda dapat memiliki paling banyak {{max}} tahap kustom.",
+  "stageNotFound": "Tahap tersebut sudah tidak ada.",
+  "stageBuiltinLocked": "Tahap bawaan tidak dapat diganti namanya atau dihapus.",
   "unexpected": "Ada yang salah: {{message}}",
   "unexpectedNoDetail": "Ada yang salah."
 }

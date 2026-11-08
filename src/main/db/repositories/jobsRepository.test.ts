@@ -328,6 +328,8 @@ describe('importJobs', () => {
       submittedAt: '2020-01-03T00:00:00.000Z',
       resumeVariantId: null,
       attachedResume: null,
+      stageId: null,
+      stageChangedAt: null,
       createdAt: '2020-01-01T00:00:00.000Z',
       updatedAt: '2020-01-03T00:00:00.000Z',
       ...overrides

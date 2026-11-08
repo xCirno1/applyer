@@ -6,6 +6,7 @@ import {
 import { getSettings } from '@shared/settings'
 import { isNavigableUrl } from '@shared/url'
 import { JOB_SOURCES, SEARCH_COUNTRIES } from '@shared/types/jobSource'
+import { STAGE_LABEL_MAX_LENGTH } from '@shared/types/applicationStage'
 import {
   resumeContentSchema,
   resumePageSizeSchema,
@@ -62,8 +63,13 @@ export const queueJobShape = {
   matchReasons: z.array(z.string().trim().max(200)).max(5).optional()
 }
 
+/** A stage by name or id, the way resume variants are addressed by name. Bounded, then resolved in the tool. */
+const stageReference = z.string().trim().min(1).max(STAGE_LABEL_MAX_LENGTH * 2)
+
 export const listJobsShape = {
   status: jobStatusEnum.optional(),
+  /** Narrows to Submitted jobs in one post-submission stage (name or id); `none` for jobs with no stage yet. */
+  stage: stageReference.optional(),
   limit: z.number().int().min(1).max(LIST_JOBS_MAX_LIMIT).optional(),
   offset: z.number().int().min(0).optional()
 }
@@ -223,4 +229,12 @@ export const assignResumeShape = {
 
 export const deleteResumeVariantShape = {
   name: resumeVariantNameSchema
+}
+
+export const listApplicationStagesShape = {}
+
+export const setApplicationStageShape = {
+  jobId: z.string().trim().min(1),
+  /** Stage name or id; null or left out clears the job's stage. */
+  stage: stageReference.nullable().optional()
 }

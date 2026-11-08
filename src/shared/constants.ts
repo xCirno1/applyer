@@ -149,7 +149,7 @@ export const RESUME_MAX_TEXT_CHARS = settings.dangerousResumeMaxTextChars
  * grouped by what it does to the user's data. This is what the OpenRouter
  * chat mode's tool-approval editor lists: a checkbox per tool, grouped
  * "Reads" / "Writes" / "Form actions" so a user can ask to be prompted
- * before the ones that change something without wading through all 19 as a
+ * before the ones that change something without wading through all 21 as a
  * flat list.
  *
  * 'read' never changes anything. 'form' changes a job application page in
@@ -179,5 +179,7 @@ export const APPLYER_MCP_TOOLS: ReadonlyArray<{ name: string; kind: 'read' | 'wr
   { name: 'set_master_resume', kind: 'write' },
   { name: 'save_resume_variant', kind: 'write' },
   { name: 'assign_resume', kind: 'write' },
-  { name: 'delete_resume_variant', kind: 'write' }
+  { name: 'delete_resume_variant', kind: 'write' },
+  { name: 'list_application_stages', kind: 'read' },
+  { name: 'set_application_stage', kind: 'write' }
 ]

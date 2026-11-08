@@ -16,7 +16,11 @@
     "otherSource": "Lainnya",
     "sortNewest": "Terbaru dulu",
     "sortMatch": "Paling cocok dulu",
-    "searchSettings": "Pengaturan pencarian kerja: negara dan situs yang dijangkau pencarian"
+    "searchSettings": "Pengaturan pencarian kerja: negara dan situs yang dijangkau pencarian",
+    "stageLabel": "Saring Terkirim menurut tahap",
+    "stageAll": "Semua tahap",
+    "stageNone": "Belum ada tahap",
+    "manageStages": "Kelola tahap"
   },
   "card": {
     "select": "Pilih lowongan",
@@ -68,7 +72,10 @@
     "open": "Buka",
     "clearSelection": "Bersihkan Pilihan",
     "deselect": "Batalkan Pilihan",
-    "markSubmitted": "Tandai Terkirim"
+    "markSubmitted": "Tandai Terkirim",
+    "setStage": "Atur tahap",
+    "setStageCount": "Atur tahap ({{count}})",
+    "setStageMenu": "Atur tahap..."
   },
   "confirm": {
     "markFilledTitle_other": "Tandai lowongan sebagai terisi?",
@@ -132,7 +139,10 @@
     "resumeAttachedOriginal": "File asli yang diunggah dilampirkan pada {{date}}.",
     "resumeAttachedStale": "Varian itu berdasarkan resume utama yang lebih lama.",
     "resumeAttachedPendingChange": "Formulir yang terbuka berisi resume yang berbeda dari yang dipilih; pengisian berikutnya pada kolom resume akan melampirkan yang dipilih.",
-    "resumeAttachedAlreadySent": "Lamaran ini berisi resume yang berbeda dari yang dipilih; mengubah pilihan tidak mengubahnya."
+    "resumeAttachedAlreadySent": "Lamaran ini berisi resume yang berbeda dari yang dipilih; mengubah pilihan tidak mengubahnya.",
+    "stage": "Tahap",
+    "stageSelect": "Tahap lamaran",
+    "stageHint": "Posisi lamaran ini sejak Anda mengirimkannya."
   },
   "overview": {
     "title": "Ringkasan",
@@ -140,7 +150,10 @@
     "pipeline": "Alur",
     "jobs": "lowongan",
     "needsVerification": "Perlu verifikasi",
-    "noneWaiting": "Tidak ada lowongan yang lagi nunggu verifikasi."
+    "noneWaiting": "Tidak ada lowongan yang lagi nunggu verifikasi.",
+    "stages": "Tahap lamaran terkirim",
+    "noSubmitted": "Belum ada lamaran yang terkirim.",
+    "stageFilterHint": "Tampilkan hanya tahap ini di kolom Terkirim"
   },
   "captcha": {
     "message": "Ada verifikasi di <1>{{title}}</1> @ {{company}}. Selesaikan dulu di jendela browser yang kebuka.",
@@ -153,5 +166,63 @@
     "searchResuming": "Membaca hasil {{site}}…",
     "searchSkipped": "{{site}} dilewati untuk pencarian ini.",
     "skipSource": "Lewati situs ini"
+  },
+  "stages": {
+    "builtin": {
+      "awaiting_response": "Menunggu tanggapan",
+      "interviewing": "Wawancara",
+      "offer": "Tawaran",
+      "rejected": "Ditolak",
+      "withdrawn": "Dibatalkan"
+    },
+    "none": "Tanpa tahap",
+    "tooltip": "Tahap mencatat apa yang terjadi setelah Anda mengirim lamaran, misalnya wawancara atau tawaran kerja.",
+    "picker": {
+      "title_other": "Atur tahap untuk {{count}} lowongan",
+      "intro_other": "Pilih posisi {{count}} lamaran ini sekarang.",
+      "skipped_other": "{{count}} lowongan terpilih belum Terkirim dan tidak diikutkan.",
+      "current": "Saat ini",
+      "apply": "Atur tahap"
+    },
+    "manager": {
+      "title": "Tahap lamaran",
+      "intro": "Tahap menjelaskan posisi lamaran yang sudah terkirim. Tahap bawaan dapat diurutkan ulang; tahap buatan Anda juga dapat diganti namanya dan dihapus.",
+      "builtin": "Bawaan",
+      "builtinTooltip": "Tahap bawaan disertakan oleh Applyer dan tidak dapat diganti namanya atau dihapus, hanya diurutkan ulang.",
+      "jobs_other": "{{count}} lowongan",
+      "moveUp": "Pindahkan {{name}} ke atas",
+      "moveDown": "Pindahkan {{name}} ke bawah",
+      "rename": "Ganti nama",
+      "renameLabel": "Nama baru untuk {{name}}",
+      "save": "Simpan",
+      "cancel": "Batal",
+      "delete": "Hapus",
+      "addLabel": "Nama tahap baru",
+      "addPlaceholder": "Contoh: Wawancara telepon",
+      "add": "Tambah tahap",
+      "limit": "{{count}} dari {{max}} tahap kustom",
+      "limitReached": "Anda telah mencapai batas {{max}} tahap kustom. Hapus salah satu untuk menambah yang baru.",
+      "nameEmpty": "Masukkan nama.",
+      "nameTooLong": "Nama paling banyak {{max}} karakter.",
+      "nameTaken": "Tahap dengan nama itu sudah ada.",
+      "loadFailed": "Tidak ada tahap untuk ditampilkan. Tahap tidak dapat dimuat."
+    },
+    "confirmDelete": {
+      "title": "Hapus tahap \"{{name}}\"?",
+      "messageUnused": "Tidak ada lowongan di tahap ini. Penghapusan tidak dapat dibatalkan.",
+      "message_other": "{{count}} lowongan terkirim berada di tahap ini dan akan kembali tanpa tahap. Penghapusan tahap tidak dapat dibatalkan.",
+      "confirm": "Hapus tahap"
+    },
+    "toast": {
+      "set_other": "{{count}} lowongan dipindahkan ke {{name}}.",
+      "cleared_other": "Tahap dihapus dari {{count}} lowongan.",
+      "unchanged": "Sudah berada di tahap itu.",
+      "skipped_other": "{{count}} lowongan dilewati karena belum Terkirim.",
+      "created": "Tahap \"{{name}}\" ditambahkan.",
+      "renamed": "Nama diganti menjadi \"{{name}}\".",
+      "deleted": "Tahap \"{{name}}\" dihapus.",
+      "deletedCleared_other": "Tahap \"{{name}}\" dihapus; {{count}} lowongan kini tanpa tahap.",
+      "reorderFailed": "Urutan baru tidak dapat disimpan."
+    }
   }
 }
